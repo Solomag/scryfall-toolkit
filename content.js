@@ -23,6 +23,55 @@
   // throttled CardTrader queue is reused for rows that are created later.
   let finishesSettled = Promise.resolve();
   let enqueueCardTraderPrint = null;
+  // Print-row buttons follow the clipboard: a printing counts as selected when
+  // a buffered card points at the same set and number, and every button
+  // refreshes whenever the clipboard changes here or in another tab.
+  let clipboardCards = Array.isArray(settings.cards) ? settings.cards : [];
+  const printButtonRefreshers = new Set();
+  const printKey = (set, number) => `${String(set || '').toLowerCase()}\u0000${String(number || '').toLowerCase()}`;
+  function refreshPrintButtons() { for (const sync of printButtonRefreshers) sync(); }
+  function attachPrintButton(cell, key, payload, addTitle) {
+    if (!settings.clipboard || !settings.printAddButtons || cell.querySelector('.stk-native-print-add')) return null;
+    const add = button('+', async () => {
+      add.disabled = true;
+      try { await window.STK_ADD_PRINT(payload); }
+      finally { add.disabled = false; refreshPrintButtons(); }
+    });
+    add.className = 'stk-native-print-add';
+    add.title = addTitle;
+    add.setAttribute('aria-label', addTitle);
+    cell.append(add);
+    const removeTitle = language === 'ru' ? 'Убрать это издание из буфера' : 'Remove this printing from the clipboard';
+    const sync = () => {
+      const selected = clipboardCards.some(card => printKey(card.set, card.number) === key);
+      // A selected printing keeps its check mark on screen at all times; an
+      // unselected one only shows up while its row is hovered.
+      add.textContent = selected ? '✓' : '+';
+      add.classList.toggle('stk-print-selected', selected);
+      add.title = selected ? removeTitle : addTitle;
+      add.setAttribute('aria-label', add.title);
+    };
+    printButtonRefreshers.add(sync);
+    sync();
+    return add;
+  }
+  // Copy feedback: a repeat copy has to restart the pop, and the timer left over
+  // from the previous copy must not cut the new one short.
+  const copiedTimers = new WeakMap();
+  function flashCopied(control, restTitle) {
+    clearTimeout(copiedTimers.get(control));
+    control.classList.remove('stk-copied');
+    void control.offsetWidth;
+    control.classList.add('stk-copied');
+    control.title = t('Скопировано');
+    copiedTimers.set(control, setTimeout(() => {
+      control.classList.remove('stk-copied');
+      control.title = restTitle;
+      copiedTimers.delete(control);
+    }, 1000));
+  }
+  // Set by the stats panel so a re-arranged legality block can realign it.
+  let realignStatsPanel = null;
 
   function request(message) {
     return new Promise((resolve, reject) => {
@@ -485,6 +534,33 @@
       }
       legality.append(panel);
       legality.hidden = false;
+      // The panel's two columns have to sit exactly under the two status
+      // columns of the legality block above. Those columns are content-sized,
+      // so the few-pixel offset depends on the format names, the column width
+      // and the browser zoom: it is measured instead of hard-coded.
+      realignStatsPanel = () => {
+        const salt = panel.querySelector('.stk-edhrec-salt');
+        const meter = panel.querySelector('.stk-salt-meter');
+        if (!salt || !meter) return;
+        salt.style.marginLeft = '0px';
+        const pills = [...legality.querySelectorAll('.card-legality-item dd')];
+        const target = meter.getBoundingClientRect().left;
+        let best = null;
+        let bestGap = Infinity;
+        for (const pill of pills) {
+          const gap = Math.abs(pill.getBoundingClientRect().left - target);
+          if (gap < bestGap) { bestGap = gap; best = pill; }
+        }
+        if (best && bestGap < 40) {
+          salt.style.marginLeft = `${best.getBoundingClientRect().left - target}px`;
+        }
+      };
+      realignStatsPanel();
+      let realignTimer;
+      addEventListener('resize', () => {
+        clearTimeout(realignTimer);
+        realignTimer = setTimeout(realignStatsPanel, 120);
+      }, { passive: true });
     }).catch(() => {});
   }
 
@@ -538,12 +614,14 @@
     table.dataset.stkPrints = '1';
     // The native link is hijacked to expand in place, so the real full page
     // keeps a permanent sibling on the same line.
+    const nativeRow = native.closest('tr');
+    const nativeLabel = native.textContent;
     const pageLink = document.createElement('a');
     pageLink.className = 'stk-print-new-page';
     pageLink.href = native.getAttribute('href');
     pageLink.target = '_blank';
     pageLink.rel = 'noopener noreferrer';
-    pageLink.textContent = language === 'ru' ? 'Открыть отдельной страницей ↗' : 'Open on a new page ↗';
+    pageLink.textContent = language === 'ru' ? 'Открыть отдельной страницей' : 'Open on a new page';
     const pageLine = document.createElement('span');
     pageLine.className = 'stk-print-new-page-line';
     native.parentNode?.insertBefore(pageLine, native);
@@ -559,8 +637,22 @@
       row.append(cell);
       return row;
     };
-    let rows = [];
+    let builtGroups = new Map();
+    let truncatedResult = false;
+    let extraRows = [];
+    let collapsibleRows = [];
     let loaded = false;
+    const fewerLabel = language === 'ru' ? 'Показать меньше изданий ↑' : 'Show fewer prints ↑';
+    // Everything added here goes in front of the View-all line, so the line
+    // itself ends up as the last row of the table.
+    const insertAtEnd = node => tbody.insertBefore(node, nativeRow && nativeRow.parentNode === tbody ? nativeRow : null);
+    const insertAfter = (ref, node) => ref.parentNode.insertBefore(node, ref.nextSibling);
+    const clearExtra = () => {
+      for (const row of extraRows) row.remove();
+      extraRows = [];
+      for (const row of collapsibleRows) row.hidden = false;
+      collapsibleRows = [];
+    };
     native.setAttribute('aria-expanded', 'false');
     native.addEventListener('click', async event => {
       if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
@@ -568,17 +660,17 @@
       const expanding = !table.classList.contains('stk-prints-expanded');
       table.classList.toggle('stk-prints-expanded', expanding);
       native.setAttribute('aria-expanded', String(expanding));
+      native.textContent = expanding ? fewerLabel : nativeLabel;
       if (!expanding) {
-        for (const row of rows) row.remove();
+        clearExtra();
         return;
       }
       if (loaded) {
-        for (const row of rows) tbody.append(row);
+        placeGroups();
         return;
       }
       const status = statusRow(language === 'ru' ? 'Загружаю издания…' : 'Loading printings…');
-      rows = [status];
-      tbody.append(status);
+      insertAtEnd(status);
       try {
         let oracleId = document.querySelector('meta[name="scryfall:oracle:id"]')?.content;
         if (!oracleId) {
@@ -606,22 +698,97 @@
         // The Finish column header is added by a separate response; wait for
         // it so column spans and cell indexes match the settled header row.
         await finishesSettled;
-        const built = buildRows(groups, truncated);
+        builtGroups = buildRows(groups);
+        truncatedResult = !!truncated;
         status.remove();
-        rows = built;
-        if (table.classList.contains('stk-prints-expanded')) {
-          for (const row of built) tbody.append(row);
-        }
         loaded = true;
+        if (table.classList.contains('stk-prints-expanded')) placeGroups();
       } catch {
         status.querySelector('td').textContent =
           language === 'ru' ? 'Не удалось загрузить издания. Откройте отдельную страницу.' : 'Could not load printings. Open the separate page.';
       }
     });
 
-    // Rows are appended to Scryfall's own prints table so the expansion stays
-    // part of the original Prints section instead of a detached panel.
-    function buildRows(groups, truncated) {
+    const rowSet = row => {
+      const link = row.querySelector('td:first-child a[href]');
+      let match = null;
+      try { match = link && new URL(link.href, location.href).pathname.match(/^\/card\/([^/]+)\//); } catch { match = null; }
+      return match ? match[1].toLowerCase() : null;
+    };
+    const setNameOf = row => (row.querySelector('td:first-child a[href]')?.textContent || '').replace(/\s*#.*$/, '').trim();
+    const groupHead = (setName, set, count) => {
+      const head = document.createElement('tr');
+      head.className = 'stk-print-group-row stk-print-extra';
+      const cell = document.createElement('td');
+      cell.colSpan = columns();
+      // A span inside the cell mirrors Scryfall's own first-column markup, so
+      // the native padding, alignment and single-line rhythm apply unchanged.
+      const label = document.createElement('span');
+      label.textContent = `${setName} (${set.toUpperCase()}) · ${count}`;
+      cell.append(label);
+      head.append(cell);
+      return head;
+    };
+    const wireGroup = (head, rows) => {
+      collapsibleRows.push(...rows);
+      head.addEventListener('click', () => {
+        const collapsed = !head.classList.contains('stk-group-collapsed');
+        head.classList.toggle('stk-group-collapsed', collapsed);
+        for (const row of rows) row.hidden = collapsed;
+      });
+    };
+    // One set is one group: the printings Scryfall already lists and the ones
+    // added here share a single header, so two printings of one set (for
+    // example #304 and #304★) end up under the same group instead of apart.
+    function placeGroups() {
+      clearExtra();
+      const nativeGroups = new Map();
+      for (const row of [...tbody.querySelectorAll('tr:not(.stk-print-extra)')]) {
+        if (row === nativeRow) continue;
+        const set = rowSet(row);
+        if (!set) continue;
+        if (!nativeGroups.has(set)) nativeGroups.set(set, []);
+        nativeGroups.get(set).push(row);
+      }
+      for (const [set, nativeSetRows] of nativeGroups) {
+        const extra = builtGroups.get(set);
+        const added = extra ? extra.rows : [];
+        let anchor = nativeSetRows[nativeSetRows.length - 1];
+        for (const row of added) { insertAfter(anchor, row); anchor = row; }
+        const all = [...nativeSetRows, ...added];
+        if (all.length > 1) {
+          const head = groupHead(extra?.setName || setNameOf(nativeSetRows[0]), set, all.length);
+          nativeSetRows[0].before(head);
+          wireGroup(head, all);
+          extraRows.push(head);
+        }
+        extraRows.push(...added);
+      }
+      for (const [set, extra] of builtGroups) {
+        if (nativeGroups.has(set)) continue;
+        const added = extra.rows;
+        let anchor = nativeRow;
+        if (added.length > 1) {
+          const head = groupHead(extra.setName, set, added.length);
+          insertAtEnd(head);
+          wireGroup(head, added);
+          extraRows.push(head);
+          anchor = head;
+        }
+        for (const row of added) { if (anchor === nativeRow) insertAtEnd(row); else insertAfter(anchor, row); anchor = row; }
+        extraRows.push(...added);
+      }
+      if (truncatedResult) {
+        const notice = statusRow(language === 'ru' ? 'Часть изданий не загрузилась; откройте полную страницу.' : 'More printings are available on the full page.');
+        insertAtEnd(notice);
+        extraRows.push(notice);
+      }
+    }
+
+    // Rows are inserted into Scryfall's own prints table so the expansion stays
+    // part of the original Prints section instead of a detached panel. One set
+    // is one group, so the headers are built in placeGroups().
+    function buildRows(groups) {
       const total = columns();
       const heads = headCells();
       const finishIdx = heads.findIndex(th => th.classList.contains('stk-finish-header'));
@@ -651,29 +818,13 @@
       const nativeHrefs = new Set(
         [...tbody.querySelectorAll('tr:not(.stk-print-extra) td:first-child a[href]')].map(link => path(link.href)).filter(Boolean)
       );
-      const out = [];
+      const built = new Map();
       for (const cards of groups.values()) {
         // Printings already listed by the native table are skipped so the
         // expansion only adds what is missing.
         const entries = cards.filter(card => !nativeHrefs.has(path(card.uri)));
         if (!entries.length) continue;
-        const head = document.createElement('tr');
-        head.className = 'stk-print-group-row stk-print-extra';
-        const headCell = document.createElement('td');
-        headCell.colSpan = total;
-        // A span inside the cell mirrors Scryfall's own first-column markup, so
-        // the native padding, alignment and single-line rhythm apply unchanged.
-        const headLabel = document.createElement('span');
-        headLabel.textContent = `${cards[0].setName} (${cards[0].set.toUpperCase()}) · ${entries.length}`;
-        headCell.append(headLabel);
-        head.append(headCell);
-        const entryRows = [];
-        head.addEventListener('click', () => {
-          const collapsed = !head.classList.contains('stk-group-collapsed');
-          head.classList.toggle('stk-group-collapsed', collapsed);
-          for (const entryRow of entryRows) entryRow.hidden = collapsed;
-        });
-        out.push(head);
+        const group = { setName: cards[0].setName, rows: [] };
         for (const card of entries) {
           const row = document.createElement('tr');
           row.className = 'stk-print-entry stk-print-extra';
@@ -684,17 +835,8 @@
               link.href = path(card.uri);
               link.textContent = `#${card.number}${card.lang !== 'en' ? ` · ${card.lang.toUpperCase()}` : ''}`;
               cell.append(link);
-              if (settings.clipboard && settings.printAddButtons) {
-                const add = button('+', async () => {
-                  add.disabled = true;
-                  try { add.textContent = await window.STK_ADD_PRINT(card) ? '✓' : '+'; }
-                  finally { add.disabled = false; }
-                });
-                add.className = 'stk-native-print-add';
-                add.title = language === 'ru' ? 'Добавить конкретное издание с кодом сета в буфер' : 'Add this printing with its set code to the clipboard';
-                add.setAttribute('aria-label', add.title);
-                cell.append(add);
-              }
+              attachPrintButton(cell, printKey(card.set, card.number), card,
+                language === 'ru' ? 'Добавить конкретное издание с кодом сета в буфер' : 'Add this printing with its set code to the clipboard');
             } else if (i === finishIdx) {
               const glyphs = { nonfoil: '○', foil: '✶', etched: '◈' };
               const text = (card.finishes || []).map(kind => glyphs[kind]).filter(Boolean).join('');
@@ -724,18 +866,11 @@
             if (hiddenIdx.has(i)) cell.classList.add('stk-price-hidden');
             row.append(cell);
           }
-          entryRows.push(row);
-          out.push(row);
+          group.rows.push(row);
         }
-        if (entryRows.length > 1) {
-          head.classList.add('stk-group-collapsed');
-          for (const entryRow of entryRows) entryRow.hidden = true;
-        }
+        built.set(cards[0].set.toLowerCase(), group);
       }
-      if (truncated) {
-        out.push(statusRow(language === 'ru' ? 'Часть изданий не загрузилась; откройте полную страницу.' : 'More printings are available on the full page.'));
-      }
-      return out;
+      return built;
     }
   }
 
@@ -743,18 +878,16 @@
     const name = [...document.querySelectorAll('#main .card-text-card-name')].map(node => node.textContent.trim()).filter(Boolean).join(' // ');
     if (!name) return;
     for (const row of document.querySelectorAll('#main .prints > .prints-table tbody tr')) {
-      const link = row.querySelector('td:first-child a[href^="/card/"],td:first-child a[href^="https://scryfall.com/card/"]');
+      const cell = row.querySelector('td:first-child');
+      // The View-all line spans the whole table and is not a printing.
+      if (!cell || cell.colSpan > 1) continue;
+      const link = cell.querySelector('a[href^="/card/"],a[href^="https://scryfall.com/card/"]');
       const parts = link && new URL(link.href,location.href).pathname.match(/^\/card\/([^/]+)\/([^/]+)/);
-      if (!parts || row.querySelector('.stk-native-print-add')) continue;
-      const add = button('+', async () => {
-        add.disabled = true;
-        try { add.textContent = await window.STK_ADD_PRINT({name,uri:link.href,set:parts[1],number:decodeURIComponent(parts[2])}) ? '✓' : '+'; }
-        finally { add.disabled = false; }
-      });
-      add.className = 'stk-native-print-add';
-      add.title = language === 'ru' ? 'Добавить это издание с сетом' : 'Add this printing with its set';
-      add.setAttribute('aria-label', add.title);
-      row.querySelector('td:first-child').append(add);
+      if (!parts) continue;
+      const set = parts[1];
+      const number = decodeURIComponent(parts[2]);
+      attachPrintButton(cell, printKey(set, number), { name, uri: link.href, set, number },
+        language === 'ru' ? 'Добавить это издание с сетом' : 'Add this printing with its set');
     }
   }
 
@@ -783,9 +916,8 @@
     open.append(badge);
     const writeClipboard = async (format, control, restLabel, stripSets) => {
       const text = cards.map(c => formatCard(c, format, stripSets)).join("\n");
-      try { await navigator.clipboard.writeText(text); control.title = t('Скопировано'); control.classList.add('stk-copied'); }
+      try { await navigator.clipboard.writeText(text); flashCopied(control, restLabel); }
       catch { control.title = t('Ошибка копирования'); }
-      setTimeout(() => { control.title = restLabel; control.classList.remove('stk-copied'); }, 1000);
     };
     // Copy keeps the export format; hovering it reveals a small menu above with
     // a one-off "names only" choice, so sets stay the default action.
@@ -829,8 +961,10 @@
 
     async function persist() {
       await chrome.storage.local.set({ cards });
+      clipboardCards = cards;
       render();
       scan();
+      refreshPrintButtons();
     }
     function formatCard(card, format, stripSets) {
       const suffix = !stripSets && (format === 'moxfield' || card.forceSet) && card.set && card.number ? ` (${card.set.toUpperCase()}) ${card.number}` : '';
@@ -850,9 +984,8 @@
         link.textContent = card.name;
         const copyCard = iconButton('duplicate', `${t('Копировать карту')} ${card.name}`, async () => {
           const { exportFormat } = await chrome.storage.local.get({ exportFormat: 'moxfield' });
-          try { await navigator.clipboard.writeText(formatCard(card, exportFormat)); copyCard.title = t('Скопировано'); copyCard.classList.add('stk-copied'); }
+          try { await navigator.clipboard.writeText(formatCard(card, exportFormat)); flashCopied(copyCard, `${t('Копировать карту')} ${card.name}`); }
           catch { copyCard.title = t('Ошибка копирования'); }
-          setTimeout(() => { copyCard.title = `${t('Копировать карту')} ${card.name}`; copyCard.classList.remove('stk-copied'); }, 1000);
         });
         copyCard.classList.add('stk-copy-card');
         const set = document.createElement('span');
@@ -911,7 +1044,13 @@
       setTimeout(() => { pending = false; scan(); }, 100);
     }).observe(document.body, { childList: true, subtree: true });
     chrome.storage.onChanged.addListener(changes => {
-      if (changes.cards && Array.isArray(changes.cards.newValue)) { cards = changes.cards.newValue; render(); scan(); }
+      if (changes.cards && Array.isArray(changes.cards.newValue)) {
+        cards = changes.cards.newValue;
+        clipboardCards = cards;
+        render();
+        scan();
+        refreshPrintButtons();
+      }
     });
     window.STK_ADD_PRINT = async card => {
       if (!card?.name || !card?.set || !card?.number) return;
@@ -1234,6 +1373,8 @@
     }
     table.hidden = false;
     arrange();
+    // The stats panel under the block has to follow the new column layout.
+    realignStatsPanel?.();
   }
 
   function button(label, click) {

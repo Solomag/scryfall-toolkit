@@ -24,9 +24,9 @@ const CARD_HTML = `<!DOCTYPE html><html><head>
         <tr class="current"><td><a data-card-id="${PRINT_CURRENT}" href="https://scryfall.com/card/tst/1/test-card">Test Card (TST) 1</a></td><td>TST</td><td></td><td></td><td></td></tr>
         <tr><td><a data-card-id="${PRINT_TST2}" href="https://scryfall.com/card/tst/2/test-card">Test Card (TST) 2</a></td><td>TST</td><td></td><td></td><td></td></tr>
         <tr><td><a data-card-id="${PRINT_MH3}" href="https://scryfall.com/card/mh3/42/test-card">Test Card (MH3) 42</a></td><td>MH3</td><td></td><td></td><td></td></tr>
+        <tr class="view-all"><td colspan="5"><a href="https://scryfall.com/search?unique=prints&amp;include=extras">View all prints →</a></td></tr>
       </tbody>
     </table>
-    <div class="prints-all"><a href="https://scryfall.com/card/tst/1/printings">View all prints</a></div>
   </div>
   <div id="stores"><ul class="toolbox-links"></ul></div>
   <div class="card-legality">
@@ -211,7 +211,8 @@ async function cardPageTest() {
     'exportFormat setting still honored for the main click');
 
   // Printings expand directly inside the native prints table.
-  const nativeLink = document.querySelector('#main .prints-all a');
+  const nativeLink = document.querySelector('#main .prints .prints-table .stk-print-new-page-line > a');
+  const viewAllRow = document.querySelector('#main .prints .prints-table tbody tr.view-all');
   const printTable = document.querySelector('#main .prints > .prints-table');
   const printBody = printTable.tBodies && printTable.tBodies[0] ? printTable.tBodies[0] : printTable.querySelector('tbody');
   assertEqual(nativeLink.getAttribute('aria-expanded'), 'false', 'aria-expanded starts false');
@@ -221,22 +222,37 @@ async function cardPageTest() {
   assertEqual(nativeLink.getAttribute('aria-expanded'), 'true', 'aria-expanded flips to true');
   await waitFor(() => printBody.querySelectorAll('.stk-print-group-row').length === 2, 'prints grouped by set inside the table');
   const groupTitles = [...printBody.querySelectorAll('.stk-print-group-row td')].map(td => td.textContent);
-  assertEqual(groupTitles, ['Test Set (TST) · 2', 'Modern Horizons 3 (MH3) · 1'],
-    'group rows carry set name, code and count');
+  assertEqual(groupTitles, ['Test Set (TST) · 4', 'Modern Horizons 3 (MH3) · 2'],
+    'group headers count the native and the added printings of the set together');
   assert([...printBody.querySelectorAll('.stk-print-group-row td')].every(td => td.querySelector('span')),
     'group headers wrap their label in the native span-in-cell markup');
+  // The header of a set sits in front of Scryfall's own first row of that set,
+  // and the added printings follow the set's last native row.
+  const rowOrder = [...printBody.children].map(row => {
+    if (row.classList.contains('stk-print-group-row')) return `group:${row.textContent.split('(')[0].trim()}`;
+    if (row.classList.contains('view-all')) return 'view-all';
+    const link = row.querySelector('td:first-child a[href]');
+    return link ? new URL(link.getAttribute('href'), 'https://scryfall.com').pathname : row.className;
+  });
+  assertEqual(rowOrder, [
+    'group:Test Set', '/card/tst/1/test-card', '/card/tst/2/test-card', '/card/tst/3/test-card', '/card/tst/4/test-card',
+    'group:Modern Horizons 3', '/card/mh3/42/test-card', '/card/mh3/43/test-card', 'view-all'
+  ], 'each set keeps Scryfall rows and added printings under one header, view-all last');
+  assertEqual(nativeLink.textContent, 'Show fewer prints ↑', 'expanded link offers to collapse');
   assertEqual(printBody.querySelectorAll('.stk-print-entry').length, 3, 'missing printings inserted into the table');
   const entryLinks = [...printBody.querySelectorAll('.stk-print-entry a')].map(link => link.textContent);
   assert(entryLinks.includes('#43 · JP'), 'non-English printing shows its language');
   assertEqual(printBody.querySelectorAll('.stk-native-print-add').length, 6,
     'every printing row, native and extra, has an add button');
-  const newPageLink = document.querySelector('#main .prints-all .stk-print-new-page');
+  const newPageLink = document.querySelector('#main .prints .stk-print-new-page');
   assert(newPageLink && newPageLink.closest('.stk-print-new-page-line'),
     'new-page link sits in a line wrapper with the native link');
   assert(newPageLink && newPageLink.previousElementSibling === nativeLink,
     'new-page link is the second half of the native printings line');
   assertEqual(newPageLink.getAttribute('href'), nativeLink.getAttribute('href'),
     'new-page link keeps the native printings URL');
+  assertEqual(newPageLink.textContent, 'Open on a new page', 'new-page link dropped the arrow glyph');
+  assert(viewAllRow.lastElementChild.contains(newPageLink), 'the printings line is the last row of the table');
 
   // Expanded rows carry the same price fills as the native ones.
   const entryOf = suffix => [...printBody.querySelectorAll('.stk-print-entry')]
@@ -262,18 +278,17 @@ async function cardPageTest() {
   );
   assertEqual(expandedCtLink.textContent, '€12.34', 'expanded row joins the shared CardTrader queue');
 
-  // Sets with several missing printings start collapsed and toggle on header click.
+  // Groups start open and collapse on header click, native rows included.
   const tstGroup = [...printBody.querySelectorAll('.stk-print-group-row')]
     .find(row => row.textContent.includes('(TST)'));
-  const tstEntries = [...printBody.querySelectorAll('.stk-print-entry')]
-    .filter(row => /\/card\/tst\//.test(row.querySelector('a').getAttribute('href')));
-  assertEqual(tstEntries.length, 2, 'two missing TST printings under one header');
-  assert(tstEntries.every(row => row.hidden), 'multi-printing set starts collapsed');
+  const tstRows = [...printBody.querySelectorAll('tr:not(.stk-print-group-row):not(.stk-print-status)')]
+    .filter(row => /\/card\/tst\//.test(row.querySelector('td:first-child a[href]').getAttribute('href')));
+  assertEqual(tstRows.length, 4, 'two native and two added TST printings under one header');
+  assert(tstRows.every(row => !row.hidden), 'groups start open');
   click(tstGroup);
-  assert(tstEntries.every(row => !row.hidden), 'clicking the group header reveals its printings');
+  assert(tstRows.every(row => row.hidden), 'clicking the group header hides native and added printings together');
   click(tstGroup);
-  assert(tstEntries.every(row => row.hidden), 'clicking again collapses the group');
-  click(tstGroup);
+  assert(tstRows.every(row => !row.hidden), 'clicking again reveals the group');
 
   // Toggle a printing inside the expanded table.
   const thirdPrintAdd = await waitFor(
@@ -283,18 +298,39 @@ async function cardPageTest() {
   );
   click(thirdPrintAdd);
   await waitFor(() => thirdPrintAdd.textContent === '✓', 'expanded print button selected');
+  assert(thirdPrintAdd.classList.contains('stk-print-selected'), 'selected print button is marked for the always-visible rule');
   assertEqual(mock.state.cards.length, 4, 'printing added from expanded table');
   assertEqual(mock.state.cards[3], {
     name: 'Test Card', url: 'https://scryfall.com/card/tst/3/test-card', set: 'tst', number: '3', forceSet: true
   }, 'expanded print saved with forceSet');
   click(thirdPrintAdd);
   await waitFor(() => thirdPrintAdd.textContent === '+', 'expanded print button deselected');
+  assert(!thirdPrintAdd.classList.contains('stk-print-selected'), 'deselected print button loses the always-visible mark');
   assertEqual(mock.state.cards.length, 3, 'printing removed again');
 
   click(nativeLink);
   assert(!printTable.classList.contains('stk-prints-expanded'), 'second click collapses the table again');
   assertEqual(printBody.querySelectorAll('.stk-print-extra').length, 0, 'extra rows leave the table when collapsed');
   assertEqual(nativeLink.getAttribute('aria-expanded'), 'false', 'aria-expanded resets to false');
+  assertEqual(nativeLink.textContent, 'View all prints →', 'collapsed link gets the native label back');
+  assert(tstRows.every(row => !row.hidden), 'native rows are visible again after the collapse');
+
+  // A printing that is already in the clipboard shows a permanent check mark:
+  // the current printing was added through the scan button earlier.
+  const firstNativeAdd = printBody.querySelector('tr.current .stk-native-print-add');
+  assertEqual(firstNativeAdd.textContent, '✓', 'a buffered printing shows a check mark right away');
+  assert(firstNativeAdd.classList.contains('stk-print-selected'), 'the buffered printing is marked as selected');
+  click(firstNativeAdd);
+  await waitFor(() => firstNativeAdd.textContent === '+', 'the check mark clears when the printing is removed');
+  click(firstNativeAdd);
+  await waitFor(() => firstNativeAdd.textContent === '✓', 'the check mark comes back when it is added again');
+  click(nativeLink);
+  await waitFor(() => printBody.querySelectorAll('.stk-print-group-row').length === 2, 'table expands again');
+  const reExpandedAdd = printBody.querySelector('tr.current .stk-native-print-add');
+  assertEqual(reExpandedAdd, firstNativeAdd, 'the cached rows keep the same buttons');
+  assertEqual(reExpandedAdd.textContent, '✓', 're-expanded table still shows the check mark');
+  click(nativeLink);
+  assert(!printTable.classList.contains('stk-prints-expanded'), 'table is collapsed again');
 
   // Clear the clipboard.
   click(aside.querySelector('.stk-icon-trash'));

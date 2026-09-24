@@ -73,11 +73,15 @@ function cssCheck() {
   const css = read('content.css');
   assert(css.includes('#main .prints > .prints-table .stk-native-print-add{'),
     'native print button styles exist');
-  assert(!/stk-native-print-add\{[^}]*visibility:hidden/.test(css),
-    'print buttons stay visible instead of hover-gated');
+  assert(css.includes('tbody tr:hover .stk-native-print-add'),
+    'print buttons appear when their own printing is hovered');
+  assert(css.includes('.stk-native-print-add.stk-print-selected{opacity:1'),
+    'a buffered printing keeps its check mark on screen');
+  assert(css.includes('@media(hover:none)'),
+    'print buttons stay reachable on touch screens');
   assert(css.includes('#main .prints > .prints-table .stk-print-group-row td{'),
     'set group header rows styled');
-  assert(css.includes('#main .prints > .prints-table .stk-print-entry[hidden]{display:none}'),
+  assert(css.includes('#main .prints > .prints-table tbody tr[hidden]{display:none!important}'),
     'collapsed group rows are display:none');
   assert(!css.includes('#stk-all-prints'),
     'detached prints panel styles removed');
@@ -90,11 +94,15 @@ function cssCheck() {
     '#scryfall-toolkit-clipboard .stk-copy-menu[hidden]{display:none}',
     '#scryfall-toolkit-clipboard .stk-copy-plain',
     '#scryfall-toolkit-clipboard .stk-list-set',
-    'stk-copied-pop', 'padding:14px 2px 0 25px',
+    'stk-copied-pop', 'padding:14px 2px 16.5px 25px',
     '#main .card-text:has(.card-legality #stk-edhrec){padding-bottom:0!important}'
   ]) assert(css.includes(selector), `content.css styles ${selector}`);
   assert(/stk-copied-pop \.15s/.test(css), 'copied pop animation is quick');
-  assert(css.includes('margin-top:15px'), 'stats panel leaves 22px above itself');
+  // 22px on a 125% zoom is 17.6 CSS px, which is 12px above the panel plus the
+  // 5.6px the legality row itself adds above the border.
+  assert(css.includes('margin-top:12px'), 'stats panel leaves 22px above itself at 125% zoom');
+  assert(!css.includes('margin-left:4px'),
+    'the salt meter offset is measured at runtime, not hard-coded');
   assert(css.includes('#main .prints > .prints-table tbody tr:has(.stk-native-print-add){position:relative}'),
     'print rows anchor their plus button');
   assert(css.includes('.stk-native-print-add{position:absolute;top:50%;right:-27px'),

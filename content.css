@@ -72,14 +72,13 @@
 .stk-ct-price-header,.stk-cm-price-header{white-space:nowrap!important}
 .prints-table th .stk-price-heading{display:inline-flex;align-items:center;justify-content:flex-end;gap:4px;white-space:nowrap;vertical-align:middle;line-height:15px}
 .prints-table th .stk-price-heading img{display:block;flex:none;vertical-align:middle}
-/* 22px between the last legality row and the panel border, and 22px from the
-   bottom badge down to the card frame: the native card-text padding is dropped
-   only while the stats panel is present. */
-#stk-edhrec{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;box-sizing:border-box;width:100%;margin-top:15px;padding:14px 2px 0 25px;border-top:1px solid #e5e1e4;color:#16161d;font:12px/1.2 Lato,'Helvetica Neue',Arial,sans-serif}
+/* The three visible gaps around the panel are 22px on the user's 125% zoom,
+   which is 17.6 CSS px: 12px above the panel, 15px under its top border and
+   16.5px of panel padding below the last line. The native card-text padding is
+   dropped only while the panel is present. */
+#stk-edhrec{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;box-sizing:border-box;width:100%;margin-top:12px;padding:14px 2px 16.5px 25px;border-top:1px solid #e5e1e4;color:#16161d;font:12px/1.2 Lato,'Helvetica Neue',Arial,sans-serif}
 #main .card-text:has(.card-legality #stk-edhrec){padding-bottom:0!important}
 #stk-edhrec .stk-edhrec-item{display:grid;grid-template-columns:68px minmax(0,1fr);align-items:center;column-gap:6px;min-width:0}
-#stk-edhrec .stk-edhrec-salt{margin-left:4px}
-#stk-edhrec .stk-edhrec-salt{margin-left:0}
 #stk-edhrec .stk-edhrec-label{grid-column:2;grid-row:1;min-width:0;display:inline-flex;align-items:center;gap:3px;white-space:nowrap}
 #stk-edhrec .stk-edhrec-value,#stk-edhrec .stk-salt-meter{grid-column:1;grid-row:1}
 #stk-edhrec .stk-stat-badge{box-sizing:border-box;display:flex;align-items:center;justify-content:center;width:68px;height:20px;min-width:0;min-height:0;padding:2px 2px;border-radius:2px;text-align:center;color:#fff;font:10px/1 Lato,'Helvetica Neue',Arial,sans-serif;font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -102,17 +101,20 @@
 html.stk-dark #stk-edhrec{color:#e6e3df;border-color:#414345}
 html.stk-dark #stk-edhrec .stk-edhrec-usage>.stk-edhrec-fraction{color:#d5d2d6}
 /* The plus lives just outside the row, like it did before it moved into the
-   name cell, and stays visible and clickable without a hover gate. */
+   name cell. It stays out of the way until its own printing is hovered, and a
+   printing that is already in the clipboard keeps a permanent check mark. */
 #main .prints > .prints-table tbody tr:has(.stk-native-print-add){position:relative}
-#main .prints > .prints-table .stk-native-print-add{position:absolute;top:50%;right:-27px;transform:translateY(-50%);width:23px;height:23px;padding:0;border:1px solid #75707b;border-radius:3px;background:#35333b;color:#fff;font:16px/1 Arial,sans-serif;cursor:pointer;z-index:2}
+#main .prints > .prints-table .stk-native-print-add{position:absolute;top:50%;right:-27px;transform:translateY(-50%);width:23px;height:23px;padding:0;border:1px solid #75707b;border-radius:3px;background:#35333b;color:#fff;font:16px/1 Arial,sans-serif;cursor:pointer;z-index:2;opacity:0;pointer-events:none;transition:opacity .12s ease}
+#main .prints > .prints-table tbody tr:hover .stk-native-print-add,#main .prints > .prints-table .stk-native-print-add:focus-visible,#main .prints > .prints-table .stk-native-print-add.stk-print-selected{opacity:1;pointer-events:auto}
 #main .prints > .prints-table .stk-native-print-add:hover,#main .prints > .prints-table .stk-native-print-add:focus-visible{background:#4c4954}
+@media(hover:none){#main .prints > .prints-table .stk-native-print-add{opacity:1;pointer-events:auto}}
 /* Group headers reuse the native first-cell markup (its span takes the native
    padding, line-height and alignment) so the whole label stays on one line. */
 #main .prints > .prints-table .stk-print-group-row td{padding:0;background:#efeaf4;border-top:1px solid #ddd8e0;cursor:pointer;user-select:none}
 #main .prints > .prints-table .stk-print-group-row td>span{font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #main .prints > .prints-table .stk-print-group-row td>span::before{content:"▾ ";font-size:11px}
 #main .prints > .prints-table .stk-print-group-row.stk-group-collapsed td>span::before{content:"▸ "}
-#main .prints > .prints-table .stk-print-entry[hidden]{display:none}
+#main .prints > .prints-table tbody tr[hidden]{display:none!important}
 #main .prints > .prints-table .stk-print-status td{padding:8px 13px;font-size:12px}
 /* "Open on a new page" shares the native View-all line as its right half. */
 #main .prints .stk-print-new-page-line{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:7px 4px 6px 13px}
