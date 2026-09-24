@@ -119,10 +119,12 @@ function cssCheck() {
     'group header label uses the native span-in-cell markup');
   assert(css.includes('.stk-print-group-row.stk-current-group td{'),
     'the set of the card being viewed is highlighted');
-  assert(css.includes('tr.stk-group-end td{border-bottom:1px solid #ddd8e0}'),
-    'an open group is closed by a light rule under its last row');
-  assert(css.includes('.stk-print-group-row.stk-group-folded-end td{border-bottom'),
-    'a folded group closes the rule at its own header');
+  assert(css.includes('tr.stk-group-end td{border-bottom:2px solid #cfc3d6}'),
+    'an open group is closed by a light stripe under its last row');
+  assert(css.includes('.stk-print-group-row.stk-group-folded-end td{border-bottom:2px'),
+    'a folded group closes the stripe at its own header');
+  assert(!css.includes('.stk-print-group-row td{') || !/\.stk-print-group-row td\{[^}]*user-select:none/.test(css),
+    'the group label stays selectable so it can be copied');
   assert(css.includes('.stk-print-new-page-line.stk-print-line-end{justify-content:flex-end}'),
     'a lone full-page link sits on the right of the line');
   assert(css.includes('.stk-tag-icon.icon-flipped svg{transform:scale(-1,1)}'),

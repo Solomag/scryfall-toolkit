@@ -780,10 +780,29 @@
         group.push(card);
         groups.set(card.set, group);
       }
+      // Scryfall's own row order reveals the print preference; the API always
+      // answers newest first, so the added printings are flipped to match.
+      const releaseOf = new Map();
+      for (const cards of groups.values()) {
+        for (const card of cards) releaseOf.set(printKey(card.set, card.number), card.released);
+      }
+      const nativeDates = [];
+      for (const row of [...tbody.querySelectorAll('tr:not(.stk-print-extra)')]) {
+        if (row === nativeRow) continue;
+        const identity = rowSet(row);
+        const released = identity && releaseOf.get(printKey(identity.set, identity.number));
+        if (released) nativeDates.push(released);
+      }
+      const oldestFirst = nativeDates.length > 1 && nativeDates[0] < nativeDates[nativeDates.length - 1];
+      const byAge = (a, b) => (a || '') === (b || '') ? 0 : (a || '') < (b || '') ? -1 : 1;
+      const compare = oldestFirst ? byAge : (a, b) => -byAge(a, b);
+      const ordered = new Map([...groups.entries()]
+        .sort((a, b) => compare(a[1][0]?.released, b[1][0]?.released))
+        .map(([set, cards]) => [set, cards.slice().sort((a, b) => compare(a.released, b.released))]));
       // The Finish column header is added by a separate response; wait for
       // it so column spans and cell indexes match the settled header row.
       await finishesSettled;
-      builtGroups = buildRows(groups);
+      builtGroups = buildRows(ordered);
       truncatedResult = !!truncated;
       loaded = true;
     };
@@ -829,10 +848,11 @@
       try { match = link && new URL(link.href, location.href).pathname.match(/^\/card\/([^/]+)\/([^/]+)/); } catch { match = null; }
       return match ? { set: match[1].toLowerCase(), number: decodeURIComponent(match[2]) } : null;
     };
-    // Scryfall puts the collector number on its own line inside the link, so the
-    // whitespace has to be collapsed before the number can be cut off.
+    // Scryfall puts the collector number on its own line inside the link and
+    // marks a foil-only printing with a star, so the whitespace is collapsed and
+    // both the number and the star are cut off.
     const setNameOf = row => (row.querySelector('td:first-child a[href]')?.textContent || '')
-      .replace(/\s+/g, ' ').trim().replace(/\s*#.*$/, '').trim();
+      .replace(/\s+/g, ' ').trim().replace(/\s*#.*$/, '').replace(/[\s✶★]+$/, '').trim();
     const normName = name => String(name || '').replace(/\s+/g, ' ').trim().toLowerCase();
     const baseName = name => normName(name).replace(/\s+promos?$/, '');
     const groupHead = (setName, set, count) => {
@@ -924,11 +944,12 @@
       for (const [set, nativeSetRows] of nativeGroups) {
         const extra = builtGroups.get(set);
         const added = extra ? extra.rows : [];
-        if (nativeSetRows.length + added.length > 1) {
-          units.push({ set, sets: [set], setName: extra?.setName || setNameOf(nativeSetRows[0]), nativeRows: nativeSetRows, added, grouped: true });
-        } else if (added.length) {
-          units.push({ set, sets: [set], setName: extra.setName, nativeRows: [], added, grouped: false });
-        }
+        // Even a set with a single printing joins the list: it may still be the
+        // parent a promo set has to be merged into.
+        units.push({
+          set, sets: [set], setName: extra?.setName || setNameOf(nativeSetRows[0]),
+          nativeRows: nativeSetRows, added, grouped: nativeSetRows.length + added.length > 1
+        });
       }
       for (const [set, extra] of builtGroups) {
         if (nativeGroups.has(set)) continue;
@@ -937,7 +958,10 @@
           added: extra.rows, grouped: extra.rows.length > 1
         });
       }
-      const merged = mergePromoUnits(units);
+      // After a promo merge the set holds more than one printing, so it earns a
+      // header even when one side arrived as a single native row.
+      const merged = mergePromoUnits(units)
+        .map(unit => ({ ...unit, grouped: unit.nativeRows.length + unit.added.length > 1 }));
       totalUnits = merged.length;
       placedUnits = merged.slice(0, showingAll ? Infinity : 10);
       for (const unit of placedUnits) {

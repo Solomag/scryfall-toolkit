@@ -429,7 +429,7 @@ async function printsGroupsEdgeTest() {
           #1</a></td><td>AAA</td><td></td><td></td><td></td></tr>
         <tr><td><a data-card-id="a2" href="/card/aaa/2/edge-card">Set AAA
           #2</a></td><td>AAA</td><td></td><td></td><td></td></tr>
-        <tr><td><a data-card-id="b1" href="/card/bbb/1/edge-card">Set BBB
+        <tr><td><a data-card-id="b1" href="/card/bbb/1/edge-card">Set BBB ★
           #1</a></td><td>BBB</td><td></td><td></td><td></td></tr>
         <tr class="view-all"><td colspan="5"><a href="https://scryfall.com/search?unique=prints">View all prints →</a></td></tr>`;
   const html = CARD_HTML.replace(/<tbody>[\s\S]*?<\/tbody>/, `<tbody>${native}</tbody>`);
@@ -458,7 +458,7 @@ async function printsGroupsEdgeTest() {
 
   const heads = [...printBody.querySelectorAll('.stk-print-group-row span')].map(node => node.textContent);
   assertEqual(heads, ['Set AAA (AAA) · 3', 'Set BBB (BBB) · 2'],
-    'a native-only group takes its set name from the row, and the promo set joins its parent');
+    'a native-only group takes its set name from the row without the star or the number, and the promo set joins its parent');
   const promoRow = printBody.querySelector('.stk-print-entry a[href*="/card/aaap/"]');
   assertEqual(promoRow.textContent, '#7 (AAAP)', 'a promo row inside the parent group shows its own set code');
   let enclosingHead = promoRow.closest('tr').previousElementSibling;
@@ -509,6 +509,99 @@ async function printsSameTabTest() {
   assertEqual(link.getAttribute('rel'), null, 'and needs no noopener');
 }
 
+async function promoParentMergeTest() {
+  console.log('content.js: promo set merges into a parent with one native printing');
+  // Scryfall lists a single printing of the parent set; the promo set is only
+  // known after loading. The parent still has to adopt the promo group.
+  const native = `
+        <tr class="current"><td><a data-card-id="s1" href="/card/abc/7/edge-card">Set ABC
+          #7</a></td><td>ABC</td><td></td><td></td><td></td></tr>
+        <tr class="view-all"><td colspan="5"><a href="https://scryfall.com/search?unique=prints">View all prints →</a></td></tr>`;
+  const html = CARD_HTML.replace(/<tbody>[\s\S]*?<\/tbody>/, `<tbody>${native}</tbody>`);
+  const promoRoutes = {
+    ...routes,
+    finishes: () => ({}),
+    allPrints: () => ({
+      prints: [
+        { id: 'abc7', name: 'Edge Card', uri: 'https://scryfall.com/card/abc/7/edge-card', set: 'abc', setName: 'Set ABC', number: '7', lang: 'en', digital: false, finishes: ['nonfoil'], prices: {} },
+        { id: 'abcp1', name: 'Edge Card', uri: 'https://scryfall.com/card/abcp/1/edge-card', set: 'abcp', setName: 'Set ABC Promos', number: '1', lang: 'en', digital: false, finishes: ['foil'], prices: {} },
+        { id: 'abcp2', name: 'Edge Card', uri: 'https://scryfall.com/card/abcp/2/edge-card', set: 'abcp', setName: 'Set ABC Promos', number: '2', lang: 'en', digital: false, finishes: ['foil'], prices: {} }
+      ],
+      truncated: false
+    })
+  };
+  const page = createPage({ url: 'https://scryfall.com/card/abc/7/edge-card', html, state: { cards: [] }, routes: promoRoutes });
+  await page.script('i18n.js');
+  await page.script('format-catalog.js');
+  await page.script('tag-icons.js');
+  await page.script('data/shambleshark-nicknames.js');
+  await page.script('content.js');
+  await sleep(60);
+  const { document } = page;
+  const printBody = document.querySelector('#main .prints .prints-table tbody');
+  await waitFor(() => printBody.querySelectorAll('.stk-print-group-row').length === 1, 'one merged group');
+  const head = printBody.querySelector('.stk-print-group-row');
+  assertEqual(head.querySelector('span').textContent, 'Set ABC (ABC) · 3',
+    'the parent set adopts the promo printings into one group of three');
+  const labels = [...printBody.querySelectorAll('tr:not(.stk-print-group-row):not(.view-all) td:first-child a[href]')]
+    .map(a => a.textContent.replace(/^Set ABC Promos |^Set ABC /, ''));
+  assertEqual(labels, ['#7', '#1 (ABCP)', '#2 (ABCP)'],
+    'the native parent row and both promo rows share the group, promo rows keep their code');
+  assert(head.classList.contains('stk-current-group'), 'the merged group is the one holding the current card');
+}
+
+async function printsOrderTest() {
+  console.log('content.js: printings follow the page order');
+  const print = (set, setName, number, released) => ({
+    id: `o-${set}-${number}`, name: 'Order Card', uri: `https://scryfall.com/card/${set}/${number}/order-card`,
+    set, setName, number, lang: 'en', digital: false, finishes: ['nonfoil'], prices: {}, released
+  });
+  const first = print('old', 'Set Old', '1', '2020-01-01');
+  const second = print('old', 'Set Old', '2', '2020-02-01');
+  const midOld = print('mid', 'Set Mid', '1', '2021-06-01');
+  const midNew = print('mid', 'Set Mid', '2', '2022-03-01');
+  const fresh = print('new', 'Set New', '1', '2023-01-01');
+  const build = (nativeOrder, added) => {
+    const rows = nativeOrder.map((card, index) => `<tr${index === 0 ? ' class="current"' : ''}><td><a data-card-id="n${index}" href="/card/${card.set}/${card.number}/order-card">${card.setName}
+          #${card.number}</a></td><td>${card.set.toUpperCase()}</td><td></td><td></td><td></td></tr>`).join('');
+    return {
+      html: CARD_HTML.replace(/<tbody>[\s\S]*?<\/tbody>/, `<tbody>${rows}
+        <tr class="view-all"><td colspan="5"><a href="https://scryfall.com/search?unique=prints">View all prints →</a></td></tr></tbody>`),
+      // The API always answers newest first, no matter what the page shows.
+      routes: { ...routes, finishes: () => ({}), allPrints: () => ({ prints: added, truncated: false }) }
+    };
+  };
+  const load = async setup => {
+    const page = createPage({ url: 'https://scryfall.com/card/old/1/order-card', html: setup.html, state: { cards: [] }, routes: setup.routes });
+    await page.script('i18n.js');
+    await page.script('format-catalog.js');
+    await page.script('tag-icons.js');
+    await page.script('data/shambleshark-nicknames.js');
+    await page.script('content.js');
+    await sleep(60);
+    return page.document.querySelector('#main .prints .prints-table tbody');
+  };
+  const layout = body => [...body.children].filter(row => !row.classList.contains('view-all')).map(row => {
+    if (row.classList.contains('stk-print-group-row')) return 'H:' + row.querySelector('span').textContent;
+    const link = row.querySelector('td:first-child a[href]');
+    return link ? link.textContent : row.className;
+  });
+
+  // The API answers with every printing, newest first, including the ones
+  // Scryfall already lists; the added ones are what we have to order.
+  const oldestFirst = await load(build([first, second], [fresh, midNew, midOld, second, first]));
+  await waitFor(() => oldestFirst.querySelectorAll('.stk-print-group-row').length === 2, 'oldest page: groups built');
+  assertEqual(layout(oldestFirst), [
+    'H:Set Old (OLD) · 2', '#1', '#2', 'H:Set Mid (MID) · 2', '#1', '#2', 'Set New #1'
+  ], 'with the oldest printing on top the added sets follow from oldest to newest');
+
+  const newestFirst = await load(build([second, first], [midOld, midNew, fresh, first, second]));
+  await waitFor(() => newestFirst.querySelectorAll('.stk-print-group-row').length === 2, 'newest page: groups built');
+  assertEqual(layout(newestFirst), [
+    'H:Set Old (OLD) · 2', '#2', '#1', 'Set New #1', 'H:Set Mid (MID) · 2', '#2', '#1'
+  ], 'with the newest printing on top the added sets follow from newest to oldest, native rows keep their order');
+}
+
 async function legacyMigrationTest() {
   console.log('content.js: legacy cardClipboard migration');
   const page = createPage({
@@ -533,6 +626,8 @@ async function legacyMigrationTest() {
   try {
     await cardPageTest();
     await printsGroupsEdgeTest();
+    await promoParentMergeTest();
+    await printsOrderTest();
     await printsSameTabTest();
     await searchPageTest();
     await clipboardDisabledTest();

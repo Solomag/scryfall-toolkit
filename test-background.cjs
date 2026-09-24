@@ -72,7 +72,7 @@ const PRINT_A = {
   id: 'card-a', name: 'Test Card', scryfall_uri: 'https://scryfall.com/card/tst/1/test',
   set: 'tst', set_name: 'Test Set', collector_number: '1', lang: 'en',
   digital: false, finishes: ['nonfoil'], prices: { eur: '1.00' },
-  image_uris: { normal: 'https://cards.scryfall.io/normal/front/a/aa/test.jpg' }
+  released_at: '2024-01-02', image_uris: { normal: 'https://cards.scryfall.io/normal/front/a/aa/test.jpg' }
 };
 const PRINT_B = {
   id: 'card-b', name: 'Test Card', scryfall_uri: 'https://scryfall.com/card/mh3/42/test',
@@ -300,8 +300,9 @@ const setsFetches = () => fetchLog.filter(url => url === 'https://api.scryfall.c
       id: 'card-a', name: 'Test Card', uri: 'https://scryfall.com/card/tst/1/test',
       set: 'tst', setName: 'Test Set', number: '1', lang: 'en',
       digital: false, finishes: ['nonfoil'], prices: { eur: '1.00' },
-      image: 'https://cards.scryfall.io/normal/front/a/aa/test.jpg'
-    }, 'scryfall print fields are renamed for the content script, art included');
+      released: '2024-01-02', image: 'https://cards.scryfall.io/normal/front/a/aa/test.jpg'
+    }, 'scryfall print fields are renamed for the content script, art and release date included');
+    assertEqual(allPrints.data.prints[1].released, '', 'a printing without a release date reports an empty one');
     assertEqual(allPrints.data.prints[1].image, null, 'a printing without art reports no image');
     const evilPage = await send({ type: 'allPrints', oracleId: EVIL_PRINTS_ID });
     assertEqual(evilPage, { ok: false, error: 'Invalid next page' }, 'next_page from a foreign host is rejected');

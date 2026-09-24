@@ -225,6 +225,9 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
             id: card.id, name: card.name, uri: card.scryfall_uri, set: card.set,
             setName: card.set_name, number: card.collector_number, lang: card.lang,
             digital: card.digital, finishes: card.finishes, prices: card.prices,
+            // Release dates let the content script order the printings the way
+            // Scryfall's own rows are ordered on this page.
+            released: card.released_at || '',
             // The row preview reuses the printing's own art, so it needs no
             // extra request once the print list is in.
             image: card.image_uris?.normal || card.card_faces?.[0]?.image_uris?.normal || null
