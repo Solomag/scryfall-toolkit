@@ -117,6 +117,8 @@ function cssCheck() {
     'new-page link shares the native printings line');
   assert(css.includes('.stk-print-group-row td>span{'),
     'group header label uses the native span-in-cell markup');
+  assert(css.includes('.stk-print-group-row.stk-current-group td{'),
+    'the set of the card being viewed is highlighted');
   assert(css.includes('.stk-tag-icon.icon-flipped svg{transform:scale(-1,1)}'),
     'flipped tag icons rule exists');
   const flipLine = read('content.js').split('\n').find(line => line.includes('icon-flipped'));
@@ -144,6 +146,8 @@ function cssCheck() {
     'dark repaint for the card-page action buttons');
   assert(theme.includes('html.stk-dark .prints-table .stk-print-group-row td{background:#2a2835!important'),
     'dark group header rows win over the light content rule');
+  assert(theme.includes('html.stk-dark .prints-table .stk-print-group-row.stk-current-group td{'),
+    'dark theme keeps the current group accent');
   assert(theme.includes('html.stk-dark .prints-table :is(a,span).currency-eur{'),
     'dark theme recolors generated price spans too');
   assert(/Never paint a footer band/.test(theme), 'footer band guard comment present');

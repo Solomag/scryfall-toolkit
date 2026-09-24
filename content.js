@@ -23,6 +23,10 @@
   // throttled CardTrader queue is reused for rows that are created later.
   let finishesSettled = Promise.resolve();
   let enqueueCardTraderPrint = null;
+  // A printing's CardTrader cell is fetched once no matter how often the table
+  // is regrouped; the set is keyed on the DOM node so a re-expand while the
+  // queue is still draining can never fill the same cell twice.
+  const ctQueuedCells = new WeakSet();
   // Print-row buttons follow the clipboard: a printing counts as selected when
   // a buffered card points at the same set and number, and every button
   // refreshes whenever the clipboard changes here or in another tab.
@@ -72,9 +76,6 @@
   }
   // Set by the stats panel so a re-arranged legality block can realign it.
   let realignStatsPanel = null;
-  // Set by the prints expansion so the table can be regrouped once every column
-  // (Finish, CardTrader) has landed.
-  let regroupPrints = null;
 
   // One hover preview shared by the tag panel and the expanded print rows.
   let previewBox, previewTimer, previewHideTimer, activePreview;
@@ -161,12 +162,6 @@
   if (settings.deckNoPrices) initDeckPriceOption();
   if (settings.stackedDeckCards) initStackedDeckCards();
   if (settings.deckTokens) initDeckTokens();
-  if (cardPage) {
-    // The Finish column lands with its own response, so the print groups are
-    // built only after the header row is final.
-    await finishesSettled;
-    regroupPrints?.();
-  }
 
   function initSetFilter() {
     // Scryfall lists these curated online cubes under /cubes/, outside its
@@ -397,7 +392,7 @@
           row.children[eurIndex]?.after(cell);
           const print = row.querySelector('a[data-card-id]');
           const path = print?.href && new URL(print.href, location.href).pathname.match(/^\/card\/([^/]+)\//);
-          if (path) queue.push({ cell, id: print.dataset.cardId, set: path[1] });
+          if (path) { ctQueuedCells.add(cell); queue.push({ cell, id: print.dataset.cardId, set: path[1] }); }
         }
         // Start with the current printing. Remaining rows arrive gradually to respect the marketplace rate limit.
         queue.sort((a,b) => Number(b.id === id) - Number(a.id === id));
@@ -439,7 +434,12 @@
             while (queue.length) { if (await fetchPrint(queue.shift())) break; }
           } finally { pumping = false; }
         };
-        enqueueCardTraderPrint = (cell, cardId, set) => { queue.push({ cell, id: cardId, set }); pump(); };
+        enqueueCardTraderPrint = (cell, cardId, set) => {
+          if (ctQueuedCells.has(cell)) return;
+          ctQueuedCells.add(cell);
+          queue.push({ cell, id: cardId, set });
+          pump();
+        };
         pump();
       }
     }
@@ -710,6 +710,7 @@
     let extraRows = [];
     let collapsibleRows = [];
     let loaded = false;
+    let showingAll = false;
     const fewerLabel = language === 'ru' ? 'Показать меньше изданий ↑' : 'Show fewer prints ↑';
     // Everything added here goes in front of the View-all line, so the line
     // itself ends up as the last row of the table.
@@ -727,6 +728,40 @@
         delete link.dataset.stkLabel;
       }
     };
+    // Fetches the complete print list once; the default view groups it too, so
+    // the ten-entry cap covers the whole card, not only Scryfall's subset.
+    const loadPrints = async () => {
+      if (loaded) return;
+      let oracleId = document.querySelector('meta[name="scryfall:oracle:id"]')?.content;
+      if (!oracleId) {
+        const id = document.querySelector('#main .prints-table tbody tr.current a[data-card-id]')?.dataset.cardId;
+        if (!id) throw new Error('Card identity unavailable');
+        oracleId = (await request({type:'card', id})).oracle_id;
+      }
+      const {prints, truncated} = await request({type:'allPrints', oracleId});
+      const categories = (settings.hideNonTournamentSets || settings.hideOversizedSets || settings.hideForeignBlackBorder || settings.hideDigitalSets)
+        ? await request({type:'setCategories'}).catch(() => ({})) : {};
+      const excluded = new Set([
+        ...(settings.hideDigitalSets ? categories.digital || [] : []),
+        ...(settings.hideNonTournamentSets ? categories.nonTournament || [] : []),
+        ...(settings.hideOversizedSets ? categories.oversized || [] : []),
+        ...(settings.hideForeignBlackBorder ? categories.foreignBlackBorder || [] : [])
+      ]);
+      const groups = new Map();
+      for (const card of prints) {
+        if (excluded.has(card.set) || settings.hideDigitalSets && card.digital ||
+            settings.hideNonEnglishPrints && card.lang !== 'en') continue;
+        const group = groups.get(card.set) || [];
+        group.push(card);
+        groups.set(card.set, group);
+      }
+      // The Finish column header is added by a separate response; wait for
+      // it so column spans and cell indexes match the settled header row.
+      await finishesSettled;
+      builtGroups = buildRows(groups);
+      truncatedResult = !!truncated;
+      loaded = true;
+    };
     native.setAttribute('aria-expanded', 'false');
     native.addEventListener('click', async event => {
       if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
@@ -735,53 +770,27 @@
       table.classList.toggle('stk-prints-expanded', expanding);
       native.setAttribute('aria-expanded', String(expanding));
       native.textContent = expanding ? fewerLabel : nativeLabel;
-      if (!expanding) {
-        clearExtra();
-        return;
-      }
-      if (loaded) {
-        placeGroups();
-        return;
-      }
-      const status = statusRow(language === 'ru' ? 'Загружаю издания…' : 'Loading printings…');
-      insertAtEnd(status);
-      try {
-        let oracleId = document.querySelector('meta[name="scryfall:oracle:id"]')?.content;
-        if (!oracleId) {
-          const id = document.querySelector('#main .prints-table tbody tr.current a[data-card-id]')?.dataset.cardId;
-          if (!id) throw new Error('Card identity unavailable');
-          oracleId = (await request({type:'card', id})).oracle_id;
+      showingAll = expanding;
+      if (expanding && !loaded) {
+        const status = statusRow(language === 'ru' ? 'Загружаю издания…' : 'Loading printings…');
+        insertAtEnd(status);
+        try { await loadPrints(); status.remove(); }
+        catch {
+          status.querySelector('td').textContent =
+            language === 'ru' ? 'Не удалось загрузить издания. Откройте отдельную страницу.' : 'Could not load printings. Open the separate page.';
+          return;
         }
-        const {prints, truncated} = await request({type:'allPrints', oracleId});
-        const categories = (settings.hideNonTournamentSets || settings.hideOversizedSets || settings.hideForeignBlackBorder || settings.hideDigitalSets)
-          ? await request({type:'setCategories'}).catch(() => ({})) : {};
-        const excluded = new Set([
-          ...(settings.hideDigitalSets ? categories.digital || [] : []),
-          ...(settings.hideNonTournamentSets ? categories.nonTournament || [] : []),
-          ...(settings.hideOversizedSets ? categories.oversized || [] : []),
-          ...(settings.hideForeignBlackBorder ? categories.foreignBlackBorder || [] : [])
-        ]);
-        const groups = new Map();
-        for (const card of prints) {
-          if (excluded.has(card.set) || settings.hideDigitalSets && card.digital ||
-              settings.hideNonEnglishPrints && card.lang !== 'en') continue;
-          const group = groups.get(card.set) || [];
-          group.push(card);
-          groups.set(card.set, group);
-        }
-        // The Finish column header is added by a separate response; wait for
-        // it so column spans and cell indexes match the settled header row.
-        await finishesSettled;
-        builtGroups = buildRows(groups);
-        truncatedResult = !!truncated;
-        status.remove();
-        loaded = true;
-        if (table.classList.contains('stk-prints-expanded')) placeGroups();
-      } catch {
-        status.querySelector('td').textContent =
-          language === 'ru' ? 'Не удалось загрузить издания. Откройте отдельную страницу.' : 'Could not load printings. Open the separate page.';
       }
+      // Regrouping the same rows is idempotent: closing the table keeps the
+      // first ten entries grouped, and opening it shows everything.
+      placeGroups();
     });
+    // The default view is already grouped from the complete print list.
+    (async () => {
+      await finishesSettled;
+      try { await loadPrints(); } catch { /* the click still offers the full page */ }
+      placeGroups();
+    })();
 
     const rowSet = row => {
       const link = row.querySelector('td:first-child a[href]');
@@ -814,8 +823,9 @@
         head.classList.toggle('stk-group-collapsed', collapsed);
         for (const row of rows) row.hidden = collapsed;
       };
-      // Groups start closed; opening one only ever adds rows, nothing else moves.
-      setCollapsed(true);
+      // The default view folds the groups; "View all prints" unfolds them, and a
+      // click on a single header still toggles that group on its own.
+      setCollapsed(!showingAll);
       head.addEventListener('click', () => setCollapsed(!head.classList.contains('stk-group-collapsed')));
     };
     // A promo set belongs to its parent set: "Ixalan Promos" shares the group of
@@ -872,7 +882,7 @@
           added: extra.rows, grouped: extra.rows.length > 1
         });
       }
-      for (const unit of mergePromoUnits(units).slice(0, 10)) {
+      for (const unit of mergePromoUnits(units).slice(0, showingAll ? Infinity : 10)) {
         // Inside a group the set name lives in the header, so every row there
         // shows the bare collector number; a lone printing repeats the set name.
         const all = [...unit.nativeRows, ...unit.added];
@@ -894,6 +904,9 @@
         let anchor = null;
         if (unit.grouped) {
           const head = groupHead(unit.setName, unit.set, all.length);
+          // The set of the card being viewed gets a light accent so it is easy
+          // to find among the other groups.
+          if (unit.nativeRows.some(row => row.classList.contains('current'))) head.classList.add('stk-current-group');
           if (unit.nativeRows.length) unit.nativeRows[0].before(head);
           else insertAtEnd(head);
           wireGroup(head, all);
@@ -1017,9 +1030,6 @@
       }
       return built;
     }
-    // The grouping runs once every column exists, so the group headers span the
-    // finished table, and again after each expansion.
-    regroupPrints = placeGroups;
   }
 
   function initNativePrintButtons() {

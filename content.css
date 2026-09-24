@@ -117,6 +117,8 @@ html.stk-dark #stk-edhrec .stk-edhrec-usage>.stk-edhrec-fraction{color:#d5d2d6}
 #main .prints > .prints-table .stk-print-group-row td>span{font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #main .prints > .prints-table .stk-print-group-row td>span::before{content:"▾ ";font-size:11px}
 #main .prints > .prints-table .stk-print-group-row.stk-group-collapsed td>span::before{content:"▸ "}
+/* The set of the card being viewed gets a light accent so it stands out. */
+#main .prints > .prints-table .stk-print-group-row.stk-current-group td{background:#efe3f4;border-left:3px solid #8b6597}
 #main .prints > .prints-table tbody tr[hidden]{display:none!important}
 #main .prints > .prints-table .stk-print-status td{padding:8px 13px;font-size:12px}
 /* "Open on a new page" shares the native View-all line as its right half. */
