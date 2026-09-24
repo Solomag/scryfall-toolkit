@@ -166,6 +166,10 @@ function createPage(options) {
     ({ top: 0, left: 0, right: 0, bottom: 0, width: 0, height: 0 });
   const location = {
     href: url,
+    origin: new URL(url).origin,
+    protocol: new URL(url).protocol,
+    host: new URL(url).host,
+    hostname: new URL(url).hostname,
     pathname: new URL(url).pathname,
     search: new URL(url).search,
     assigned: [],

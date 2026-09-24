@@ -13,6 +13,9 @@ if (/^\/(?:bots|docs)(?:\/|$)/.test(location.pathname)) document.documentElement
 if (/^\/blog(?:\/|$)/.test(location.pathname)) document.documentElement.classList.add('stk-blog-page');
 if (/^\/team(?:\/|$)/.test(location.pathname)) document.documentElement.classList.add('stk-team-page');
 if (/^\/bots(?:\/|$)/.test(location.pathname)) document.documentElement.classList.add('stk-bots-page');
+// Tagger lives on its own host and shares no class names with Scryfall, so the
+// theme marks it separately and keeps its rules away from the main site.
+if (/(^|\.)tagger\.scryfall\.com$/.test(location.hostname)) document.documentElement.classList.add('stk-tagger');
 if (/^\/(?:@[^/]+\/decks|decks)(?:\/|$)/.test(location.pathname)) initDeckActionsLayout();
 chrome.storage.onChanged.addListener(changes => {
   if (changes.hideCasterIndicator) document.documentElement.classList.toggle('stk-hide-caster', Boolean(changes.hideCasterIndicator.newValue));
@@ -28,7 +31,10 @@ function repairDarkPurple() {
   document.documentElement.dataset.stkPurpleRepair = 'true';
   let scheduled = false;
   const pending = new Set();
-  const selector = 'a,button,label,span,p,li,small,abbr,option,h1,h2,h3,h4,h5,h6';
+  // Scryfall marks its links with one purple, but it hands that colour to plain
+  // inline tags too (strong in the empty search, b in the jump bar), so the list
+  // covers the text tags a link or a sentence can be built from.
+  const selector = 'a,button,label,span,p,li,small,abbr,option,h1,h2,h3,h4,h5,h6,strong,b,em,i,u,s,sub,sup,code,pre,kbd,samp,var,cite,dfn,mark,legend,figcaption,summary,caption,dt,dd,th,td';
   const scan = (root = document.getElementById('main')) => {
     if (!document.documentElement.classList.contains('stk-dark')) return;
     const main = document.getElementById('main');

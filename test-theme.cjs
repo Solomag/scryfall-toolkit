@@ -32,6 +32,11 @@ async function manifestIntegrity() {
     'README version matches manifest');
   const pkg = JSON.parse(read('package.json'));
   assertEqual(pkg.version, manifest.version, 'package.json version matches manifest');
+  const taggerGroups = manifest.content_scripts.filter(group => group.matches.some(host => host.includes('tagger.scryfall.com')));
+  assert(taggerGroups.length >= 1, 'manifest keeps a Tagger content script');
+  assert(taggerGroups.some(group => group.js.includes('theme.js') && group.css.includes('theme.css')),
+    'the theme is injected on Tagger as well, so the setting reaches it');
+  assert(taggerGroups.some(group => group.run_at === 'document_start'), 'the Tagger theme runs at document_start');
 }
 
 function syntaxCheck() {
@@ -175,6 +180,27 @@ function cssCheck() {
     'and the folded group stripe in the dark theme too');
   assert(theme.includes('html.stk-dark .prints-table :is(a,span).currency-eur{'),
     'dark theme recolors generated price spans too');
+  assert(theme.includes('html.stk-dark .footer .footer-legal,html.stk-dark .footer .footer-legal p{color:#aaa8a6!important}'),
+    "the footer's legal paragraphs are readable in the dark theme");
+  assert(theme.includes('html.stk-dark body > h1{color:#e6e3df!important}'),
+    'the "Nothing Here" heading of a dead link is not left black');
+  assert(theme.includes('html.stk-dark #main .card-legality dd{color:#16161d!important}'),
+    'the legality pills keep dark ink on Scryfall light status fills');
+  assert(theme.includes('html.stk-dark #main .reference-jump a.button-n'),
+    'the jump bar button is repainted with the bar around it');
+  assert(theme.includes('html.stk-dark.stk-bots-page #main :is(.bot-marketing-panel,.bot-marketing-panel-shadow) :is(p,span,div){background-color:transparent!important}'),
+    'the bot panels lose their own light text surfaces');
+  assert(theme.includes('html.stk-dark.stk-bots-page #main :is(.bot-marketing-panel,.bot-marketing-panel-shadow) .bot-marketing-panel-footer .button-n{'),
+    'and the button inside a panel footer is repainted too, ahead of the transparent rule');
+  for (const rule of [
+    'html.stk-dark.stk-tagger :is(.sample-tags,.light-mode){background:#252829!important',
+    'html.stk-dark.stk-tagger .blurry-background-art{background:#3a3247!important',
+    'html.stk-dark.stk-tagger .tag-input-field{background:#292b2c!important',
+    'html.stk-dark.stk-tagger .dialog :is(h1,p){color:#e6e3df!important'
+  ]) assert(theme.includes(rule), `Tagger rule present: ${rule.slice(0, 52)}`);
+  const js = read('theme.js');
+  assert(js.includes("tagger\\.scryfall\\.com"), 'theme.js marks the Tagger host');
+  assert(/const selector = '[^']*strong/.test(js), 'the purple repair also looks at strong and the other text tags');
   assert(/Never paint a footer band/.test(theme), 'footer band guard comment present');
   const stripped = theme.replace(/\/\*[\s\S]*?\*\//g, '');
   let offender = '';
@@ -248,6 +274,25 @@ async function pathClasses() {
         `${pathname} avoids ${cls}`);
     }
   }
+  // Tagger is a different host, so it gets its own mark and none of the
+  // Scryfall page classes.
+  const tagger = createPage({
+    url: 'https://tagger.scryfall.com/tags/artwork/tomoya',
+    html: '<!DOCTYPE html><html><body><div class="app-wrapper"></div></body></html>',
+    state: {}
+  });
+  tagger.script('theme.js');
+  assert(tagger.document.documentElement.classList.contains('stk-tagger'), 'Tagger host is marked stk-tagger');
+  for (const cls of ['stk-account-page', 'stk-info-page', 'stk-team-page', 'stk-bots-page', 'stk-blog-page']) {
+    assert(!tagger.document.documentElement.classList.contains(cls), `Tagger avoids ${cls}`);
+  }
+  const mainSite = createPage({
+    url: 'https://scryfall.com/card/lea/54/counterspell',
+    html: '<!DOCTYPE html><html><body><div id="main"></div></body></html>',
+    state: {}
+  });
+  mainSite.script('theme.js');
+  assert(!mainSite.document.documentElement.classList.contains('stk-tagger'), 'Scryfall itself is not marked as Tagger');
 }
 
 (async () => {

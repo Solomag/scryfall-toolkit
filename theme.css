@@ -1,8 +1,15 @@
 /* Scryfall's purple headers remain untouched; the content uses a muted charcoal palette. */
 html.stk-dark{color-scheme:dark}
 html.stk-dark body,html.stk-dark #main,html.stk-dark .main,html.stk-dark .card-profile,html.stk-dark .toolbox,html.stk-dark .rulings{background-color:#1d2021!important;color:#e6e3df!important}
+/* Scryfall's "Nothing Here" page paints its heading outside #main, where the
+   body colour never reaches it. */
+html.stk-dark body > h1{color:#e6e3df!important}
 html.stk-dark .card-text,html.stk-dark .card-legality,html.stk-dark .prints-table,html.stk-dark .card-grid-item{background-color:#191b1c!important;color:#e6e3df!important;border-color:#444240!important}
 html.stk-dark .card-text-box,html.stk-dark .card-text-title,html.stk-dark .card-text-type-line,html.stk-dark .card-text-oracle,html.stk-dark .card-text-flavor,html.stk-dark .card-legality dt,html.stk-dark .prints-table tbody td,html.stk-dark .prints-table tbody td a,html.stk-dark .rulings h6,html.stk-dark .rulings-item{color:#e6e3df!important}
+/* The legality pills keep Scryfall's light status fills (green, grey, yellow),
+   so their labels take dark ink instead of the inherited light one. The #main
+   keeps this ahead of the general text colour for #main. */
+html.stk-dark #main .card-legality dd{color:#16161d!important}
 html.stk-dark .card-text-box,html.stk-dark .card-text-stats,html.stk-dark .card-text-artist,html.stk-dark .card-legality-row,html.stk-dark .prints-table tbody tr,html.stk-dark .rulings,html.stk-dark .rulings-item{border-color:#3a3b3b!important}
 html.stk-dark .prints-table thead,html.stk-dark .prints-current,html.stk-dark .print-langs-item.current{background-color:#2a2835!important;color:#e9e4ee!important}
 html.stk-dark .prints-table thead th,html.stk-dark .prints-table thead a{color:#e9e4ee!important}
@@ -30,7 +37,7 @@ html.stk-dark .toolbox .button-n.cardhoarder{color:#f1875d!important;border-colo
 html.stk-dark .toolbox .button-n .currency-eur{color:#d091ce!important}
 html.stk-dark .toolbox .button-n .currency-usd,html.stk-dark .toolbox .button-n .currency-usd-promo{color:#78afff!important}
 html.stk-dark .toolbox .button-n .currency-tix{color:#f1875d!important}
-html.stk-dark .rulings-item-date,html.stk-dark .footer .footer-small-print{color:#aaa8a6!important}
+html.stk-dark .rulings-item-date,html.stk-dark .footer .footer-small-print,html.stk-dark .footer .footer-legal,html.stk-dark .footer .footer-legal p{color:#aaa8a6!important}
 html.stk-dark .footer{color:#d3d0ce!important}
 html.stk-dark .card-grid-header-content{background:transparent!important;color:#e6e3df!important}
 html.stk-dark .card-grid-header-content a{color:#c79ce3!important}
@@ -79,6 +86,9 @@ html.stk-dark #main .form-row-content-band{background-color:#1d2021!important;co
 html.stk-dark #main :is(h1,h2,h3,h4,h5,h6,p,li,dt,dd,label,small,th,td,.set-name-text,.form-row-label,.form-row-tip,.reference-example-text){color:#e6e3df!important}
 html.stk-dark #main :is(.checklist,.checklist td,.checklist th,.form-row,.reference-block,.reference-example){border-color:#414345!important}
 html.stk-dark #main :is(.checklist td,.checklist th,.reference-example,.reference-jump-links .button-n){background-color:#1d2021!important;color:#e6e3df!important}
+/* The jump bar's own button keeps Scryfall's light pill while the theme paints
+   the bar around it, so the pill is repainted with it. */
+html.stk-dark #main .reference-jump a.button-n,html.stk-dark #main .reference-jump .button-n{background-color:#292b2c!important;color:#c79ce3!important;border-color:#595c60!important}
 html.stk-dark #main .checklist tr:hover td{background:#292b2c!important}
 html.stk-dark #main :is(.checklist td a,.reference-block a,.reference-jump a,.form-row a,.set-name-text a){color:#c79ce3!important}
 html.stk-dark #main .checklist td a{color:#e6e3df!important}
@@ -213,6 +223,11 @@ html.stk-dark.stk-bots-page #main :is(.reference-jump,.bot-marketing,.bot-market
 html.stk-dark.stk-bots-page #main :is(.bot-marketing-panel,.marketing-features-item){background-color:#252829!important}
 html.stk-dark.stk-bots-page #main .bot-marketing{background-image:none!important}
 html.stk-dark.stk-bots-page #main :is(.bot-marketing-panel-desc,.marketing-features-item-content,.marketing-features-item-content p){color:#e6e3df!important}
+/* The text blocks inside a bot panel carry their own light surface, which the
+   panel repaint above does not reach. */
+html.stk-dark.stk-bots-page #main :is(.bot-marketing-panel,.bot-marketing-panel-shadow) :is(p,span,div){background-color:transparent!important}
+html.stk-dark.stk-bots-page #main :is(.bot-marketing-panel,.bot-marketing-panel-shadow) .bot-marketing-panel-footer{background:#2a2c2d!important;color:#e6e3df!important}
+html.stk-dark.stk-bots-page #main :is(.bot-marketing-panel,.bot-marketing-panel-shadow) .bot-marketing-panel-footer .button-n{background:#3a3d40!important;color:#c79ce3!important;border-color:#595c60!important}
 html.stk-dark.stk-team-page #main :is(.team-header,.team-header .inner-flex){background-color:#252829!important;color:#e6e3df!important}
 html.stk-dark.stk-team-page #main .team-header :is(h1,p,a){color:#e6e3df!important;text-shadow:none!important}
 html.stk-dark.stk-team-page #main .team-header a{color:#bda1df!important}
@@ -274,3 +289,19 @@ html.stk-dark.stk-account-page :is(#deckbuilder,[class*="deckbuilder"]) .stk-dec
 html.stk-dark.stk-account-page :is(#deckbuilder,[class*="deckbuilder"]) .stk-deck-editor-label *{color:#e6e3df!important;opacity:1!important}
 html.stk-dark .left-tray :is(.deck-tray-option,.deck-tray-buttons,.deck-tray-option .button-n,[class*="add-to-deck"]){background-color:#292b2c!important;color:#e6e3df!important;border-color:#59535e!important}
 html.stk-dark #main :is(.add-to-deck,.add-to-deck-button,[class*="add-to-deck"]):is(a,button){background-color:#413949!important;color:#f7f2fb!important;border-color:#756782!important}
+
+/* Tagger is a small Vue app with its own dark surfaces. The generic body and
+   field rules already line its palette up with the rest of the site; these
+   repaint the few light panels it still keeps, plus its "lost in the wild"
+   page. The stk-tagger class is set by theme.js, so these rules cannot reach
+   Scryfall's own components that happen to share a class name. */
+html.stk-dark.stk-tagger :is(.app-header,.app-footer){border-color:#3a3b3b!important}
+html.stk-dark.stk-tagger :is(.sample-tags,.light-mode){background:#252829!important;color:#e6e3df!important;border-color:#414345!important}
+html.stk-dark.stk-tagger :is(.sample-tags,.light-mode) :is(a,span,label,li){color:#c79ce3!important}
+html.stk-dark.stk-tagger .blurry-background-art{background:#3a3247!important;color:#e6e3df!important}
+html.stk-dark.stk-tagger :is(.app-status,.app-viewport,.utilities) :is(a,button){color:#c79ce3!important}
+html.stk-dark.stk-tagger .tag-input-field{background:#292b2c!important;color:#e6e3df!important;border-color:#5a5d61!important}
+html.stk-dark.stk-tagger .suggestion-input-utils{background:#252829!important;color:#e6e3df!important;border-color:#414345!important}
+html.stk-dark.stk-tagger .suggestion-input-utils :is(a,li,span){color:#c79ce3!important}
+html.stk-dark.stk-tagger .dialog :is(h1,p){color:#e6e3df!important}
+html.stk-dark.stk-tagger .app-footer :is(a,.footer-link){color:#c2c2c2!important}
