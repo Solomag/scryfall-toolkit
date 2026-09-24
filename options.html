@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Scryfall Toolkit</title><link rel="stylesheet" href="options.css"></head>
+<body><header class="hero"><h1>Scryfall Toolkit</h1><p>Настройки расширения для Scryfall</p></header><main>
+<section class="language-settings"><label for="settingsLanguage">Язык настроек</label><select id="settingsLanguage"><option value="ru">Русский</option><option value="en">Английский</option></select>
+<label for="siteLanguage">Язык интерфейса Scryfall и Tagger</label><select id="siteLanguage"><option value="en">Английский</option><option value="ru">Русский</option></select>
+<p class="hint">Язык добавляемых элементов и основных элементов Scryfall. Тексты карт и статей не переводятся.</p></section>
+<section><h2>Общее</h2>
+<label><input type="checkbox" id="clipboard"> Общий буфер карт на Scryfall и Tagger</label>
+<label><input type="checkbox" id="darkTheme"> Тёмная тема Scryfall</label>
+<label><input type="checkbox" id="hideCasterIndicator"> Скрыть индикатор Caster ON</label>
+<label><input type="checkbox" id="hideDigitalSets"> Скрывать цифровые сеты на странице Sets и в Prints</label>
+<p class="hint">Скрываются цифровые сеты и кубы из списка Scryfall; выбранное издание остаётся видимым на собственной странице карты.</p>
+<label><input type="checkbox" id="hideNonTournamentSets"> Скрывать нетурнирные сеты (сувениры, официальные прокси, токены)</label>
+<label><input type="checkbox" id="hideOversizedSets"> Скрывать увеличенные карты (oversized) отдельно</label>
+<label><input type="checkbox" id="hideForeignBlackBorder"> Скрывать Foreign Black Border сеты (4BB, FBB, BCHR)</label>
+<label><input type="checkbox" id="hideNonEnglishPrints"> Скрывать неанглийские издания в Prints (Portal, Secret Lair и другие)</label>
+<p class="hint">Фильтры сетов действуют в Sets и Prints, фильтр языка — только в Prints. Текущее издание остаётся видимым; смешанные сеты с легальными картами сохраняются.</p>
+</section><section><h2>Страница карты</h2>
+<label><input type="checkbox" id="tags"> Теги карт на странице карты</label>
+<fieldset><legend>Какие теги показывать</legend>
+<label><input type="checkbox" id="cardTags"> Card Tags</label>
+<label><input type="checkbox" id="artTags"> Art Tags</label>
+<label><input type="checkbox" id="relationships"> Связанные карты</label>
+</fieldset>
+<label><input type="checkbox" id="finishBadges"> Отдельный столбец отделки выпусков: Nonfoil, Foil, Etched, особый фойл</label>
+<label><input type="checkbox" id="printAddButtons"> Плюс для отдельного издания при наведении в полном списке</label>
+<label><input type="checkbox" id="onlyCardmarket"> Скрыть USD, TIX, TCGplayer и Cardhoarder</label>
+</section><section><h2>EDHREC</h2>
+<label><input type="checkbox" id="edhrecUsage"> Показывать использование в колодах Commander</label>
+<label><input type="checkbox" id="edhrecLink"> Показывать значок-ссылку EDHREC</label>
+<label for="edhrecUsageDisplay">Как показывать использование</label>
+<select id="edhrecUsageDisplay"><option value="both">Дробь и процент</option><option value="fraction">Только дробь</option><option value="percent">Только процент</option></select>
+<label for="usageColorMetric">Окрашивать популярность по</label>
+<select id="usageColorMetric"><option value="decks">Количеству колод</option><option value="percent">Доле подходящих колод</option></select>
+<div class="salt-thresholds" id="usageCountThresholds"><label for="usageMediumDecks">Жёлтый: от <input type="number" id="usageMediumDecks" min="0" step="1000"></label><label for="usageHighDecks">Красный: от <input type="number" id="usageHighDecks" min="1" step="1000"></label></div>
+<div class="salt-thresholds" id="usagePercentThresholds" hidden><label for="usageMediumPercent">Жёлтый: более <input type="number" id="usageMediumPercent" min="0" max="100" step="0.1"></label><label for="usageHighPercent">Красный: от <input type="number" id="usageHighPercent" min="0.1" max="100" step="0.1"></label></div>
+<label><input type="checkbox" id="edhrecSalt"> Показывать Salt Score карты</label>
+<label><input type="checkbox" id="showSaltScale"> Показывать шкалу «/4» рядом с Salt Meter</label>
+<div class="salt-thresholds"><label for="saltMediumThreshold">Жёлтый с <input type="number" id="saltMediumThreshold" min="0" max="4" step="0.1"></label><label for="saltHighThreshold">Красный с <input type="number" id="saltHighThreshold" min="0" max="4" step="0.1"></label></div>
+<p class="hint">Показатели встраиваются под форматы. Дробь показывает количество колод с картой среди подходящих по цветовой идентичности. По умолчанию популярность окрашивается по абсолютному количеству: зелёный ниже 50 000, жёлтый от 50 000, красный от 100 000; при выборе доли — до 1% включительно, выше 1% и от 2,6% соответственно. Salt Score — оценка сообщества от 0 до 4, не сила карты: зелёный до 1, жёлтый от 1, красный от 2.</p>
+</section><section><h2>CardTrader</h2>
+<label><input type="checkbox" id="cardtraderPrices"> Показывать предложения CardTrader на странице карты</label>
+<label for="euroPriceSources">Цены в евро в таблице выпусков</label>
+<select id="euroPriceSources"><option value="cm">Cardmarket</option><option value="ct">CardTrader</option><option value="both">Cardmarket и CardTrader</option></select>
+<label id="cardtraderTokenLabel" for="cardtraderToken">Личный API-токен CardTrader</label>
+<div class="token-row"><input id="cardtraderToken" type="password" autocomplete="off" spellcheck="false" placeholder="Вставь личный токен"><button id="saveToken" type="button">Сохранить</button><button id="removeToken" type="button">Удалить</button></div>
+<p class="hint" id="tokenStatus">Для цен CardTrader нужен токен. Он хранится локально в расширении и передаётся только в API CardTrader. Цены в таблице появляются постепенно; учитываются предложения в EUR. Состояние и язык могут отличаться.</p>
+</section><section><h2>Легальность</h2>
+<label><input type="checkbox" id="legalities"> Дополнительные форматы</label>
+<fieldset><legend>Форматы: показывать и порядок</legend>
+<div class="columns-header"><span>Левая колонка</span><span>Правая колонка</span></div>
+<div id="formatList"></div>
+<p class="hint">Перетащи формат в нужную позицию любой колонки; чекбокс скрывает его. Порядок на карте: слева направо, сверху вниз.</p>
+</fieldset>
+</section><section><h2>Экспорт</h2>
+<label for="exportFormat">Формат копирования</label>
+<select id="exportFormat"><option value="names">1 Название карты</option><option value="moxfield">1 Название карты (SET) номер</option></select>
+</section>
+<section><h2>Функции Shambleshark</h2>
+<label><input type="checkbox" id="taggerSearchLinks"> Ссылка на Tagger поверх карт в результатах поиска</label>
+<label><input type="checkbox" id="cardSearchLinks"> Поиск по типу и манакосту со страницы карты</label>
+<label><input type="checkbox" id="cardNicknames"> Показать исторические прозвища карт при предпросмотре Scryfall</label>
+<label><input type="checkbox" id="deckNoPrices"> Режим «No Prices» в выпадающем списке колоды</label>
+<label><input type="checkbox" id="stackedDeckCards"> Карты колоды стопкой вместо развёрнутой сетки</label>
+<label><input type="checkbox" id="deckTokens"> Список токенов, создаваемых картами колоды</label>
+<p class="hint">Модули редактора колод Shambleshark зависят от внутреннего интерфейса Scryfall. Их переношу отдельно после проверки работы в редакторе.</p>
+</section>
+<p class="hint">После изменения настроек обнови открытые страницы Scryfall и Tagger. MoxTags продолжает работать отдельно на Moxfield.</p>
+<button id="openOptions" type="button">Открыть настройки во вкладке</button><p id="status" role="status" aria-live="polite"></p></main><script src="i18n.js"></script><script src="format-catalog.js"></script><script src="options.js"></script></body></html>

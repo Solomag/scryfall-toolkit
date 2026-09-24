@@ -1,0 +1,23 @@
+*{box-sizing:border-box}
+body{font:14px/1.5 system-ui,sans-serif;margin:0;min-width:340px;background:#211f28;color:#e9e5ee}
+.hero{padding:26px max(18px,calc((100% - 850px)/2));background:linear-gradient(115deg,#292434,#583b59);border-bottom:2px solid #8b7194}
+h1{font-size:28px;margin:0;font-weight:700}h2{margin:0 0 12px;color:#f0d5f3;font-size:18px}
+.hero p{margin:3px 0 0;color:#d7c8d8}
+main{max-width:880px;padding:22px 16px 35px;margin:auto}
+section{padding:18px;margin:0 0 15px;background:#2d2c34;border:1px solid #514858;border-radius:6px;box-shadow:0 3px 12px #0003}
+label{display:block;margin:9px 0;cursor:pointer}input{accent-color:#aa85b5}
+fieldset{border:1px solid #655968;border-radius:5px;margin:16px 0 4px;padding:7px 12px 12px}legend{padding:0 6px;color:#e4c7ea}
+select,input[type=password]{width:100%;padding:8px;margin-top:4px;color:#e9e5ee;background:#24242a;border:1px solid #6a6070;border-radius:4px}
+.salt-thresholds{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px}.salt-thresholds label{display:flex;align-items:center;gap:8px}.salt-thresholds input{width:72px;padding:5px;color:#e9e5ee;background:#24242a;border:1px solid #6a6070;border-radius:4px}
+.salt-thresholds[hidden]{display:none}
+button{background:#473b50;color:#f1e8f3;border:1px solid #88758d;border-radius:4px;cursor:pointer;padding:7px 10px}button:hover{background:#5d4b68}
+.token-row{display:flex;gap:6px;align-items:center}.token-row input{min-width:0;flex:1}.token-row button{white-space:nowrap}
+.hint{font-size:12px;color:#bdb6c2;margin:12px 0 0}#status{color:#abdfb7;min-height:18px}
+.columns-header{display:grid;grid-template-columns:1fr 1fr;gap:8px;color:#bfb3c5;font-size:12px;margin:3px 0 7px}
+#formatList{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px 10px}
+.format-item{display:flex;align-items:center;gap:6px;min-width:0;padding:7px 8px;background:#24252b;border:1px solid #58525e;border-radius:4px;cursor:grab}
+.format-item:active{cursor:grabbing}.format-item.dragging{opacity:.4}.format-item.drag-over{outline:2px solid #c9a4d5}
+.format-item.is-hidden{opacity:.48}
+.format-item .handle{color:#bba9c2;font-size:15px;line-height:1}.format-item label{margin:0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.format-item:focus-visible{outline:2px solid #c9a4d5}
+@media(max-width:520px){main{padding:12px 9px}section{padding:13px}.hero{padding:18px 15px}h1{font-size:23px}#formatList{gap:4px}.format-item{font-size:12px;padding:5px 3px}.token-row{flex-wrap:wrap}.token-row input{flex-basis:100%}}

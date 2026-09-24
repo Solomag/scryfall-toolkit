@@ -1,0 +1,109 @@
+// Keep the popup language independent of labels added to Scryfall and Tagger.
+(() => {
+  const en = {
+    'Настройки расширения для Scryfall': 'Extension settings for Scryfall',
+    'Язык настроек': 'Settings language',
+    'Язык интерфейса Scryfall и Tagger': 'Scryfall and Tagger interface language',
+    'Язык добавляемых элементов и основных элементов Scryfall. Тексты карт и статей не переводятся.': 'Language of extension controls and common Scryfall controls. Card text and articles are not translated.',
+    'Русский': 'Russian', 'Английский': 'English',
+    'Общее': 'General', 'Общий буфер карт на Scryfall и Tagger': 'Shared card clipboard on Scryfall and Tagger',
+    'Тёмная тема Scryfall': 'Scryfall dark theme', 'Скрыть индикатор Caster ON': 'Hide Caster ON indicator',
+    'Скрывать цифровые сеты на странице Sets и в Prints': 'Hide digital-only sets on Sets and in Prints',
+    'Скрываются цифровые сеты и кубы из списка Scryfall; выбранное издание остаётся видимым на собственной странице карты.': 'Hide Scryfall digital-only sets and online cubes; the currently viewed printing remains visible on its own card page.',
+    'Скрывать нетурнирные сеты (сувениры, официальные прокси, токены)': 'Hide non-tournament sets (memorabilia, official proxies, tokens)',
+    'Скрывать увеличенные карты (oversized) отдельно': 'Hide oversized sets separately',
+    'Скрывать Foreign Black Border сеты (4BB, FBB, BCHR)': 'Hide Foreign Black Border sets (4BB, FBB, BCHR)',
+    'Скрывать неанглийские издания в Prints (Portal, Secret Lair и другие)': 'Hide non-English printings in Prints (Portal, Secret Lair and others)',
+    'Фильтры сетов действуют в Sets и Prints, фильтр языка — только в Prints. Текущее издание остаётся видимым; смешанные сеты с легальными картами сохраняются.': 'Set filters apply to Sets and Prints; the language filter applies only to Prints. The current printing stays visible, and mixed sets containing legal cards remain listed.',
+    'Скрываются только целиком цифровые сеты из каталога Scryfall; поиск отдельных карт не меняется.': 'Only sets that exist exclusively in digital form are hidden from Scryfall’s Sets index. Individual card searches are unchanged.',
+    'Страница карты': 'Card page', 'Теги карт на странице карты': 'Show tags on card pages',
+    'Какие теги показывать': 'Tags to display', 'Связанные карты': 'Related cards',
+    'Отдельный столбец отделки выпусков: Nonfoil, Foil, Etched, особый фойл': 'Separate printing finish column: Nonfoil, Foil, Etched, special foil',
+    'Плюс для отдельного издания при наведении в полном списке': 'Show add button on hover for each printing in the expanded list',
+    'Скрыть USD, TIX, TCGplayer и Cardhoarder': 'Hide USD, TIX, TCGplayer and Cardhoarder',
+    'Показывать использование в колодах Commander': 'Show Commander deck usage',
+    'Показывать значок-ссылку EDHREC': 'Show EDHREC icon and link',
+    'Как показывать использование': 'Usage display',
+    'Дробь и процент': 'Fraction and percentage', 'Только дробь': 'Fraction only', 'Только процент': 'Percentage only',
+    'Окрашивать популярность по': 'Color popularity by', 'Количеству колод': 'Deck count', 'Доле подходящих колод': 'Eligible deck percentage',
+    'Жёлтый: от': 'Yellow: from', 'Жёлтый: более': 'Yellow: above', 'Красный: от': 'Red: from',
+    'Показывать Salt Score карты': 'Show card Salt Meter', 'Жёлтый с': 'Yellow from', 'Красный с': 'Red from',
+    'Показывать шкалу «/4» рядом с Salt Meter': 'Show the “/4” scale beside Salt Meter',
+    'Показатели встраиваются под форматы. Дробь показывает количество колод с картой среди подходящих по цветовой идентичности. По умолчанию популярность окрашивается по абсолютному количеству: зелёный ниже 50 000, жёлтый от 50 000, красный от 100 000; при выборе доли — до 1% включительно, выше 1% и от 2,6% соответственно. Salt Score — оценка сообщества от 0 до 4, не сила карты: зелёный до 1, жёлтый от 1, красный от 2.': 'Indicators appear under format legality. The fraction is decks containing this card over decks eligible by color identity. By default, deck counts are green below 50,000, yellow from 50,000 and red from 100,000. In percentage mode, green is up to 1%, yellow above 1%, and red from 2.6%. Salt Meter is a community rating from 0 to 4, not card strength; yellow starts at 1 and red at 2.',
+    'Показывать предложения CardTrader на странице карты': 'Show CardTrader offers on card pages',
+    'Цены в евро в таблице выпусков': 'EUR prices in printing table',
+    'Cardmarket и CardTrader': 'Cardmarket and CardTrader',
+    'Личный API-токен CardTrader': 'Personal CardTrader API token',
+    'Для цен CardTrader нужен токен. Он хранится локально в расширении и передаётся только в API CardTrader. Цены в таблице появляются постепенно; учитываются предложения в EUR. Состояние и язык могут отличаться.': 'CardTrader prices require a personal token. It stays in the extension and is sent only to the CardTrader API. EUR offers load gradually; condition and language may vary.',
+    'Легальность': 'Legality', 'Дополнительные форматы': 'Additional formats',
+    'Форматы: показывать и порядок': 'Formats: visibility and order', 'Левая колонка': 'Left column', 'Правая колонка': 'Right column',
+    'Перетащи формат в нужную позицию любой колонки; чекбокс скрывает его. Порядок на карте: слева направо, сверху вниз.': 'Drag a format to either column; uncheck it to hide it. Cards display formats left to right, then top to bottom.',
+    'Экспорт': 'Export', 'Формат копирования': 'Clipboard export format',
+    '1 Название карты': '1 Card name', '1 Название карты (SET) номер': '1 Card name (SET) number',
+    'Функции Shambleshark': 'Shambleshark features',
+    'Ссылка на Tagger поверх карт в результатах поиска': 'Tagger link on search result cards',
+    'Поиск по типу и манакосту со страницы карты': 'Search by type and mana cost from card pages',
+    'Показать исторические прозвища карт при предпросмотре Scryfall': 'Show historical card nicknames in Scryfall preview',
+    'Режим «No Prices» в выпадающем списке колоды': 'No Prices mode in deck menu',
+    'Карты колоды стопкой вместо развёрнутой сетки': 'Stack deck cards instead of showing the whole grid',
+    'Список токенов, создаваемых картами колоды': 'Show tokens created by cards in a deck',
+    'Модули редактора колод Shambleshark зависят от внутреннего интерфейса Scryfall. Их переношу отдельно после проверки работы в редакторе.': 'Shambleshark deck editor modules depend on Scryfall internals. They will be ported after testing in the editor.',
+    'После изменения настроек обнови открытые страницы Scryfall и Tagger. MoxTags продолжает работать отдельно на Moxfield.': 'Reload open Scryfall and Tagger tabs after changing settings. MoxTags continues to run separately on Moxfield.',
+    'Открыть настройки во вкладке': 'Open settings in a tab',
+    'Сохранить': 'Save', 'Заменить': 'Replace', 'Удалить': 'Delete',
+    'Вставь личный токен': 'Paste your personal token',
+    'Введите новый токен для замены сохранённого': 'Enter a new token to replace the saved token',
+    'Личный API-токен CardTrader · сохранён ✓': 'Personal CardTrader API token · saved ✓',
+    'Личный API-токен CardTrader · не задан': 'Personal CardTrader API token · not set',
+    'Токен сохранён. Пустое поле означает, что текущий токен продолжает работать. Он передаётся только в API CardTrader.': 'Token saved. A blank field means the current token remains active. It is sent only to the CardTrader API.',
+    'Для цен CardTrader нужен личный токен. Он хранится локально и передаётся только в API CardTrader.': 'CardTrader prices need your personal token. It is stored locally and sent only to the CardTrader API.',
+    'Вставь токен без пробелов': 'Paste a token without spaces',
+    'Токен сохранён; цены проверятся на странице карты': 'Token saved; prices will load on the card page',
+    'Токен удалён': 'Token removed', 'Сохранено': 'Saved',
+    'Пороги популярности: красный должен быть выше жёлтого': 'Popularity thresholds: red must be higher than yellow',
+    'Пороги популярности сохранены': 'Popularity thresholds saved',
+    'Укажи пороги от 0 до 4; красный должен быть выше жёлтого': 'Use thresholds from 0 to 4; red must be higher than yellow',
+    'Пороги Salt сохранены': 'Salt thresholds saved',
+    'Порядок и видимость сохранены': 'Format order and visibility saved',
+    'Закрыть': 'Close', 'Токены колоды': 'Deck tokens', 'Загружаю токены…': 'Loading tokens…',
+    'Показать токены': 'Show Tokens', 'Без цен': 'No Prices',
+    'Токены не найдены.': 'No tokens found.', 'Не удалось загрузить токены.': 'Could not load tokens.',
+    'Открыть теги карты в Tagger': 'Open card tags in Tagger',
+    'Цены Cardmarket в евро': 'Cardmarket prices in EUR',
+    'CardTrader: минимальное предложение для этого издания в евро': 'CardTrader: lowest EUR offer for this printing',
+    'Минимальное предложение CardTrader; состояние и язык могут отличаться': 'Lowest CardTrader offer; condition and language may vary',
+    'Цена CardTrader недоступна': 'CardTrader price unavailable',
+    'Минимальное предложение; состояние и язык могут отличаться': 'Lowest offer; condition and language may vary',
+    'CardTrader недоступен — проверь токен в настройках.': 'CardTrader unavailable — check the token in settings.',
+    'Открыть статистику карты на EDHREC': 'Open card statistics on EDHREC',
+    'В колодах': 'In decks',
+    'Средняя оценка раздражающего эффекта карты по опросу EDHREC; не мера силы карты': 'Average salt rating from EDHREC community votes; not a measure of card strength',
+    'Отделка выпуска': 'Printing finish', 'Только Foil': 'Foil only', 'Только Nonfoil': 'Nonfoil only',
+    'Только Etched Foil': 'Etched foil only',
+    'Показать список карт': 'Show card list', 'Копировать карты': 'Copy cards', 'Копировать карту': 'Copy card', 'Скопировано': 'Copied',
+    'Ошибка копирования': 'Copy failed', 'Очистить буфер карт': 'Clear card clipboard',
+    'Очистить буфер карт?': 'Clear the card clipboard?', 'Список пуст': 'List is empty',
+    'Удалить': 'Remove', 'Добавить': 'Add', 'Загружаю теги…': 'Loading tags…',
+    'Загружаю карту…': 'Loading card…', 'Для этой карты тегов нет': 'No tags for this card',
+    'Связи Tagger сейчас недоступны; теги показаны из локального списка.': 'Tagger relationships are unavailable; showing tags from the local index.',
+    'Теги недоступны — открыть Tagger': 'Tags unavailable — open Tagger'
+  };
+  const languages = ['ru','en'];
+  const originals = new WeakMap();
+  const t = (source, language = 'ru') => language === 'en' ? en[source] || source : source;
+  const localizeOptions = language => {
+    if (!languages.includes(language)) language = 'ru';
+    document.documentElement.lang = language;
+    for (const node of document.querySelectorAll('body *')) {
+      if (node.matches('script,style')) continue;
+      for (const child of node.childNodes) {
+        if (child.nodeType !== 3 || !child.textContent.trim()) continue;
+        if (!originals.has(child)) originals.set(child, child.textContent);
+        const original = originals.get(child);
+        const match = original.match(/^(\s*)([\s\S]*?)(\s*)$/);
+        child.textContent = match[1] + t(match[2], language) + match[3];
+      }
+    }
+  };
+  window.STK_I18N = { t, localizeOptions };
+})();
