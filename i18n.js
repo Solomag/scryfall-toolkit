@@ -20,6 +20,7 @@
     'Какие теги показывать': 'Tags to display', 'Связанные карты': 'Related cards',
     'Отдельный столбец отделки выпусков: Nonfoil, Foil, Etched, особый фойл': 'Separate printing finish column: Nonfoil, Foil, Etched, special foil',
     'Плюс для отдельного издания при наведении в полном списке': 'Show add button on hover for each printing in the expanded list',
+    'Открывать полный список изданий в этой же вкладке': 'Open the full printings list in this same tab',
     'Скрыть USD, TIX, TCGplayer и Cardhoarder': 'Hide USD, TIX, TCGplayer and Cardhoarder',
     'Показывать использование в колодах Commander': 'Show Commander deck usage',
     'Показывать значок-ссылку EDHREC': 'Show EDHREC icon and link',

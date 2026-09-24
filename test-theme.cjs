@@ -119,6 +119,12 @@ function cssCheck() {
     'group header label uses the native span-in-cell markup');
   assert(css.includes('.stk-print-group-row.stk-current-group td{'),
     'the set of the card being viewed is highlighted');
+  assert(css.includes('tr.stk-group-end td{border-bottom:1px solid #ddd8e0}'),
+    'an open group is closed by a light rule under its last row');
+  assert(css.includes('.stk-print-group-row.stk-group-folded-end td{border-bottom'),
+    'a folded group closes the rule at its own header');
+  assert(css.includes('.stk-print-new-page-line.stk-print-line-end{justify-content:flex-end}'),
+    'a lone full-page link sits on the right of the line');
   assert(css.includes('.stk-tag-icon.icon-flipped svg{transform:scale(-1,1)}'),
     'flipped tag icons rule exists');
   const flipLine = read('content.js').split('\n').find(line => line.includes('icon-flipped'));
@@ -148,6 +154,8 @@ function cssCheck() {
     'dark group header rows win over the light content rule');
   assert(theme.includes('html.stk-dark .prints-table .stk-print-group-row.stk-current-group td{'),
     'dark theme keeps the current group accent');
+  assert(theme.includes('html.stk-dark .prints-table tr.stk-group-end td{'),
+    'dark theme keeps the group closing rule');
   assert(theme.includes('html.stk-dark .prints-table :is(a,span).currency-eur{'),
     'dark theme recolors generated price spans too');
   assert(/Never paint a footer band/.test(theme), 'footer band guard comment present');

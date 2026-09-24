@@ -22,7 +22,7 @@ const CARD_HTML = `<!DOCTYPE html><html><head>
       <thead><tr><th>Name</th><th>Set</th><th><span>USD</span></th><th><span>EUR</span></th><th><span>TIX</span></th></tr></thead>
       <tbody>
         <tr class="current"><td><a data-card-id="${PRINT_CURRENT}" href="https://scryfall.com/card/tst/1/test-card">Test Set
-          #1</a></td><td>TST</td><td></td><td></td><td></td></tr>
+          #1</a></td><td>TST</td><td><a class="currency-usd" href="https://partner.tcgplayer.com/x">✶$7.82</a></td><td></td><td></td></tr>
         <tr><td><a data-card-id="${PRINT_TST2}" href="https://scryfall.com/card/tst/2/test-card">Test Set
           #2</a></td><td>TST</td><td></td><td></td><td></td></tr>
         <tr><td><a data-card-id="${PRINT_MH3}" href="https://scryfall.com/card/mh3/42/test-card">Modern Horizons 3
@@ -115,6 +115,8 @@ async function cardPageTest() {
   assertEqual(document.querySelectorAll('.stk-finish-nonfoil').length, 1, 'nonfoil badge rendered');
   assertEqual(document.querySelectorAll('.stk-finish-foil').length, 1, 'foil badge rendered');
   assertEqual(document.querySelectorAll('.stk-finish-etched').length, 1, 'etched badge rendered');
+  assertEqual(document.querySelector('.currency-usd').textContent, '$7.82',
+    'Scryfall’s star in a price is dropped, the finish column carries it');
 
   // Tags panel.
   const tagsPanel = await waitFor(
@@ -234,6 +236,10 @@ async function cardPageTest() {
   assertEqual([...printBody.querySelectorAll('a[href*="/card/tst/"]')].slice(0, 2).map(a => a.textContent), ['#1', '#2'],
     'grouped native rows keep the bare collector number');
   assertEqual(printBody.querySelectorAll('.stk-print-entry').length, 3, 'the added printings are already on the page');
+  assert(heads()[0].classList.contains('stk-group-folded-end'), 'a folded group closes the rule at its own header');
+  assert([...printBody.querySelectorAll('tr.stk-group-end')]
+    .some(row => /\/card\/tst\/4\//.test(row.querySelector('td:first-child a[href]').getAttribute('href'))),
+    'an open group closes the rule under its last row');
 
   const rowOrder = [...printBody.children].map(row => {
     if (row.classList.contains('stk-print-group-row')) return `group:${row.textContent.split('(')[0].trim()}`;
@@ -246,13 +252,23 @@ async function cardPageTest() {
     'group:Modern Horizons 3', '/card/mh3/42/test-card', '/card/mh3/43/test-card', 'view-all'
   ], 'each set keeps Scryfall rows and added printings under one header, view-all last');
 
-  // "View all prints" unfolds the groups.
+  // Nothing is left behind the cap here, so the line offers to unfold instead.
+  const pageLine = document.querySelector('.stk-print-new-page-line');
+  assertEqual(nativeLink.textContent, 'Expand all groups', 'with every printing shown the line offers to unfold the groups');
+  assertEqual(nativeLink.hidden, false, 'the unfold action stays visible');
+  assertEqual(document.querySelector('#main .prints .stk-print-new-page').textContent, 'Open on a new page',
+    'the full-page link keeps its wording while the line has two halves');
+  assert(!pageLine.classList.contains('stk-print-line-end'), 'the full-page link stays on the right side');
+
   click(nativeLink);
   assert(printTable.classList.contains('stk-prints-expanded'), 'table carries the expanded state');
   assertEqual(nativeLink.getAttribute('aria-expanded'), 'true', 'aria-expanded flips to true');
-  assertEqual(nativeLink.textContent, 'Show fewer prints ↑', 'expanded link offers to collapse');
   assert(heads().every(row => !row.classList.contains('stk-group-collapsed')), 'opening unfolds every group');
   assert(allRows().every(row => !row.hidden), 'the unfolded groups reveal their rows');
+  assertEqual(nativeLink.hidden, true, 'with nothing left to press the left half disappears');
+  assertEqual(document.querySelector('#main .prints .stk-print-new-page').textContent, 'View all prints on a new page →',
+    'the right half becomes the full-page action on its own');
+  assert(pageLine.classList.contains('stk-print-line-end'), 'the lone right link is pushed to the end of the line');
   assert([...printBody.querySelectorAll('.stk-print-group-row td')].every(td => td.querySelector('span')),
     'group headers wrap their label in the native span-in-cell markup');
   const entryLinks = [...printBody.querySelectorAll('.stk-print-entry a')].map(link => link.textContent);
@@ -264,7 +280,6 @@ async function cardPageTest() {
     'new-page link is the second half of the native printings line');
   assertEqual(newPageLink.getAttribute('href'), nativeLink.getAttribute('href'),
     'new-page link keeps the native printings URL');
-  assertEqual(newPageLink.textContent, 'Open on a new page', 'new-page link dropped the arrow glyph');
   assert(viewAllRow.lastElementChild.contains(newPageLink), 'the printings line is the last row of the table');
 
   // Expanded rows carry the same price fills as the native ones.
@@ -278,7 +293,8 @@ async function cardPageTest() {
   const foilRow = entryOf('/tst/4/');
   assertEqual(foilRow.querySelector('.stk-finish-cell')?.textContent, '✶', 'a foil-only printing gets a single finish glyph');
   assertEqual(foilRow.querySelector('.stk-finish-badge')?.textContent.length, 1, 'never more than one finish glyph in a cell');
-  assertEqual(foilRow.querySelector('.currency-usd')?.textContent, '✶ $9.99', 'foil-only price falls back to the foil value');
+  assertEqual(foilRow.querySelector('.currency-usd')?.textContent, '$9.99',
+    'foil-only price falls back to the foil value without a second star');
   assert(!foilRow.querySelector('.currency-eur'), 'missing prices leave the cell empty');
   const emptyRow = entryOf('/mh3/43/');
   assert(!emptyRow.querySelector('.currency-usd') && !emptyRow.querySelector('.currency-eur'),
@@ -305,8 +321,7 @@ async function cardPageTest() {
     'rows under a group header keep the bare collector number');
   click(tstGroup);
   assert(tstRows.every(row => row.hidden), 'clicking a header folds just that group');
-  click(tstGroup);
-  assert(tstRows.every(row => !row.hidden), 'clicking again unfolds it');
+  assertEqual(nativeLink.textContent, 'Expand all groups', 'the line offers to unfold the groups again');
 
   // Toggle a printing inside the expanded table.
   const thirdPrintAdd = await waitFor(
@@ -326,13 +341,13 @@ async function cardPageTest() {
   assert(!thirdPrintAdd.classList.contains('stk-print-selected'), 'deselected print button loses the always-visible mark');
   assertEqual(mock.state.cards.length, 3, 'printing removed again');
 
-  // "Show fewer prints" folds the groups again without dropping the grouping.
+  // The line unfolds everything again, groups included, without dropping them.
   click(nativeLink);
-  assert(!printTable.classList.contains('stk-prints-expanded'), 'second click folds the table again');
-  assertEqual(nativeLink.getAttribute('aria-expanded'), 'false', 'aria-expanded resets to false');
-  assertEqual(nativeLink.textContent, 'View all prints →', 'collapsed link gets the native label back');
-  assertEqual(heads().length, 2, 'the groups stay when the table folds');
-  assert(allRows().every(row => row.hidden), 'folding hides the rows again');
+  assert(tstRows.every(row => !row.hidden), 'the line unfolds the folded group again');
+  assertEqual(heads().length, 2, 'the groups stay on the page');
+  assertEqual(nativeLink.hidden, true, 'with every group open the left half has nothing left to do');
+  assertEqual(document.querySelector('#main .prints .stk-print-new-page').textContent, 'View all prints on a new page →',
+    'the right half takes over the full-page wording');
   assertEqual(printBody.querySelectorAll('.stk-print-entry').length, 3, 'the added printings remain on the page');
 
   // A printing that is already in the clipboard shows a permanent check mark:
@@ -345,12 +360,10 @@ async function cardPageTest() {
   click(firstNativeAdd);
   await waitFor(() => firstNativeAdd.textContent === '✓', 'the check mark comes back when it is added again');
   click(nativeLink);
-  await waitFor(() => printBody.querySelectorAll('.stk-print-group-row').length === 2, 'table expands again');
+  await waitFor(() => printBody.querySelectorAll('.stk-print-group-row').length === 2, 'the groups are still there');
   const reExpandedAdd = printBody.querySelector('tr.current .stk-native-print-add');
-  assertEqual(reExpandedAdd, firstNativeAdd, 'the cached rows keep the same buttons');
-  assertEqual(reExpandedAdd.textContent, '✓', 're-expanded table still shows the check mark');
-  click(nativeLink);
-  assert(!printTable.classList.contains('stk-prints-expanded'), 'table is collapsed again');
+  assertEqual(reExpandedAdd, firstNativeAdd, 'the regrouped rows keep the same buttons');
+  assertEqual(reExpandedAdd.textContent, '✓', 'the check mark survives regrouping');
 
   // Clear the clipboard.
   click(aside.querySelector('.stk-icon-trash'));
@@ -471,6 +484,29 @@ async function printsGroupsEdgeTest() {
   assert(!printBody.querySelector('a[href*="/card/c09/"]'), 'opening a group does not bring the capped printings back');
   assertEqual(printBody.querySelectorAll('.stk-print-entry').length, 10, 'opening a group adds no other rows');
   assert(promoRow.closest('tr').hidden === false, 'the promo row opens together with its parent group');
+
+  // Beyond ten entries the line offers the rest, and the groups stay as they are.
+  const nativeLink = document.querySelector('.stk-print-new-page-line > a');
+  assertEqual(nativeLink.textContent, 'View all prints →', 'the line offers the printings behind the cap');
+  click(nativeLink);
+  assertEqual(nativeLink.textContent, 'Show fewer prints ↑', 'after revealing them it offers to fold back');
+  assert([...printBody.querySelectorAll('.stk-print-entry')].length > 10, 'the capped printings join the table');
+  assert(aaaRows.every(row => !row.hidden), 'revealing the rest leaves the opened group open');
+  assert([...printBody.querySelectorAll('.stk-print-group-row')][1].classList.contains('stk-group-collapsed'),
+    'and the folded ones stay folded');
+  click(nativeLink);
+  assertEqual(nativeLink.textContent, 'View all prints →', 'folding back restores the offer');
+  assertEqual([...printBody.querySelectorAll('.stk-print-entry')].length, 10, 'the ten-entry cap returns');
+}
+
+async function printsSameTabTest() {
+  console.log('content.js: printings link in the same tab');
+  const page = await loadCardPage({ cards: [], printPageSameTab: true });
+  const { document } = page;
+  const link = document.querySelector('#main .prints .stk-print-new-page');
+  assertEqual(link.textContent, 'Open on this page', 'the full-page link says on this page when the setting is on');
+  assertEqual(link.getAttribute('target'), null, 'the same-tab link opens no new tab');
+  assertEqual(link.getAttribute('rel'), null, 'and needs no noopener');
 }
 
 async function legacyMigrationTest() {
@@ -497,6 +533,7 @@ async function legacyMigrationTest() {
   try {
     await cardPageTest();
     await printsGroupsEdgeTest();
+    await printsSameTabTest();
     await searchPageTest();
     await clipboardDisabledTest();
     await legacyMigrationTest();

@@ -117,6 +117,10 @@ html.stk-dark #stk-edhrec .stk-edhrec-usage>.stk-edhrec-fraction{color:#d5d2d6}
 #main .prints > .prints-table .stk-print-group-row td>span{font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #main .prints > .prints-table .stk-print-group-row td>span::before{content:"▾ ";font-size:11px}
 #main .prints > .prints-table .stk-print-group-row.stk-group-collapsed td>span::before{content:"▸ "}
+/* A light rule closes the group, so its printings read apart from the rows
+   that stand on their own. A folded group closes at its own header. */
+#main .prints > .prints-table tr.stk-group-end td{border-bottom:1px solid #ddd8e0}
+#main .prints > .prints-table .stk-print-group-row.stk-group-folded-end td{border-bottom:1px solid #ddd8e0}
 /* The set of the card being viewed gets a light accent so it stands out. */
 #main .prints > .prints-table .stk-print-group-row.stk-current-group td{background:#efe3f4;border-left:3px solid #8b6597}
 #main .prints > .prints-table tbody tr[hidden]{display:none!important}
@@ -125,6 +129,7 @@ html.stk-dark #stk-edhrec .stk-edhrec-usage>.stk-edhrec-fraction{color:#d5d2d6}
 #main .prints .stk-print-new-page-line{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:7px 4px 6px 13px}
 #main .prints .stk-print-new-page-line>a{display:block;flex:0 1 auto;min-width:0;padding:0;line-height:14px;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
 #main .prints .stk-print-new-page-line>.stk-print-new-page{text-align:right;white-space:nowrap}
+#main .prints .stk-print-new-page-line.stk-print-line-end{justify-content:flex-end}
 @media(max-width:550px){#stk-edhrec{grid-template-columns:1fr;row-gap:6px}#stk-edhrec .stk-edhrec-item{grid-template-columns:68px minmax(0,1fr)}#stk-edhrec .stk-edhrec-salt{margin-left:0}}
 .stk-cardtrader-error{font-size:12px;opacity:.75}
 .stk-token-button{margin:8px}

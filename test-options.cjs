@@ -16,7 +16,7 @@ const REQUIRED_IDS = [
   'siteLanguage', 'usageColorMetric', 'usageCountThresholds',
   'usagePercentThresholds', 'usageMediumDecks', 'usageHighDecks',
   'usageMediumPercent', 'usageHighPercent', 'saltMediumThreshold',
-  'saltHighThreshold', 'clipboard', 'printAddButtons', 'darkTheme',
+  'saltHighThreshold', 'clipboard', 'printAddButtons', 'printPageSameTab', 'darkTheme',
   'hideCasterIndicator', 'hideDigitalSets', 'hideNonTournamentSets',
   'hideOversizedSets', 'hideForeignBlackBorder', 'hideNonEnglishPrints',
   'tags', 'cardTags', 'artTags', 'relationships', 'finishBadges',
@@ -124,6 +124,12 @@ async function settingsTest() {
   fireEvent(darkTheme, 'change');
   assertEqual(mock.state.darkTheme, true, 'toggling darkTheme persists');
   assertEqual(document.getElementById('status').textContent, 'Сохранено', 'save confirmed in Russian');
+
+  const sameTab = document.getElementById('printPageSameTab');
+  assertEqual(sameTab.checked, false, 'printPageSameTab starts unchecked');
+  sameTab.checked = true;
+  fireEvent(sameTab, 'change');
+  assertEqual(mock.state.printPageSameTab, true, 'the same-tab printings link setting persists');
 
   const exportFormat = document.getElementById('exportFormat');
   assertEqual(exportFormat.value, 'moxfield', 'export format defaults to with-sets');

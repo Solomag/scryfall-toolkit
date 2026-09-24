@@ -2,7 +2,7 @@
   const defaults = {
     siteLanguage: 'en',
     clipboard: true, tags: true, cardTags: true, artTags: true, relationships: true,
-    onlyCardmarket: false, printAddButtons: true, hideDigitalSets: false, hideNonTournamentSets: false, hideOversizedSets: false,
+    onlyCardmarket: false, printAddButtons: true, printPageSameTab: false, hideDigitalSets: false, hideNonTournamentSets: false, hideOversizedSets: false,
     hideForeignBlackBorder: false, hideNonEnglishPrints: false, legalities: true, finishBadges: true, cardtraderPrices: false, euroPriceSources: 'cm',
     edhrecUsage: false, edhrecSalt: false, showSaltScale: false, edhrecLink: true, edhrecUsageDisplay: 'both',
     usageColorMetric: 'decks', usageMediumDecks: 50000, usageHighDecks: 100000,
@@ -670,6 +670,12 @@
         badge.textContent = { foil:'✶', nonfoil:'○', etched:'◈', special:'✧' }[item.kind];
         cell.append(badge);
       }
+      // Scryfall marks a foil-only printing with a star inside the price cells.
+      // The finish column already says it, so the star is dropped there.
+      for (const price of table.querySelectorAll('td .currency-usd, td .currency-usd-promo, td .currency-eur, td .currency-tix')) {
+        const textNode = [...price.childNodes].find(node => node.nodeType === 3 && node.textContent.trim());
+        if (textNode) textNode.textContent = textNode.textContent.replace(/^[\s✶★]+/, '');
+      }
     }).catch(() => {});
   }
 
@@ -684,16 +690,28 @@
     // keeps a permanent sibling on the same line.
     const nativeRow = native.closest('tr');
     const nativeLabel = native.textContent;
+    // "Open on a new page" can become "Open on this page", which also stops the
+    // link from opening a new tab.
+    const sameTab = Boolean(settings.printPageSameTab);
     const pageLink = document.createElement('a');
     pageLink.className = 'stk-print-new-page';
     pageLink.href = native.getAttribute('href');
-    pageLink.target = '_blank';
-    pageLink.rel = 'noopener noreferrer';
-    pageLink.textContent = language === 'ru' ? 'Открыть отдельной страницей' : 'Open on a new page';
+    if (!sameTab) {
+      pageLink.target = '_blank';
+      pageLink.rel = 'noopener noreferrer';
+    }
     const pageLine = document.createElement('span');
     pageLine.className = 'stk-print-new-page-line';
     native.parentNode?.insertBefore(pageLine, native);
     pageLine.append(native, pageLink);
+    const openPageLabel = () => language === 'ru'
+      ? (sameTab ? 'Открыть на этой странице' : 'Открыть на новой странице')
+      : (sameTab ? 'Open on this page' : 'Open on a new page');
+    const fullPageLabel = () => language === 'ru'
+      ? (sameTab ? 'Все издания на этой странице' : 'Все издания на новой странице →')
+      : (sameTab ? 'View all prints on this page' : 'View all prints on a new page →');
+    const expandLabel = () => language === 'ru' ? 'Развернуть все группы' : 'Expand all groups';
+    const fewerLabel = language === 'ru' ? 'Показать меньше изданий ↑' : 'Show fewer prints ↑';
     const headCells = () => [...(table.querySelector('thead')?.querySelectorAll('th') || [])];
     const columns = () => headCells().length || 1;
     const statusRow = text => {
@@ -711,7 +729,11 @@
     let collapsibleRows = [];
     let loaded = false;
     let showingAll = false;
-    const fewerLabel = language === 'ru' ? 'Показать меньше изданий ↑' : 'Show fewer prints ↑';
+    // Each group remembers whether the user folded it, so regrouping never
+    // changes a group's state behind their back.
+    const groupFolded = new Map();
+    let placedUnits = [];
+    let totalUnits = 0;
     // Everything added here goes in front of the View-all line, so the line
     // itself ends up as the last row of the table.
     const insertAtEnd = node => tbody.insertBefore(node, nativeRow && nativeRow.parentNode === tbody ? nativeRow : null);
@@ -721,6 +743,9 @@
       extraRows = [];
       for (const row of collapsibleRows) row.hidden = false;
       collapsibleRows = [];
+      for (const row of document.querySelectorAll('#main .prints > .prints-table tr.stk-group-end')) {
+        row.classList.remove('stk-group-end');
+      }
       // Rows inside a group show the bare collector number; Scryfall's own text
       // comes back when the table is regrouped without that group.
       for (const link of document.querySelectorAll('#main .prints > .prints-table a[data-stk-label]')) {
@@ -766,23 +791,29 @@
     native.addEventListener('click', async event => {
       if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
       event.preventDefault();
-      const expanding = !table.classList.contains('stk-prints-expanded');
-      table.classList.toggle('stk-prints-expanded', expanding);
-      native.setAttribute('aria-expanded', String(expanding));
-      native.textContent = expanding ? fewerLabel : nativeLabel;
-      showingAll = expanding;
-      if (expanding && !loaded) {
-        const status = statusRow(language === 'ru' ? 'Загружаю издания…' : 'Loading printings…');
-        insertAtEnd(status);
-        try { await loadPrints(); status.remove(); }
-        catch {
-          status.querySelector('td').textContent =
-            language === 'ru' ? 'Не удалось загрузить издания. Откройте отдельную страницу.' : 'Could not load printings. Open the separate page.';
-          return;
-        }
+      // One link, three jobs: fold the table back, reveal the printings behind
+      // the cap, or unfold every group when there is nothing left to reveal.
+      if (showingAll) {
+        showingAll = false;
+        placeGroups();
+        return;
       }
-      // Regrouping the same rows is idempotent: closing the table keeps the
-      // first ten entries grouped, and opening it shows everything.
+      if (totalUnits > 10) {
+        if (!loaded) {
+          const status = statusRow(language === 'ru' ? 'Загружаю издания…' : 'Loading printings…');
+          insertAtEnd(status);
+          try { await loadPrints(); status.remove(); }
+          catch {
+            status.querySelector('td').textContent =
+              language === 'ru' ? 'Не удалось загрузить издания. Откройте отдельную страницу.' : 'Could not load printings. Open the separate page.';
+            return;
+          }
+        }
+        showingAll = true;
+        placeGroups();
+        return;
+      }
+      for (const unit of placedUnits) if (unit.grouped) groupFolded.set(unit.set, false);
       placeGroups();
     });
     // The default view is already grouped from the complete print list.
@@ -817,17 +848,41 @@
       head.append(cell);
       return head;
     };
-    const wireGroup = (head, rows) => {
+    const wireGroup = (head, rows, set) => {
       collapsibleRows.push(...rows);
       const setCollapsed = collapsed => {
         head.classList.toggle('stk-group-collapsed', collapsed);
+        // A folded group ends at its own header, an open one at its last row.
+        head.classList.toggle('stk-group-folded-end', collapsed);
         for (const row of rows) row.hidden = collapsed;
       };
-      // The default view folds the groups; "View all prints" unfolds them, and a
-      // click on a single header still toggles that group on its own.
-      setCollapsed(!showingAll);
-      head.addEventListener('click', () => setCollapsed(!head.classList.contains('stk-group-collapsed')));
+      // Groups start folded and then keep whatever state the user left them in,
+      // no matter how often the table is regrouped.
+      setCollapsed(groupFolded.get(set) !== false);
+      head.addEventListener('click', () => {
+        const collapsed = !head.classList.contains('stk-group-collapsed');
+        groupFolded.set(set, collapsed);
+        setCollapsed(collapsed);
+        updateLine();
+      });
     };
+    // The line at the bottom of the table offers whatever is still worth
+    // pressing: more printings, groups to unfold, or nothing but the full page.
+    function updateLine() {
+      const folded = placedUnits.filter(unit => unit.grouped && groupFolded.get(unit.set) !== false);
+      const left = showingAll ? fewerLabel
+        : totalUnits > 10 ? nativeLabel
+        : folded.length ? expandLabel()
+        : '';
+      native.hidden = !left;
+      native.textContent = left;
+      const bare = !left;
+      pageLink.textContent = bare ? fullPageLabel() : openPageLabel();
+      pageLine.classList.toggle('stk-print-line-end', bare);
+      const open = showingAll || placedUnits.some(unit => unit.grouped && groupFolded.get(unit.set) === false);
+      table.classList.toggle('stk-prints-expanded', open);
+      native.setAttribute('aria-expanded', String(open));
+    }
     // A promo set belongs to its parent set: "Ixalan Promos" shares the group of
     // "Ixalan", and only its own code tells the two apart inside the group.
     function mergePromoUnits(units) {
@@ -882,7 +937,10 @@
           added: extra.rows, grouped: extra.rows.length > 1
         });
       }
-      for (const unit of mergePromoUnits(units).slice(0, showingAll ? Infinity : 10)) {
+      const merged = mergePromoUnits(units);
+      totalUnits = merged.length;
+      placedUnits = merged.slice(0, showingAll ? Infinity : 10);
+      for (const unit of placedUnits) {
         // Inside a group the set name lives in the header, so every row there
         // shows the bare collector number; a lone printing repeats the set name.
         const all = [...unit.nativeRows, ...unit.added];
@@ -909,7 +967,7 @@
           if (unit.nativeRows.some(row => row.classList.contains('current'))) head.classList.add('stk-current-group');
           if (unit.nativeRows.length) unit.nativeRows[0].before(head);
           else insertAtEnd(head);
-          wireGroup(head, all);
+          wireGroup(head, all, unit.set);
           extraRows.push(head);
           anchor = head;
         }
@@ -922,12 +980,20 @@
           row.stkEnqueueCT?.();
         }
         extraRows.push(...unit.added);
+        // A light rule under the group's last row tells the grouped printings
+        // apart from the ones that stand on their own.
+        if (unit.grouped && all.length) {
+          const last = all[all.length - 1];
+          last.classList.add('stk-group-end');
+          collapsibleRows.push(last);
+        }
       }
       if (truncatedResult) {
         const notice = statusRow(language === 'ru' ? 'Часть изданий не загрузилась; откройте полную страницу.' : 'More printings are available on the full page.');
         insertAtEnd(notice);
         extraRows.push(notice);
       }
+      updateLine();
     }
 
     // Rows are inserted into Scryfall's own prints table so the expansion stays
@@ -955,7 +1021,7 @@
       };
       const priceText = (card, key, foilKey, symbol) =>
         card.prices?.[key] ? `${symbol}${card.prices[key]}`
-          : card.prices?.[foilKey] ? `✶ ${symbol}${card.prices[foilKey]}` : '';
+          : card.prices?.[foilKey] ? `${symbol}${card.prices[foilKey]}` : '';
       const path = uri => {
         try { return new URL(uri, location.href).pathname.replace(/\/+$/, ''); }
         catch { return ''; }
