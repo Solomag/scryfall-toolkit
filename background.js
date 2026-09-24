@@ -224,7 +224,10 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
           prints.push(...response.data.map(card => ({
             id: card.id, name: card.name, uri: card.scryfall_uri, set: card.set,
             setName: card.set_name, number: card.collector_number, lang: card.lang,
-            digital: card.digital, finishes: card.finishes, prices: card.prices
+            digital: card.digital, finishes: card.finishes, prices: card.prices,
+            // The row preview reuses the printing's own art, so it needs no
+            // extra request once the print list is in.
+            image: card.image_uris?.normal || card.card_faces?.[0]?.image_uris?.normal || null
           })));
           const next = response.has_more && response.next_page ? new URL(response.next_page) : null;
           if (next && (next.protocol !== 'https:' || next.hostname !== 'api.scryfall.com' || next.pathname !== '/cards/search')) throw new Error('Invalid next page');

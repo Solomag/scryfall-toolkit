@@ -72,6 +72,68 @@
   }
   // Set by the stats panel so a re-arranged legality block can realign it.
   let realignStatsPanel = null;
+  // Set by the prints expansion so the table can be regrouped once every column
+  // (Finish, CardTrader) has landed.
+  let regroupPrints = null;
+
+  // One hover preview shared by the tag panel and the expanded print rows.
+  let previewBox, previewTimer, previewHideTimer, activePreview;
+  function hidePreview(immediate = false) {
+    clearTimeout(previewTimer);
+    clearTimeout(previewHideTimer);
+    if (immediate) { activePreview = null; if (previewBox) previewBox.hidden = true; return; }
+    previewHideTimer = setTimeout(() => {
+      if (previewBox?.matches(':hover')) return;
+      activePreview = null;
+      if (previewBox) previewBox.hidden = true;
+    }, 450);
+  }
+  function positionPreview(link) {
+    const rect = link.getBoundingClientRect();
+    const width = 240, height = 340;
+    const left = rect.left > width + 24 ? rect.left - width - 12 : rect.right + 12;
+    previewBox.style.left = `${Math.max(8, Math.min(left, window.innerWidth - width - 8))}px`;
+    previewBox.style.top = `${Math.max(8, Math.min(rect.top, window.innerHeight - height - 8))}px`;
+  }
+  // `resolve` returns the card to show, so a print row can answer from the print
+  // list it already has while a tag row asks the background for it.
+  function enablePreview(link, resolve) {
+    const show = () => {
+      hidePreview(true);
+      activePreview = link;
+      previewTimer = setTimeout(async () => {
+        try {
+          if (!previewBox) {
+            previewBox = document.createElement('div');
+            previewBox.id = 'stk-card-preview';
+            previewBox.addEventListener('mouseenter', () => clearTimeout(previewHideTimer));
+            previewBox.addEventListener('mouseleave', () => hidePreview());
+            document.body.append(previewBox);
+            window.addEventListener('scroll', () => hidePreview(true), { passive: true });
+          }
+          previewBox.textContent = t('Загружаю карту…');
+          previewBox.classList.add('stk-card-preview-loading');
+          positionPreview(link);
+          previewBox.hidden = false;
+          const card = await resolve();
+          if (activePreview !== link || !card?.image) return;
+          if (card.uri) link.href = card.uri;
+          const img = document.createElement('img');
+          img.src = card.image;
+          img.alt = card.name || '';
+          previewBox.setAttribute('aria-label', card.name || '');
+          previewBox.replaceChildren(img);
+          previewBox.classList.remove('stk-card-preview-loading');
+          positionPreview(link);
+          previewBox.hidden = false;
+        } catch { if (activePreview === link) hidePreview(true); }
+      }, 160);
+    };
+    link.addEventListener('mouseenter', show);
+    link.addEventListener('focus', show);
+    link.addEventListener('mouseleave', () => hidePreview());
+    link.addEventListener('blur', () => hidePreview());
+  }
 
   function request(message) {
     return new Promise((resolve, reject) => {
@@ -99,6 +161,12 @@
   if (settings.deckNoPrices) initDeckPriceOption();
   if (settings.stackedDeckCards) initStackedDeckCards();
   if (settings.deckTokens) initDeckTokens();
+  if (cardPage) {
+    // The Finish column lands with its own response, so the print groups are
+    // built only after the header row is final.
+    await finishesSettled;
+    regroupPrints?.();
+  }
 
   function initSetFilter() {
     // Scryfall lists these curated online cubes under /cubes/, outside its
@@ -652,6 +720,12 @@
       extraRows = [];
       for (const row of collapsibleRows) row.hidden = false;
       collapsibleRows = [];
+      // Rows inside a group show the bare collector number; Scryfall's own text
+      // comes back when the table is regrouped without that group.
+      for (const link of document.querySelectorAll('#main .prints > .prints-table a[data-stk-label]')) {
+        link.textContent = link.dataset.stkLabel;
+        delete link.dataset.stkLabel;
+      }
     };
     native.setAttribute('aria-expanded', 'false');
     native.addEventListener('click', async event => {
@@ -712,13 +786,15 @@
     const rowSet = row => {
       const link = row.querySelector('td:first-child a[href]');
       let match = null;
-      try { match = link && new URL(link.href, location.href).pathname.match(/^\/card\/([^/]+)\//); } catch { match = null; }
-      return match ? match[1].toLowerCase() : null;
+      try { match = link && new URL(link.href, location.href).pathname.match(/^\/card\/([^/]+)\/([^/]+)/); } catch { match = null; }
+      return match ? { set: match[1].toLowerCase(), number: decodeURIComponent(match[2]) } : null;
     };
     // Scryfall puts the collector number on its own line inside the link, so the
     // whitespace has to be collapsed before the number can be cut off.
     const setNameOf = row => (row.querySelector('td:first-child a[href]')?.textContent || '')
       .replace(/\s+/g, ' ').trim().replace(/\s*#.*$/, '').trim();
+    const normName = name => String(name || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    const baseName = name => normName(name).replace(/\s+promos?$/, '');
     const groupHead = (setName, set, count) => {
       const head = document.createElement('tr');
       head.className = 'stk-print-group-row stk-print-extra';
@@ -742,51 +818,85 @@
       setCollapsed(true);
       head.addEventListener('click', () => setCollapsed(!head.classList.contains('stk-group-collapsed')));
     };
+    // A promo set belongs to its parent set: "Ixalan Promos" shares the group of
+    // "Ixalan", and only its own code tells the two apart inside the group.
+    function mergePromoUnits(units) {
+      const merged = [];
+      for (const unit of units) {
+        const index = merged.findIndex(other =>
+          other.setName !== unit.setName && baseName(other.setName) === baseName(unit.setName));
+        if (index < 0) { merged.push(unit); continue; }
+        const target = merged[index];
+        // The parent set keeps the group's name and code even when the promo
+        // printing was met first.
+        if (normName(unit.setName) === baseName(unit.setName) && normName(target.setName) !== baseName(target.setName)) {
+          target.setName = unit.setName;
+          target.set = unit.set;
+        }
+        target.sets = [...new Set([...target.sets, ...unit.sets])];
+        target.nativeRows = [...target.nativeRows, ...unit.nativeRows];
+        target.added = [...target.added, ...unit.added];
+      }
+      return merged;
+    }
     // One set is one group: the printings Scryfall already lists and the ones
     // added here share a single header, so two printings of one set (for
-    // example #304 and #304★) end up under the same group instead of apart.
-    // A card with a long print list shows the first ten entries of the closed
-    // table (a closed group counts as one); the rest stays on the full page.
+    // example #304 and #304★) end up under the same group instead of apart. The
+    // grouping is already in place before "View all prints" is pressed, and a
+    // long print list keeps the first ten entries of the closed table (a closed
+    // group counts as one); the rest stays behind the full-page link.
     function placeGroups() {
       clearExtra();
       const nativeGroups = new Map();
       for (const row of [...tbody.querySelectorAll('tr:not(.stk-print-extra)')]) {
         if (row === nativeRow) continue;
-        const set = rowSet(row);
-        if (!set) continue;
-        if (!nativeGroups.has(set)) nativeGroups.set(set, []);
-        nativeGroups.get(set).push(row);
+        const identity = rowSet(row);
+        if (!identity) continue;
+        if (!nativeGroups.has(identity.set)) nativeGroups.set(identity.set, []);
+        nativeGroups.get(identity.set).push(row);
       }
       const units = [];
       for (const [set, nativeSetRows] of nativeGroups) {
         const extra = builtGroups.get(set);
         const added = extra ? extra.rows : [];
         if (nativeSetRows.length + added.length > 1) {
-          units.push({ set, setName: extra?.setName || setNameOf(nativeSetRows[0]), nativeRows: nativeSetRows, added, grouped: true });
+          units.push({ set, sets: [set], setName: extra?.setName || setNameOf(nativeSetRows[0]), nativeRows: nativeSetRows, added, grouped: true });
         } else if (added.length) {
-          units.push({ set, setName: extra.setName, nativeRows: [], added, grouped: false });
+          units.push({ set, sets: [set], setName: extra.setName, nativeRows: [], added, grouped: false });
         }
       }
       for (const [set, extra] of builtGroups) {
         if (nativeGroups.has(set)) continue;
         units.push({
-          set, setName: extra.setName, nativeRows: [],
+          set, sets: [set], setName: extra.setName, nativeRows: [],
           added: extra.rows, grouped: extra.rows.length > 1
         });
       }
-      for (const unit of units.slice(0, 10)) {
-        // Inside a group the set name is already in the header, so the row keeps
-        // the bare collector number; a lone printing repeats the set name.
-        for (const row of unit.added) {
+      for (const unit of mergePromoUnits(units).slice(0, 10)) {
+        // Inside a group the set name lives in the header, so every row there
+        // shows the bare collector number; a lone printing repeats the set name.
+        const all = [...unit.nativeRows, ...unit.added];
+        for (const row of all) {
           const link = row.querySelector('td:first-child a[href]');
-          if (link) link.textContent = unit.grouped ? row.stkShortLabel : row.stkFullLabel;
+          if (!link) continue;
+          if (unit.grouped) {
+            const identity = rowSet(row);
+            // Scryfall's own wording is kept aside so regrouping can restore it.
+            if (identity && link.dataset.stkLabel === undefined) link.dataset.stkLabel = link.textContent;
+            const code = identity && identity.set !== unit.set ? ` (${identity.set.toUpperCase()})` : '';
+            link.textContent = row.stkShortLabel
+              ? `${row.stkShortLabel}${code}`
+              : `#${identity ? identity.number : ''}${code}`;
+          } else {
+            link.textContent = row.stkFullLabel || link.textContent;
+          }
         }
         let anchor = null;
         if (unit.grouped) {
-          const head = groupHead(unit.setName, unit.set, unit.nativeRows.length + unit.added.length);
+          const head = groupHead(unit.setName, unit.set, all.length);
           if (unit.nativeRows.length) unit.nativeRows[0].before(head);
           else insertAtEnd(head);
-          wireGroup(head, [...unit.nativeRows, ...unit.added]);
+          wireGroup(head, all);
           extraRows.push(head);
           anchor = head;
         }
@@ -862,6 +972,9 @@
               link.href = path(card.uri);
               link.textContent = number;
               cell.append(link);
+              // The printing's own art comes with the print list, so the hover
+              // preview needs no extra request.
+              if (card.image) enablePreview(link, async () => ({ image: card.image, name: card.name, uri: link.href }));
               attachPrintButton(cell, printKey(card.set, card.number), card,
                 language === 'ru' ? 'Добавить конкретное издание с кодом сета в буфер' : 'Add this printing with its set code to the clipboard');
             } else if (i === finishIdx) {
@@ -904,6 +1017,9 @@
       }
       return built;
     }
+    // The grouping runs once every column exists, so the group headers span the
+    // finished table, and again after each expansion.
+    regroupPrints = placeGroups;
   }
 
   function initNativePrintButtons() {
@@ -1118,61 +1234,6 @@
     panel.textContent = t('Загружаю теги…');
     anchor.after(panel);
     let noticeTimeout;
-    let preview, previewTimer, hideTimer, activePreview;
-    function hidePreview(immediate = false) {
-      clearTimeout(previewTimer);
-      clearTimeout(hideTimer);
-      if (immediate) { activePreview = null; if (preview) preview.hidden = true; return; }
-      hideTimer = setTimeout(() => {
-        if (preview?.matches(':hover')) return;
-        activePreview = null;
-        if (preview) preview.hidden = true;
-      }, 450);
-    }
-    function positionPreview(link) {
-      const rect = link.getBoundingClientRect();
-      const width = 240, height = 340;
-      const left = rect.left > width + 24 ? rect.left - width - 12 : rect.right + 12;
-      preview.style.left = `${Math.max(8, Math.min(left, window.innerWidth - width - 8))}px`;
-      preview.style.top = `${Math.max(8, Math.min(rect.top, window.innerHeight - height - 8))}px`;
-    }
-    function enablePreview(link, kind, id) {
-      const show = () => {
-        hidePreview(true);
-        activePreview = link;
-        previewTimer = setTimeout(async () => {
-          try {
-            if (!preview) {
-              preview = document.createElement('div');
-              preview.id = 'stk-card-preview';
-              preview.addEventListener('mouseenter', () => clearTimeout(hideTimer));
-              preview.addEventListener('mouseleave', () => hidePreview());
-              document.body.append(preview);
-              window.addEventListener('scroll', () => hidePreview(true), { passive: true });
-            }
-            preview.textContent = t('Загружаю карту…');
-            preview.classList.add('stk-card-preview-loading');
-            positionPreview(link);
-            preview.hidden = false;
-            const card = await request({ type: 'preview', kind, id });
-            if (activePreview !== link) return;
-            if (card.uri) link.href = card.uri;
-            const img = document.createElement('img');
-            img.src = card.image;
-            img.alt = card.name;
-            preview.setAttribute('aria-label', card.name);
-            preview.replaceChildren(img);
-            preview.classList.remove('stk-card-preview-loading');
-            positionPreview(link);
-            preview.hidden = false;
-          } catch { if (activePreview === link) hidePreview(true); }
-        }, 160);
-      };
-      link.addEventListener('mouseenter', show);
-      link.addEventListener('focus', show);
-      link.addEventListener('mouseleave', () => hidePreview());
-      link.addEventListener('blur', () => hidePreview());
-    }
     function showTagNotice(token) {
       let notice = document.getElementById("stk-tag-notice");
       if (!notice) {
@@ -1239,7 +1300,7 @@
               const query = `${kind}:${tag.targetId}`;
               a.href = `/search?q=${encodeURIComponent(query)}`;
               a.title = `${tagType.toLowerCase().replaceAll("_", " ")}: ${tag.name}`;
-              enablePreview(a, kind, tag.targetId);
+              enablePreview(a, () => request({ type: 'preview', kind, id: tag.targetId }));
               // Open the actual card detail so prices, tags and legality load.
               // Keep the search URL as a usable fallback if the API fails.
               a.addEventListener('click', async event => {

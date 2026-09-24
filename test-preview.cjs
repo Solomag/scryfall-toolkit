@@ -21,9 +21,12 @@ const CARD_HTML = `<!DOCTYPE html><html><head>
     <table class="prints-table">
       <thead><tr><th>Name</th><th>Set</th><th><span>USD</span></th><th><span>EUR</span></th><th><span>TIX</span></th></tr></thead>
       <tbody>
-        <tr class="current"><td><a data-card-id="${PRINT_CURRENT}" href="https://scryfall.com/card/tst/1/test-card">Test Card (TST) 1</a></td><td>TST</td><td></td><td></td><td></td></tr>
-        <tr><td><a data-card-id="${PRINT_TST2}" href="https://scryfall.com/card/tst/2/test-card">Test Card (TST) 2</a></td><td>TST</td><td></td><td></td><td></td></tr>
-        <tr><td><a data-card-id="${PRINT_MH3}" href="https://scryfall.com/card/mh3/42/test-card">Test Card (MH3) 42</a></td><td>MH3</td><td></td><td></td><td></td></tr>
+        <tr class="current"><td><a data-card-id="${PRINT_CURRENT}" href="https://scryfall.com/card/tst/1/test-card">Test Set
+          #1</a></td><td>TST</td><td></td><td></td><td></td></tr>
+        <tr><td><a data-card-id="${PRINT_TST2}" href="https://scryfall.com/card/tst/2/test-card">Test Set
+          #2</a></td><td>TST</td><td></td><td></td><td></td></tr>
+        <tr><td><a data-card-id="${PRINT_MH3}" href="https://scryfall.com/card/mh3/42/test-card">Modern Horizons 3
+          #42</a></td><td>MH3</td><td></td><td></td><td></td></tr>
         <tr class="view-all"><td colspan="5"><a href="https://scryfall.com/search?unique=prints&amp;include=extras">View all prints →</a></td></tr>
       </tbody>
     </table>
@@ -216,7 +219,20 @@ async function cardPageTest() {
   const printTable = document.querySelector('#main .prints > .prints-table');
   const printBody = printTable.tBodies && printTable.tBodies[0] ? printTable.tBodies[0] : printTable.querySelector('tbody');
   assertEqual(nativeLink.getAttribute('aria-expanded'), 'false', 'aria-expanded starts false');
-  assertEqual(printBody.querySelectorAll('.stk-print-extra').length, 0, 'no extra rows before expanding');
+  // The sets are grouped before anything is pressed, exactly like after expanding.
+  const loadHead = printBody.querySelector('.stk-print-group-row');
+  assert(loadHead, 'a set with two native printings is grouped on load');
+  assertEqual(loadHead.querySelector('span').textContent, 'Test Set (TST) · 2',
+    'the load-time header names the set and drops the collector number');
+  assert(loadHead.classList.contains('stk-group-collapsed'), 'the load-time group starts closed');
+  const loadTstRows = [...printBody.querySelectorAll('a[href*="/card/tst/"]')].map(link => link.closest('tr'));
+  assert(loadTstRows.every(row => row.hidden), 'the closed load-time group hides its native rows');
+  assertEqual(loadTstRows.map(row => row.querySelector('a').textContent), ['#1', '#2'],
+    'grouped native rows show the bare collector number');
+  const loneMh3 = printBody.querySelector('a[href*="/card/mh3/42/"]');
+  assertEqual(loneMh3.textContent.replace(/\s+/g, ' ').trim(), 'Modern Horizons 3 #42',
+    'a set with one printing keeps Scryfall wording');
+  assertEqual(printBody.querySelectorAll('.stk-print-entry').length, 0, 'no added printings before expanding');
   click(nativeLink);
   assert(printTable.classList.contains('stk-prints-expanded'), 'table carries the expanded state');
   assertEqual(nativeLink.getAttribute('aria-expanded'), 'true', 'aria-expanded flips to true');
@@ -322,6 +338,10 @@ async function cardPageTest() {
   assertEqual(nativeLink.getAttribute('aria-expanded'), 'false', 'aria-expanded resets to false');
   assertEqual(nativeLink.textContent, 'View all prints →', 'collapsed link gets the native label back');
   assert(tstRows.every(row => !row.hidden), 'native rows are visible again after the collapse');
+  assertEqual(printBody.querySelector('a[href*="/card/tst/1/"]').textContent.replace(/\s+/g, ' ').trim(), 'Test Set #1',
+    'Scryfall wording comes back when the group is gone');
+  assertEqual(printBody.querySelector('a[href*="/card/mh3/42/"]').textContent.replace(/\s+/g, ' ').trim(), 'Modern Horizons 3 #42',
+    'the single-printing set keeps its row untouched');
 
   // A printing that is already in the clipboard shows a permanent check mark:
   // the current printing was added through the scan button earlier.
@@ -410,11 +430,12 @@ async function printsGroupsEdgeTest() {
   const html = CARD_HTML.replace(/<tbody>[\s\S]*?<\/tbody>/, `<tbody>${native}</tbody>`);
   const many = [];
   for (let index = 1; index <= 12; index++) many.push(mkPrint(`c${String(index).padStart(2, '0')}`, '1'));
+  const promo = { ...mkPrint('aaap', '7'), setName: 'Set AAA Promos' };
   const edgeRoutes = {
     ...routes,
     finishes: () => ({}),
     allPrints: () => ({
-      prints: [mkPrint('aaa', '1'), mkPrint('aaa', '2'), mkPrint('bbb', '1'), mkPrint('bbb', '2'), ...many],
+      prints: [mkPrint('aaa', '1'), mkPrint('aaa', '2'), mkPrint('bbb', '1'), mkPrint('bbb', '2'), promo, ...many],
       truncated: false
     })
   };
@@ -432,13 +453,22 @@ async function printsGroupsEdgeTest() {
   await waitFor(() => printBody.querySelectorAll('.stk-print-group-row').length === 2, 'two set groups are built');
 
   const heads = [...printBody.querySelectorAll('.stk-print-group-row span')].map(node => node.textContent);
-  assertEqual(heads, ['Set AAA (AAA) · 2', 'Set BBB (BBB) · 2'],
-    'a native-only group takes its set name from the row and drops the collector number');
+  assertEqual(heads, ['Set AAA (AAA) · 3', 'Set BBB (BBB) · 2'],
+    'a native-only group takes its set name from the row, and the promo set joins its parent');
+  const promoRow = printBody.querySelector('.stk-print-entry a[href*="/card/aaap/"]');
+  assertEqual(promoRow.textContent, '#7 (AAAP)', 'a promo row inside the parent group shows its own set code');
+  let enclosingHead = promoRow.closest('tr').previousElementSibling;
+  while (enclosingHead && !enclosingHead.classList.contains('stk-print-group-row')) {
+    enclosingHead = enclosingHead.previousElementSibling;
+  }
+  assert(enclosingHead && enclosingHead.textContent.includes('(AAA)'),
+    'the promo row belongs to the parent set group, not to a set of its own');
+  assert(promoRow.closest('tr').hidden, 'the promo row is folded away with its group');
   // A closed group counts as one entry, so fourteen entries collapse to ten.
   const entries = [...printBody.querySelectorAll('.stk-print-entry')];
-  assertEqual(entries.length, 9, 'nine added printings made it past the ten-entry cap');
+  assertEqual(entries.length, 10, 'ten added printings made it into the ten-entry cap');
   assertEqual(entries.map(row => row.querySelector('td:first-child a').textContent),
-    ['#2', 'Set C01 #1', 'Set C02 #1', 'Set C03 #1', 'Set C04 #1', 'Set C05 #1', 'Set C06 #1', 'Set C07 #1', 'Set C08 #1'],
+    ['#7 (AAAP)', '#2', 'Set C01 #1', 'Set C02 #1', 'Set C03 #1', 'Set C04 #1', 'Set C05 #1', 'Set C06 #1', 'Set C07 #1', 'Set C08 #1'],
     'rows inside a group keep the bare number, rows outside repeat the set name');
   assert(!printBody.querySelector('a[href*="/card/c09/"]'), 'the printings behind the cap stay off the page');
   const aaaRows = [...printBody.querySelectorAll('a[href*="/card/aaa/"]')].map(link => link.closest('tr'));
@@ -448,7 +478,8 @@ async function printsGroupsEdgeTest() {
   click(aaaHead);
   assert(aaaRows.every(row => !row.hidden), 'opening a group only reveals its own rows');
   assert(!printBody.querySelector('a[href*="/card/c09/"]'), 'opening a group does not bring the capped printings back');
-  assertEqual(printBody.querySelectorAll('.stk-print-entry').length, 9, 'opening a group adds no other rows');
+  assertEqual(printBody.querySelectorAll('.stk-print-entry').length, 10, 'opening a group adds no other rows');
+  assert(promoRow.closest('tr').hidden === false, 'the promo row opens together with its parent group');
 }
 
 async function legacyMigrationTest() {
