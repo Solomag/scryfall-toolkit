@@ -112,22 +112,25 @@ html.stk-dark #stk-edhrec .stk-edhrec-usage>.stk-edhrec-fraction{color:#d5d2d6}
 #main .prints > .prints-table .stk-native-print-add:hover,#main .prints > .prints-table .stk-native-print-add:focus-visible{background:#4c4954}
 @media(hover:none){#main .prints > .prints-table .stk-native-print-add{opacity:1;pointer-events:auto}}
 /* Group headers reuse the native first-cell markup (its span takes the native
-   padding, line-height and alignment) so the whole label stays on one line. */
-#main .prints > .prints-table .stk-print-group-row td{padding:0;background:#efeaf4;border-top:1px solid #ddd8e0;cursor:pointer}
+   padding, line-height and alignment) so the whole label stays on one line. The
+   header carries no line of its own: its tinted background and the closing
+   stripe say where a group begins and ends. */
+#main .prints > .prints-table .stk-print-group-row td{padding:0;background:#efeaf4;cursor:pointer}
 #main .prints > .prints-table .stk-print-group-row td>span{font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #main .prints > .prints-table .stk-print-group-row td>span::before{content:"▾ ";font-size:11px}
 #main .prints > .prints-table .stk-print-group-row.stk-group-collapsed td>span::before{content:"▸ "}
 /* Scryfall draws a hairline under every printing and closes the table with a
-   3px rule. The group stripe below takes that job over, so the native borders
-   are cleared and only one separator is ever visible. */
+   3px rule. The group stripe below takes that job over, so every native border
+   is cleared and only one separator is ever visible. */
 #main .prints > .prints-table tbody tr,
-#main .prints > .prints-table tbody tr:last-child{border-bottom:0}
+#main .prints > .prints-table tbody tr:last-child{border-bottom:0!important;border-top:0!important}
+#main .prints > .prints-table tbody td{border-bottom:0!important;border-top:0!important}
 /* A light stripe closes the group, so its printings read apart from the rows
    that stand on their own. */
-#main .prints > .prints-table tr.stk-group-end{border-bottom:0}
-#main .prints > .prints-table tr.stk-group-end td{border-bottom:2px solid #cfc3d6}
-#main .prints > .prints-table tr.stk-print-group-row.stk-group-folded-end{border-bottom:0}
-#main .prints > .prints-table tr.stk-print-group-row.stk-group-folded-end td{border-bottom:2px solid #cfc3d6}
+#main .prints > .prints-table tr.stk-group-end{border-bottom:0!important}
+#main .prints > .prints-table tr.stk-group-end td{border-bottom:2px solid #cfc3d6!important}
+#main .prints > .prints-table tr.stk-print-group-row.stk-group-folded-end{border-bottom:0!important}
+#main .prints > .prints-table tr.stk-print-group-row.stk-group-folded-end td{border-bottom:2px solid #cfc3d6!important}
 /* The set of the card being viewed gets a light accent so it stands out. */
 #main .prints > .prints-table .stk-print-group-row.stk-current-group td{background:#efe3f4;border-left:3px solid #8b6597}
 #main .prints > .prints-table tbody tr[hidden]{display:none!important}

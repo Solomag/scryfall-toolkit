@@ -119,15 +119,19 @@ function cssCheck() {
     'group header label uses the native span-in-cell markup');
   assert(css.includes('.stk-print-group-row.stk-current-group td{'),
     'the set of the card being viewed is highlighted');
-  assert(css.includes('#main .prints > .prints-table tbody tr:last-child{border-bottom:0}'),
+  assert(css.includes('#main .prints > .prints-table tbody tr:last-child{border-bottom:0!important;border-top:0!important}'),
     "Scryfall's own row hairlines and closing rule are gone, so no doubled separator is left");
-  assert(css.includes('tr.stk-group-end{border-bottom:0}'),
+  assert(css.includes('#main .prints > .prints-table tbody td{border-bottom:0!important;border-top:0!important}'),
+    'the cells are cleared as well, should Scryfall ever draw a line on them');
+  assert(!/\.stk-print-group-row td\{[^}]*border-top/.test(css),
+    'a group header draws no line of its own, its background and the stripe say where it starts');
+  assert(css.includes('tr.stk-group-end{border-bottom:0!important}'),
     "Scryfall's own hairline is cleared where the group stripe takes over");
-  assert(css.includes('tr.stk-group-end td{border-bottom:2px solid #cfc3d6}'),
+  assert(css.includes('tr.stk-group-end td{border-bottom:2px solid #cfc3d6!important}'),
     'an open group is closed by a light stripe under its last row');
-  assert(css.includes('tr.stk-print-group-row.stk-group-folded-end{border-bottom:0}'),
+  assert(css.includes('tr.stk-print-group-row.stk-group-folded-end{border-bottom:0!important}'),
     "a folded group clears the original hairline at its own header");
-  assert(css.includes('tr.stk-print-group-row.stk-group-folded-end td{border-bottom:2px'),
+  assert(css.includes('tr.stk-print-group-row.stk-group-folded-end td{border-bottom:2px solid #cfc3d6!important}'),
     'and closes the stripe there instead');
   assert(!css.includes('tr.stk-group-row'), 'the folded stripe goes to the class group headers really carry');
   assert(!css.includes('.stk-print-group-row td{') || !/\.stk-print-group-row td\{[^}]*user-select:none/.test(css),
@@ -163,11 +167,11 @@ function cssCheck() {
     'dark group header rows win over the light content rule');
   assert(theme.includes('html.stk-dark .prints-table .stk-print-group-row.stk-current-group td{'),
     'dark theme keeps the current group accent');
-  assert(theme.includes('html.stk-dark .prints-table tbody tr:last-child{border-bottom:0!important}'),
-    'the dark theme clears the native row hairlines as well');
-  assert(theme.includes('html.stk-dark .prints-table tr.stk-group-end td{'),
+  assert(theme.includes('html.stk-dark #main .prints > .prints-table tbody tr:last-child{border-bottom:0!important;border-top:0!important}'),
+    'the dark theme clears the native row hairlines as well, and outranks the light rule');
+  assert(theme.includes('html.stk-dark #main .prints > .prints-table tr.stk-group-end td{'),
     'dark theme keeps the group closing stripe');
-  assert(theme.includes('html.stk-dark .prints-table tr.stk-print-group-row.stk-group-folded-end td{'),
+  assert(theme.includes('html.stk-dark #main .prints > .prints-table tr.stk-print-group-row.stk-group-folded-end td{'),
     'and the folded group stripe in the dark theme too');
   assert(theme.includes('html.stk-dark .prints-table :is(a,span).currency-eur{'),
     'dark theme recolors generated price spans too');

@@ -1,4 +1,4 @@
-# Scryfall Toolkit — preview 0.21.0
+# Scryfall Toolkit — preview 0.22.0
 
 An independent browser extension for Scryfall. The current preview includes a shared card clipboard on Scryfall and Scryfall Tagger, sidebar Tagger card/art tags on individual Scryfall card pages, and extra format legalities. It never runs on Moxfield; keep the official MoxTags extension installed there.
 

@@ -736,10 +736,13 @@
     let placedUnits = [];
     let totalUnits = 0;
     let defaultFolded = true;
+    // Where every printing sits in the API answer (newest first), so native rows
+    // and added ones can share one order.
+    let printIndex = new Map();
+    let printNewestFirst = true;
     // Everything added here goes in front of the View-all line, so the line
     // itself ends up as the last row of the table.
     const insertAtEnd = node => tbody.insertBefore(node, nativeRow && nativeRow.parentNode === tbody ? nativeRow : null);
-    const insertAfter = (ref, node) => ref.parentNode.insertBefore(node, ref.nextSibling);
     const clearExtra = () => {
       for (const row of extraRows) row.remove();
       extraRows = [];
@@ -754,6 +757,9 @@
         link.textContent = link.dataset.stkLabel;
         delete link.dataset.stkLabel;
       }
+      // Printings the window skipped are back on the page while the next
+      // placement decides where each of them belongs.
+      for (const row of tbody.querySelectorAll('tr[hidden]')) row.hidden = false;
     };
     // Fetches the complete print list once; the default view groups it too, so
     // the ten-entry cap covers the whole card, not only Scryfall's subset.
@@ -791,6 +797,7 @@
       for (const cards of groups.values()) {
         for (const card of cards) apiIndex.set(printKey(card.set, card.number), position++);
       }
+      printIndex = apiIndex;
       const nativePositions = [];
       for (const row of [...tbody.querySelectorAll('tr:not(.stk-print-extra)')]) {
         if (row === nativeRow) continue;
@@ -803,6 +810,7 @@
         if (nativePositions[index] < nativePositions[index - 1]) inversions++;
       }
       const newestFirst = nativePositions.length < 2 || inversions * 2 <= nativePositions.length - 1;
+      printNewestFirst = newestFirst;
       const byApi = (a, b) => (apiIndex.get(printKey(a.set, a.number)) ?? 0) - (apiIndex.get(printKey(b.set, b.number)) ?? 0);
       const compare = newestFirst ? byApi : (a, b) => -byApi(a, b);
       const ordered = new Map([...groups.entries()]
@@ -869,6 +877,9 @@
     const baseName = name => normName(name).replace(/\s+promos?$/, '');
     // A star never belongs in a set name: the finish column already says it.
     const cleanSetName = name => String(name || '').replace(/[\s✶★]+/g, ' ').replace(/\s+/g, ' ').trim();
+    // The API and the row link keep the star inside the collector number itself
+    // ("67★" is a foil-only printing), so it is cut off whenever a number is shown.
+    const cleanNumber = number => String(number || '').replace(/\s*[✶★]+\s*$/, '').trim();
     // A lone printing keeps Scryfall's own wording, star included, so the star
     // that trails its collector number is cut here as well.
     const cleanRowLabel = label => String(label || '')
@@ -980,11 +991,37 @@
       // header even when one side arrived as a single native row.
       const merged = mergePromoUnits(units)
         .map(unit => ({ ...unit, grouped: unit.nativeRows.length + unit.added.length > 1 }));
+      // Native rows take part in the order like any other printing: the whole
+      // table reads as one list in the direction the page itself uses, with the
+      // rows Scryfall renders where their release date puts them.
+      const rowRank = row => {
+        const identity = rowSet(row);
+        const rank = identity && printIndex.get(printKey(identity.set, identity.number));
+        return rank === undefined ? Infinity : rank;
+      };
+      const unitRank = unit => Math.min(...[...unit.nativeRows, ...unit.added].map(rowRank));
+      merged.sort((a, b) => {
+        const left = unitRank(a);
+        const right = unitRank(b);
+        if (left === right) return 0;
+        return (left < right ? -1 : 1) * (printNewestFirst ? 1 : -1);
+      });
       totalUnits = merged.length;
-      placedUnits = merged.slice(0, showingAll ? Infinity : 10);
       // A card whose printings all fit into ten rows has nothing to fold away,
       // so its groups start open.
-      defaultFolded = placedUnits.reduce((sum, unit) => sum + unit.nativeRows.length + unit.added.length, 0) > 10;
+      defaultFolded = merged.reduce((sum, unit) => sum + unit.nativeRows.length + unit.added.length, 0) > 10;
+      // Ten entries fit on the page (a closed group counts as one). Scryfall
+      // keeps the printing being viewed on screen, so the window is taken around
+      // its group instead of from the top.
+      const cap = 10;
+      let start = 0;
+      if (!showingAll && totalUnits > cap) {
+        const currentRow = tbody.querySelector('tr.current');
+        const at = currentRow ? merged.findIndex(unit => unit.nativeRows.includes(currentRow)) : -1;
+        start = at < 0 ? 0 : Math.max(0, Math.min(at - 4, totalUnits - cap));
+      }
+      placedUnits = showingAll ? merged : merged.slice(start, start + cap);
+      const sequence = [];
       for (const unit of placedUnits) {
         // Inside a group the set name lives in the header, so every row there
         // shows the bare collector number; a lone printing repeats the set name.
@@ -999,27 +1036,22 @@
             const code = identity && identity.set !== unit.set ? ` (${identity.set.toUpperCase()})` : '';
             link.textContent = row.stkShortLabel
               ? `${row.stkShortLabel}${code}`
-              : `#${identity ? identity.number : ''}${code}`;
+              : `#${identity ? cleanNumber(identity.number) : ''}${code}`;
           } else {
             link.textContent = cleanRowLabel(row.stkFullLabel || link.textContent);
           }
         }
-        let anchor = null;
         if (unit.grouped) {
           const head = groupHead(unit.setName, unit.set, all.length);
           // The set of the card being viewed gets a light accent so it is easy
           // to find among the other groups.
           if (unit.nativeRows.some(row => row.classList.contains('current'))) head.classList.add('stk-current-group');
-          if (unit.nativeRows.length) unit.nativeRows[0].before(head);
-          else insertAtEnd(head);
           wireGroup(head, all, unit.set);
           extraRows.push(head);
-          anchor = head;
+          sequence.push(head);
         }
-        if (unit.nativeRows.length) anchor = unit.nativeRows[unit.nativeRows.length - 1];
+        sequence.push(...all);
         for (const row of unit.added) {
-          if (anchor) insertAfter(anchor, row); else insertAtEnd(row);
-          anchor = row;
           // The CardTrader queue only ever sees the rows that made it into the
           // table, so the printings behind the ten-entry cap cost no requests.
           row.stkEnqueueCT?.();
@@ -1032,6 +1064,14 @@
           last.classList.add('stk-group-end');
           collapsibleRows.push(last);
         }
+      }
+      // The whole body is moved into the chosen order, Scryfall's own rows
+      // included, so the table reads as one list from top to bottom.
+      for (const row of sequence) insertAtEnd(row);
+      // Printings the window skipped wait off screen until "View all prints"
+      // brings the whole list in.
+      for (const row of [...tbody.querySelectorAll('tr:not(.stk-print-extra)')]) {
+        if (row !== nativeRow && !sequence.includes(row)) row.hidden = true;
       }
       if (truncatedResult) {
         const notice = statusRow(language === 'ru' ? 'Часть изданий не загрузилась; откройте полную страницу.' : 'More printings are available on the full page.');
@@ -1084,7 +1124,7 @@
         for (const card of entries) {
           const row = document.createElement('tr');
           row.className = 'stk-print-entry stk-print-extra';
-          const number = `#${card.number}${card.lang !== 'en' ? ` · ${card.lang.toUpperCase()}` : ''}`;
+          const number = `#${cleanNumber(card.number)}${card.lang !== 'en' ? ` · ${card.lang.toUpperCase()}` : ''}`;
           // Under a group header the set name would repeat on every row, so the
           // bare number is used there and the full label outside groups.
           row.stkShortLabel = number;

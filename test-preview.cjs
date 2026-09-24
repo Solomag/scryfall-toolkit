@@ -599,13 +599,121 @@ async function printsOrderTest() {
   await waitFor(() => oldestFirst.querySelectorAll('.stk-print-group-row').length === 2, 'oldest page: groups built');
   assertEqual(layout(oldestFirst), [
     'H:Set Old (OLD) · 3', '#1', '#2', '#3', 'H:Set Mid (MID) · 2', '#1', '#2', 'Set New #1'
-  ], 'with the oldest printing on top the added sets follow from oldest to newest');
+  ], 'with the oldest printing on top the whole table, native rows included, runs from oldest to newest');
 
   const newestFirst = await load(build([third, second, first]));
   await waitFor(() => newestFirst.querySelectorAll('.stk-print-group-row').length === 2, 'newest page: groups built');
   assertEqual(layout(newestFirst), [
-    'H:Set Old (OLD) · 3', '#3', '#2', '#1', 'Set New #1', 'H:Set Mid (MID) · 2', '#2', '#1'
-  ], 'with the newest printing on top the added sets follow from newest to oldest, native rows keep their order');
+    'Set New #1', 'H:Set Mid (MID) · 2', '#2', '#1', 'H:Set Old (OLD) · 3', '#3', '#2', '#1'
+  ], 'with the newest printing on top the whole table runs from newest to oldest, Scryfall rows keep their own order');
+}
+
+async function printsWindowTest() {
+  console.log('content.js: the ten-entry window keeps the printing being viewed on screen');
+  const print = (set, number) => ({
+    id: `w-${set}-${number}`, name: 'Window Card', uri: `https://scryfall.com/card/${set}/${number}/window-card`,
+    set, setName: `Set ${set.toUpperCase()}`, number, lang: 'en', digital: false, finishes: ['nonfoil'], prices: {}
+  });
+  // The API answers newest first: twelve sets from this year, then an old trio.
+  const recent = [];
+  for (let index = 12; index >= 1; index--) recent.push(print(`n${String(index).padStart(2, '0')}`, '1'));
+  const old = [print('old', '3'), print('old', '2'), print('old', '1')];
+  const apiOrder = [...recent, ...old];
+  // Scryfall's own table is a window around the printing being viewed; here it
+  // holds the current set plus the three old rows, which fall outside ours.
+  const native = `
+        <tr class="current"><td><a data-card-id="n06" href="/card/n06/1/window-card">Set N06
+          #1</a></td><td>N06</td><td></td><td></td><td></td></tr>
+        <tr><td><a data-card-id="o1" href="/card/old/1/window-card">Set OLD
+          #1</a></td><td>OLD</td><td></td><td></td><td></td></tr>
+        <tr><td><a data-card-id="o2" href="/card/old/2/window-card">Set OLD
+          #2</a></td><td>OLD</td><td></td><td></td><td></td></tr>
+        <tr><td><a data-card-id="o3" href="/card/old/3/window-card">Set OLD
+          #3</a></td><td>OLD</td><td></td><td></td><td></td></tr>
+        <tr class="view-all"><td colspan="5"><a href="https://scryfall.com/search?unique=prints">View all prints →</a></td></tr>`;
+  const html = CARD_HTML.replace(/<tbody>[\s\S]*?<\/tbody>/, `<tbody>${native}</tbody>`);
+  const page = createPage({
+    url: 'https://scryfall.com/card/n06/1/window-card', html, state: { cards: [] },
+    routes: { ...routes, finishes: () => ({}), allPrints: () => ({ prints: apiOrder, truncated: false }) }
+  });
+  await page.script('i18n.js');
+  await page.script('format-catalog.js');
+  await page.script('tag-icons.js');
+  await page.script('data/shambleshark-nicknames.js');
+  await page.script('content.js');
+  await sleep(60);
+  const { document } = page;
+  const printBody = document.querySelector('#main .prints .prints-table tbody');
+  const nativeLink = document.querySelector('.stk-print-new-page-line > a');
+  await waitFor(() => printBody.querySelectorAll('.stk-print-entry').length, 'the printings are placed');
+  const rows = () => [...printBody.querySelectorAll('tr:not(.stk-print-group-row):not(.view-all):not(.stk-print-status)')];
+  const visible = () => rows().filter(row => !row.hidden);
+  const codes = () => visible().map(row => (row.querySelector('a[href]')?.getAttribute('href') || '').match(/\/card\/([^/]+)\//)?.[1]);
+
+  assertEqual(rows().length, 13, 'the window takes ten of the thirteen sets; the two it skips never reach the page');
+  assertEqual(visible().length, 10, 'ten entries are on the page');
+  assert(printBody.querySelector('tr.current') && !printBody.querySelector('tr.current').hidden,
+    'the printing being viewed stays on screen');
+  assertEqual(codes()[0], 'n02', 'the window opens four entries above the current one instead of at the newest');
+  assert(!codes().includes('n12'), 'the newest printing is behind the window');
+  assert(rows().filter(row => /\/card\/old\//.test(row.querySelector('a[href]')?.getAttribute('href') || '')).every(row => row.hidden),
+    'native rows the window skipped wait off screen');
+  assertEqual(nativeLink.textContent, 'View all prints →', 'the line offers the rest');
+
+  click(nativeLink);
+  assertEqual(rows().length, 15, 'revealing all puts every printing on the page');
+  assertEqual(visible().length, 12, 'the three old rows now wait inside their own closed group, which counts as one entry');
+  assert(printBody.querySelector('tr.current') && !printBody.querySelector('tr.current').hidden,
+    'and the viewed printing is still there');
+  const oldHead = [...printBody.querySelectorAll('.stk-print-group-row')].find(head => head.textContent.includes('(OLD)'));
+  assert(oldHead, 'the old set gets a group header of its own');
+  const oldRows = () => rows().filter(row => /\/card\/old\//.test(row.querySelector('a[href]')?.getAttribute('href') || ''));
+  click(oldHead);
+  assert(oldRows().every(row => !row.hidden), 'opening the group brings the native rows the window skipped back');
+  assertEqual(nativeLink.textContent, 'Show fewer prints ↑', 'the line then offers to fold back');
+}
+
+async function starNumberTest() {
+  console.log('content.js: a foil-only collector number loses its star');
+  const print = (set, setName, number, finishes) => ({
+    id: `s-${set}-${number}`, name: 'Star Card', uri: `https://scryfall.com/card/${set}/${encodeURIComponent(number)}/star-card`,
+    set, setName, number, lang: 'en', digital: false, finishes, prices: {}
+  });
+  // Scryfall keeps the star inside the collector number, both in its own table
+  // and in the API answer.
+  const native = `
+        <tr class="current"><td><a data-card-id="s1" href="/card/7ed/67%E2%98%85/star-card">Seventh Edition
+          #67 ★</a></td><td>7ED</td><td></td><td></td><td></td></tr>
+        <tr><td><a data-card-id="s2" href="/card/7ed/12/star-card">Seventh Edition
+          #12</a></td><td>7ED</td><td></td><td></td><td></td></tr>
+        <tr class="view-all"><td colspan="5"><a href="https://scryfall.com/search?unique=prints">View all prints →</a></td></tr>`;
+  const html = CARD_HTML.replace(/<tbody>[\s\S]*?<\/tbody>/, `<tbody>${native}</tbody>`);
+  const prints = [
+    print('7ed', 'Seventh Edition', '67★', ['foil']),
+    print('7ed', 'Seventh Edition', '12', ['nonfoil']),
+    print('xyz', 'Set XYZ', '12★', ['foil'])
+  ];
+  const page = createPage({
+    url: 'https://scryfall.com/card/7ed/67%E2%98%85/star-card', html, state: { cards: [] },
+    routes: { ...routes, finishes: () => ({}), allPrints: () => ({ prints, truncated: false }) }
+  });
+  await page.script('i18n.js');
+  await page.script('format-catalog.js');
+  await page.script('tag-icons.js');
+  await page.script('data/shambleshark-nicknames.js');
+  await page.script('content.js');
+  await sleep(60);
+  const { document } = page;
+  const printBody = document.querySelector('#main .prints .prints-table tbody');
+  await waitFor(() => printBody.querySelectorAll('.stk-print-group-row').length, 'the groups are built');
+  const head = printBody.querySelector('.stk-print-group-row span');
+  const starred = printBody.querySelector('tr.current td:first-child a');
+  const lone = printBody.querySelector('.stk-print-entry a');
+
+  assertEqual(head.textContent, 'Seventh Edition (7ED) · 2', 'the group header names the set without a star');
+  assertEqual(starred.textContent, '#67', 'a foil-only number reads as a plain number in the group');
+  assertEqual(lone.textContent, 'Set XYZ #12', 'and a lone foil-only printing drops the star too');
+  assertEqual(printBody.textContent.includes('★'), false, 'no star is left anywhere in the table');
 }
 
 async function singlePrintingTest() {
@@ -669,6 +777,8 @@ async function legacyMigrationTest() {
     await printsGroupsEdgeTest();
     await promoParentMergeTest();
     await printsOrderTest();
+    await printsWindowTest();
+    await starNumberTest();
     await singlePrintingTest();
     await printsSameTabTest();
     await searchPageTest();
