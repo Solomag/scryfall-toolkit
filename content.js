@@ -715,7 +715,10 @@
       try { match = link && new URL(link.href, location.href).pathname.match(/^\/card\/([^/]+)\//); } catch { match = null; }
       return match ? match[1].toLowerCase() : null;
     };
-    const setNameOf = row => (row.querySelector('td:first-child a[href]')?.textContent || '').replace(/\s*#.*$/, '').trim();
+    // Scryfall puts the collector number on its own line inside the link, so the
+    // whitespace has to be collapsed before the number can be cut off.
+    const setNameOf = row => (row.querySelector('td:first-child a[href]')?.textContent || '')
+      .replace(/\s+/g, ' ').trim().replace(/\s*#.*$/, '').trim();
     const groupHead = (setName, set, count) => {
       const head = document.createElement('tr');
       head.className = 'stk-print-group-row stk-print-extra';
@@ -731,15 +734,19 @@
     };
     const wireGroup = (head, rows) => {
       collapsibleRows.push(...rows);
-      head.addEventListener('click', () => {
-        const collapsed = !head.classList.contains('stk-group-collapsed');
+      const setCollapsed = collapsed => {
         head.classList.toggle('stk-group-collapsed', collapsed);
         for (const row of rows) row.hidden = collapsed;
-      });
+      };
+      // Groups start closed; opening one only ever adds rows, nothing else moves.
+      setCollapsed(true);
+      head.addEventListener('click', () => setCollapsed(!head.classList.contains('stk-group-collapsed')));
     };
     // One set is one group: the printings Scryfall already lists and the ones
     // added here share a single header, so two printings of one set (for
     // example #304 and #304★) end up under the same group instead of apart.
+    // A card with a long print list shows the first ten entries of the closed
+    // table (a closed group counts as one); the rest stays on the full page.
     function placeGroups() {
       clearExtra();
       const nativeGroups = new Map();
@@ -750,33 +757,48 @@
         if (!nativeGroups.has(set)) nativeGroups.set(set, []);
         nativeGroups.get(set).push(row);
       }
+      const units = [];
       for (const [set, nativeSetRows] of nativeGroups) {
         const extra = builtGroups.get(set);
         const added = extra ? extra.rows : [];
-        let anchor = nativeSetRows[nativeSetRows.length - 1];
-        for (const row of added) { insertAfter(anchor, row); anchor = row; }
-        const all = [...nativeSetRows, ...added];
-        if (all.length > 1) {
-          const head = groupHead(extra?.setName || setNameOf(nativeSetRows[0]), set, all.length);
-          nativeSetRows[0].before(head);
-          wireGroup(head, all);
-          extraRows.push(head);
+        if (nativeSetRows.length + added.length > 1) {
+          units.push({ set, setName: extra?.setName || setNameOf(nativeSetRows[0]), nativeRows: nativeSetRows, added, grouped: true });
+        } else if (added.length) {
+          units.push({ set, setName: extra.setName, nativeRows: [], added, grouped: false });
         }
-        extraRows.push(...added);
       }
       for (const [set, extra] of builtGroups) {
         if (nativeGroups.has(set)) continue;
-        const added = extra.rows;
-        let anchor = nativeRow;
-        if (added.length > 1) {
-          const head = groupHead(extra.setName, set, added.length);
-          insertAtEnd(head);
-          wireGroup(head, added);
+        units.push({
+          set, setName: extra.setName, nativeRows: [],
+          added: extra.rows, grouped: extra.rows.length > 1
+        });
+      }
+      for (const unit of units.slice(0, 10)) {
+        // Inside a group the set name is already in the header, so the row keeps
+        // the bare collector number; a lone printing repeats the set name.
+        for (const row of unit.added) {
+          const link = row.querySelector('td:first-child a[href]');
+          if (link) link.textContent = unit.grouped ? row.stkShortLabel : row.stkFullLabel;
+        }
+        let anchor = null;
+        if (unit.grouped) {
+          const head = groupHead(unit.setName, unit.set, unit.nativeRows.length + unit.added.length);
+          if (unit.nativeRows.length) unit.nativeRows[0].before(head);
+          else insertAtEnd(head);
+          wireGroup(head, [...unit.nativeRows, ...unit.added]);
           extraRows.push(head);
           anchor = head;
         }
-        for (const row of added) { if (anchor === nativeRow) insertAtEnd(row); else insertAfter(anchor, row); anchor = row; }
-        extraRows.push(...added);
+        if (unit.nativeRows.length) anchor = unit.nativeRows[unit.nativeRows.length - 1];
+        for (const row of unit.added) {
+          if (anchor) insertAfter(anchor, row); else insertAtEnd(row);
+          anchor = row;
+          // The CardTrader queue only ever sees the rows that made it into the
+          // table, so the printings behind the ten-entry cap cost no requests.
+          row.stkEnqueueCT?.();
+        }
+        extraRows.push(...unit.added);
       }
       if (truncatedResult) {
         const notice = statusRow(language === 'ru' ? 'Часть изданий не загрузилась; откройте полную страницу.' : 'More printings are available on the full page.');
@@ -828,18 +850,25 @@
         for (const card of entries) {
           const row = document.createElement('tr');
           row.className = 'stk-print-entry stk-print-extra';
+          const number = `#${card.number}${card.lang !== 'en' ? ` · ${card.lang.toUpperCase()}` : ''}`;
+          // Under a group header the set name would repeat on every row, so the
+          // bare number is used there and the full label outside groups.
+          row.stkShortLabel = number;
+          row.stkFullLabel = `${cards[0].setName} ${number}`;
           for (let i = 0; i < total; i++) {
             const cell = document.createElement('td');
             if (i === 0) {
               const link = document.createElement('a');
               link.href = path(card.uri);
-              link.textContent = `#${card.number}${card.lang !== 'en' ? ` · ${card.lang.toUpperCase()}` : ''}`;
+              link.textContent = number;
               cell.append(link);
               attachPrintButton(cell, printKey(card.set, card.number), card,
                 language === 'ru' ? 'Добавить конкретное издание с кодом сета в буфер' : 'Add this printing with its set code to the clipboard');
             } else if (i === finishIdx) {
+              // One glyph only: a printing with several finishes gets no badge,
+              // exactly like Scryfall's own rows.
               const glyphs = { nonfoil: '○', foil: '✶', etched: '◈' };
-              const text = (card.finishes || []).map(kind => glyphs[kind]).filter(Boolean).join('');
+              const text = (card.finishes || []).length === 1 ? glyphs[card.finishes[0]] || '' : '';
               if (text) {
                 cell.className = 'stk-finish-cell';
                 const badge = document.createElement('span');
@@ -854,8 +883,11 @@
               cell.append(span);
             } else if (i === ctIdx) {
               cell.className = 'stk-ct-price-cell';
-              // Same throttled background queue that fills the native rows.
-              enqueueCardTraderPrint?.(cell, card.id, card.set);
+              // Same throttled background queue that fills the native rows, but
+              // only once the row is actually placed in the table.
+              row.stkEnqueueCT = () => {
+                if (!cell.querySelector('a')) enqueueCardTraderPrint?.(cell, card.id, card.set);
+              };
             } else if (i === usdIdx || i === eurIdx || i === tixIdx) {
               if (i === usdIdx) fillPrice(cell, priceText(card, 'usd', 'usd_foil', '$'), 'usd');
               else if (i === eurIdx) {

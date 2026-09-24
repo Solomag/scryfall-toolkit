@@ -75,6 +75,12 @@ function cssCheck() {
     'native print button styles exist');
   assert(css.includes('tbody tr:hover .stk-native-print-add'),
     'print buttons appear when their own printing is hovered');
+  assert(css.includes('.stk-native-print-add:hover'),
+    'the print button stays reachable while the pointer moves onto it');
+  assert(css.includes('.stk-native-print-add::before{content:\'\''),
+    'a bridge keeps the hover alive across the gap next to the row');
+  assert(!/\.stk-native-print-add\{[^}]*pointer-events:none/.test(css),
+    'the hidden print button still takes the pointer so it can be reached');
   assert(css.includes('.stk-native-print-add.stk-print-selected{opacity:1'),
     'a buffered printing keeps its check mark on screen');
   assert(css.includes('@media(hover:none)'),

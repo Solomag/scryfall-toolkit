@@ -40,7 +40,7 @@ const CARD_HTML = `<!DOCTYPE html><html><head>
 
 const prints = [
   { id: 'p1', name: 'Test Card', uri: 'https://scryfall.com/card/tst/1/test-card', set: 'tst', setName: 'Test Set', number: '1', lang: 'en', digital: false, finishes: ['nonfoil'], prices: { eur: '1.00' } },
-  { id: 'p2', name: 'Test Card', uri: 'https://scryfall.com/card/tst/3/test-card', set: 'tst', setName: 'Test Set', number: '3', lang: 'en', digital: false, finishes: ['nonfoil'], prices: { eur: '2.00', usd: '3.50', tix: '0.05' } },
+  { id: 'p2', name: 'Test Card', uri: 'https://scryfall.com/card/tst/3/test-card', set: 'tst', setName: 'Test Set', number: '3', lang: 'en', digital: false, finishes: ['foil', 'nonfoil'], prices: { eur: '2.00', usd: '3.50', tix: '0.05' } },
   { id: 'p4', name: 'Test Card', uri: 'https://scryfall.com/card/tst/4/test-card', set: 'tst', setName: 'Test Set', number: '4', lang: 'en', digital: false, finishes: ['foil'], prices: { usd_foil: '9.99' } },
   { id: 'p3', name: 'Test Card', uri: 'https://scryfall.com/card/mh3/42/test-card', set: 'mh3', setName: 'Modern Horizons 3', number: '42', lang: 'jp', digital: false, finishes: ['foil'], prices: {} },
   { id: 'p5', name: 'Test Card', uri: 'https://scryfall.com/card/mh3/43/test-card', set: 'mh3', setName: 'Modern Horizons 3', number: '43', lang: 'jp', digital: false, finishes: ['foil'], prices: {} }
@@ -261,7 +261,10 @@ async function cardPageTest() {
   assertEqual(fullPriceRow.querySelector('.currency-usd')?.textContent, '$3.50', 'expanded row fills the USD price');
   assertEqual(fullPriceRow.querySelector('.currency-eur')?.textContent, '€2.00', 'expanded row fills the EUR price');
   assertEqual(fullPriceRow.querySelector('.currency-tix')?.textContent, '0.05', 'expanded row fills the TIX price');
+  assert(!fullPriceRow.querySelector('.stk-finish-cell'), 'a printing with both finishes gets no finish badge');
   const foilRow = entryOf('/tst/4/');
+  assertEqual(foilRow.querySelector('.stk-finish-cell')?.textContent, '✶', 'a foil-only printing gets a single finish glyph');
+  assertEqual(foilRow.querySelector('.stk-finish-badge')?.textContent.length, 1, 'never more than one finish glyph in a cell');
   assertEqual(foilRow.querySelector('.currency-usd')?.textContent, '✶ $9.99', 'foil-only price falls back to the foil value');
   assert(!foilRow.querySelector('.currency-eur'), 'missing prices leave the cell empty');
   const emptyRow = entryOf('/mh3/43/');
@@ -278,17 +281,22 @@ async function cardPageTest() {
   );
   assertEqual(expandedCtLink.textContent, '€12.34', 'expanded row joins the shared CardTrader queue');
 
-  // Groups start open and collapse on header click, native rows included.
+  // Groups start closed and collapse on header click, native rows included.
   const tstGroup = [...printBody.querySelectorAll('.stk-print-group-row')]
     .find(row => row.textContent.includes('(TST)'));
   const tstRows = [...printBody.querySelectorAll('tr:not(.stk-print-group-row):not(.stk-print-status)')]
     .filter(row => /\/card\/tst\//.test(row.querySelector('td:first-child a[href]').getAttribute('href')));
   assertEqual(tstRows.length, 4, 'two native and two added TST printings under one header');
-  assert(tstRows.every(row => !row.hidden), 'groups start open');
+  assert(tstGroup.classList.contains('stk-group-collapsed'), 'groups start closed');
+  assert(tstRows.every(row => row.hidden), 'a closed group hides its native and added printings');
   click(tstGroup);
-  assert(tstRows.every(row => row.hidden), 'clicking the group header hides native and added printings together');
+  assert(tstRows.every(row => !row.hidden), 'clicking the group header reveals its printings');
+  assertEqual(tstRows.filter(row => row.classList.contains('stk-print-entry'))
+    .map(row => row.querySelector('td:first-child a').textContent), ['#3', '#4'],
+    'rows under a group header keep the bare collector number');
   click(tstGroup);
-  assert(tstRows.every(row => !row.hidden), 'clicking again reveals the group');
+  assert(tstRows.every(row => row.hidden), 'clicking again collapses the group');
+  click(tstGroup);
 
   // Toggle a printing inside the expanded table.
   const thirdPrintAdd = await waitFor(
@@ -384,6 +392,65 @@ async function clipboardDisabledTest() {
   assertEqual(page.context.STK_ADD_PRINT, undefined, 'no STK_ADD_PRINT handler when clipboard disabled');
 }
 
+async function printsGroupsEdgeTest() {
+  console.log('content.js: print group edge cases');
+  const mkPrint = (set, number) => ({
+    id: `e-${set}-${number}`, name: 'Edge Card', uri: `https://scryfall.com/card/${set}/${number}/edge-card`,
+    set, setName: `Set ${set.toUpperCase()}`, number, lang: 'en', digital: false, finishes: ['nonfoil'], prices: {}
+  });
+  // Scryfall keeps the collector number on its own line inside the link.
+  const native = `
+        <tr><td><a data-card-id="a1" href="/card/aaa/1/edge-card">Set AAA
+          #1</a></td><td>AAA</td><td></td><td></td><td></td></tr>
+        <tr><td><a data-card-id="a2" href="/card/aaa/2/edge-card">Set AAA
+          #2</a></td><td>AAA</td><td></td><td></td><td></td></tr>
+        <tr><td><a data-card-id="b1" href="/card/bbb/1/edge-card">Set BBB
+          #1</a></td><td>BBB</td><td></td><td></td><td></td></tr>
+        <tr class="view-all"><td colspan="5"><a href="https://scryfall.com/search?unique=prints">View all prints →</a></td></tr>`;
+  const html = CARD_HTML.replace(/<tbody>[\s\S]*?<\/tbody>/, `<tbody>${native}</tbody>`);
+  const many = [];
+  for (let index = 1; index <= 12; index++) many.push(mkPrint(`c${String(index).padStart(2, '0')}`, '1'));
+  const edgeRoutes = {
+    ...routes,
+    finishes: () => ({}),
+    allPrints: () => ({
+      prints: [mkPrint('aaa', '1'), mkPrint('aaa', '2'), mkPrint('bbb', '1'), mkPrint('bbb', '2'), ...many],
+      truncated: false
+    })
+  };
+  const page = createPage({ url: 'https://scryfall.com/card/aaa/1/edge-card', html, state: { cards: [] }, routes: edgeRoutes });
+  await page.script('i18n.js');
+  await page.script('format-catalog.js');
+  await page.script('tag-icons.js');
+  await page.script('data/shambleshark-nicknames.js');
+  await page.script('content.js');
+  await sleep(60);
+  const { document } = page;
+  const printBody = document.querySelector('#main .prints .prints-table tbody');
+  const nativeLink = document.querySelector('.stk-print-new-page-line > a');
+  click(nativeLink);
+  await waitFor(() => printBody.querySelectorAll('.stk-print-group-row').length === 2, 'two set groups are built');
+
+  const heads = [...printBody.querySelectorAll('.stk-print-group-row span')].map(node => node.textContent);
+  assertEqual(heads, ['Set AAA (AAA) · 2', 'Set BBB (BBB) · 2'],
+    'a native-only group takes its set name from the row and drops the collector number');
+  // A closed group counts as one entry, so fourteen entries collapse to ten.
+  const entries = [...printBody.querySelectorAll('.stk-print-entry')];
+  assertEqual(entries.length, 9, 'nine added printings made it past the ten-entry cap');
+  assertEqual(entries.map(row => row.querySelector('td:first-child a').textContent),
+    ['#2', 'Set C01 #1', 'Set C02 #1', 'Set C03 #1', 'Set C04 #1', 'Set C05 #1', 'Set C06 #1', 'Set C07 #1', 'Set C08 #1'],
+    'rows inside a group keep the bare number, rows outside repeat the set name');
+  assert(!printBody.querySelector('a[href*="/card/c09/"]'), 'the printings behind the cap stay off the page');
+  const aaaRows = [...printBody.querySelectorAll('a[href*="/card/aaa/"]')].map(link => link.closest('tr'));
+  assertEqual(aaaRows.length, 2, 'both native AAA rows belong to the group');
+  assert(aaaRows.every(row => row.hidden), 'a closed group hides its native rows');
+  const aaaHead = printBody.querySelector('.stk-print-group-row');
+  click(aaaHead);
+  assert(aaaRows.every(row => !row.hidden), 'opening a group only reveals its own rows');
+  assert(!printBody.querySelector('a[href*="/card/c09/"]'), 'opening a group does not bring the capped printings back');
+  assertEqual(printBody.querySelectorAll('.stk-print-entry').length, 9, 'opening a group adds no other rows');
+}
+
 async function legacyMigrationTest() {
   console.log('content.js: legacy cardClipboard migration');
   const page = createPage({
@@ -407,6 +474,7 @@ async function legacyMigrationTest() {
 (async () => {
   try {
     await cardPageTest();
+    await printsGroupsEdgeTest();
     await searchPageTest();
     await clipboardDisabledTest();
     await legacyMigrationTest();

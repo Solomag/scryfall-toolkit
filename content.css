@@ -104,8 +104,11 @@ html.stk-dark #stk-edhrec .stk-edhrec-usage>.stk-edhrec-fraction{color:#d5d2d6}
    name cell. It stays out of the way until its own printing is hovered, and a
    printing that is already in the clipboard keeps a permanent check mark. */
 #main .prints > .prints-table tbody tr:has(.stk-native-print-add){position:relative}
-#main .prints > .prints-table .stk-native-print-add{position:absolute;top:50%;right:-27px;transform:translateY(-50%);width:23px;height:23px;padding:0;border:1px solid #75707b;border-radius:3px;background:#35333b;color:#fff;font:16px/1 Arial,sans-serif;cursor:pointer;z-index:2;opacity:0;pointer-events:none;transition:opacity .12s ease}
-#main .prints > .prints-table tbody tr:hover .stk-native-print-add,#main .prints > .prints-table .stk-native-print-add:focus-visible,#main .prints > .prints-table .stk-native-print-add.stk-print-selected{opacity:1;pointer-events:auto}
+#main .prints > .prints-table .stk-native-print-add{position:absolute;top:50%;right:-27px;transform:translateY(-50%);width:23px;height:23px;padding:0;border:1px solid #75707b;border-radius:3px;background:#35333b;color:#fff;font:16px/1 Arial,sans-serif;cursor:pointer;z-index:2;opacity:0;transition:opacity .12s ease}
+/* The button sits outside the row, so a narrow bridge keeps the hover alive
+   while the pointer crosses the gap between the two. */
+#main .prints > .prints-table .stk-native-print-add::before{content:'';position:absolute;left:-5px;top:0;bottom:0;width:5px}
+#main .prints > .prints-table tbody tr:hover .stk-native-print-add,#main .prints > .prints-table .stk-native-print-add:hover,#main .prints > .prints-table .stk-native-print-add:focus-visible,#main .prints > .prints-table .stk-native-print-add.stk-print-selected{opacity:1}
 #main .prints > .prints-table .stk-native-print-add:hover,#main .prints > .prints-table .stk-native-print-add:focus-visible{background:#4c4954}
 @media(hover:none){#main .prints > .prints-table .stk-native-print-add{opacity:1;pointer-events:auto}}
 /* Group headers reuse the native first-cell markup (its span takes the native
