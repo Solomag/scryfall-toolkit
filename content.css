@@ -117,11 +117,17 @@ html.stk-dark #stk-edhrec .stk-edhrec-usage>.stk-edhrec-fraction{color:#d5d2d6}
 #main .prints > .prints-table .stk-print-group-row td>span{font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #main .prints > .prints-table .stk-print-group-row td>span::before{content:"▾ ";font-size:11px}
 #main .prints > .prints-table .stk-print-group-row.stk-group-collapsed td>span::before{content:"▸ "}
+/* Scryfall draws a hairline under every printing and closes the table with a
+   3px rule. The group stripe below takes that job over, so the native borders
+   are cleared and only one separator is ever visible. */
+#main .prints > .prints-table tbody tr,
+#main .prints > .prints-table tbody tr:last-child{border-bottom:0}
 /* A light stripe closes the group, so its printings read apart from the rows
-   that stand on their own. Scryfall separates rows with a 1px hairline, so the
-   closing stripe is deliberately thicker and a shade stronger. */
+   that stand on their own. */
+#main .prints > .prints-table tr.stk-group-end{border-bottom:0}
 #main .prints > .prints-table tr.stk-group-end td{border-bottom:2px solid #cfc3d6}
-#main .prints > .prints-table .stk-print-group-row.stk-group-folded-end td{border-bottom:2px solid #cfc3d6}
+#main .prints > .prints-table tr.stk-print-group-row.stk-group-folded-end{border-bottom:0}
+#main .prints > .prints-table tr.stk-print-group-row.stk-group-folded-end td{border-bottom:2px solid #cfc3d6}
 /* The set of the card being viewed gets a light accent so it stands out. */
 #main .prints > .prints-table .stk-print-group-row.stk-current-group td{background:#efe3f4;border-left:3px solid #8b6597}
 #main .prints > .prints-table tbody tr[hidden]{display:none!important}

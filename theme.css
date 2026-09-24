@@ -60,8 +60,13 @@ html.stk-dark .card-actions .button-n path{fill:#c9a2df}
 html.stk-dark .prints-table .stk-print-group-row td{background:#2a2835!important;color:#e9e4ee!important}
 html.stk-dark .prints-table .stk-print-group-row td>span{color:#e9e4ee!important}
 html.stk-dark .prints-table .stk-print-group-row.stk-current-group td{background:#352e42!important;border-left-color:#b68fd0}
+/* In the dark theme the native rows are recoloured with !important, so the
+   cleared hairline needs the same treatment to stay gone. */
+html.stk-dark .prints-table tbody tr,html.stk-dark .prints-table tbody tr:last-child{border-bottom:0!important}
+html.stk-dark .prints-table tr.stk-group-end{border-bottom:0!important}
 html.stk-dark .prints-table tr.stk-group-end td{border-bottom:2px solid #625872!important}
-html.stk-dark .prints-table .stk-print-group-row.stk-group-folded-end td{border-bottom:2px solid #625872!important}
+html.stk-dark .prints-table tr.stk-print-group-row.stk-group-folded-end{border-bottom:0!important}
+html.stk-dark .prints-table tr.stk-print-group-row.stk-group-folded-end td{border-bottom:2px solid #625872!important}
 /* Shared pages: set index, advanced search, syntax reference, account and deck pages. */
 html.stk-dark #main,html.stk-dark #main .card-profile .inner-flex,html.stk-dark #main .checklist-wrapper,
 html.stk-dark #main .reference-jump,html.stk-dark #main .reference-block,

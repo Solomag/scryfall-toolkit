@@ -225,21 +225,23 @@ async function cardPageTest() {
   const viewAllRow = document.querySelector('#main .prints .prints-table tbody tr.view-all');
   const printTable = document.querySelector('#main .prints > .prints-table');
   const printBody = printTable.tBodies && printTable.tBodies[0] ? printTable.tBodies[0] : printTable.querySelector('tbody');
-  assertEqual(nativeLink.getAttribute('aria-expanded'), 'false', 'aria-expanded starts false');
+  assertEqual(nativeLink.getAttribute('aria-expanded'), 'true', 'a table that fits into ten rows starts unfolded');
   const heads = () => [...printBody.querySelectorAll('.stk-print-group-row')];
   const allRows = () => [...printBody.querySelectorAll('tr:not(.stk-print-group-row):not(.view-all):not(.stk-print-status)')];
   assertEqual(heads().map(row => row.querySelector('span').textContent), ['Test Set (TST) · 4', 'Modern Horizons 3 (MH3) · 2'],
     'the full print list is grouped on load, native and added printings counted together');
   assert(heads()[0].classList.contains('stk-current-group'), 'the set of the card being viewed is highlighted');
-  assert(heads().every(row => row.classList.contains('stk-group-collapsed')), 'groups start folded by default');
-  assert(allRows().every(row => row.hidden), 'the folded groups hide their rows by default');
+  assert(heads().every(row => !row.classList.contains('stk-group-collapsed')),
+    'groups start open when the whole table fits into ten rows');
+  assert(allRows().every(row => !row.hidden), 'so every printing is on the page right away');
   assertEqual([...printBody.querySelectorAll('a[href*="/card/tst/"]')].slice(0, 2).map(a => a.textContent), ['#1', '#2'],
     'grouped native rows keep the bare collector number');
   assertEqual(printBody.querySelectorAll('.stk-print-entry').length, 3, 'the added printings are already on the page');
-  assert(heads()[0].classList.contains('stk-group-folded-end'), 'a folded group closes the rule at its own header');
+  assert(heads().every(row => !row.classList.contains('stk-group-folded-end')),
+    'an open group leaves the header without a closing stripe');
   assert([...printBody.querySelectorAll('tr.stk-group-end')]
     .some(row => /\/card\/tst\/4\//.test(row.querySelector('td:first-child a[href]').getAttribute('href'))),
-    'an open group closes the rule under its last row');
+    'the open group closes the stripe under its last row');
 
   const rowOrder = [...printBody.children].map(row => {
     if (row.classList.contains('stk-print-group-row')) return `group:${row.textContent.split('(')[0].trim()}`;
@@ -252,23 +254,24 @@ async function cardPageTest() {
     'group:Modern Horizons 3', '/card/mh3/42/test-card', '/card/mh3/43/test-card', 'view-all'
   ], 'each set keeps Scryfall rows and added printings under one header, view-all last');
 
-  // Nothing is left behind the cap here, so the line offers to unfold instead.
+  // Nothing is left behind the cap and every group is open, so the line folds the
+  // groups instead of unfolding them.
   const pageLine = document.querySelector('.stk-print-new-page-line');
-  assertEqual(nativeLink.textContent, 'Expand all groups', 'with every printing shown the line offers to unfold the groups');
-  assertEqual(nativeLink.hidden, false, 'the unfold action stays visible');
+  assertEqual(nativeLink.textContent, 'Collapse all groups', 'with every group open the line offers to fold them');
+  assertEqual(nativeLink.hidden, false, 'the fold action stays visible');
   assertEqual(document.querySelector('#main .prints .stk-print-new-page').textContent, 'Open on a new page',
     'the full-page link keeps its wording while the line has two halves');
   assert(!pageLine.classList.contains('stk-print-line-end'), 'the full-page link stays on the right side');
 
   click(nativeLink);
-  assert(printTable.classList.contains('stk-prints-expanded'), 'table carries the expanded state');
-  assertEqual(nativeLink.getAttribute('aria-expanded'), 'true', 'aria-expanded flips to true');
-  assert(heads().every(row => !row.classList.contains('stk-group-collapsed')), 'opening unfolds every group');
-  assert(allRows().every(row => !row.hidden), 'the unfolded groups reveal their rows');
-  assertEqual(nativeLink.hidden, true, 'with nothing left to press the left half disappears');
-  assertEqual(document.querySelector('#main .prints .stk-print-new-page').textContent, 'View all prints on a new page →',
-    'the right half becomes the full-page action on its own');
-  assert(pageLine.classList.contains('stk-print-line-end'), 'the lone right link is pushed to the end of the line');
+  assert(heads().every(row => row.classList.contains('stk-group-collapsed')), 'pressing the line folds every group');
+  assert(allRows().every(row => row.hidden), 'and the folded groups hide their rows');
+  assert(heads().every(row => row.classList.contains('stk-group-folded-end')), 'a folded group closes the stripe at its header');
+  assertEqual(nativeLink.textContent, 'Expand all groups', 'the line then offers to unfold them again');
+  assertEqual(nativeLink.getAttribute('aria-expanded'), 'false', 'aria-expanded reflects the folded state');
+  click(nativeLink);
+  assert(allRows().every(row => !row.hidden), 'pressing it again unfolds every group');
+  assertEqual(nativeLink.textContent, 'Collapse all groups', 'and the line offers to fold them once more');
   assert([...printBody.querySelectorAll('.stk-print-group-row td')].every(td => td.querySelector('span')),
     'group headers wrap their label in the native span-in-cell markup');
   const entryLinks = [...printBody.querySelectorAll('.stk-print-entry a')].map(link => link.textContent);
@@ -345,9 +348,7 @@ async function cardPageTest() {
   click(nativeLink);
   assert(tstRows.every(row => !row.hidden), 'the line unfolds the folded group again');
   assertEqual(heads().length, 2, 'the groups stay on the page');
-  assertEqual(nativeLink.hidden, true, 'with every group open the left half has nothing left to do');
-  assertEqual(document.querySelector('#main .prints .stk-print-new-page').textContent, 'View all prints on a new page →',
-    'the right half takes over the full-page wording');
+  assertEqual(nativeLink.textContent, 'Collapse all groups', 'with every group open the line offers to fold them');
   assertEqual(printBody.querySelectorAll('.stk-print-entry').length, 3, 'the added printings remain on the page');
 
   // A printing that is already in the clipboard shows a permanent check mark:
@@ -552,23 +553,26 @@ async function promoParentMergeTest() {
 
 async function printsOrderTest() {
   console.log('content.js: printings follow the page order');
-  const print = (set, setName, number, released) => ({
+  const print = (set, setName, number) => ({
     id: `o-${set}-${number}`, name: 'Order Card', uri: `https://scryfall.com/card/${set}/${number}/order-card`,
-    set, setName, number, lang: 'en', digital: false, finishes: ['nonfoil'], prices: {}, released
+    set, setName, number, lang: 'en', digital: false, finishes: ['nonfoil'], prices: {}
   });
-  const first = print('old', 'Set Old', '1', '2020-01-01');
-  const second = print('old', 'Set Old', '2', '2020-02-01');
-  const midOld = print('mid', 'Set Mid', '1', '2021-06-01');
-  const midNew = print('mid', 'Set Mid', '2', '2022-03-01');
-  const fresh = print('new', 'Set New', '1', '2023-01-01');
-  const build = (nativeOrder, added) => {
+  const first = print('old', 'Set Old', '1');
+  const second = print('old', 'Set Old', '2');
+  const third = print('old', 'Set Old', '3');
+  const midOld = print('mid', 'Set Mid', '1');
+  const midNew = print('mid', 'Set Mid', '2');
+  const fresh = print('new', 'Set New', '1');
+  // The API always answers newest first, no matter which order the page shows.
+  // Only the rows Scryfall renders itself reveal the order the visitor reads.
+  const apiOrder = [fresh, midNew, midOld, third, second, first];
+  const build = nativeOrder => {
     const rows = nativeOrder.map((card, index) => `<tr${index === 0 ? ' class="current"' : ''}><td><a data-card-id="n${index}" href="/card/${card.set}/${card.number}/order-card">${card.setName}
           #${card.number}</a></td><td>${card.set.toUpperCase()}</td><td></td><td></td><td></td></tr>`).join('');
     return {
       html: CARD_HTML.replace(/<tbody>[\s\S]*?<\/tbody>/, `<tbody>${rows}
         <tr class="view-all"><td colspan="5"><a href="https://scryfall.com/search?unique=prints">View all prints →</a></td></tr></tbody>`),
-      // The API always answers newest first, no matter what the page shows.
-      routes: { ...routes, finishes: () => ({}), allPrints: () => ({ prints: added, truncated: false }) }
+      routes: { ...routes, finishes: () => ({}), allPrints: () => ({ prints: apiOrder, truncated: false }) }
     };
   };
   const load = async setup => {
@@ -588,18 +592,55 @@ async function printsOrderTest() {
   });
 
   // The API answers with every printing, newest first, including the ones
-  // Scryfall already lists; the added ones are what we have to order.
-  const oldestFirst = await load(build([first, second], [fresh, midNew, midOld, second, first]));
+  // Scryfall already lists; the added ones are what we have to order. The rows
+  // Scryfall itself renders speak for the page, the API never lies about its
+  // own order.
+  const oldestFirst = await load(build([first, second, third]));
   await waitFor(() => oldestFirst.querySelectorAll('.stk-print-group-row').length === 2, 'oldest page: groups built');
   assertEqual(layout(oldestFirst), [
-    'H:Set Old (OLD) · 2', '#1', '#2', 'H:Set Mid (MID) · 2', '#1', '#2', 'Set New #1'
+    'H:Set Old (OLD) · 3', '#1', '#2', '#3', 'H:Set Mid (MID) · 2', '#1', '#2', 'Set New #1'
   ], 'with the oldest printing on top the added sets follow from oldest to newest');
 
-  const newestFirst = await load(build([second, first], [midOld, midNew, fresh, first, second]));
+  const newestFirst = await load(build([third, second, first]));
   await waitFor(() => newestFirst.querySelectorAll('.stk-print-group-row').length === 2, 'newest page: groups built');
   assertEqual(layout(newestFirst), [
-    'H:Set Old (OLD) · 2', '#2', '#1', 'Set New #1', 'H:Set Mid (MID) · 2', '#2', '#1'
+    'H:Set Old (OLD) · 3', '#3', '#2', '#1', 'Set New #1', 'H:Set Mid (MID) · 2', '#2', '#1'
   ], 'with the newest printing on top the added sets follow from newest to oldest, native rows keep their order');
+}
+
+async function singlePrintingTest() {
+  console.log('content.js: a card with one printing needs no groups');
+  // Scryfall marks a foil-only printing with a star behind its number.
+  const native = `<tr class="current"><td><a data-card-id="u1" href="/card/uni/1/only">Set Uni
+          #1 ★</a></td><td>UNI</td><td></td><td></td><td></td></tr>
+        <tr class="view-all"><td colspan="5"><a href="https://scryfall.com/search?unique=prints">View all prints →</a></td></tr>`;
+  const html = CARD_HTML.replace(/<tbody>[\s\S]*?<\/tbody>/, `<tbody>${native}</tbody>`);
+  const onlyRoutes = {
+    ...routes,
+    finishes: () => ({}),
+    allPrints: () => ({
+      prints: [{ id: 'u1', name: 'Only', uri: 'https://scryfall.com/card/uni/1/only', set: 'uni', setName: 'Set Uni', number: '1', lang: 'en', digital: false, finishes: ['nonfoil'], prices: {} }],
+      truncated: false
+    })
+  };
+  const page = createPage({ url: 'https://scryfall.com/card/uni/1/only', html, state: { cards: [] }, routes: onlyRoutes });
+  await page.script('i18n.js');
+  await page.script('format-catalog.js');
+  await page.script('tag-icons.js');
+  await page.script('data/shambleshark-nicknames.js');
+  await page.script('content.js');
+  await sleep(60);
+  const { document } = page;
+  const printBody = document.querySelector('#main .prints .prints-table tbody');
+  const line = document.querySelector('.stk-print-new-page-line');
+  await waitFor(() => printBody.querySelector('.stk-print-new-page')?.textContent, 'the printings line is ready');
+  assertEqual(printBody.querySelectorAll('.stk-print-group-row').length, 0, 'a lone printing gets no header');
+  assertEqual(line.firstElementChild.hidden, true, 'with no groups to fold the left half disappears');
+  assertEqual(line.querySelector('.stk-print-new-page').textContent, 'View all prints on a new page →',
+    'the right half becomes the full-page action');
+  assert(line.classList.contains('stk-print-line-end'), 'and it sits on the right of the line');
+  assertEqual(printBody.querySelector('tr.current td:first-child a').textContent, 'Set Uni #1',
+    "the star behind a foil-only number is gone, the finish column says it instead");
 }
 
 async function legacyMigrationTest() {
@@ -628,6 +669,7 @@ async function legacyMigrationTest() {
     await printsGroupsEdgeTest();
     await promoParentMergeTest();
     await printsOrderTest();
+    await singlePrintingTest();
     await printsSameTabTest();
     await searchPageTest();
     await clipboardDisabledTest();

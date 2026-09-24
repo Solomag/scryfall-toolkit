@@ -711,6 +711,7 @@
       ? (sameTab ? 'Все издания на этой странице' : 'Все издания на новой странице →')
       : (sameTab ? 'View all prints on this page' : 'View all prints on a new page →');
     const expandLabel = () => language === 'ru' ? 'Развернуть все группы' : 'Expand all groups';
+    const collapseLabel = () => language === 'ru' ? 'Свернуть все группы' : 'Collapse all groups';
     const fewerLabel = language === 'ru' ? 'Показать меньше изданий ↑' : 'Show fewer prints ↑';
     const headCells = () => [...(table.querySelector('thead')?.querySelectorAll('th') || [])];
     const columns = () => headCells().length || 1;
@@ -734,6 +735,7 @@
     const groupFolded = new Map();
     let placedUnits = [];
     let totalUnits = 0;
+    let defaultFolded = true;
     // Everything added here goes in front of the View-all line, so the line
     // itself ends up as the last row of the table.
     const insertAtEnd = node => tbody.insertBefore(node, nativeRow && nativeRow.parentNode === tbody ? nativeRow : null);
@@ -780,25 +782,32 @@
         group.push(card);
         groups.set(card.set, group);
       }
-      // Scryfall's own row order reveals the print preference; the API always
-      // answers newest first, so the added printings are flipped to match.
-      const releaseOf = new Map();
+      // The API answers newest first. Scryfall's own rows reveal the page's print
+      // preference: the same order as the API means newest first, the opposite
+      // order means oldest first. That reads the page itself rather than dates,
+      // so it holds for any set order Scryfall uses.
+      const apiIndex = new Map();
+      let position = 0;
       for (const cards of groups.values()) {
-        for (const card of cards) releaseOf.set(printKey(card.set, card.number), card.released);
+        for (const card of cards) apiIndex.set(printKey(card.set, card.number), position++);
       }
-      const nativeDates = [];
+      const nativePositions = [];
       for (const row of [...tbody.querySelectorAll('tr:not(.stk-print-extra)')]) {
         if (row === nativeRow) continue;
         const identity = rowSet(row);
-        const released = identity && releaseOf.get(printKey(identity.set, identity.number));
-        if (released) nativeDates.push(released);
+        const index = identity && apiIndex.get(printKey(identity.set, identity.number));
+        if (index !== undefined) nativePositions.push(index);
       }
-      const oldestFirst = nativeDates.length > 1 && nativeDates[0] < nativeDates[nativeDates.length - 1];
-      const byAge = (a, b) => (a || '') === (b || '') ? 0 : (a || '') < (b || '') ? -1 : 1;
-      const compare = oldestFirst ? byAge : (a, b) => -byAge(a, b);
+      let inversions = 0;
+      for (let index = 1; index < nativePositions.length; index++) {
+        if (nativePositions[index] < nativePositions[index - 1]) inversions++;
+      }
+      const newestFirst = nativePositions.length < 2 || inversions * 2 <= nativePositions.length - 1;
+      const byApi = (a, b) => (apiIndex.get(printKey(a.set, a.number)) ?? 0) - (apiIndex.get(printKey(b.set, b.number)) ?? 0);
+      const compare = newestFirst ? byApi : (a, b) => -byApi(a, b);
       const ordered = new Map([...groups.entries()]
-        .sort((a, b) => compare(a[1][0]?.released, b[1][0]?.released))
-        .map(([set, cards]) => [set, cards.slice().sort((a, b) => compare(a.released, b.released))]));
+        .sort((a, b) => compare(a[1][0], b[1][0]))
+        .map(([set, cards]) => [set, cards.slice().sort(compare)]));
       // The Finish column header is added by a separate response; wait for
       // it so column spans and cell indexes match the settled header row.
       await finishesSettled;
@@ -832,7 +841,10 @@
         placeGroups();
         return;
       }
-      for (const unit of placedUnits) if (unit.grouped) groupFolded.set(unit.set, false);
+      // Nothing left to reveal: fold or unfold every group in one go.
+      const grouped = placedUnits.filter(unit => unit.grouped);
+      const anyFolded = grouped.some(unit => groupFolded.has(unit.set) ? groupFolded.get(unit.set) : defaultFolded);
+      for (const unit of grouped) groupFolded.set(unit.set, !anyFolded);
       placeGroups();
     });
     // The default view is already grouped from the complete print list.
@@ -855,6 +867,14 @@
       .replace(/\s+/g, ' ').trim().replace(/\s*#.*$/, '').replace(/[\s✶★]+$/, '').trim();
     const normName = name => String(name || '').replace(/\s+/g, ' ').trim().toLowerCase();
     const baseName = name => normName(name).replace(/\s+promos?$/, '');
+    // A star never belongs in a set name: the finish column already says it.
+    const cleanSetName = name => String(name || '').replace(/[\s✶★]+/g, ' ').replace(/\s+/g, ' ').trim();
+    // A lone printing keeps Scryfall's own wording, star included, so the star
+    // that trails its collector number is cut here as well.
+    const cleanRowLabel = label => String(label || '')
+      .replace(/\s+/g, ' ').trim()
+      .replace(/(\s*#\s*[^\s★✶]+)\s*[★✶]+/g, '$1')
+      .replace(/\s*[★✶]+$/, '').trim();
     const groupHead = (setName, set, count) => {
       const head = document.createElement('tr');
       head.className = 'stk-print-group-row stk-print-extra';
@@ -863,7 +883,7 @@
       // A span inside the cell mirrors Scryfall's own first-column markup, so
       // the native padding, alignment and single-line rhythm apply unchanged.
       const label = document.createElement('span');
-      label.textContent = `${setName} (${set.toUpperCase()}) · ${count}`;
+      label.textContent = `${cleanSetName(setName)} (${set.toUpperCase()}) · ${count}`;
       cell.append(label);
       head.append(cell);
       return head;
@@ -876,9 +896,8 @@
         head.classList.toggle('stk-group-folded-end', collapsed);
         for (const row of rows) row.hidden = collapsed;
       };
-      // Groups start folded and then keep whatever state the user left them in,
-      // no matter how often the table is regrouped.
-      setCollapsed(groupFolded.get(set) !== false);
+      // Groups start folded, unless the whole table fits into ten rows anyway.
+      setCollapsed(groupFolded.has(set) ? groupFolded.get(set) : defaultFolded);
       head.addEventListener('click', () => {
         const collapsed = !head.classList.contains('stk-group-collapsed');
         groupFolded.set(set, collapsed);
@@ -889,17 +908,16 @@
     // The line at the bottom of the table offers whatever is still worth
     // pressing: more printings, groups to unfold, or nothing but the full page.
     function updateLine() {
-      const folded = placedUnits.filter(unit => unit.grouped && groupFolded.get(unit.set) !== false);
-      const left = showingAll ? fewerLabel
-        : totalUnits > 10 ? nativeLabel
-        : folded.length ? expandLabel()
-        : '';
+      const grouped = placedUnits.filter(unit => unit.grouped);
+      const folded = grouped.filter(unit => groupFolded.has(unit.set) ? groupFolded.get(unit.set) : defaultFolded);
+      let left = showingAll ? fewerLabel : totalUnits > 10 ? nativeLabel : '';
+      if (!left && grouped.length) left = folded.length ? expandLabel() : collapseLabel();
       native.hidden = !left;
       native.textContent = left;
       const bare = !left;
       pageLink.textContent = bare ? fullPageLabel() : openPageLabel();
       pageLine.classList.toggle('stk-print-line-end', bare);
-      const open = showingAll || placedUnits.some(unit => unit.grouped && groupFolded.get(unit.set) === false);
+      const open = showingAll || grouped.some(unit => !(groupFolded.has(unit.set) ? groupFolded.get(unit.set) : defaultFolded));
       table.classList.toggle('stk-prints-expanded', open);
       native.setAttribute('aria-expanded', String(open));
     }
@@ -964,6 +982,9 @@
         .map(unit => ({ ...unit, grouped: unit.nativeRows.length + unit.added.length > 1 }));
       totalUnits = merged.length;
       placedUnits = merged.slice(0, showingAll ? Infinity : 10);
+      // A card whose printings all fit into ten rows has nothing to fold away,
+      // so its groups start open.
+      defaultFolded = placedUnits.reduce((sum, unit) => sum + unit.nativeRows.length + unit.added.length, 0) > 10;
       for (const unit of placedUnits) {
         // Inside a group the set name lives in the header, so every row there
         // shows the bare collector number; a lone printing repeats the set name.
@@ -980,7 +1001,7 @@
               ? `${row.stkShortLabel}${code}`
               : `#${identity ? identity.number : ''}${code}`;
           } else {
-            link.textContent = row.stkFullLabel || link.textContent;
+            link.textContent = cleanRowLabel(row.stkFullLabel || link.textContent);
           }
         }
         let anchor = null;
