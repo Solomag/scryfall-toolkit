@@ -73,10 +73,14 @@ function cssCheck() {
   const css = read('content.css');
   assert(css.includes('#main .prints > .prints-table .stk-native-print-add{'),
     'native print button styles exist');
-  assert(css.includes('tr:hover .stk-native-print-add'),
-    'native print buttons revealed on row hover (tr:hover)');
-  assert(css.includes('#stk-all-prints[hidden]{display:none}'),
-    'hidden expanded-prints panel is display:none');
+  assert(!/stk-native-print-add\{[^}]*visibility:hidden/.test(css),
+    'print buttons stay visible instead of hover-gated');
+  assert(css.includes('#main .prints > .prints-table .stk-print-group-row td{'),
+    'set group header rows styled');
+  assert(css.includes('#main .prints > .prints-table .stk-print-entry[hidden]{display:none}'),
+    'collapsed group rows are display:none');
+  assert(!css.includes('#stk-all-prints'),
+    'detached prints panel styles removed');
   assert(/\.card-grid-item:has\(>\.stk-add\)/.test(css),
     'grid add button anchors its parent item');
   for (const selector of [
@@ -85,13 +89,17 @@ function cssCheck() {
     '#scryfall-toolkit-clipboard .stk-copy-wrap{',
     '#scryfall-toolkit-clipboard .stk-copy-menu[hidden]{display:none}',
     '#scryfall-toolkit-clipboard .stk-copy-plain',
-    '#scryfall-toolkit-clipboard .stk-list-set'
+    '#scryfall-toolkit-clipboard .stk-list-set',
+    'stk-copied-pop', 'padding:14px 2px 0 25px',
+    '#main .card-legality{padding-bottom:22px!important}'
   ]) assert(css.includes(selector), `content.css styles ${selector}`);
   assert(css.includes('.stk-tag-icon.icon-flipped svg{transform:scale(-1,1)}'),
     'flipped tag icons rule exists');
   const flipLine = read('content.js').split('\n').find(line => line.includes('icon-flipped'));
   assert(flipLine && !flipLine.includes('BETTER_THAN'),
     'BETTER_THAN no longer flips the relation icon');
+  assert(flipLine && flipLine.includes('WORSE_THAN'),
+    'WORSE_THAN flips the relation icon');
 
   const theme = read('theme.css');
   assert(theme.includes('html.stk-dark{--stk-link-purple:#9073bf}'),
@@ -100,6 +108,14 @@ function cssCheck() {
     'brighter purple rule for dark theme');
   assert(theme.includes('html.stk-dark #scryfall-toolkit-clipboard .stk-copy-menu{'),
     'dark styles for the names-only menu');
+  assert(theme.includes('html.stk-dark #scryfall-toolkit-clipboard .stk-copied{background:#2f9e44!important}'),
+    'dark copied feedback matches the vivid green');
+  assert(theme.includes('html.stk-dark .prints-info-section,html.stk-dark .prints-info-section h2{color:#29252c!important}'),
+    'dark theme keeps the gold info note readable');
+  assert(theme.includes('html.stk-dark .card-grid-item-transform-button{'),
+    'dark repaint for the Transform button');
+  assert(theme.includes('html.stk-dark .prints-table .stk-print-group-row td{'),
+    'dark group header rows');
   assert(/Never paint a footer band/.test(theme), 'footer band guard comment present');
   const stripped = theme.replace(/\/\*[\s\S]*?\*\//g, '');
   let offender = '';

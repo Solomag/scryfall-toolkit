@@ -38,7 +38,7 @@
       control.title = t('Скопировано');
       control.classList.add('stk-copied');
     } catch { control.title = t('Ошибка копирования'); }
-    setTimeout(() => { control.title = restLabel; control.classList.remove('stk-copied'); }, 1800);
+    setTimeout(() => { control.title = restLabel; control.classList.remove('stk-copied'); }, 1000);
   };
   // Same shape as the Scryfall clipboard: sets by default, "names only" in a
   // small menu revealed above the copy button on hover.
@@ -61,8 +61,15 @@
     await writeClipboard('names', plain, t('Только названия без сетов'));
   });
   wrap.append(menu, copy);
-  for (const type of ['mouseenter', 'focusin']) wrap.addEventListener(type, () => { menu.hidden = false; });
-  for (const type of ['mouseleave', 'focusout']) wrap.addEventListener(type, () => { menu.hidden = true; });
+  let hideMenuTimer;
+  const showMenu = () => { clearTimeout(hideMenuTimer); menu.hidden = false; };
+  const scheduleHideMenu = () => {
+    clearTimeout(hideMenuTimer);
+    hideMenuTimer = setTimeout(() => { menu.hidden = true; }, 200);
+  };
+  for (const type of ['mouseenter', 'focusin']) wrap.addEventListener(type, showMenu);
+  for (const type of ['mouseleave', 'focusout']) wrap.addEventListener(type, scheduleHideMenu);
+  menu.addEventListener('mouseenter', showMenu);
   const clear = iconButton('trash', t('Очистить буфер карт'), async () => {
     if (!cards.length || !confirm(t('Очистить буфер карт?'))) return;
     cards = [];
@@ -98,7 +105,7 @@
         const { exportFormat } = await chrome.storage.local.get({ exportFormat: 'moxfield' });
         try { await navigator.clipboard.writeText(formatCard(card, exportFormat)); copyCard.title = t('Скопировано'); copyCard.classList.add('stk-copied'); }
         catch { copyCard.title = t('Ошибка копирования'); }
-        setTimeout(() => { copyCard.title = `${t('Копировать карту')} ${card.name}`; copyCard.classList.remove('stk-copied'); }, 1800);
+        setTimeout(() => { copyCard.title = `${t('Копировать карту')} ${card.name}`; copyCard.classList.remove('stk-copied'); }, 1000);
       });
       copyCard.classList.add('stk-copy-card');
       const remove = document.createElement('button');

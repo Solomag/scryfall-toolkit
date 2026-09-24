@@ -39,15 +39,18 @@ const CARD_HTML = `<!DOCTYPE html><html><head>
 
 const prints = [
   { id: 'p1', name: 'Test Card', uri: 'https://scryfall.com/card/tst/1/test-card', set: 'tst', setName: 'Test Set', number: '1', lang: 'en', digital: false, finishes: ['nonfoil'], prices: { eur: '1.00' } },
-  { id: 'p2', name: 'Test Card', uri: 'https://scryfall.com/card/tst/3/test-card', set: 'tst', setName: 'Test Set', number: '3', lang: 'en', digital: false, finishes: ['nonfoil'], prices: {} },
-  { id: 'p3', name: 'Test Card', uri: 'https://scryfall.com/card/mh3/42/test-card', set: 'mh3', setName: 'Modern Horizons 3', number: '42', lang: 'jp', digital: false, finishes: ['foil'], prices: {} }
+  { id: 'p2', name: 'Test Card', uri: 'https://scryfall.com/card/tst/3/test-card', set: 'tst', setName: 'Test Set', number: '3', lang: 'en', digital: false, finishes: ['nonfoil'], prices: { eur: '2.00' } },
+  { id: 'p4', name: 'Test Card', uri: 'https://scryfall.com/card/tst/4/test-card', set: 'tst', setName: 'Test Set', number: '4', lang: 'en', digital: false, finishes: ['foil'], prices: {} },
+  { id: 'p3', name: 'Test Card', uri: 'https://scryfall.com/card/mh3/42/test-card', set: 'mh3', setName: 'Modern Horizons 3', number: '42', lang: 'jp', digital: false, finishes: ['foil'], prices: {} },
+  { id: 'p5', name: 'Test Card', uri: 'https://scryfall.com/card/mh3/43/test-card', set: 'mh3', setName: 'Modern Horizons 3', number: '43', lang: 'jp', digital: false, finishes: ['foil'], prices: {} }
 ];
 
 const routes = {
   tags: () => ({
     card: [
       { name: 'Aggro', slug: 'aggro', tagType: 'ORACLE_CARD_TAG' },
-      { name: 'Other Card', targetId: REL_ID, tagType: 'BETTER_THAN', relation: true, targetKind: 'card' }
+      { name: 'Other Card', targetId: REL_ID, tagType: 'BETTER_THAN', relation: true, targetKind: 'card' },
+      { name: 'Worse Card', targetId: '66666666-6666-4666-8666-666666666666', tagType: 'WORSE_THAN', relation: true, targetKind: 'card' }
     ],
     art: [],
     fallback: false
@@ -92,10 +95,11 @@ async function cardPageTest() {
   assert(scanButton, 'grid-less card page gets an add button on the card image');
   assertEqual(scanButton.textContent, '+', 'fresh card is not selected yet');
 
-  // Native print buttons live inside the native prints table.
+  // Native print buttons live inside the native prints table, current row included.
   const nativeButtons = [...document.querySelectorAll('#main .prints-table .stk-native-print-add')];
-  assertEqual(nativeButtons.length, 2, 'only non-current print rows get native add buttons');
-  assert(!document.querySelector('tr.current .stk-native-print-add'), 'current printing row stays untouched');
+  assertEqual(nativeButtons.length, 3, 'every print row gets a native add button');
+  assert(document.querySelector('tr.current .stk-native-print-add'),
+    'current printing row gets an add button too');
 
   // Finish badges from the finishes response.
   assert(document.querySelector('.stk-finish-header'), 'finish column header is added');
@@ -125,6 +129,11 @@ async function cardPageTest() {
   assert(tagIcon, 'relation row has a tag icon');
   assert(tagIcon.title.toLowerCase().includes('better'), 'icon tooltip says better, not worse');
   assert(!tagIcon.classList.contains('icon-flipped'), 'better-than icon keeps its original direction');
+  const worseLink = tagsPanel.querySelector('.stk-related-table a[title*="worse than"]');
+  assert(worseLink, 'worse relation row rendered');
+  assertEqual(worseLink.title, 'worse than: Worse Card', 'WORSE_THAN relation tooltip reads worse than');
+  const worseIcon = worseLink.closest('tr')?.querySelector('.stk-tag-icon');
+  assert(worseIcon && worseIcon.classList.contains('icon-flipped'), 'worse-than icon is inverted');
 
   // Related card click opens its real card page via preview.
   click(relationLink);
@@ -147,15 +156,16 @@ async function cardPageTest() {
   }, 'scan card saved with set and number, without forceSet');
 
   // Native print buttons add printings with forceSet. Their label updates only
-  // after the async add resolves, so wait on the label itself.
-  click(nativeButtons[0]);
-  await waitFor(() => nativeButtons[0].textContent === '✓', 'first native print button selected');
+  // after the async add resolves, so wait on the label itself. The first row is
+  // the current printing and mirrors the scan button, so it is skipped here.
+  click(nativeButtons[1]);
+  await waitFor(() => nativeButtons[1].textContent === '✓', 'first native print button selected');
   assertEqual(mock.state.cards.length, 2, 'first native print added');
   assertEqual(mock.state.cards[1], {
     name: 'Test Card', url: 'https://scryfall.com/card/tst/2/test-card', set: 'tst', number: '2', forceSet: true
   }, 'native print saved with forceSet');
-  click(nativeButtons[1]);
-  await waitFor(() => nativeButtons[1].textContent === '✓', 'second native print button selected');
+  click(nativeButtons[2]);
+  await waitFor(() => nativeButtons[2].textContent === '✓', 'second native print button selected');
   assertEqual(mock.state.cards.length, 3, 'second native print added');
   assertEqual(mock.state.cards[2], {
     name: 'Test Card', url: 'https://scryfall.com/card/mh3/42/test-card', set: 'mh3', number: '42', forceSet: true
@@ -198,35 +208,50 @@ async function cardPageTest() {
     '1 Test Card\n1 Test Card (TST) 2\n1 Test Card (MH3) 42',
     'exportFormat setting still honored for the main click');
 
-  // Expanded prints inside the native "View all prints" link.
+  // Printings expand directly inside the native prints table.
   const nativeLink = document.querySelector('#main .prints-all a');
-  const panel = document.getElementById('stk-all-prints');
-  assert(panel, 'native prints panel injected after the table');
-  assert(panel.hidden, 'native prints panel starts hidden');
+  const printTable = document.querySelector('#main .prints > .prints-table');
+  const printBody = printTable.tBodies && printTable.tBodies[0] ? printTable.tBodies[0] : printTable.querySelector('tbody');
   assertEqual(nativeLink.getAttribute('aria-expanded'), 'false', 'aria-expanded starts false');
+  assertEqual(printBody.querySelectorAll('.stk-print-extra').length, 0, 'no extra rows before expanding');
   click(nativeLink);
-  assert(!panel.hidden, 'clicking View all prints reveals the panel');
+  assert(printTable.classList.contains('stk-prints-expanded'), 'table carries the expanded state');
   assertEqual(nativeLink.getAttribute('aria-expanded'), 'true', 'aria-expanded flips to true');
-  await waitFor(() => panel.querySelectorAll('.stk-print-group').length === 2, 'prints grouped by set');
-  const summaries = [...panel.querySelectorAll('summary')].map(node => node.textContent);
-  assertEqual(summaries, ['Test Set (TST) · 2', 'Modern Horizons 3 (MH3) · 1'], 'group summaries carry set name, code and count');
-  assertEqual(panel.querySelectorAll('.stk-print-add').length, 3, 'every printing row gets an add button');
-  assert(
-    panel.querySelector('.stk-prints-new-page').href === nativeLink.href,
-    'new-page link keeps the native printings URL'
-  );
-  assert([...panel.querySelectorAll('.stk-print-entry a')].some(link => link.textContent === '#42 · JP'),
-    'non-English printing shows its language');
+  await waitFor(() => printBody.querySelectorAll('.stk-print-group-row').length === 2, 'prints grouped by set inside the table');
+  const groupTitles = [...printBody.querySelectorAll('.stk-print-group-row td')].map(td => td.textContent);
+  assertEqual(groupTitles, ['Test Set (TST) · 2', 'Modern Horizons 3 (MH3) · 1'],
+    'group rows carry set name, code and count');
+  assertEqual(printBody.querySelectorAll('.stk-print-entry').length, 3, 'missing printings inserted into the table');
+  const entryLinks = [...printBody.querySelectorAll('.stk-print-entry a')].map(link => link.textContent);
+  assert(entryLinks.includes('#43 · JP'), 'non-English printing shows its language');
+  assertEqual(printBody.querySelectorAll('.stk-native-print-add').length, 6,
+    'every printing row, native and extra, has an add button');
+  const newPageRowLink = printBody.querySelector('.stk-print-new-page a');
+  assert(newPageRowLink && newPageRowLink.getAttribute('href') === nativeLink.getAttribute('href'),
+    'new-page row keeps the native printings URL');
 
-  // Toggle a printing inside the expanded panel.
+  // Sets with several missing printings start collapsed and toggle on header click.
+  const tstGroup = [...printBody.querySelectorAll('.stk-print-group-row')]
+    .find(row => row.textContent.includes('(TST)'));
+  const tstEntries = [...printBody.querySelectorAll('.stk-print-entry')]
+    .filter(row => /\/card\/tst\//.test(row.querySelector('a').getAttribute('href')));
+  assertEqual(tstEntries.length, 2, 'two missing TST printings under one header');
+  assert(tstEntries.every(row => row.hidden), 'multi-printing set starts collapsed');
+  click(tstGroup);
+  assert(tstEntries.every(row => !row.hidden), 'clicking the group header reveals its printings');
+  click(tstGroup);
+  assert(tstEntries.every(row => row.hidden), 'clicking again collapses the group');
+  click(tstGroup);
+
+  // Toggle a printing inside the expanded table.
   const thirdPrintAdd = await waitFor(
-    () => [...panel.querySelectorAll('.stk-print-add')].find(button =>
+    () => [...printBody.querySelectorAll('.stk-print-entry .stk-native-print-add')].find(button =>
       button.closest('.stk-print-entry').querySelector('a').textContent === '#3'),
     'add button for printing #3'
   );
   click(thirdPrintAdd);
   await waitFor(() => thirdPrintAdd.textContent === '✓', 'expanded print button selected');
-  assertEqual(mock.state.cards.length, 4, 'printing added from expanded panel');
+  assertEqual(mock.state.cards.length, 4, 'printing added from expanded table');
   assertEqual(mock.state.cards[3], {
     name: 'Test Card', url: 'https://scryfall.com/card/tst/3/test-card', set: 'tst', number: '3', forceSet: true
   }, 'expanded print saved with forceSet');
@@ -235,7 +260,8 @@ async function cardPageTest() {
   assertEqual(mock.state.cards.length, 3, 'printing removed again');
 
   click(nativeLink);
-  assert(panel.hidden, 'second click hides the panel again');
+  assert(!printTable.classList.contains('stk-prints-expanded'), 'second click collapses the table again');
+  assertEqual(printBody.querySelectorAll('.stk-print-extra').length, 0, 'extra rows leave the table when collapsed');
   assertEqual(nativeLink.getAttribute('aria-expanded'), 'false', 'aria-expanded resets to false');
 
   // Clear the clipboard.

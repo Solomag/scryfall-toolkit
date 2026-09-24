@@ -41,11 +41,20 @@ html.stk-dark #scryfall-toolkit-clipboard .stk-toolbar,html.stk-dark #scryfall-t
 html.stk-dark #scryfall-toolkit-clipboard .stk-icon-button:hover,html.stk-dark #scryfall-toolkit-clipboard .stk-icon-button:focus-visible{background:#3a3d40!important}
 html.stk-dark #scryfall-toolkit-clipboard .stk-icon-button img{filter:invert(.85)}
 html.stk-dark #scryfall-toolkit-clipboard .stk-list-row button{color:#c69de1}
-html.stk-dark #scryfall-toolkit-clipboard .stk-copied{background:#405044!important}
+html.stk-dark #scryfall-toolkit-clipboard .stk-copied{background:#2f9e44!important}
 html.stk-dark #scryfall-toolkit-clipboard .stk-list-set{color:#9aa3ab}
-html.stk-dark #scryfall-toolkit-clipboard .stk-copy-menu{background:#292c2e!important;color:#e6e3df!important;border-color:#4d5255!important}
-html.stk-dark #scryfall-toolkit-clipboard .stk-copy-plain{color:#e6e3df!important}
-html.stk-dark #scryfall-toolkit-clipboard .stk-copy-plain:hover,html.stk-dark #scryfall-toolkit-clipboard .stk-copy-plain:focus-visible{background:#3a3d40!important}
+html.stk-dark #scryfall-toolkit-clipboard .stk-copy-menu{background:#292c2e!important;color:#e6e3df!important;border-color:#4d5255!important;box-shadow:0 6px 16px #0007}
+html.stk-dark #scryfall-toolkit-clipboard .stk-copy-plain{background:#33373b!important;border-color:#565c61!important;color:#e6e3df!important}
+html.stk-dark #scryfall-toolkit-clipboard .stk-copy-plain::before{color:#9aa3ab}
+html.stk-dark #scryfall-toolkit-clipboard .stk-copy-plain:hover,html.stk-dark #scryfall-toolkit-clipboard .stk-copy-plain:focus-visible{background:#3f4b58!important;border-color:#6f9fd6!important}
+/* Native gold info boxes keep their background, but the text must stay dark. */
+html.stk-dark .prints-info-section,html.stk-dark .prints-info-section h2{color:#29252c!important}
+/* The DFC flip button is white on card images; repaint it for the dark theme. */
+html.stk-dark .card-grid-item-transform-button{background:#292b2c;border-color:#7f7a8a}
+html.stk-dark .card-grid-item-transform-button path{fill:#e6e3df}
+html.stk-dark .card-grid-item-transform-button.spooky{background:#e6e3df;border-color:#fff}
+html.stk-dark .card-grid-item-transform-button.spooky path{fill:#292b2c}
+html.stk-dark .prints-table .stk-print-group-row td{background:#2a2835;color:#e9e4ee!important}
 /* Shared pages: set index, advanced search, syntax reference, account and deck pages. */
 html.stk-dark #main,html.stk-dark #main .card-profile .inner-flex,html.stk-dark #main .checklist-wrapper,
 html.stk-dark #main .reference-jump,html.stk-dark #main .reference-block,

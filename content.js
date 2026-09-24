@@ -518,29 +518,40 @@
     const table = document.querySelector('#main .prints > .prints-table');
     const native = document.querySelector('#main .prints .prints-all a') ||
       [...(table?.querySelectorAll('a[href]') || [])].find(link => /^(?:view all prints|показать все издания)/i.test(link.textContent.trim()));
-    if (!native || document.getElementById('stk-all-prints')) return;
-    const panel = document.createElement('section');
-    panel.id = 'stk-all-prints';
-    panel.hidden = true;
-    const newPage = document.createElement('a');
-    newPage.href = native.href;
-    newPage.target = '_blank';
-    newPage.rel = 'noopener noreferrer';
-    newPage.textContent = language === 'ru' ? 'Открыть отдельной страницей ↗' : 'Open on a new page ↗';
-    newPage.className = 'stk-prints-new-page';
-    panel.append(newPage);
-    table.after(panel);
+    const tbody = table?.querySelector('tbody');
+    if (!native || !tbody || table.dataset.stkPrints) return;
+    table.dataset.stkPrints = '1';
+    const headCells = () => [...(table.querySelector('thead')?.querySelectorAll('th') || [])];
+    const columns = () => headCells().length || 1;
+    const statusRow = text => {
+      const row = document.createElement('tr');
+      row.className = 'stk-print-status stk-print-extra';
+      const cell = document.createElement('td');
+      cell.colSpan = columns();
+      cell.textContent = text;
+      row.append(cell);
+      return row;
+    };
+    let rows = [];
     let loaded = false;
     native.setAttribute('aria-expanded', 'false');
     native.addEventListener('click', async event => {
       if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
       event.preventDefault();
-      panel.hidden = !panel.hidden;
-      native.setAttribute('aria-expanded', String(!panel.hidden));
-      if (panel.hidden || loaded) return;
-      const status = document.createElement('p');
-      status.textContent = language === 'ru' ? 'Загружаю издания…' : 'Loading printings…';
-      panel.append(status);
+      const expanding = !table.classList.contains('stk-prints-expanded');
+      table.classList.toggle('stk-prints-expanded', expanding);
+      native.setAttribute('aria-expanded', String(expanding));
+      if (!expanding) {
+        for (const row of rows) row.remove();
+        return;
+      }
+      if (loaded) {
+        for (const row of rows) tbody.append(row);
+        return;
+      }
+      const status = statusRow(language === 'ru' ? 'Загружаю издания…' : 'Loading printings…');
+      rows = [status];
+      tbody.append(status);
       try {
         let oracleId = document.querySelector('meta[name="scryfall:oracle:id"]')?.content;
         if (!oracleId) {
@@ -565,58 +576,132 @@
           group.push(card);
           groups.set(card.set, group);
         }
+        const built = buildRows(groups, truncated);
         status.remove();
-        for (const cards of groups.values()) {
-          const group = document.createElement('details');
-          group.className = 'stk-print-group';
-          if (cards.length === 1) group.open = true;
-          const summary = document.createElement('summary');
-          summary.textContent = `${cards[0].setName} (${cards[0].set.toUpperCase()}) · ${cards.length}`;
-          group.append(summary);
-          for (const card of cards) {
-            const row = document.createElement('div');
-            row.className = 'stk-print-entry';
-            const link = document.createElement('a');
-            link.href = card.uri;
-            link.textContent = `#${card.number}${card.lang !== 'en' ? ` · ${card.lang.toUpperCase()}` : ''}`;
-            const finish = document.createElement('span');
-            finish.className = 'stk-print-finish';
-            finish.textContent = (card.finishes || []).join(' / ');
-            const price = document.createElement('span');
-            price.className = 'stk-print-price';
-            price.textContent = card.prices?.eur ? `€${card.prices.eur}` : card.prices?.eur_foil ? `✶ €${card.prices.eur_foil}` : '';
-            row.append(link, finish, price);
-            if (settings.clipboard && settings.printAddButtons) {
-              const add = button('+', async () => {
-                add.disabled = true;
-                try { add.textContent = await window.STK_ADD_PRINT(card) ? '✓' : '+'; }
-                finally { add.disabled = false; }
-              });
-              add.className = 'stk-print-add';
-              add.title = language === 'ru' ? 'Добавить конкретное издание с кодом сета в буфер' : 'Add this printing with its set code to the clipboard';
-              add.setAttribute('aria-label', add.title);
-              row.append(add);
-            }
-            group.append(row);
-          }
-          panel.append(group);
-        }
-        if (truncated) {
-          const note = document.createElement('p');
-          note.textContent = language === 'ru' ? 'Часть изданий не загрузилась; откройте полную страницу.' : 'More printings are available on the full page.';
-          panel.append(note);
+        rows = built;
+        if (table.classList.contains('stk-prints-expanded')) {
+          for (const row of built) tbody.append(row);
         }
         loaded = true;
       } catch {
-        status.textContent = language === 'ru' ? 'Не удалось загрузить издания. Откройте отдельную страницу.' : 'Could not load printings. Open the separate page.';
+        status.querySelector('td').textContent =
+          language === 'ru' ? 'Не удалось загрузить издания. Откройте отдельную страницу.' : 'Could not load printings. Open the separate page.';
       }
     });
+
+    // Rows are appended to Scryfall's own prints table so the expansion stays
+    // part of the original Prints section instead of a detached panel.
+    function buildRows(groups, truncated) {
+      const total = columns();
+      const heads = headCells();
+      const finishIdx = heads.findIndex(th => th.classList.contains('stk-finish-header'));
+      const eurIdx = heads.findIndex(th => /^eur/i.test(th.textContent.trim()));
+      const setIdx = heads.findIndex(th => /^set$/i.test(th.textContent.trim()));
+      const path = uri => {
+        try { return new URL(uri, location.href).pathname.replace(/\/+$/, ''); }
+        catch { return ''; }
+      };
+      const nativeHrefs = new Set(
+        [...tbody.querySelectorAll('tr:not(.stk-print-extra) td:first-child a[href]')].map(link => path(link.href)).filter(Boolean)
+      );
+      const out = [];
+      for (const cards of groups.values()) {
+        // Printings already listed by the native table are skipped so the
+        // expansion only adds what is missing.
+        const entries = cards.filter(card => !nativeHrefs.has(path(card.uri)));
+        if (!entries.length) continue;
+        const head = document.createElement('tr');
+        head.className = 'stk-print-group-row stk-print-extra';
+        const headCell = document.createElement('td');
+        headCell.colSpan = total;
+        headCell.textContent = `${cards[0].setName} (${cards[0].set.toUpperCase()}) · ${entries.length}`;
+        head.append(headCell);
+        const entryRows = [];
+        head.addEventListener('click', () => {
+          const collapsed = !head.classList.contains('stk-group-collapsed');
+          head.classList.toggle('stk-group-collapsed', collapsed);
+          for (const entryRow of entryRows) entryRow.hidden = collapsed;
+        });
+        out.push(head);
+        for (const card of entries) {
+          const row = document.createElement('tr');
+          row.className = 'stk-print-entry stk-print-extra';
+          for (let i = 0; i < total; i++) {
+            const cell = document.createElement('td');
+            if (i === 0) {
+              const link = document.createElement('a');
+              link.href = path(card.uri);
+              link.textContent = `#${card.number}${card.lang !== 'en' ? ` · ${card.lang.toUpperCase()}` : ''}`;
+              cell.append(link);
+              if (settings.clipboard && settings.printAddButtons) {
+                const add = button('+', async () => {
+                  add.disabled = true;
+                  try { add.textContent = await window.STK_ADD_PRINT(card) ? '✓' : '+'; }
+                  finally { add.disabled = false; }
+                });
+                add.className = 'stk-native-print-add';
+                add.title = language === 'ru' ? 'Добавить конкретное издание с кодом сета в буфер' : 'Add this printing with its set code to the clipboard';
+                add.setAttribute('aria-label', add.title);
+                cell.append(add);
+              }
+            } else if (i === finishIdx) {
+              const glyphs = { nonfoil: '○', foil: '✶', etched: '◈' };
+              const text = (card.finishes || []).map(kind => glyphs[kind]).filter(Boolean).join('');
+              if (text) {
+                cell.className = 'stk-finish-cell';
+                const badge = document.createElement('span');
+                badge.className = 'stk-finish-badge';
+                badge.textContent = text;
+                badge.title = (card.finishes || []).join(' / ');
+                cell.append(badge);
+              }
+            } else if (i === setIdx) {
+              const span = document.createElement('span');
+              span.textContent = card.set.toUpperCase();
+              cell.append(span);
+            } else if (i === eurIdx) {
+              const price = card.prices?.eur ? `€${card.prices.eur}`
+                : card.prices?.eur_foil ? `✶ €${card.prices.eur_foil}` : '';
+              if (price) {
+                const span = document.createElement('span');
+                span.className = 'stk-print-price';
+                span.textContent = price;
+                cell.append(span);
+              }
+            }
+            row.append(cell);
+          }
+          entryRows.push(row);
+          out.push(row);
+        }
+        if (entryRows.length > 1) {
+          head.classList.add('stk-group-collapsed');
+          for (const entryRow of entryRows) entryRow.hidden = true;
+        }
+      }
+      if (truncated) {
+        out.push(statusRow(language === 'ru' ? 'Часть изданий не загрузилась; откройте полную страницу.' : 'More printings are available on the full page.'));
+      }
+      const pageRow = document.createElement('tr');
+      pageRow.className = 'stk-print-new-page stk-print-extra';
+      const pageCell = document.createElement('td');
+      pageCell.colSpan = total;
+      const pageLink = document.createElement('a');
+      pageLink.href = native.getAttribute('href');
+      pageLink.target = '_blank';
+      pageLink.rel = 'noopener noreferrer';
+      pageLink.textContent = language === 'ru' ? 'Открыть отдельной страницей ↗' : 'Open on a new page ↗';
+      pageCell.append(pageLink);
+      pageRow.append(pageCell);
+      out.push(pageRow);
+      return out;
+    }
   }
 
   function initNativePrintButtons() {
     const name = [...document.querySelectorAll('#main .card-text-card-name')].map(node => node.textContent.trim()).filter(Boolean).join(' // ');
     if (!name) return;
-    for (const row of document.querySelectorAll('#main .prints > .prints-table tbody tr:not(.current)')) {
+    for (const row of document.querySelectorAll('#main .prints > .prints-table tbody tr')) {
       const link = row.querySelector('td:first-child a[href^="/card/"],td:first-child a[href^="https://scryfall.com/card/"]');
       const parts = link && new URL(link.href,location.href).pathname.match(/^\/card\/([^/]+)\/([^/]+)/);
       if (!parts || row.querySelector('.stk-native-print-add')) continue;
@@ -659,7 +744,7 @@
       const text = cards.map(c => formatCard(c, format)).join("\n");
       try { await navigator.clipboard.writeText(text); control.title = t('Скопировано'); control.classList.add('stk-copied'); }
       catch { control.title = t('Ошибка копирования'); }
-      setTimeout(() => { control.title = restLabel; control.classList.remove('stk-copied'); }, 1800);
+      setTimeout(() => { control.title = restLabel; control.classList.remove('stk-copied'); }, 1000);
     };
     // Copy keeps the export format; hovering it reveals a small menu above with
     // a one-off "names only" choice, so sets stay the default action.
@@ -682,8 +767,15 @@
       await writeClipboard('names', plain, t('Только названия без сетов'));
     });
     wrap.append(menu, copy);
-    for (const type of ['mouseenter', 'focusin']) wrap.addEventListener(type, () => { menu.hidden = false; });
-    for (const type of ['mouseleave', 'focusout']) wrap.addEventListener(type, () => { menu.hidden = true; });
+    let hideMenuTimer;
+    const showMenu = () => { clearTimeout(hideMenuTimer); menu.hidden = false; };
+    const scheduleHideMenu = () => {
+      clearTimeout(hideMenuTimer);
+      hideMenuTimer = setTimeout(() => { menu.hidden = true; }, 200);
+    };
+    for (const type of ['mouseenter', 'focusin']) wrap.addEventListener(type, showMenu);
+    for (const type of ['mouseleave', 'focusout']) wrap.addEventListener(type, scheduleHideMenu);
+    menu.addEventListener('mouseenter', showMenu);
     const clear = iconButton('trash', t('Очистить буфер карт'), async () => {
       if (!cards.length || !confirm(t('Очистить буфер карт?'))) return;
       cards = [];
@@ -719,7 +811,7 @@
           const { exportFormat } = await chrome.storage.local.get({ exportFormat: 'moxfield' });
           try { await navigator.clipboard.writeText(formatCard(card, exportFormat)); copyCard.title = t('Скопировано'); copyCard.classList.add('stk-copied'); }
           catch { copyCard.title = t('Ошибка копирования'); }
-          setTimeout(() => { copyCard.title = `${t('Копировать карту')} ${card.name}`; copyCard.classList.remove('stk-copied'); }, 1800);
+          setTimeout(() => { copyCard.title = `${t('Копировать карту')} ${card.name}`; copyCard.classList.remove('stk-copied'); }, 1000);
         });
         copyCard.classList.add('stk-copy-card');
         const set = document.createElement('span');
@@ -886,7 +978,7 @@
       const icon = document.createElement("span");
       icon.className = "stk-tag-icon";
       if (["WITHOUT_BODY"].includes(type)) icon.classList.add("icon-upside-down");
-      if (["COMES_BEFORE", "DEPICTS", "REFERENCES_TO"].includes(type)) icon.classList.add("icon-flipped");
+      if (["COMES_BEFORE", "DEPICTS", "REFERENCES_TO", "WORSE_THAN"].includes(type)) icon.classList.add("icon-flipped");
       // Only render SVG literals bundled from Shambleshark; never insert API markup.
       const icons = window.STK_TAG_ICONS;
       icon.innerHTML = Object.prototype.hasOwnProperty.call(icons, type)
