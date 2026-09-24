@@ -29,8 +29,11 @@ async function detailPageTest() {
 
   const aside = document.getElementById('scryfall-toolkit-clipboard');
   assert(aside, 'clipboard aside injected on Tagger');
-  assertEqual(aside.querySelectorAll('.stk-toolbar > button').length, 3,
-    'toolbar has copy, clear and open buttons');
+  const toolbar = aside.querySelector('.stk-toolbar');
+  assert(toolbar.querySelector('.stk-copy-wrap .stk-icon-duplicate'),
+    'toolbar copy button wrapped with hover menu');
+  assert(toolbar.querySelector('.stk-icon-trash'), 'toolbar has a clear button');
+  assert(toolbar.querySelector('.stk-icon-clip'), 'toolbar has an open button');
   const list = aside.querySelector('.stk-list');
   assert(list.hidden, 'card list starts hidden');
   assertEqual(aside.querySelector('.stk-count').textContent, '0', 'badge starts at zero');
@@ -62,22 +65,29 @@ async function detailPageTest() {
     'row link uses the canonical URL');
   assertEqual(row.querySelector('.stk-copy-card').getAttribute('aria-label'), 'Copy card Test Card',
     'row copy button labeled');
+  assertEqual(row.querySelector('.stk-list-set').textContent, '(TST) 1', 'row shows set code and number');
 
-  // Row copy honors the export format.
+  // Row copy follows the with-sets default.
   click(row.querySelector('.stk-copy-card'));
   await waitFor(() => mock.clipboardWrites.length === 1, 'row copy wrote to clipboard');
-  assertEqual(mock.clipboardWrites[0], '1 Test Card', 'names format copies names only');
+  assertEqual(mock.clipboardWrites[0], '1 Test Card (TST) 1', 'row copy includes set and number by default');
 
-  // Toolbar copy-all.
-  click(aside.querySelector('.stk-toolbar .stk-icon-duplicate'));
+  // Toolbar copy-all includes sets by default.
+  click(toolbar.querySelector('.stk-icon-duplicate'));
   await waitFor(() => mock.clipboardWrites.length === 2, 'toolbar copy wrote to clipboard');
-  assertEqual(mock.clipboardWrites[1], '1 Test Card', 'toolbar copy-all formats every card');
+  assertEqual(mock.clipboardWrites[1], '1 Test Card (TST) 1', 'toolbar copy-all includes sets by default');
 
-  mock.state.exportFormat = 'moxfield';
-  click(aside.querySelector('.stk-toolbar .stk-icon-duplicate'));
-  await waitFor(() => mock.clipboardWrites.length === 3, 'moxfield copy wrote to clipboard');
-  assertEqual(mock.clipboardWrites[2], '1 Test Card (TST) 1',
-    'moxfield format appends set and number');
+  // Hovering copy reveals the names-only choice above the button.
+  const copyWrap = toolbar.querySelector('.stk-copy-wrap');
+  const copyMenu = copyWrap.querySelector('.stk-copy-menu');
+  assert(copyMenu.hidden, 'names-only menu starts hidden');
+  fireEvent(copyWrap, 'mouseenter');
+  assert(!copyMenu.hidden, 'hovering copy opens the menu above');
+  click(copyMenu.querySelector('.stk-copy-plain'));
+  await waitFor(() => mock.clipboardWrites.length === 3, 'names-only copy wrote to clipboard');
+  assertEqual(mock.clipboardWrites[2], '1 Test Card', 'names-only menu item drops sets');
+  assert(copyMenu.hidden, 'menu closes after choosing');
+  fireEvent(copyWrap, 'mouseleave');
 
   // Remove the card through the row button.
   click(row.querySelector('button[aria-label="Remove Test Card"]'));

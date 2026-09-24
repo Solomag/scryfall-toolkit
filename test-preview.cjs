@@ -1,7 +1,7 @@
 'use strict';
 // content.js end-to-end: card page and search page over linkedom.
 const {
-  assert, assertEqual, summary, sleep, waitFor, createPage, click
+  assert, assertEqual, summary, sleep, waitFor, createPage, click, fireEvent
 } = require('./testlib.cjs');
 
 const ORACLE_ID = '00000000-0000-4000-8000-000000000001';
@@ -81,7 +81,7 @@ async function cardPageTest() {
   // Clipboard shell.
   const aside = document.getElementById('scryfall-toolkit-clipboard');
   assert(aside, 'clipboard aside is injected');
-  assertEqual(aside.querySelector('.stk-toolbar').children.length, 3, 'toolbar has copy, clear and open buttons');
+  assertEqual(aside.querySelector('.stk-toolbar').children.length, 3, 'toolbar has wrapped copy, clear and open buttons');
   const list = aside.querySelector('.stk-list');
   assert(list.hidden, 'clipboard list starts hidden');
   click(aside.querySelector('.stk-icon-clip'));
@@ -124,6 +124,7 @@ async function cardPageTest() {
   const tagIcon = relationLink.closest('tr').querySelector('.stk-tag-icon');
   assert(tagIcon, 'relation row has a tag icon');
   assert(tagIcon.title.toLowerCase().includes('better'), 'icon tooltip says better, not worse');
+  assert(!tagIcon.classList.contains('icon-flipped'), 'better-than icon keeps its original direction');
 
   // Related card click opens its real card page via preview.
   click(relationLink);
@@ -160,21 +161,42 @@ async function cardPageTest() {
     name: 'Test Card', url: 'https://scryfall.com/card/mh3/42/test-card', set: 'mh3', number: '42', forceSet: true
   }, 'second native print saved with forceSet');
 
-  // Copy all: default names format keeps set for forceSet cards only.
-  const copyAll = aside.querySelector('.stk-toolbar .stk-icon-duplicate');
+  // Rows display the set code and collector number.
+  const setSpans = [...list.querySelectorAll('.stk-list-set')].map(span => span.textContent);
+  assertEqual(setSpans, ['(TST) 1', '(TST) 2', '(MH3) 42'], 'buffer rows show set code and number');
+
+  // Copy all: sets by default; the names-only choice lives in the hover menu.
+  const copyWrap = aside.querySelector('.stk-copy-wrap');
+  assert(copyWrap, 'copy button wrapped in a hover menu');
+  const copyMenu = copyWrap.querySelector('.stk-copy-menu');
+  assert(copyMenu.hidden, 'names-only menu starts hidden');
+  const copyAll = copyWrap.querySelector('.stk-icon-duplicate');
   click(copyAll);
   await waitFor(() => mock.clipboardWrites.length === 1, 'copy-all wrote to clipboard');
   assertEqual(mock.clipboardWrites[0],
-    '1 Test Card\n1 Test Card (TST) 2\n1 Test Card (MH3) 42',
-    'names format: plain card plain, forceSet cards with set code');
-
-  // Moxfield format adds the set to every card.
-  mock.state.exportFormat = 'moxfield';
-  click(copyAll);
-  await waitFor(() => mock.clipboardWrites.length === 2, 'second copy-all wrote to clipboard');
-  assertEqual(mock.clipboardWrites[1],
     '1 Test Card (TST) 1\n1 Test Card (TST) 2\n1 Test Card (MH3) 42',
-    'moxfield format: every card carries its set code');
+    'default copy includes set codes');
+
+  fireEvent(copyWrap, 'mouseenter');
+  assert(!copyMenu.hidden, 'hovering copy opens the menu above');
+  const plain = copyMenu.querySelector('.stk-copy-plain');
+  assertEqual(plain.textContent, 'Names only, no sets', 'menu item translated for English site');
+  click(plain);
+  await waitFor(() => mock.clipboardWrites.length === 2, 'names-only copy wrote to clipboard');
+  assertEqual(mock.clipboardWrites[1],
+    '1 Test Card\n1 Test Card (TST) 2\n1 Test Card (MH3) 42',
+    'names-only item drops sets for plain cards and keeps forced ones');
+  assert(copyMenu.hidden, 'menu closes after choosing');
+  fireEvent(copyWrap, 'mouseleave');
+  assert(copyMenu.hidden, 'menu stays closed after leaving');
+
+  // The options setting still picks the default for the plain click.
+  mock.state.exportFormat = 'names';
+  click(copyAll);
+  await waitFor(() => mock.clipboardWrites.length === 3, 'setting-driven copy wrote to clipboard');
+  assertEqual(mock.clipboardWrites[2],
+    '1 Test Card\n1 Test Card (TST) 2\n1 Test Card (MH3) 42',
+    'exportFormat setting still honored for the main click');
 
   // Expanded prints inside the native "View all prints" link.
   const nativeLink = document.querySelector('#main .prints-all a');
@@ -253,7 +275,7 @@ async function searchPageTest() {
   const copyAll = document.querySelector('#scryfall-toolkit-clipboard .stk-toolbar .stk-icon-duplicate');
   click(copyAll);
   await waitFor(() => mock.clipboardWrites.length === 1, 'grid copy-all wrote to clipboard');
-  assertEqual(mock.clipboardWrites[0], '1 Grid Card', 'default names format copies names only');
+  assertEqual(mock.clipboardWrites[0], '1 Grid Card (GRID) 9', 'default format includes set and number');
 
   click(addButtons[0]);
   await waitFor(() => mock.state.cards.length === 0, 'grid card toggled off');

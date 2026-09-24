@@ -86,7 +86,8 @@
     'Удалить': 'Remove', 'Добавить': 'Add', 'Загружаю теги…': 'Loading tags…',
     'Загружаю карту…': 'Loading card…', 'Для этой карты тегов нет': 'No tags for this card',
     'Связи Tagger сейчас недоступны; теги показаны из локального списка.': 'Tagger relationships are unavailable; showing tags from the local index.',
-    'Теги недоступны — открыть Tagger': 'Tags unavailable — open Tagger'
+    'Теги недоступны — открыть Tagger': 'Tags unavailable — open Tagger',
+    'Только названия без сетов': 'Names only, no sets'
   };
   const languages = ['ru','en'];
   const originals = new WeakMap();

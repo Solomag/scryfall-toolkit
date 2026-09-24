@@ -81,16 +81,25 @@ function cssCheck() {
     'grid add button anchors its parent item');
   for (const selector of [
     '#scryfall-toolkit-clipboard .stk-toolbar{', '.stk-count{', '.stk-list-row{',
-    '.stk-copied', '#stk-tags{', '#stk-tags .stk-card-table'
+    '.stk-copied', '#stk-tags{', '#stk-tags .stk-card-table',
+    '#scryfall-toolkit-clipboard .stk-copy-wrap{',
+    '#scryfall-toolkit-clipboard .stk-copy-menu[hidden]{display:none}',
+    '#scryfall-toolkit-clipboard .stk-copy-plain',
+    '#scryfall-toolkit-clipboard .stk-list-set'
   ]) assert(css.includes(selector), `content.css styles ${selector}`);
   assert(css.includes('.stk-tag-icon.icon-flipped svg{transform:scale(-1,1)}'),
     'flipped tag icons rule exists');
+  const flipLine = read('content.js').split('\n').find(line => line.includes('icon-flipped'));
+  assert(flipLine && !flipLine.includes('BETTER_THAN'),
+    'BETTER_THAN no longer flips the relation icon');
 
   const theme = read('theme.css');
   assert(theme.includes('html.stk-dark{--stk-link-purple:#9073bf}'),
     'dark theme link purple variable');
   assert(theme.includes('html.stk-dark #main .stk-brighter-purple{color:#9073bf!important}'),
     'brighter purple rule for dark theme');
+  assert(theme.includes('html.stk-dark #scryfall-toolkit-clipboard .stk-copy-menu{'),
+    'dark styles for the names-only menu');
   assert(/Never paint a footer band/.test(theme), 'footer band guard comment present');
   const stripped = theme.replace(/\/\*[\s\S]*?\*\//g, '');
   let offender = '';

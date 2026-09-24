@@ -10,7 +10,7 @@
     taggerSearchLinks: false, cardSearchLinks: false, cardNicknames: false, deckNoPrices: true, stackedDeckCards: false, deckTokens: false,
     premodern: true, heritage: false, classic: false, peak: false,
     formatOrder: null, formatVisibility: null,
-    exportFormat: "names", cards: null
+    exportFormat: "moxfield", cards: null
   };
   const settings = await chrome.storage.local.get(defaults);
   const language = settings.siteLanguage === 'ru' ? 'ru' : 'en';
@@ -655,19 +655,41 @@
     badge.className = 'stk-count';
     badge.setAttribute('aria-hidden', 'true');
     open.append(badge);
-    const copy = iconButton('duplicate', t('Копировать карты'), async () => {
-      const format = (await chrome.storage.local.get({ exportFormat: "names" })).exportFormat;
+    const writeClipboard = async (format, control, restLabel) => {
       const text = cards.map(c => formatCard(c, format)).join("\n");
-      try { await navigator.clipboard.writeText(text); copy.title = t('Скопировано'); copy.classList.add('stk-copied'); }
-      catch { copy.title = t('Ошибка копирования'); }
-      setTimeout(() => { copy.title = t('Копировать карты'); copy.classList.remove('stk-copied'); }, 1800);
+      try { await navigator.clipboard.writeText(text); control.title = t('Скопировано'); control.classList.add('stk-copied'); }
+      catch { control.title = t('Ошибка копирования'); }
+      setTimeout(() => { control.title = restLabel; control.classList.remove('stk-copied'); }, 1800);
+    };
+    // Copy keeps the export format; hovering it reveals a small menu above with
+    // a one-off "names only" choice, so sets stay the default action.
+    const wrap = document.createElement('span');
+    wrap.className = 'stk-copy-wrap';
+    const menu = document.createElement('span');
+    menu.className = 'stk-copy-menu';
+    menu.hidden = true;
+    const plain = document.createElement('button');
+    plain.type = 'button';
+    plain.className = 'stk-copy-plain';
+    plain.textContent = t('Только названия без сетов');
+    menu.append(plain);
+    const copy = iconButton('duplicate', t('Копировать карты'), async () => {
+      const format = (await chrome.storage.local.get({ exportFormat: "moxfield" })).exportFormat;
+      await writeClipboard(format, copy, t('Копировать карты'));
     });
+    plain.addEventListener('click', async () => {
+      menu.hidden = true;
+      await writeClipboard('names', plain, t('Только названия без сетов'));
+    });
+    wrap.append(menu, copy);
+    for (const type of ['mouseenter', 'focusin']) wrap.addEventListener(type, () => { menu.hidden = false; });
+    for (const type of ['mouseleave', 'focusout']) wrap.addEventListener(type, () => { menu.hidden = true; });
     const clear = iconButton('trash', t('Очистить буфер карт'), async () => {
       if (!cards.length || !confirm(t('Очистить буфер карт?'))) return;
       cards = [];
       await persist();
     });
-    toolbar.append(copy, clear, open);
+    toolbar.append(wrap, clear, open);
     root.append(toolbar, list);
     document.body.append(root);
     list.hidden = true;
@@ -694,18 +716,23 @@
         link.href = /^https:\/\/(?:www\.)?scryfall\.com\/card\//.test(card.url) ? card.url : "#";
         link.textContent = card.name;
         const copyCard = iconButton('duplicate', `${t('Копировать карту')} ${card.name}`, async () => {
-          const { exportFormat } = await chrome.storage.local.get({ exportFormat: 'names' });
+          const { exportFormat } = await chrome.storage.local.get({ exportFormat: 'moxfield' });
           try { await navigator.clipboard.writeText(formatCard(card, exportFormat)); copyCard.title = t('Скопировано'); copyCard.classList.add('stk-copied'); }
           catch { copyCard.title = t('Ошибка копирования'); }
           setTimeout(() => { copyCard.title = `${t('Копировать карту')} ${card.name}`; copyCard.classList.remove('stk-copied'); }, 1800);
         });
         copyCard.classList.add('stk-copy-card');
+        const set = document.createElement('span');
+        set.className = 'stk-list-set';
+        if (card.set && card.number) set.textContent = `(${card.set.toUpperCase()}) ${card.number}`;
         const remove = button("×", async () => {
           cards.splice(index, 1);
           await persist();
         });
         remove.setAttribute("aria-label", `${t('Удалить')} ${card.name}`);
-        row.append(link, copyCard, remove);
+        row.append(link);
+        if (set.textContent) row.append(set);
+        row.append(copyCard, remove);
         list.append(row);
       }
     }
@@ -859,7 +886,7 @@
       const icon = document.createElement("span");
       icon.className = "stk-tag-icon";
       if (["WITHOUT_BODY"].includes(type)) icon.classList.add("icon-upside-down");
-      if (["COMES_BEFORE", "DEPICTS", "REFERENCES_TO", "BETTER_THAN"].includes(type)) icon.classList.add("icon-flipped");
+      if (["COMES_BEFORE", "DEPICTS", "REFERENCES_TO"].includes(type)) icon.classList.add("icon-flipped");
       // Only render SVG literals bundled from Shambleshark; never insert API markup.
       const icons = window.STK_TAG_ICONS;
       icon.innerHTML = Object.prototype.hasOwnProperty.call(icons, type)

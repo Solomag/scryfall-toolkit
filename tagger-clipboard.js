@@ -1,6 +1,6 @@
 // Share the Scryfall clipboard on Tagger without changing Tagger's own tagging UI.
 (async () => {
-  const settings = await chrome.storage.local.get({ clipboard: true, cards: [], exportFormat: 'names', siteLanguage: 'en' });
+  const settings = await chrome.storage.local.get({ clipboard: true, cards: [], exportFormat: 'moxfield', siteLanguage: 'en' });
   const t = text => window.STK_I18N.t(text, settings.siteLanguage === 'ru' ? 'ru' : 'en');
   if (!settings.clipboard || document.getElementById('scryfall-toolkit-clipboard')) return;
   let cards = Array.isArray(settings.cards) ? settings.cards : [];
@@ -31,22 +31,44 @@
   badge.setAttribute('aria-hidden', 'true');
   const open = iconButton('clip', t('Показать список карт'), () => { list.hidden = !list.hidden; });
   open.append(badge);
-  const copy = iconButton('duplicate', t('Копировать карты'), async () => {
-    const { exportFormat } = await chrome.storage.local.get({ exportFormat: 'names' });
-    const value = cards.map(c => formatCard(c, exportFormat)).join('\n');
+  const writeClipboard = async (format, control, restLabel) => {
+    const value = cards.map(c => formatCard(c, format)).join('\n');
     try {
       await navigator.clipboard.writeText(value);
-      copy.title = t('Скопировано');
-      copy.classList.add('stk-copied');
-    } catch { copy.title = t('Ошибка копирования'); }
-    setTimeout(() => { copy.title = t('Копировать карты'); copy.classList.remove('stk-copied'); }, 1800);
+      control.title = t('Скопировано');
+      control.classList.add('stk-copied');
+    } catch { control.title = t('Ошибка копирования'); }
+    setTimeout(() => { control.title = restLabel; control.classList.remove('stk-copied'); }, 1800);
+  };
+  // Same shape as the Scryfall clipboard: sets by default, "names only" in a
+  // small menu revealed above the copy button on hover.
+  const wrap = document.createElement('span');
+  wrap.className = 'stk-copy-wrap';
+  const menu = document.createElement('span');
+  menu.className = 'stk-copy-menu';
+  menu.hidden = true;
+  const plain = document.createElement('button');
+  plain.type = 'button';
+  plain.className = 'stk-copy-plain';
+  plain.textContent = t('Только названия без сетов');
+  menu.append(plain);
+  const copy = iconButton('duplicate', t('Копировать карты'), async () => {
+    const { exportFormat } = await chrome.storage.local.get({ exportFormat: 'moxfield' });
+    await writeClipboard(exportFormat, copy, t('Копировать карты'));
   });
+  plain.addEventListener('click', async () => {
+    menu.hidden = true;
+    await writeClipboard('names', plain, t('Только названия без сетов'));
+  });
+  wrap.append(menu, copy);
+  for (const type of ['mouseenter', 'focusin']) wrap.addEventListener(type, () => { menu.hidden = false; });
+  for (const type of ['mouseleave', 'focusout']) wrap.addEventListener(type, () => { menu.hidden = true; });
   const clear = iconButton('trash', t('Очистить буфер карт'), async () => {
     if (!cards.length || !confirm(t('Очистить буфер карт?'))) return;
     cards = [];
     await persist();
   });
-  toolbar.append(copy, clear, open);
+  toolbar.append(wrap, clear, open);
   root.append(toolbar, list);
   (document.body || document.documentElement).append(root);
 
@@ -73,7 +95,7 @@
       link.href = /^https:\/\/(?:www\.)?scryfall\.com\/card\//.test(card.url) ? card.url : '#';
       link.textContent = card.name;
       const copyCard = iconButton('duplicate', `${t('Копировать карту')} ${card.name}`, async () => {
-        const { exportFormat } = await chrome.storage.local.get({ exportFormat: 'names' });
+        const { exportFormat } = await chrome.storage.local.get({ exportFormat: 'moxfield' });
         try { await navigator.clipboard.writeText(formatCard(card, exportFormat)); copyCard.title = t('Скопировано'); copyCard.classList.add('stk-copied'); }
         catch { copyCard.title = t('Ошибка копирования'); }
         setTimeout(() => { copyCard.title = `${t('Копировать карту')} ${card.name}`; copyCard.classList.remove('stk-copied'); }, 1800);
@@ -87,7 +109,14 @@
         cards = cards.filter(c => c.name !== card.name);
         await persist();
       });
-      row.append(link, copyCard, remove);
+      row.append(link);
+      if (card.set && card.number) {
+        const set = document.createElement('span');
+        set.className = 'stk-list-set';
+        set.textContent = `(${card.set.toUpperCase()}) ${card.number}`;
+        row.append(set);
+      }
+      row.append(copyCard, remove);
       list.append(row);
     }
   }

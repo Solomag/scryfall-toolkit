@@ -42,6 +42,10 @@ html.stk-dark #scryfall-toolkit-clipboard .stk-icon-button:hover,html.stk-dark #
 html.stk-dark #scryfall-toolkit-clipboard .stk-icon-button img{filter:invert(.85)}
 html.stk-dark #scryfall-toolkit-clipboard .stk-list-row button{color:#c69de1}
 html.stk-dark #scryfall-toolkit-clipboard .stk-copied{background:#405044!important}
+html.stk-dark #scryfall-toolkit-clipboard .stk-list-set{color:#9aa3ab}
+html.stk-dark #scryfall-toolkit-clipboard .stk-copy-menu{background:#292c2e!important;color:#e6e3df!important;border-color:#4d5255!important}
+html.stk-dark #scryfall-toolkit-clipboard .stk-copy-plain{color:#e6e3df!important}
+html.stk-dark #scryfall-toolkit-clipboard .stk-copy-plain:hover,html.stk-dark #scryfall-toolkit-clipboard .stk-copy-plain:focus-visible{background:#3a3d40!important}
 /* Shared pages: set index, advanced search, syntax reference, account and deck pages. */
 html.stk-dark #main,html.stk-dark #main .card-profile .inner-flex,html.stk-dark #main .checklist-wrapper,
 html.stk-dark #main .reference-jump,html.stk-dark #main .reference-block,

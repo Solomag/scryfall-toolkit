@@ -126,10 +126,10 @@ async function settingsTest() {
   assertEqual(document.getElementById('status').textContent, 'Сохранено', 'save confirmed in Russian');
 
   const exportFormat = document.getElementById('exportFormat');
-  assertEqual(exportFormat.value, 'names', 'export format defaults to names');
-  exportFormat.value = 'moxfield';
+  assertEqual(exportFormat.value, 'moxfield', 'export format defaults to with-sets');
+  exportFormat.value = 'names';
   fireEvent(exportFormat, 'change');
-  assertEqual(mock.state.exportFormat, 'moxfield', 'export format persists');
+  assertEqual(mock.state.exportFormat, 'names', 'export format persists');
 
   click(document.getElementById('openOptions'));
   assertEqual(mock.openOptionsPageCalls.length, 1, 'openOptions opens the options page');
