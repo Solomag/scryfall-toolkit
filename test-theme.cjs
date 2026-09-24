@@ -91,8 +91,18 @@ function cssCheck() {
     '#scryfall-toolkit-clipboard .stk-copy-plain',
     '#scryfall-toolkit-clipboard .stk-list-set',
     'stk-copied-pop', 'padding:14px 2px 0 25px',
-    '#main .card-legality{padding-bottom:22px!important}'
+    '#main .card-text:has(.card-legality #stk-edhrec){padding-bottom:0!important}'
   ]) assert(css.includes(selector), `content.css styles ${selector}`);
+  assert(/stk-copied-pop \.15s/.test(css), 'copied pop animation is quick');
+  assert(css.includes('margin-top:15px'), 'stats panel leaves 22px above itself');
+  assert(css.includes('#main .prints > .prints-table tbody tr:has(.stk-native-print-add){position:relative}'),
+    'print rows anchor their plus button');
+  assert(css.includes('.stk-native-print-add{position:absolute;top:50%;right:-27px'),
+    'print plus sits outside the name cell again');
+  assert(css.includes('.stk-print-new-page-line{display:flex'),
+    'new-page link shares the native printings line');
+  assert(css.includes('.stk-print-group-row td>span{'),
+    'group header label uses the native span-in-cell markup');
   assert(css.includes('.stk-tag-icon.icon-flipped svg{transform:scale(-1,1)}'),
     'flipped tag icons rule exists');
   const flipLine = read('content.js').split('\n').find(line => line.includes('icon-flipped'));
@@ -114,8 +124,14 @@ function cssCheck() {
     'dark theme keeps the gold info note readable');
   assert(theme.includes('html.stk-dark .card-grid-item-transform-button{'),
     'dark repaint for the Transform button');
-  assert(theme.includes('html.stk-dark .prints-table .stk-print-group-row td{'),
-    'dark group header rows');
+  assert(!theme.includes('.card-grid-item-transform-button.spooky'),
+    'spooky inversion removed so the flip button stays dark in both states');
+  assert(theme.includes('html.stk-dark .card-actions .button-n{'),
+    'dark repaint for the card-page action buttons');
+  assert(theme.includes('html.stk-dark .prints-table .stk-print-group-row td{background:#2a2835!important'),
+    'dark group header rows win over the light content rule');
+  assert(theme.includes('html.stk-dark .prints-table :is(a,span).currency-eur{'),
+    'dark theme recolors generated price spans too');
   assert(/Never paint a footer band/.test(theme), 'footer band guard comment present');
   const stripped = theme.replace(/\/\*[\s\S]*?\*\//g, '');
   let offender = '';

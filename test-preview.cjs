@@ -19,15 +19,16 @@ const CARD_HTML = `<!DOCTYPE html><html><head>
   <div class="card-text"><div class="card-text-card-name">Test Card</div></div>
   <div class="prints">
     <table class="prints-table">
-      <thead><tr><th>Name</th><th>Set</th></tr></thead>
+      <thead><tr><th>Name</th><th>Set</th><th><span>USD</span></th><th><span>EUR</span></th><th><span>TIX</span></th></tr></thead>
       <tbody>
-        <tr class="current"><td><a data-card-id="${PRINT_CURRENT}" href="https://scryfall.com/card/tst/1/test-card">Test Card (TST) 1</a></td><td>TST</td></tr>
-        <tr><td><a data-card-id="${PRINT_TST2}" href="https://scryfall.com/card/tst/2/test-card">Test Card (TST) 2</a></td><td>TST</td></tr>
-        <tr><td><a data-card-id="${PRINT_MH3}" href="https://scryfall.com/card/mh3/42/test-card">Test Card (MH3) 42</a></td><td>MH3</td></tr>
+        <tr class="current"><td><a data-card-id="${PRINT_CURRENT}" href="https://scryfall.com/card/tst/1/test-card">Test Card (TST) 1</a></td><td>TST</td><td></td><td></td><td></td></tr>
+        <tr><td><a data-card-id="${PRINT_TST2}" href="https://scryfall.com/card/tst/2/test-card">Test Card (TST) 2</a></td><td>TST</td><td></td><td></td><td></td></tr>
+        <tr><td><a data-card-id="${PRINT_MH3}" href="https://scryfall.com/card/mh3/42/test-card">Test Card (MH3) 42</a></td><td>MH3</td><td></td><td></td><td></td></tr>
       </tbody>
     </table>
     <div class="prints-all"><a href="https://scryfall.com/card/tst/1/printings">View all prints</a></div>
   </div>
+  <div id="stores"><ul class="toolbox-links"></ul></div>
   <div class="card-legality">
     <div class="card-legality-row">
       <div class="card-legality-item"><dt>Standard</dt><dd class="legal">Legal</dd></div>
@@ -39,8 +40,8 @@ const CARD_HTML = `<!DOCTYPE html><html><head>
 
 const prints = [
   { id: 'p1', name: 'Test Card', uri: 'https://scryfall.com/card/tst/1/test-card', set: 'tst', setName: 'Test Set', number: '1', lang: 'en', digital: false, finishes: ['nonfoil'], prices: { eur: '1.00' } },
-  { id: 'p2', name: 'Test Card', uri: 'https://scryfall.com/card/tst/3/test-card', set: 'tst', setName: 'Test Set', number: '3', lang: 'en', digital: false, finishes: ['nonfoil'], prices: { eur: '2.00' } },
-  { id: 'p4', name: 'Test Card', uri: 'https://scryfall.com/card/tst/4/test-card', set: 'tst', setName: 'Test Set', number: '4', lang: 'en', digital: false, finishes: ['foil'], prices: {} },
+  { id: 'p2', name: 'Test Card', uri: 'https://scryfall.com/card/tst/3/test-card', set: 'tst', setName: 'Test Set', number: '3', lang: 'en', digital: false, finishes: ['nonfoil'], prices: { eur: '2.00', usd: '3.50', tix: '0.05' } },
+  { id: 'p4', name: 'Test Card', uri: 'https://scryfall.com/card/tst/4/test-card', set: 'tst', setName: 'Test Set', number: '4', lang: 'en', digital: false, finishes: ['foil'], prices: { usd_foil: '9.99' } },
   { id: 'p3', name: 'Test Card', uri: 'https://scryfall.com/card/mh3/42/test-card', set: 'mh3', setName: 'Modern Horizons 3', number: '42', lang: 'jp', digital: false, finishes: ['foil'], prices: {} },
   { id: 'p5', name: 'Test Card', uri: 'https://scryfall.com/card/mh3/43/test-card', set: 'mh3', setName: 'Modern Horizons 3', number: '43', lang: 'jp', digital: false, finishes: ['foil'], prices: {} }
 ];
@@ -62,6 +63,7 @@ const routes = {
   }),
   card: () => ({ oracle_id: ORACLE_ID, legalities: { premodern: 'legal', legacy: 'banned' } }),
   allPrints: () => ({ prints, truncated: false }),
+  cardtrader: () => ({ available: true, url: 'https://www.cardtrader.com/en/cards/test', nonfoil: { cents: 1234, currency: 'EUR' } }),
   preview: () => ({ name: 'Other Card', image: 'https://cards.scryfall.io/normal/o.jpg', uri: 'https://scryfall.com/card/oth/1/other-card' })
 };
 
@@ -78,7 +80,7 @@ async function loadCardPage(state) {
 
 async function cardPageTest() {
   console.log('content.js: card page');
-  const page = await loadCardPage({ cards: [] });
+  const page = await loadCardPage({ cards: [], euroPriceSources: 'both' });
   const { document, mock, location } = page;
 
   // Clipboard shell.
@@ -194,8 +196,8 @@ async function cardPageTest() {
   click(plain);
   await waitFor(() => mock.clipboardWrites.length === 2, 'names-only copy wrote to clipboard');
   assertEqual(mock.clipboardWrites[1],
-    '1 Test Card\n1 Test Card (TST) 2\n1 Test Card (MH3) 42',
-    'names-only item drops sets for plain cards and keeps forced ones');
+    '1 Test Card\n1 Test Card\n1 Test Card',
+    'names-only item drops sets everywhere, including forced ones');
   assert(copyMenu.hidden, 'menu closes after choosing');
   fireEvent(copyWrap, 'mouseleave');
   assert(copyMenu.hidden, 'menu stays closed after leaving');
@@ -221,14 +223,44 @@ async function cardPageTest() {
   const groupTitles = [...printBody.querySelectorAll('.stk-print-group-row td')].map(td => td.textContent);
   assertEqual(groupTitles, ['Test Set (TST) · 2', 'Modern Horizons 3 (MH3) · 1'],
     'group rows carry set name, code and count');
+  assert([...printBody.querySelectorAll('.stk-print-group-row td')].every(td => td.querySelector('span')),
+    'group headers wrap their label in the native span-in-cell markup');
   assertEqual(printBody.querySelectorAll('.stk-print-entry').length, 3, 'missing printings inserted into the table');
   const entryLinks = [...printBody.querySelectorAll('.stk-print-entry a')].map(link => link.textContent);
   assert(entryLinks.includes('#43 · JP'), 'non-English printing shows its language');
   assertEqual(printBody.querySelectorAll('.stk-native-print-add').length, 6,
     'every printing row, native and extra, has an add button');
-  const newPageRowLink = printBody.querySelector('.stk-print-new-page a');
-  assert(newPageRowLink && newPageRowLink.getAttribute('href') === nativeLink.getAttribute('href'),
-    'new-page row keeps the native printings URL');
+  const newPageLink = document.querySelector('#main .prints-all .stk-print-new-page');
+  assert(newPageLink && newPageLink.closest('.stk-print-new-page-line'),
+    'new-page link sits in a line wrapper with the native link');
+  assert(newPageLink && newPageLink.previousElementSibling === nativeLink,
+    'new-page link is the second half of the native printings line');
+  assertEqual(newPageLink.getAttribute('href'), nativeLink.getAttribute('href'),
+    'new-page link keeps the native printings URL');
+
+  // Expanded rows carry the same price fills as the native ones.
+  const entryOf = suffix => [...printBody.querySelectorAll('.stk-print-entry')]
+    .find(row => row.querySelector('a').getAttribute('href').includes(suffix));
+  const fullPriceRow = entryOf('/tst/3/');
+  assertEqual(fullPriceRow.querySelector('.currency-usd')?.textContent, '$3.50', 'expanded row fills the USD price');
+  assertEqual(fullPriceRow.querySelector('.currency-eur')?.textContent, '€2.00', 'expanded row fills the EUR price');
+  assertEqual(fullPriceRow.querySelector('.currency-tix')?.textContent, '0.05', 'expanded row fills the TIX price');
+  const foilRow = entryOf('/tst/4/');
+  assertEqual(foilRow.querySelector('.currency-usd')?.textContent, '✶ $9.99', 'foil-only price falls back to the foil value');
+  assert(!foilRow.querySelector('.currency-eur'), 'missing prices leave the cell empty');
+  const emptyRow = entryOf('/mh3/43/');
+  assert(!emptyRow.querySelector('.currency-usd') && !emptyRow.querySelector('.currency-eur'),
+    'row without any price has no price cells');
+  const nativeCtLink = await waitFor(
+    () => printBody.querySelector('tr:not(.stk-print-extra) .stk-ct-price-cell a'),
+    'CardTrader price for a native row'
+  );
+  assertEqual(nativeCtLink.textContent, '€12.34', 'native row priced by CardTrader');
+  const expandedCtLink = await waitFor(
+    () => fullPriceRow.querySelector('.stk-ct-price-cell a'),
+    'CardTrader price for an expanded row'
+  );
+  assertEqual(expandedCtLink.textContent, '€12.34', 'expanded row joins the shared CardTrader queue');
 
   // Sets with several missing printings start collapsed and toggle on header click.
   const tstGroup = [...printBody.querySelectorAll('.stk-print-group-row')]

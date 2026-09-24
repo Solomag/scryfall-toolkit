@@ -5,19 +5,22 @@
 #scryfall-toolkit-clipboard .stk-icon-button img{display:block;width:19px;height:19px}
 #scryfall-toolkit-clipboard .stk-count{position:absolute;top:-3px;right:-3px;min-width:14px;padding:0 2px;border-radius:8px;background:#514760;color:#fff;font:10px/14px system-ui,sans-serif;text-align:center}
 #scryfall-toolkit-clipboard .stk-count[hidden]{display:none}
-#scryfall-toolkit-clipboard .stk-copied{background:#2f9e44!important;animation:stk-copied-pop .3s ease-out}
+#scryfall-toolkit-clipboard .stk-copied{background:#2f9e44!important;animation:stk-copied-pop .15s ease-out}
 #scryfall-toolkit-clipboard .stk-copied img{filter:brightness(0) invert(1)}
 @keyframes stk-copied-pop{0%{transform:scale(1)}45%{transform:scale(1.18)}100%{transform:scale(1)}}
-#scryfall-toolkit-clipboard .stk-list{position:absolute;right:0;bottom:calc(100% + 7px);box-sizing:border-box;width:min(340px,calc(100vw - 36px));padding:8px;max-height:280px;overflow-y:auto;background:#fff;border:1px solid #b7c3cc;border-radius:5px;box-shadow:0 3px 12px #0003}
+/* The list is one grid for every row so the (SET) num column keeps a single,
+   uniform width: its left edge lines up with the longest set text. */
+#scryfall-toolkit-clipboard .stk-list{position:absolute;right:0;bottom:calc(100% + 7px);box-sizing:border-box;width:min(340px,calc(100vw - 36px));padding:8px;max-height:280px;overflow-y:auto;background:#fff;border:1px solid #b7c3cc;border-radius:5px;box-shadow:0 3px 12px #0003;display:grid;grid-template-columns:minmax(0,1fr) max-content 24px 24px;column-gap:9px;row-gap:6px;align-items:center}
 #scryfall-toolkit-clipboard .stk-list[hidden]{display:none}
-#scryfall-toolkit-clipboard .stk-list-row{display:flex;align-items:center;justify-content:flex-start;gap:9px;margin:3px 0}
-#scryfall-toolkit-clipboard .stk-list-row a{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#scryfall-toolkit-clipboard .stk-list>p{grid-column:1/-1}
+#scryfall-toolkit-clipboard .stk-list-row{display:contents}
+#scryfall-toolkit-clipboard .stk-list-row a{grid-column:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #scryfall-toolkit-clipboard .stk-list-row button{padding:2px 6px;border:0;border-radius:3px;background:transparent;color:#514760;cursor:pointer}
-#scryfall-toolkit-clipboard .stk-list-row a{flex:0 1 auto;min-width:0}
-#scryfall-toolkit-clipboard .stk-list-row .stk-copy-card{flex:none;width:24px;height:24px;padding:3px;margin-left:auto}
+#scryfall-toolkit-clipboard .stk-list-row .stk-copy-card{grid-column:3;width:24px;height:24px;padding:3px}
 #scryfall-toolkit-clipboard .stk-list-row .stk-copy-card img{width:16px;height:16px}
 #scryfall-toolkit-clipboard .stk-list-row .stk-copy-card:hover{background:#e4e7ea}
-#scryfall-toolkit-clipboard .stk-list-set{flex:none;color:#6b7280;font:11px/1.4 system-ui,sans-serif;white-space:nowrap}
+#scryfall-toolkit-clipboard .stk-list-row button:not(.stk-copy-card){grid-column:4}
+#scryfall-toolkit-clipboard .stk-list-set{grid-column:2;color:#6b7280;font:11px/1.4 system-ui,sans-serif;white-space:nowrap}
 #scryfall-toolkit-clipboard .stk-copy-wrap{position:relative;display:flex}
 #scryfall-toolkit-clipboard .stk-copy-menu{position:absolute;bottom:calc(100% + 4px);right:0;z-index:9;display:flex;flex-direction:column;gap:3px;padding:4px;background:#fff;border:1px solid #97a2ad;border-radius:6px;box-shadow:0 6px 16px #0004}
 #scryfall-toolkit-clipboard .stk-copy-menu[hidden]{display:none}
@@ -69,8 +72,11 @@
 .stk-ct-price-header,.stk-cm-price-header{white-space:nowrap!important}
 .prints-table th .stk-price-heading{display:inline-flex;align-items:center;justify-content:flex-end;gap:4px;white-space:nowrap;vertical-align:middle;line-height:15px}
 .prints-table th .stk-price-heading img{display:block;flex:none;vertical-align:middle}
-#stk-edhrec{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;box-sizing:border-box;width:100%;margin-top:7px;padding:14px 2px 0 25px;border-top:1px solid #e5e1e4;color:#16161d;font:12px/1.2 Lato,'Helvetica Neue',Arial,sans-serif}
-#main .card-legality{padding-bottom:22px!important}
+/* 22px between the last legality row and the panel border, and 22px from the
+   bottom badge down to the card frame: the native card-text padding is dropped
+   only while the stats panel is present. */
+#stk-edhrec{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;box-sizing:border-box;width:100%;margin-top:15px;padding:14px 2px 0 25px;border-top:1px solid #e5e1e4;color:#16161d;font:12px/1.2 Lato,'Helvetica Neue',Arial,sans-serif}
+#main .card-text:has(.card-legality #stk-edhrec){padding-bottom:0!important}
 #stk-edhrec .stk-edhrec-item{display:grid;grid-template-columns:68px minmax(0,1fr);align-items:center;column-gap:6px;min-width:0}
 #stk-edhrec .stk-edhrec-salt{margin-left:4px}
 #stk-edhrec .stk-edhrec-salt{margin-left:0}
@@ -95,15 +101,23 @@
 #stk-edhrec .stk-edhrec-source img{display:block;width:16px;height:16px;object-fit:contain}
 html.stk-dark #stk-edhrec{color:#e6e3df;border-color:#414345}
 html.stk-dark #stk-edhrec .stk-edhrec-usage>.stk-edhrec-fraction{color:#d5d2d6}
-#main .prints > .prints-table td:first-child{position:relative}
-#main .prints > .prints-table .stk-native-print-add{position:absolute;top:50%;right:6px;transform:translateY(-50%);width:23px;height:23px;padding:0;border:1px solid #75707b;border-radius:3px;background:#35333b;color:#fff;font:16px/1 Arial,sans-serif;cursor:pointer;z-index:2}
+/* The plus lives just outside the row, like it did before it moved into the
+   name cell, and stays visible and clickable without a hover gate. */
+#main .prints > .prints-table tbody tr:has(.stk-native-print-add){position:relative}
+#main .prints > .prints-table .stk-native-print-add{position:absolute;top:50%;right:-27px;transform:translateY(-50%);width:23px;height:23px;padding:0;border:1px solid #75707b;border-radius:3px;background:#35333b;color:#fff;font:16px/1 Arial,sans-serif;cursor:pointer;z-index:2}
 #main .prints > .prints-table .stk-native-print-add:hover,#main .prints > .prints-table .stk-native-print-add:focus-visible{background:#4c4954}
-#main .prints > .prints-table .stk-print-group-row td{padding:7px 13px;font-weight:bold;cursor:pointer;background:#efeaf4;border-top:1px solid #ddd8e0;user-select:none}
-#main .prints > .prints-table .stk-print-group-row td::before{content:"▾ ";font-size:11px}
-#main .prints > .prints-table .stk-print-group-row.stk-group-collapsed td::before{content:"▸ "}
+/* Group headers reuse the native first-cell markup (its span takes the native
+   padding, line-height and alignment) so the whole label stays on one line. */
+#main .prints > .prints-table .stk-print-group-row td{padding:0;background:#efeaf4;border-top:1px solid #ddd8e0;cursor:pointer;user-select:none}
+#main .prints > .prints-table .stk-print-group-row td>span{font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#main .prints > .prints-table .stk-print-group-row td>span::before{content:"▾ ";font-size:11px}
+#main .prints > .prints-table .stk-print-group-row.stk-group-collapsed td>span::before{content:"▸ "}
 #main .prints > .prints-table .stk-print-entry[hidden]{display:none}
-#main .prints > .prints-table td>span.stk-print-price{color:#955891;white-space:nowrap}
-#main .prints > .prints-table .stk-print-status td,#main .prints > .prints-table .stk-print-new-page td{padding:8px 13px;font-size:12px}
+#main .prints > .prints-table .stk-print-status td{padding:8px 13px;font-size:12px}
+/* "Open on a new page" shares the native View-all line as its right half. */
+#main .prints .stk-print-new-page-line{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:7px 4px 6px 13px}
+#main .prints .stk-print-new-page-line>a{display:block;flex:0 1 auto;min-width:0;padding:0;line-height:14px;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+#main .prints .stk-print-new-page-line>.stk-print-new-page{text-align:right;white-space:nowrap}
 @media(max-width:550px){#stk-edhrec{grid-template-columns:1fr;row-gap:6px}#stk-edhrec .stk-edhrec-item{grid-template-columns:68px minmax(0,1fr)}#stk-edhrec .stk-edhrec-salt{margin-left:0}}
 .stk-cardtrader-error{font-size:12px;opacity:.75}
 .stk-token-button{margin:8px}

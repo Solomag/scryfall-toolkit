@@ -18,6 +18,11 @@
   const cardPath = location.pathname.match(/^\/card\/([^/]+)\/([^/]+)/);
   const cardPage = Boolean(cardPath && document.querySelector('.card-image') && document.querySelector('#main .prints-table'));
   const identity = cardPage ? { set: cardPath[1], number: decodeURIComponent(cardPath[2]) } : null;
+  // Shared with the in-table prints expansion: the Finish column header lands
+  // asynchronously (so expansions wait for it before counting columns) and the
+  // throttled CardTrader queue is reused for rows that are created later.
+  let finishesSettled = Promise.resolve();
+  let enqueueCardTraderPrint = null;
 
   function request(message) {
     return new Promise((resolve, reject) => {
@@ -279,36 +284,46 @@
         }
         // Start with the current printing. Remaining rows arrive gradually to respect the marketplace rate limit.
         queue.sort((a,b) => Number(b.id === id) - Number(a.id === id));
-        (async () => {
-          for (const print of queue.slice(0, 75)) {
-            try {
-              const result = await request({ type: 'cardtrader', id: print.id, set: print.set });
-              const price = result.nonfoil?.currency === 'EUR' ? result.nonfoil : result.foil?.currency === 'EUR' ? result.foil : null;
-              if (!result.available && print.id === id && sources === 'ct') {
-                heading.classList.remove('stk-price-hidden');
-                for (const cell of nativeEurCells) cell?.classList.remove('stk-price-hidden');
-              }
-              if (price) {
-                const a = document.createElement('a');
-                a.href = result.url;
-                a.target = '_blank';
-                a.rel = 'noopener noreferrer';
-                a.title = t('Минимальное предложение CardTrader; состояние и язык могут отличаться');
-                a.textContent = new Intl.NumberFormat('en-IE', { style:'currency', currency:'EUR' }).format(price.cents / 100);
-                print.cell.append(a);
-              }
-            } catch {
-              print.cell.title = t('Цена CardTrader недоступна');
-              if (print.id === id) {
-                if (sources === 'ct') {
-                  heading.classList.remove('stk-price-hidden');
-                  for (const cell of nativeEurCells) cell?.classList.remove('stk-price-hidden');
-                }
-                break;
-              }
+        queue.splice(75);
+        const showEurFallback = () => {
+          heading.classList.remove('stk-price-hidden');
+          for (const row of table.querySelectorAll('tbody tr')) row.children[eurIndex]?.classList.remove('stk-price-hidden');
+        };
+        const fetchPrint = async print => {
+          try {
+            const result = await request({ type: 'cardtrader', id: print.id, set: print.set });
+            const price = result.nonfoil?.currency === 'EUR' ? result.nonfoil : result.foil?.currency === 'EUR' ? result.foil : null;
+            if (!result.available && print.id === id && sources === 'ct') showEurFallback();
+            if (price) {
+              const a = document.createElement('a');
+              a.href = result.url;
+              a.target = '_blank';
+              a.rel = 'noopener noreferrer';
+              a.title = t('Минимальное предложение CardTrader; состояние и язык могут отличаться');
+              a.textContent = new Intl.NumberFormat('en-IE', { style:'currency', currency:'EUR' }).format(price.cents / 100);
+              print.cell.append(a);
+            }
+          } catch {
+            print.cell.title = t('Цена CardTrader недоступна');
+            if (print.id === id) {
+              if (sources === 'ct') showEurFallback();
+              return true;
             }
           }
-        })();
+          return false;
+        };
+        // One throttled queue shared with the expansion: rows that appear after
+        // "View all prints" join the same request stream.
+        let pumping = false;
+        const pump = async () => {
+          if (pumping) return;
+          pumping = true;
+          try {
+            while (queue.length) { if (await fetchPrint(queue.shift())) break; }
+          } finally { pumping = false; }
+        };
+        enqueueCardTraderPrint = (cell, cardId, set) => { queue.push({ cell, id: cardId, set }); pump(); };
+        pump();
       }
     }
     if (!settings.cardtraderPrices) return;
@@ -478,7 +493,7 @@
     const printLinks = [...(table?.querySelectorAll('tbody tr td:first-child a[data-card-id]') || [])];
     const ids = [...new Set(printLinks.map(link => link.dataset.cardId))];
     if (!ids.length || ids.length > 75) return;
-    request({ type: 'finishes', ids }).then(byId => {
+    finishesSettled = request({ type: 'finishes', ids }).then(byId => {
       const marked = [];
       for (const link of printLinks) {
         const entry = byId[link.dataset.cardId];
@@ -521,6 +536,18 @@
     const tbody = table?.querySelector('tbody');
     if (!native || !tbody || table.dataset.stkPrints) return;
     table.dataset.stkPrints = '1';
+    // The native link is hijacked to expand in place, so the real full page
+    // keeps a permanent sibling on the same line.
+    const pageLink = document.createElement('a');
+    pageLink.className = 'stk-print-new-page';
+    pageLink.href = native.getAttribute('href');
+    pageLink.target = '_blank';
+    pageLink.rel = 'noopener noreferrer';
+    pageLink.textContent = language === 'ru' ? 'Открыть отдельной страницей ↗' : 'Open on a new page ↗';
+    const pageLine = document.createElement('span');
+    pageLine.className = 'stk-print-new-page-line';
+    native.parentNode?.insertBefore(pageLine, native);
+    pageLine.append(native, pageLink);
     const headCells = () => [...(table.querySelector('thead')?.querySelectorAll('th') || [])];
     const columns = () => headCells().length || 1;
     const statusRow = text => {
@@ -576,6 +603,9 @@
           group.push(card);
           groups.set(card.set, group);
         }
+        // The Finish column header is added by a separate response; wait for
+        // it so column spans and cell indexes match the settled header row.
+        await finishesSettled;
         const built = buildRows(groups, truncated);
         status.remove();
         rows = built;
@@ -595,8 +625,25 @@
       const total = columns();
       const heads = headCells();
       const finishIdx = heads.findIndex(th => th.classList.contains('stk-finish-header'));
+      const usdIdx = heads.findIndex(th => /^usd/i.test(th.textContent.trim()));
       const eurIdx = heads.findIndex(th => /^eur/i.test(th.textContent.trim()));
+      const tixIdx = heads.findIndex(th => /^tix/i.test(th.textContent.trim()));
       const setIdx = heads.findIndex(th => /^set$/i.test(th.textContent.trim()));
+      const ctIdx = heads.findIndex(th => th.classList.contains('stk-ct-price-header'));
+      // Columns the price filter or the CardTrader switch already hid must stay
+      // hidden in rows that are created after those settings were applied.
+      const hiddenIdx = new Set(heads.map((th, i) => th.classList.contains('stk-price-hidden') ? i : -1).filter(i => i >= 0));
+      const euroSources = ['cm', 'ct', 'both'].includes(settings.euroPriceSources) ? settings.euroPriceSources : 'cm';
+      const fillPrice = (cell, text, currency) => {
+        if (!text) return;
+        const span = document.createElement('span');
+        span.className = `price currency-${currency}`;
+        span.textContent = text;
+        cell.append(span);
+      };
+      const priceText = (card, key, foilKey, symbol) =>
+        card.prices?.[key] ? `${symbol}${card.prices[key]}`
+          : card.prices?.[foilKey] ? `✶ ${symbol}${card.prices[foilKey]}` : '';
       const path = uri => {
         try { return new URL(uri, location.href).pathname.replace(/\/+$/, ''); }
         catch { return ''; }
@@ -614,7 +661,11 @@
         head.className = 'stk-print-group-row stk-print-extra';
         const headCell = document.createElement('td');
         headCell.colSpan = total;
-        headCell.textContent = `${cards[0].setName} (${cards[0].set.toUpperCase()}) · ${entries.length}`;
+        // A span inside the cell mirrors Scryfall's own first-column markup, so
+        // the native padding, alignment and single-line rhythm apply unchanged.
+        const headLabel = document.createElement('span');
+        headLabel.textContent = `${cards[0].setName} (${cards[0].set.toUpperCase()}) · ${entries.length}`;
+        headCell.append(headLabel);
         head.append(headCell);
         const entryRows = [];
         head.addEventListener('click', () => {
@@ -659,16 +710,18 @@
               const span = document.createElement('span');
               span.textContent = card.set.toUpperCase();
               cell.append(span);
-            } else if (i === eurIdx) {
-              const price = card.prices?.eur ? `€${card.prices.eur}`
-                : card.prices?.eur_foil ? `✶ €${card.prices.eur_foil}` : '';
-              if (price) {
-                const span = document.createElement('span');
-                span.className = 'stk-print-price';
-                span.textContent = price;
-                cell.append(span);
-              }
+            } else if (i === ctIdx) {
+              cell.className = 'stk-ct-price-cell';
+              // Same throttled background queue that fills the native rows.
+              enqueueCardTraderPrint?.(cell, card.id, card.set);
+            } else if (i === usdIdx || i === eurIdx || i === tixIdx) {
+              if (i === usdIdx) fillPrice(cell, priceText(card, 'usd', 'usd_foil', '$'), 'usd');
+              else if (i === eurIdx) {
+                fillPrice(cell, priceText(card, 'eur', 'eur_foil', '€'), 'eur');
+                if (euroSources === 'both') cell.classList.add('stk-cm-price-cell');
+              } else fillPrice(cell, priceText(card, 'tix', 'tix', ''), 'tix');
             }
+            if (hiddenIdx.has(i)) cell.classList.add('stk-price-hidden');
             row.append(cell);
           }
           entryRows.push(row);
@@ -682,18 +735,6 @@
       if (truncated) {
         out.push(statusRow(language === 'ru' ? 'Часть изданий не загрузилась; откройте полную страницу.' : 'More printings are available on the full page.'));
       }
-      const pageRow = document.createElement('tr');
-      pageRow.className = 'stk-print-new-page stk-print-extra';
-      const pageCell = document.createElement('td');
-      pageCell.colSpan = total;
-      const pageLink = document.createElement('a');
-      pageLink.href = native.getAttribute('href');
-      pageLink.target = '_blank';
-      pageLink.rel = 'noopener noreferrer';
-      pageLink.textContent = language === 'ru' ? 'Открыть отдельной страницей ↗' : 'Open on a new page ↗';
-      pageCell.append(pageLink);
-      pageRow.append(pageCell);
-      out.push(pageRow);
       return out;
     }
   }
@@ -740,8 +781,8 @@
     badge.className = 'stk-count';
     badge.setAttribute('aria-hidden', 'true');
     open.append(badge);
-    const writeClipboard = async (format, control, restLabel) => {
-      const text = cards.map(c => formatCard(c, format)).join("\n");
+    const writeClipboard = async (format, control, restLabel, stripSets) => {
+      const text = cards.map(c => formatCard(c, format, stripSets)).join("\n");
       try { await navigator.clipboard.writeText(text); control.title = t('Скопировано'); control.classList.add('stk-copied'); }
       catch { control.title = t('Ошибка копирования'); }
       setTimeout(() => { control.title = restLabel; control.classList.remove('stk-copied'); }, 1000);
@@ -764,7 +805,7 @@
     });
     plain.addEventListener('click', async () => {
       menu.hidden = true;
-      await writeClipboard('names', plain, t('Только названия без сетов'));
+      await writeClipboard('names', plain, t('Только названия без сетов'), true);
     });
     wrap.append(menu, copy);
     let hideMenuTimer;
@@ -791,8 +832,8 @@
       render();
       scan();
     }
-    function formatCard(card, format) {
-      const suffix = (format === 'moxfield' || card.forceSet) && card.set && card.number ? ` (${card.set.toUpperCase()}) ${card.number}` : '';
+    function formatCard(card, format, stripSets) {
+      const suffix = !stripSets && (format === 'moxfield' || card.forceSet) && card.set && card.number ? ` (${card.set.toUpperCase()}) ${card.number}` : '';
       return `1 ${card.name}${suffix}`;
     }
     function render() {
