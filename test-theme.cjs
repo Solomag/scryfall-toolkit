@@ -198,8 +198,8 @@ function cssCheck() {
     'no duplicate checkmark image is layered over the native glyph');
   assert(theme.includes('html.stk-dark #main .form-row-label svg :is(path,g,circle,rect,polygon){fill:#bda1df!important}'),
     'the black label icons are brightened in the dark theme');
-  assert(theme.includes('html.stk-dark #main .select2-selection__choice svg'),
-    'the set symbols in the select2 chips are brightened too');
+  assert(theme.includes('html.stk-dark .stk-light-set-symbol :is(path,use,circle,rect,polygon){fill:#bfb4c8!important}'),
+    'only the genuinely dark set symbols are brightened, the light ones keep their own colour');
   assert(theme.includes('html.stk-dark #main .select2-polarity{background-color:#75986e!important;color:#fff!important}'),
     'the "is" flag of a type uses the legality green');
   assert(theme.includes('html.stk-dark #main .select2-polarity.negative{background-color:#a71f2a!important;color:#fff!important}'),
@@ -212,6 +212,9 @@ function cssCheck() {
   ]) assert(theme.includes(rule), `Tagger rule present: ${rule.slice(0, 52)}`);
   const js = read('theme.js');
   assert(js.includes("tagger\\.scryfall\\.com"), 'theme.js marks the Tagger host');
+  assert(js.includes('repairSetSymbols'), 'theme.js repairs the dark set symbols on its own');
+  assert(/stk-light-set-symbol/.test(js) && /level > 0\.4/.test(js),
+    'a set symbol that already carries a light shape is left alone');
   assert(/const selector = '[^']*strong/.test(js), 'the purple repair also looks at strong and the other text tags');
   assert(/Never paint a footer band/.test(theme), 'footer band guard comment present');
   const stripped = theme.replace(/\/\*[\s\S]*?\*\//g, '');
