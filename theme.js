@@ -93,13 +93,14 @@ function repairDarkPurple() {
 
 // The bots page shows two screenshots of Scryfall's own bot inside Slack, taken
 // while Slack wore its light theme. A white window on a dark card reads as a
-// blank block, so a light screenshot is turned the other way round. The picture
-// is measured rather than guessed at: a screenshot Scryfall publishes later in
-// dark colours keeps the paint it arrived with, and a picture the browser will
-// not let us sample keeps its own too.
+// blank block, so a light screenshot is turned the other way round. Only a
+// picture that is light all over is turned: one that mixes a light window with a
+// dark one is a picture of two things, and turning it round would only move the
+// bright block from one half to the other. A picture the browser will not let us
+// sample keeps its own paint as well.
 function repairBotsArtwork() {
   if (!document.documentElement.classList.contains('stk-bots-page')) return;
-  const lightness = image => {
+  const shareOfLight = image => {
     try {
       const canvas = document.createElement('canvas');
       canvas.width = 8;
@@ -107,9 +108,14 @@ function repairBotsArtwork() {
       const context = canvas.getContext('2d', {willReadFrequently: true});
       context.drawImage(image, 0, 0, 8, 8);
       const {data} = context.getImageData(0, 0, 8, 8);
-      let sum = 0;
-      for (let i = 0; i < data.length; i += 4) sum += 0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2];
-      return sum / (data.length / 4);
+      let light = 0;
+      let count = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        const value = 0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2];
+        if (value > 140) light++;
+        count++;
+      }
+      return count ? light / count : null;
     } catch (error) {
       return null;
     }
@@ -118,9 +124,9 @@ function repairBotsArtwork() {
     for (const image of document.querySelectorAll('#main img.marketing-features-item-image')) {
       if (image.dataset.stkScreenshot) continue;
       const mark = () => {
-        const value = lightness(image);
-        image.dataset.stkScreenshot = value === null ? 'unreadable' : 'measured';
-        if (value !== null && value > 115) image.classList.add('stk-light-screenshot');
+        const share = shareOfLight(image);
+        image.dataset.stkScreenshot = share === null ? 'unreadable' : 'measured';
+        if (share !== null && share >= 0.8) image.classList.add('stk-light-screenshot');
       };
       if (image.complete && image.naturalWidth) mark();
       else image.addEventListener('load', mark, {once: true});

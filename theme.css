@@ -62,7 +62,8 @@ html.stk-dark .card-grid-item-transform-button{background:#292b2c;border-color:#
 html.stk-dark .card-grid-item-transform-button path{fill:#e6e3df}
 /* Card-page action buttons (Add to Deck, Transform) keep Scryfall's light
    surface natively, so they need the same repaint. */
-html.stk-dark .card-actions .button-n{background:#292b2c;border-color:#595c60;color:#e6e3df}
+html.stk-dark .card-actions .button-n{background:#292b2c!important;border-color:#595c60!important;color:#e6e3df!important}
+html.stk-dark .card-actions .button-n:is(:hover,:active,:focus-visible){background:#413949!important;border-color:#6d5a7d!important;color:#fff!important}
 html.stk-dark .card-actions .button-n path{fill:#c9a2df}
 html.stk-dark .prints-table .stk-print-group-row td{background:#2a2835!important;color:#e9e4ee!important}
 html.stk-dark .prints-table .stk-print-group-row td>span{color:#e9e4ee!important}
@@ -390,6 +391,33 @@ html.stk-dark.stk-bots-page #main :is(p,h1,h2,h3,h4,h5,h6,a,span,b,li,div){text-
    each one and marks the light ones, so a screenshot Scryfall publishes later in
    dark colours keeps the paint it arrived with. */
 html.stk-dark.stk-bots-page #main img.stk-light-screenshot{filter:invert(1) hue-rotate(180deg)}
+
+/* A link that looks like a button is Scryfall's own white pill with dark purple
+   ink — a light surface with a light-mode colour on a dark page, and one the
+   theme never reached: the empty search, a blog index and any page that writes a
+   button into its prose all carry it. The button is stated here with the lowest
+   specificity that still beats Scryfall's own, so every container the theme
+   already paints keeps the colours it was given.
+   The states matter as much as the button: Scryfall paints the hover and the
+   press white with a purple border, and a disabled one black, so the pointer
+   brought a flash of light and a line of ink that could not be read. */
+html.stk-dark .button-n,html.stk-dark .select-n{background-color:#292b2c!important;color:#c79ce3!important;border-color:#595c60!important}
+html.stk-dark .button-n svg,html.stk-dark .select-n svg{fill:currentColor!important}
+html.stk-dark .button-n.primary-n,html.stk-dark .select-n.primary-n{background-color:#413949!important;color:#f3ecfb!important;border-color:#6d5a7d!important}
+html.stk-dark .button-n.muted-n,html.stk-dark .select-n.muted-n{background-color:#252829!important;color:#a8a2af!important;border-color:#414345!important}
+html.stk-dark .button-n:is(.danger-n,.primary-danger-n),html.stk-dark .select-n:is(.danger-n,.primary-danger-n){color:#ee9d9d!important;border-color:#915c65!important}
+html.stk-dark .button-n:is(.positive-n,.primary-positive-n),html.stk-dark .select-n:is(.positive-n,.primary-positive-n){color:#b6e0b6!important;border-color:#3d6b45!important}
+html.stk-dark .button-n:is(.disabled,:disabled),html.stk-dark .select-n:is(.disabled,:disabled){background-color:#252829!important;color:#6f6b74!important;border-color:#3c3e42!important}
+html.stk-dark .button-n:is(:hover,:active,:focus,:focus-visible),html.stk-dark .select-n:is(:hover,:active,:focus,:focus-visible){background-color:#413949!important;color:#fff!important;border-color:#6d5a7d!important;box-shadow:none!important}
+html.stk-dark .button-n.primary-n:is(:hover,:active,:focus,:focus-visible){background-color:#554267!important;color:#fff!important}
+html.stk-dark .button-n.muted-n:is(:hover,:active,:focus,:focus-visible){background-color:#2f3133!important;color:#a8a2af!important;border-color:#4b4d52!important}
+html.stk-dark .button-n:is(.danger-n,.primary-danger-n):is(:hover,:active,:focus,:focus-visible){background-color:#4a2b2f!important;color:#f0b4b4!important;border-color:#915c65!important}
+html.stk-dark .button-n:is(.positive-n,.primary-positive-n):is(:hover,:active,:focus,:focus-visible){background-color:#1f3a26!important;color:#d3f0d3!important;border-color:#3d6b45!important}
+html.stk-dark .button-n:is(.disabled,:disabled):is(:hover,:active,:focus,:focus-visible){background-color:#252829!important;color:#6f6b74!important;border-color:#3c3e42!important}
+html.stk-dark :is(a,button).button-n:is(.disabled,:disabled):is(:hover,:active,:focus,:focus-visible){background-color:#252829!important;color:#6f6b74!important;border-color:#3c3e42!important}
+/* A link the repair had to lift keeps the lifted purple under the pointer too,
+   so the pointer never drops a line back onto Scryfall's own colour. */
+html.stk-dark #main a.stk-brighter-purple:is(:hover,:active,:focus){color:#d6c2f2!important}
 
 /* The donation tiles and the payment service tiles. */
 html.stk-dark.stk-info-page #main :is(.donation-stripe-amount,.donation-service){background-color:#252829!important;color:#e6e3df!important;border-color:#414345!important}

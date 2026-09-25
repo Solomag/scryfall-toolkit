@@ -225,6 +225,8 @@ function cssCheck() {
   assert(!/color === 'rgb\(99, 68, 150\)'/.test(js), 'the repair no longer matches a single hard-coded purple');
   assert(/function repairBotsArtwork\(\)/.test(js) && /getImageData/.test(js) && /stk-light-screenshot/.test(js),
     'a light screenshot is measured and only then repainted');
+  assert(/share >= 0\.8/.test(js),
+    'a picture that mixes a light half with a dark one is left as Scryfall published it');
   assert(/repairBotsArtwork\(\);/.test(js), 'the screenshot repair runs with the dark theme');
   assert(/Never paint a footer band/.test(theme), 'footer band guard comment present');
   const stripped = theme.replace(/\/\*[\s\S]*?\*\//g, '');
@@ -266,7 +268,11 @@ function auditGapCheck() {
     ['the light screenshot of a Slack window', /img\.stk-light-screenshot\{filter:invert\(1\) hue-rotate\(180deg\)/],
     ['the light gradient on the page Scryfall builds without a main', /html\.stk-dark body\{background-image:none!important\}/],
     ['the purple drawing on that page', /body>svg :is\(path,g,circle,rect,polygon,ellipse\):not\(\[fill="none"\]\)\{fill:var\(--stk-link-purple\)/],
-    ['the lighter box the deck columns made inside the page', /#deckbuilder :is\(\.deckbuilder-section,\.deckbuilder-column\)\{background-color:#1d2021/]
+    ['the lighter box the deck columns made inside the page', /#deckbuilder :is\(\.deckbuilder-section,\.deckbuilder-column\)\{background-color:#1d2021/],
+    ['the white link button of a page that writes one into its prose', /html\.stk-dark \.button-n,html\.stk-dark \.select-n\{background-color:#292b2c!important;color:#c79ce3/],
+    ['the white hover Scryfall paints on every button', /\.button-n:is\(:hover,:active,:focus,:focus-visible\)[^{]*\{background-color:#413949!important;color:#fff/],
+    ['the black ink a disabled button shows under the pointer', /\.button-n:is\(\.disabled,:disabled\)[^{]*\{background-color:#252829!important;color:#6f6b74/],
+    ['the lifted purple under the pointer', /a\.stk-brighter-purple:is\(:hover,:active,:focus\)\{color:#d6c2f2/]
   ]) assert(pattern.test(theme), `dark theme repaints ${what}`);
 
   // Tagger is a separate app: every rule that paints it must be scoped to the
