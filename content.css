@@ -86,9 +86,9 @@
 #stk-edhrec .stk-edhrec-item{display:grid;grid-template-columns:68px minmax(0,1fr);align-items:center;column-gap:6px;min-width:0}
 #stk-edhrec .stk-edhrec-label{grid-column:2;grid-row:1;min-width:0;display:inline-flex;align-items:center;gap:3px;white-space:nowrap}
 #stk-edhrec .stk-edhrec-value,#stk-edhrec .stk-salt-meter{grid-column:1;grid-row:1}
-#stk-edhrec .stk-stat-badge{box-sizing:border-box;display:flex;align-items:center;justify-content:center;width:68px;height:20px;min-width:0;min-height:0;padding:2px 2px;border-radius:2px;text-align:center;color:#fff;font:10px/1 Lato,'Helvetica Neue',Arial,sans-serif;font-variant-numeric:tabular-nums;white-space:nowrap}
+#stk-edhrec .stk-stat-badge{box-sizing:border-box;display:flex;align-items:center;justify-content:center;width:68px;height:20px;min-width:0;min-height:0;padding:2px 2px;border-radius:2px;text-align:center;color:#16161d;font:10px/1 Lato,'Helvetica Neue',Arial,sans-serif;font-variant-numeric:tabular-nums;white-space:nowrap}
 #stk-edhrec .stk-edhrec-value{background:var(--stk-usage-color,#75986e)}
-#stk-edhrec .stk-edhrec-value .stk-edhrec-percent{color:#fff}
+#stk-edhrec .stk-edhrec-value .stk-edhrec-percent{color:#16161d}
 #stk-edhrec .stk-edhrec-fraction{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;min-width:65px;line-height:1.02;font-size:9px;font-variant-numeric:tabular-nums;white-space:nowrap}
 #stk-edhrec .stk-edhrec-usage>.stk-edhrec-fraction{grid-column:2;grid-row:2;justify-self:start;color:#69656e}
 #stk-edhrec .stk-edhrec-fraction span{display:block;padding:0 2px}
@@ -105,6 +105,9 @@
 #stk-edhrec .stk-edhrec-source img{display:block;width:16px;height:16px;object-fit:contain}
 html.stk-dark #stk-edhrec{color:#e6e3df;border-color:#414345}
 html.stk-dark #stk-edhrec .stk-edhrec-usage>.stk-edhrec-fraction{color:#d5d2d6}
+/* The usage and Salt badges use the same light status fills as Scryfall's own
+   Legal pills, so they take the same dark ink instead of white on a light box. */
+html.stk-dark #stk-edhrec :is(.stk-stat-badge,.stk-edhrec-value,.stk-salt-meter,.stk-edhrec-percent){color:#16161d!important}
 /* The plus lives just outside the row, like it did before it moved into the
    name cell. It stays out of the way until its own printing is hovered, and a
    printing that is already in the clipboard keeps a permanent check mark. */

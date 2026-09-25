@@ -145,6 +145,14 @@ html.stk-dark #main #deckbuilder :is(.deckbuilder-entry-input,.deckbuilder-entry
 /* Let the deck actions menu extend below the list instead of clipping into a scrolling row. */
 html.stk-dark #main :is(.deck-list,.deck-list-wrapper,.deck-list-main,.deck-list-entry){overflow:visible!important;max-height:none!important}
 html.stk-dark #main .deck-list-entry :is(.dropdown,.dropdown-menu,.menu,.popover){overflow:visible!important;max-height:none!important;background-color:#292b2c!important;color:#e6e3df!important}
+/* A "Make a copy" item in the deck menu is a form of its own, and the broad
+   account rule above paints every form, which left a stray band behind that one
+   row. Inside a menu the wrapper stays out of the way. */
+html.stk-dark.stk-account-page #main .dropdown-menu-items form{background-color:transparent!important;border-color:transparent!important;padding:0!important}
+/* The deck editor draws its curve counts in black, which vanished on the dark
+   surface; the labels next to them are Scryfall's own muted grey. */
+html.stk-dark.stk-account-page #deckbuilder :is(.deckbuilder-cmc-stat,.deckbuilder-cmc-stat-number) :is(strong,b){color:#e6e3df!important}
+html.stk-dark.stk-account-page #deckbuilder :is(.deckbuilder-cmc-stat,.deckbuilder-cmc-stat-number) :is(li,span):not(.card-symbol):not(.mana-symbol){color:#bcbac3!important}
 /* Set and collector badges in the deck editor inherit near-black ink from Scryfall. */
 html.stk-dark #main #deckbuilder :is(.deckbuilder-entry,.deckbuilder-section) :is([class*="set-code"],[class*="set-name"],[class*="set-number"],[class*="collector"],[class*="printing"]){color:#e6e3df!important;background-color:#383a3c!important}
 html.stk-dark #main #deckbuilder :is(.deckbuilder-section-title-bar,.deckbuilder-section-count,.deckbuilder-section-name,.deckbuilder-entry-menu-visual){color:#d5d1d8!important}
@@ -309,14 +317,23 @@ html.stk-dark #main :is(.add-to-deck,.add-to-deck-button,[class*="add-to-deck"])
 
 /* The "Jump to" menu of a set page: the button already looked right, the menu
    it opens did not. The account rules above covered the same menu, but only on
-   pages that need a login. */
-html.stk-dark :is(.dropdown-menu,.dropdown-menu-items,.dropdown-menu-items ul,.dropdown-menu-items li){background-color:#292b2c!important;color:#e6e3df!important;border-color:#595c60!important}
-html.stk-dark .dropdown-menu-items :is(a,button){background-color:transparent!important;color:#c79ce3!important;border-color:transparent!important}
-html.stk-dark .dropdown-menu-items :is(a,button):hover,html.stk-dark .dropdown-menu-items :is(a,button):focus-visible{background-color:#413949!important;color:#fff!important}
+   pages that need a login. The wrapper is left alone on purpose: the button
+   inside it is a translucent pill, and painting the wrapper made it a dark
+   block in the middle of Scryfall's own row. */
+/* The #main prefix keeps these ahead of the runtime purple repair, which marks
+   the same links and would otherwise leave Scryfall's own dark purple on them. */
+html.stk-dark #main :is(.dropdown-menu-items,.dropdown-menu-items ul,.dropdown-menu-items li){background-color:#292b2c!important;color:#e6e3df!important;border-color:#595c60!important}
+html.stk-dark #main .dropdown-menu-items :is(a,button){background-color:transparent!important;color:#c79ce3!important;border-color:transparent!important}
+html.stk-dark #main .dropdown-menu-items :is(a,button):hover,html.stk-dark #main .dropdown-menu-items :is(a,button):focus-visible{background-color:#413949!important;color:#fff!important}
 
+/* The search reference paints its examples in the site link purple, which reads
+   as almost black next to the jump bar. The reference pages get the brighter
+   purple that the rest of the dark theme uses for links. */
+html.stk-dark.stk-docs-page #main :is(.reference-block,.reference-jump,.reference-example) a:not(.button-n){color:#b294dd!important}
 /* The jump bar of the search reference: the pills were repainted long ago, but
    their icons kept Scryfall's black and dark purple, which all but disappears
    on a dark pill. Stroke-only shapes keep their own paint. */
+html.stk-dark #main .reference-jump :is(svg,g,path,circle,rect):not([fill="none"]){fill:#bfb4c8!important}
 html.stk-dark #main .reference-jump :is(svg,g,path,circle,rect):not([fill="none"]){fill:#bfb4c8!important}
 html.stk-dark #main .reference-jump svg [fill="#000"]{fill:#bfb4c8!important}
 
@@ -335,6 +352,13 @@ html.stk-dark.stk-blog-page #main :is(.scryfall-decklist-embed a,.scryfall-deckl
 /* The bot documentation buttons sit in their own marketing cards. */
 html.stk-dark.stk-bots-page #main :is(.marketing-features-item,.marketing-features-item-content,.bot-marketing-panel) :is(a.button-n,button.button-n){background-color:#292b2c!important;color:#c79ce3!important;border-color:#595c60!important}
 html.stk-dark.stk-bots-page #main :is(.marketing-features-item,.bot-marketing-panel) :is(a.button-n,button.button-n) svg{fill:currentColor!important}
+/* Scryfall fakes the drop shadow of a panel with a second copy of it, painted
+   white so that only a sliver shows. Once the dark theme took the white fills
+   off that copy, its text came through on top of the real one and the panel read
+   as every sentence twice, with the Slack logo band covered by a blank copy of
+   itself. The copy is decoration, so the dark theme drops it and lets Scryfall's
+   own brand band show. */
+html.stk-dark.stk-bots-page #main .bot-marketing-panel-shadow{display:none!important}
 
 /* The donation tiles and the payment service tiles. */
 html.stk-dark.stk-info-page #main :is(.donation-stripe-amount,.donation-service){background-color:#252829!important;color:#e6e3df!important;border-color:#414345!important}
@@ -346,6 +370,21 @@ html.stk-dark.stk-info-page #main :is(.donation-stripe-amount,.donation-service)
 html.stk-dark :is(a.button,button.button){background-color:#292b2c!important;color:#c79ce3!important;border-color:#595c60!important}
 html.stk-dark.stk-blog-page #main .blog-post-large-content a.button-n{background-color:#292b2c!important;color:#c79ce3!important;border-color:#595c60!important}
 
+/* Pasting a word the browser remembers paints the field with its own autofill
+   yellow, which is unreadable on a dark page. The suggestion list below the field
+   is browser UI and cannot be restyled, but the field itself can. */
+html.stk-dark #header-search-field:-webkit-autofill,
+html.stk-dark #header-search-field:-webkit-autofill:hover,
+html.stk-dark #header-search-field:-webkit-autofill:focus,
+html.stk-dark #header-search-field:-webkit-autofill:active{
+  -webkit-text-fill-color:#e9e4ee!important;
+  -webkit-text-fill-color:#e9e4ee;
+  caret-color:#e9e4ee;
+  -webkit-box-shadow:0 0 0 1000px #292b2c inset!important;
+  box-shadow:0 0 0 1000px #292b2c inset!important;
+  transition:background-color 600000s 0s,color 600000s 0s;
+}
+html.stk-dark #header-search-field::placeholder{color:#8d8894!important;-webkit-text-fill-color:#8d8894!important}
 /* The skip links stay out of sight until the keyboard reaches them, and then a
    cream band flashed across the top of a dark page. */
 html.stk-dark a:is([href="#main"],[href="#footer"]){background-color:#292b2c!important;color:#c79ce3!important;outline-color:#595c60!important}

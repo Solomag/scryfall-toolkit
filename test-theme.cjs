@@ -237,7 +237,7 @@ function auditGapCheck() {
   const theme = read('theme.css');
   // Each of these was a light surface on a live page with the dark theme on.
   for (const [what, pattern] of [
-    ['the "Jump to" menu of a set page', /html\.stk-dark :is\(\.dropdown-menu,\.dropdown-menu-items/],
+    ['the "Jump to" menu of a set page', /html\.stk-dark #main :is\(\.dropdown-menu-items,\.dropdown-menu-items ul/],
     ['the drop-down items themselves', /\.dropdown-menu-items :is\(a,button\)\{background-color:transparent/],
     ['the jump bar icons of the search reference', /\.reference-jump :is\(svg,g,path,circle,rect\):not\(\[fill="none"\]\)/],
     ['the blog index post cards', /\.blog-post-small[^{]*\{background-color:#1d2021/],
@@ -247,7 +247,11 @@ function auditGapCheck() {
     ['the donation tiles', /\.donation-stripe-amount,\.donation-service\)\{background-color:#252829/],
     ['the button on Scryfall error pages', /html\.stk-dark :is\(a\.button,button\.button\)\{background-color:#292b2c/],
     ['the keyboard skip links', /a:is\(\[href="#main"\],\[href="#footer"\]\)\{background-color:#292b2c/],
-    ['the faint dot in a set card grid header', /\.card-grid-header-dot\{color:#8f8a96/]
+    ['the faint dot in a set card grid header', /\.card-grid-header-dot\{color:#8f8a96/],
+    ['the white form wrapper inside a deck menu', /\.dropdown-menu-items form\{background-color:transparent/],
+    ['the black curve counts of the deck editor', /deckbuilder-cmc-stat[^{]*:is\(strong,b\)\{color:#e6e3df/],
+    ['the duplicated panel copy on the bots page', /\.bot-marketing-panel-shadow\{display:none!important/],
+    ['the browser autofill paint in the header search', /#header-search-field:-webkit-autofill/]
   ]) assert(pattern.test(theme), `dark theme repaints ${what}`);
 
   // Tagger is a separate app: every rule that paints it must be scoped to the

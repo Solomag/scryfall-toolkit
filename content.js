@@ -246,10 +246,11 @@
           row.classList.toggle('stk-digital-set-hidden', Boolean(!row.classList.contains('current') &&
             (set && (hidden.has(set.toLowerCase()) || !setVisible(set)) || settings.hideNonEnglishPrints && foreignPrinting)));
         }
-        const counter = main.querySelector('.search-controls label[for="order"]');
-        if (counter && rows.length) {
-          const visible = rows.filter(row => !row.classList.contains('stk-digital-set-hidden')).length;
-          counter.textContent = language === 'ru' ? `${visible} из ${rows.length} сетов в` : `${visible} of ${rows.length} sets in`;
+        // Scryfall repeats the counter above and below the list, so both are
+        // rewritten; the label is found by what it labels, not by its place.
+        const shown = rows.filter(row => !row.classList.contains('stk-digital-set-hidden')).length;
+        for (const counter of main.querySelectorAll('.search-controls label[for="order"]')) {
+          counter.textContent = language === 'ru' ? `${shown} из ${rows.length} сетов в` : `${shown} of ${rows.length} sets in`;
         }
       };
       apply();
