@@ -1,2 +1,7 @@
 node_modules/
 dist/
+
+# Personal development log: kept out of the published source on purpose. It is a
+# ChatGPT conversation export with a share link and the author's working timeline,
+# it is not part of the extension, and no user of the extension needs it.
+docs/chatgpt-history.md
