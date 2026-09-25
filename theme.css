@@ -153,6 +153,17 @@ html.stk-dark.stk-account-page #main .dropdown-menu-items form{background-color:
    surface; the labels next to them are Scryfall's own muted grey. */
 html.stk-dark.stk-account-page #deckbuilder :is(.deckbuilder-cmc-stat,.deckbuilder-cmc-stat-number) :is(strong,b){color:#e6e3df!important}
 html.stk-dark.stk-account-page #deckbuilder :is(.deckbuilder-cmc-stat,.deckbuilder-cmc-stat-number) :is(li,span):not(.card-symbol):not(.mana-symbol){color:#bcbac3!important}
+/* A column header sits on its own lighter band, which reads as a second surface
+   in the middle of the column. The band takes the column's own colour. */
+html.stk-dark #main #deckbuilder .deckbuilder-section-title-bar{background-color:#252829!important;border-color:#414345!important}
+/* The set code and the collector number are Scryfall's own grey badge, which is
+   black ink at a quarter opacity and disappears on the dark row. */
+html.stk-dark.stk-account-page #deckbuilder :is(.deckbuilder-entry-badge,.stk-deck-set-badge){color:#dcd8e2!important;background-color:#383a3c!important;border-color:#4b4d52!important}
+html.stk-dark.stk-account-page #deckbuilder .deckbuilder-entry-badge.red{color:#fff!important;background-color:#a3323c!important}
+/* The form title of an account page is a light title bar of its own. On a dark
+   page it is only a band, so it takes the panel's colour; the text stays light. */
+html.stk-dark.stk-account-page #main .stk-account-light-bar.form-n-title,
+html.stk-dark.stk-account-page #main .form-n-title{background-color:#1d2021!important;border-color:transparent!important;color:#e6e3df!important;text-shadow:none!important}
 /* Set and collector badges in the deck editor inherit near-black ink from Scryfall. */
 html.stk-dark #main #deckbuilder :is(.deckbuilder-entry,.deckbuilder-section) :is([class*="set-code"],[class*="set-name"],[class*="set-number"],[class*="collector"],[class*="printing"]){color:#e6e3df!important;background-color:#383a3c!important}
 html.stk-dark #main #deckbuilder :is(.deckbuilder-section-title-bar,.deckbuilder-section-count,.deckbuilder-section-name,.deckbuilder-entry-menu-visual){color:#d5d1d8!important}
@@ -180,7 +191,11 @@ html.stk-dark.stk-account-page .stk-deck-actions-menu,html.stk-dark.stk-account-
 html.stk-dark #main .stk-deck-actions-menu :is(a,button):hover{background:#413949!important;color:#fff!important}
 
 /* Consistent link purple across Scryfall and Tagger, without changing prices. */
-html.stk-dark{--stk-link-purple:#9073bf}
+/* One link purple for the whole site. Scryfall's own #634496 is unreadable on a
+   dark surface, and the first replacement was still too close to it, so the
+   pages that carry many links (the search reference, the account pages) read
+   almost black. This is the brighter step, applied everywhere. */
+html.stk-dark{--stk-link-purple:#b294dd}
 html.stk-dark #main :is(.reference-block,.reference-jump,.form-row,.search-info,.profile,.account,.deck-list-entry) a:not(.button-n):not([class*="currency-"]),html.stk-dark #main a[href^="/tags/"],html.stk-dark #main a[href^="https://tagger.scryfall.com/"]{color:var(--stk-link-purple)!important}
 html.stk-dark #main #stk-tags a{color:var(--stk-link-purple)!important}
 html.stk-dark #main :is(.reference-block,.reference-block-doc,.reference-block-examples,.reference-jump,h1,h2,h3,h4,h5,h6){text-shadow:none!important;-webkit-text-stroke:0!important}
@@ -218,7 +233,7 @@ html.stk-dark #main #stk-tags .stk-tags-table td a{color:#e6e3df!important}
 html.stk-dark #main #stk-tags .stk-tags-toggle{color:#cba4e1!important}
 
 /* Keep the original layout and artwork while correcting the actual page surfaces. */
-html.stk-dark #main .stk-brighter-purple{color:#9073bf!important}
+html.stk-dark #main .stk-brighter-purple{color:var(--stk-link-purple)!important}
 /* The advanced-search checkbox already draws its own checkmark as a "✓"
    ::before glyph, so the theme only darkens the box and lightens that glyph
    instead of stacking a second checkmark on top. */
@@ -238,7 +253,7 @@ html.stk-dark #main .select2-polarity{background-color:#75986e!important;color:#
 html.stk-dark #main .select2-polarity.negative{background-color:#a71f2a!important;color:#fff!important}
 html.stk-dark .select2-container :is(.select2-selection__rendered,.select2-results__options,.select2-results__option,.select2-search,.select2-search__field){background-color:#292b2c!important;color:#e6e3df!important;border-color:#55575d!important;box-shadow:none!important}
 html.stk-dark .select2-container :is(.select2-results__option--highlighted,.select2-results__option[aria-selected="true"]){background-color:#493e53!important;color:#fff!important}
-html.stk-dark #main .form-row-label :is(svg,svg path),html.stk-dark #main .reference-block-icon :is(svg,svg path){fill:#9073bf!important;color:#9073bf!important}
+html.stk-dark #main :is(.form-row-label :is(svg,svg path),.reference-block-icon :is(svg,svg path)){fill:var(--stk-link-purple)!important;color:var(--stk-link-purple)!important}
 html.stk-dark.stk-docs-page #main :is(.reference-doc,.reference-doc-content,.reference-doc-menu,.reference-doc-menu-expander,.prose){background:#1d2021!important;color:#e6e3df!important}
 html.stk-dark.stk-docs-page #main .faq-link,html.stk-dark.stk-docs-page #main .faq-link:hover,html.stk-dark.stk-docs-page #main .faq-link:focus-visible{background:#292b2c!important;color:#e6e3df!important;box-shadow:none!important}
 html.stk-dark.stk-docs-page #main .faq-link :is(.faq-link-title,.faq-link-subtitle){color:#e6e3df!important;text-shadow:none!important}
@@ -326,10 +341,9 @@ html.stk-dark #main :is(.dropdown-menu-items,.dropdown-menu-items ul,.dropdown-m
 html.stk-dark #main .dropdown-menu-items :is(a,button){background-color:transparent!important;color:#c79ce3!important;border-color:transparent!important}
 html.stk-dark #main .dropdown-menu-items :is(a,button):hover,html.stk-dark #main .dropdown-menu-items :is(a,button):focus-visible{background-color:#413949!important;color:#fff!important}
 
-/* The search reference paints its examples in the site link purple, which reads
-   as almost black next to the jump bar. The reference pages get the brighter
-   purple that the rest of the dark theme uses for links. */
-html.stk-dark.stk-docs-page #main :is(.reference-block,.reference-jump,.reference-example) a:not(.button-n){color:#b294dd!important}
+/* The search reference paints its examples in the site link purple, which the
+   variable now carries for every page. */
+html.stk-dark.stk-docs-page #main :is(.reference-block,.reference-jump,.reference-example) a:not(.button-n){color:var(--stk-link-purple)!important}
 /* The jump bar of the search reference: the pills were repainted long ago, but
    their icons kept Scryfall's black and dark purple, which all but disappears
    on a dark pill. Stroke-only shapes keep their own paint. */
@@ -352,13 +366,18 @@ html.stk-dark.stk-blog-page #main :is(.scryfall-decklist-embed a,.scryfall-deckl
 /* The bot documentation buttons sit in their own marketing cards. */
 html.stk-dark.stk-bots-page #main :is(.marketing-features-item,.marketing-features-item-content,.bot-marketing-panel) :is(a.button-n,button.button-n){background-color:#292b2c!important;color:#c79ce3!important;border-color:#595c60!important}
 html.stk-dark.stk-bots-page #main :is(.marketing-features-item,.bot-marketing-panel) :is(a.button-n,button.button-n) svg{fill:currentColor!important}
-/* Scryfall fakes the drop shadow of a panel with a second copy of it, painted
-   white so that only a sliver shows. Once the dark theme took the white fills
-   off that copy, its text came through on top of the real one and the panel read
-   as every sentence twice, with the Slack logo band covered by a blank copy of
-   itself. The copy is decoration, so the dark theme drops it and lets Scryfall's
-   own brand band show. */
-html.stk-dark.stk-bots-page #main .bot-marketing-panel-shadow{display:none!important}
+/* Scryfall fakes the drop shadow of a panel with a second copy of it, laid over
+   the real panel and offset by a few pixels. The copy is what carries the Slack
+   and Discord band, so it cannot be removed; it only has to be painted like the
+   panel it lies on top of, so that it keeps hiding the text underneath instead
+   of doubling it. The brand band stays Scryfall's own colour. */
+html.stk-dark.stk-bots-page #main :is(.bot-marketing-panel,.bot-marketing-panel-shadow){background-color:#252829!important;color:#e6e3df!important;border-color:#414345!important}
+html.stk-dark.stk-bots-page #main .bot-marketing-panel-shadow :is(.bot-marketing-panel-desc,.bot-marketing-panel-footer){background-color:#252829!important;color:#e6e3df!important}
+html.stk-dark.stk-bots-page #main .bot-marketing-panel-shadow .bot-marketing-panel-footer{background-color:#2a2c2d!important}
+html.stk-dark.stk-bots-page #main .bot-marketing-panel-footer .button-n{background:#3a3d40!important;color:#c79ce3!important;border-color:#595c60!important}
+/* Scryfall lifts the text on this page with a white one-pixel shadow, which on a
+   dark page reads as a second, offset copy of every line. */
+html.stk-dark.stk-bots-page #main :is(p,h1,h2,h3,h4,h5,h6,a,span,b,li,div){text-shadow:none!important;-webkit-text-stroke:0!important}
 
 /* The donation tiles and the payment service tiles. */
 html.stk-dark.stk-info-page #main :is(.donation-stripe-amount,.donation-service){background-color:#252829!important;color:#e6e3df!important;border-color:#414345!important}
@@ -386,8 +405,9 @@ html.stk-dark #header-search-field:-webkit-autofill:active{
 }
 html.stk-dark #header-search-field::placeholder{color:#8d8894!important;-webkit-text-fill-color:#8d8894!important}
 /* The skip links stay out of sight until the keyboard reaches them, and then a
-   cream band flashed across the top of a dark page. */
-html.stk-dark a:is([href="#main"],[href="#footer"]){background-color:#292b2c!important;color:#c79ce3!important;outline-color:#595c60!important}
+   cream band flashed across the top of a dark page. Scryfall writes them as
+   absolute links on some pages and as bare fragments on others. */
+html.stk-dark a:is([href$="#main"],[href$="#footer"]){background-color:#292b2c!important;color:#c79ce3!important;outline-color:#595c60!important}
 
 /* The dot between the counts in a set's card grid header is a faint grey that
    all but vanished on the dark surface. */

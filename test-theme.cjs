@@ -152,10 +152,11 @@ function cssCheck() {
     'WORSE_THAN flips the relation icon');
 
   const theme = read('theme.css');
-  assert(theme.includes('html.stk-dark{--stk-link-purple:#9073bf}'),
+  assert(theme.includes('html.stk-dark{--stk-link-purple:#b294dd}'),
     'dark theme link purple variable');
-  assert(theme.includes('html.stk-dark #main .stk-brighter-purple{color:#9073bf!important}'),
+  assert(theme.includes('html.stk-dark #main .stk-brighter-purple{color:var(--stk-link-purple)!important}'),
     'brighter purple rule for dark theme');
+  assert(!/color:#9073bf/.test(theme), 'the first, too dark link purple is gone from every page');
   assert(theme.includes('html.stk-dark #scryfall-toolkit-clipboard .stk-copy-menu{'),
     'dark styles for the names-only menu');
   assert(theme.includes('html.stk-dark #scryfall-toolkit-clipboard .stk-copied{background:#2f9e44!important}'),
@@ -246,11 +247,15 @@ function auditGapCheck() {
     ['the bot documentation buttons', /\.marketing-features-item[^{]*:is\(a\.button-n/],
     ['the donation tiles', /\.donation-stripe-amount,\.donation-service\)\{background-color:#252829/],
     ['the button on Scryfall error pages', /html\.stk-dark :is\(a\.button,button\.button\)\{background-color:#292b2c/],
-    ['the keyboard skip links', /a:is\(\[href="#main"\],\[href="#footer"\]\)\{background-color:#292b2c/],
+    ['the keyboard skip links', /a:is\(\[href\$="#main"\],\[href\$="#footer"\]\)\{background-color:#292b2c/],
     ['the faint dot in a set card grid header', /\.card-grid-header-dot\{color:#8f8a96/],
     ['the white form wrapper inside a deck menu', /\.dropdown-menu-items form\{background-color:transparent/],
     ['the black curve counts of the deck editor', /deckbuilder-cmc-stat[^{]*:is\(strong,b\)\{color:#e6e3df/],
-    ['the duplicated panel copy on the bots page', /\.bot-marketing-panel-shadow\{display:none!important/],
+    ['the set code badge of a deck row', /\.deckbuilder-entry-badge,\.stk-deck-set-badge\)\{color:#dcd8e2/],
+    ['the lighter band behind a deck column title', /\.deckbuilder-section-title-bar\{background-color:#252829/],
+    ['the duplicated panel copy on the bots page', /\.bot-marketing-panel-shadow :is\(\.bot-marketing-panel-desc/],
+    ['the white text shadow on the bots page', /stk-bots-page #main :is\(p,h1,h2,h3,h4,h5,h6,a,span,b,li,div\)\{text-shadow:none/],
+    ['the account form title band', /\.stk-account-light-bar\.form-n-title/],
     ['the browser autofill paint in the header search', /#header-search-field:-webkit-autofill/]
   ]) assert(pattern.test(theme), `dark theme repaints ${what}`);
 

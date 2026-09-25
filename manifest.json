@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Scryfall Toolkit (Preview)",
-  "version": "0.32.0",
+  "version": "0.33.0",
   "description": "Scryfall clipboard, tags, legality, dark theme, optional CardTrader prices and EDHREC statistics.",
   "permissions": ["storage", "unlimitedStorage", "alarms"],
   "host_permissions": ["https://api.scryfall.com/*", "https://data.scryfall.io/*", "https://tagger.scryfall.com/*", "https://api.cardtrader.com/*", "https://json.edhrec.com/*"],
