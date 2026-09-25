@@ -223,6 +223,13 @@ function cssCheck() {
   assert(/const sinkIntoDark = value =>/.test(js) && /< 0\.22/.test(js),
     'the purple repair judges the colour itself, so any dark purple is lifted, not just one literal');
   assert(!/color === 'rgb\(99, 68, 150\)'/.test(js), 'the repair no longer matches a single hard-coded purple');
+  // The scan reads a colour, so it has to happen when the stylesheet that
+  // carries the colour is actually in. Scryfall's sheet is not an obstacle to a
+  // content script, so the purple only exists after the load event.
+  assert(/window\.addEventListener\('load', settle, \{once:true\}\)/.test(js),
+    'the purple repair looks again on load, when Scryfall stylesheet has arrived');
+  assert(/requestAnimationFrame\(\(\) => requestAnimationFrame\(\(\) => scan\(\)\)\)/.test(js),
+    'the repair settles one more time after the load event, for a late repaint');
   assert(/function repairBotsArtwork\(\)/.test(js) && /getImageData/.test(js) && /stk-light-screenshot/.test(js),
     'a light screenshot is measured and only then repainted');
   assert(/share >= 0\.8/.test(js),
@@ -273,7 +280,15 @@ function auditGapCheck() {
     ['the white link button of a page that writes one into its prose', /html\.stk-dark \.button-n,html\.stk-dark \.select-n\{background-color:#292b2c!important;color:#c79ce3/],
     ['the white hover Scryfall paints on every button', /\.button-n:is\(:hover,:active,:focus,:focus-visible\)[^{]*\{background-color:#413949!important;color:#fff/],
     ['the black ink a disabled button shows under the pointer', /\.button-n:is\(\.disabled,:disabled\)[^{]*\{background-color:#252829!important;color:#6f6b74/],
-    ['the lifted purple under the pointer', /a\.stk-brighter-purple:is\(:hover,:active,:focus\)\{color:#d6c2f2/]
+    ['the lifted purple under the pointer', /a\.stk-brighter-purple:is\(:hover,:active,:focus\)\{color:#d6c2f2/],
+    // Scryfall hands the pointer a near-black ink in its prose, its account
+    // forms and its checklists, which is where "the text turns black on hover"
+    // came from.
+    ['the near-black ink Scryfall gives a hovered prose link', /\.prose[^{]*a:is\(:hover,:active,:focus\):not\(\.button-n\)[^{]*\{color:var\(--stk-link-purple\)/],
+    ['the white field a focused form input turns', /\.form-input,\.form-n-input,\.form-n-file-input-control[^{]*\{background-color:#292b2c/],
+    ['the purple Scryfall fills a shape with', /\.prose-complex-h1[^{]*:not\(\[fill="none"\]\)[^{]*\{fill:var\(--stk-link-purple\)/],
+    ['the purple notice and warning bar', /\.notification\.purple,\.read-only-warning,\.print-langs-item\.current\)\{background-color:#413949/],
+    ['the purple curve meter of the deck editor', /cmc-stat-meter::\-webkit-progress-value\{background-color:var\(--stk-link-purple\)/]
   ]) assert(pattern.test(theme), `dark theme repaints ${what}`);
 
   // A brand band is a picture, not a surface. The Slack band on the bots page is
@@ -338,6 +353,43 @@ async function darkThemeRuntime() {
   assert(!root.classList.contains('stk-dark'), 'storage change removes dark class');
   assert(!root.classList.contains('stk-hide-caster'), 'storage change restores caster indicator');
   assert(!root.classList.contains('stk-site-ru'), 'storage change restores EN site language');
+}
+
+// The repair reads a link's colour to decide whether it is a dark purple. On a
+// real page that read has to wait for Scryfall's stylesheet: at DOMContentLoaded
+// the stylesheet is still in flight and every link wears the browser's default
+// blue, so a scan that stops there finds nothing to lift and the page keeps
+// Scryfall's own purple for good. This is that page, in that order.
+async function purpleAfterStylesheetTest() {
+  console.log('theme.js: the purple repair waits for the stylesheet that carries the purple');
+  const page = createPage({
+    url: 'https://scryfall.com/docs/api',
+    html: `<!DOCTYPE html><html><head>
+      <style id="scryfall-css">
+        /* Scryfall's own rule. Until this sheet is in, a[href] is the UA blue. */
+        .prose a{color:#634496}
+      </style></head><body>
+      <div id="main"><div class="prose">
+        <a href="/docs/api/rate-limits">rate limits</a>
+      </div></div></body></html>`,
+    state: { darkTheme: 'dark' }
+  });
+  // The link is blue right now: the stylesheet has not been parsed into the page
+  // yet, which is exactly the state the repair first sees.
+  const link = page.document.querySelector('.prose a');
+  assert(!link.classList.contains('stk-brighter-purple'),
+    'before the stylesheet arrives there is no dark purple to lift');
+
+  page.script('theme.js');
+  await sleep(30);
+  assertEqual(page.windowListenerCount('load'), 1,
+    'the repair is waiting for the load event, since no node will be added');
+  // Scryfall's stylesheet lands: the same link is now the site purple. Nothing
+  // added a node, so only the load event can make the repair look again.
+  page.fireWindow('load');
+  await sleep(30);
+  assert(page.document.querySelector('.prose a').classList.contains('stk-brighter-purple'),
+    'the purple that arrived with the stylesheet is lifted after the load event');
 }
 
 async function systemThemeTest() {
@@ -425,6 +477,7 @@ async function pathClasses() {
     iconCheck();
     cssCheck();
     await darkThemeRuntime();
+    await purpleAfterStylesheetTest();
     await systemThemeTest();
     await pathClasses();
     summary('test-theme');

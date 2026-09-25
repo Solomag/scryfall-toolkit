@@ -422,6 +422,35 @@ html.stk-dark :is(a,button).button-n:is(.disabled,:disabled):is(:hover,:active,:
    so the pointer never drops a line back onto Scryfall's own colour. */
 html.stk-dark #main a.stk-brighter-purple:is(:hover,:active,:focus){color:#d6c2f2!important}
 
+/* The purple Scryfall hands to a shape rather than to a line. The repair only
+   reads the ink of a text element, so a fill, a stroke, a border and a meter are
+   stated here, in the lifted purple, wherever Scryfall wrote its own. The icon
+   groups are the ones its stylesheet paints: the search reference headings, the
+   blog post cards, the form controls, the modal choices and the file picker. */
+html.stk-dark #main :is(.prose-complex-h1,.blog-post-small-content,.form-n-file-input-control,.modal-dialog-grid-choice-title,.button-n,.select-n) :is(svg,g,path,circle,rect,polygon):not([fill="none"]):not([stroke="none"]){fill:var(--stk-link-purple)!important;stroke:var(--stk-link-purple)!important}
+/* The same purple as a field of its own: a notice, a warning bar, the current
+   language of a print, the meter of a deck curve, a member's frame. */
+html.stk-dark #main :is(.notification.purple,.read-only-warning,.print-langs-item.current){background-color:#413949!important;color:#f3ecfb!important;border-color:#6d5a7d!important}
+html.stk-dark #main .deckbuilder-cmc-stat-meter::-webkit-progress-value{background-color:var(--stk-link-purple)!important}
+html.stk-dark #main .deckbuilder-cmc-stat-meter::-moz-progress-bar{background-color:var(--stk-link-purple)!important}
+html.stk-dark #main .team-member-avatar{border-color:var(--stk-link-purple)!important}
+
+/* Every state Scryfall paints with a light-mode colour. Its own stylesheet hands
+   the pointer a near-black ink on a page of light ink, so a line of text turned
+   to #16161D under the cursor, and a field turned white. Each of these is named
+   after the rule it answers, so the pair can be read together. */
+html.stk-dark #main :is(.prose,.checklist,.form-n-description,.control-panel-prose,.rulings,.search-info) a:is(:hover,:active,:focus):not(.button-n):not(.select-n){color:var(--stk-link-purple)!important;outline-color:transparent!important}
+html.stk-dark #main :is(.checklist th a:hover .arrow,.checklist th a:active .arrow,.checklist th a:focus .arrow){color:var(--stk-link-purple)!important}
+html.stk-dark #main :is(.form-input,.form-n-input,.form-n-file-input-control,.advanced-search-subjoiner,.modal-dialog-grid-choice):is(:hover,:active,:focus,:focus-visible){background-color:#292b2c!important;color:#e6e3df!important;border-color:#6d5a7d!important;box-shadow:none!important}
+html.stk-dark #main :is(.advanced-search-checkbox input[type="checkbox"]):is(:hover,:active,:focus){background-color:#292b2c!important;border-color:#6d5a7d!important}
+html.stk-dark #main .deckbuilder-entry-input:focus{background-color:#292b2c!important;color:#e6e3df!important}
+html.stk-dark #main :is(.session-form .button,.button):is(:hover,:focus):not(.button-n){background-color:#413949!important;color:#fff!important}
+html.stk-dark #main :is(.pillbox-item,.print-langs-item):is(:hover,:active,:focus):not(.disabled){background-color:#413949!important;color:#fff!important}
+html.stk-dark #main .control-panel-table tbody tr:hover{background-color:#2a2c2d!important;color:#e6e3df!important}
+html.stk-dark #main .modal-dialog-close:is(:hover,:active,:focus) :is(svg,g,path,circle):not([fill="none"]){fill:#e6e3df!important}
+html.stk-dark #main .homepage-promo:is(:hover,:active){background-color:rgba(255,255,255,0.2)!important}
+html.stk-dark #main select.form-n-input:is(:focus,:hover),html.stk-dark #main select.form-n-input option:focus{color:#e6e3df!important}
+
 /* The donation tiles and the payment service tiles. */
 html.stk-dark.stk-info-page #main :is(.donation-stripe-amount,.donation-service){background-color:#252829!important;color:#e6e3df!important;border-color:#414345!important}
 html.stk-dark.stk-info-page #main :is(.donation-stripe-amount,.donation-service) :is(b,span,svg){color:#e6e3df!important}

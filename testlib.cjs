@@ -177,6 +177,8 @@ function createPage(options) {
   };
   const confirmQueue = options.confirmQueue || [];
   const observers = [];
+  // Listeners the page registers on its own window, by event type.
+  const windowListeners = {};
   // A test can ask the page about the system colour scheme and then flip it,
   // the way a computer or phone switches its own appearance at dusk.
   const mediaListeners = {};
@@ -215,6 +217,12 @@ function createPage(options) {
     innerHeight: 900,
     Event: window.Event,
     CustomEvent: window.CustomEvent,
+    // linkedom has no window-level event target, and the theme listens for the
+    // load event to know Scryfall's stylesheet has arrived. A test fires it here.
+    addEventListener: (type, listener) => { (windowListeners[type] ||= []).push(listener); },
+    removeEventListener: (type, listener) => {
+      windowListeners[type] = (windowListeners[type] || []).filter(entry => entry !== listener);
+    },
     HTMLElement: window.HTMLElement,
     Element: window.Element,
     Node: window.Node,
@@ -251,7 +259,13 @@ function createPage(options) {
       if (!entry) return;
       entry.matches = Boolean(dark);
       entry.dispatch('change');
-    }
+    },
+    // Tells the page its window fired an event, the way a finished page does.
+    fireWindow(type) {
+      for (const listener of [...(windowListeners[type] || [])]) listener({ type });
+    },
+    // How many colours the page's own listeners can still be waiting on.
+    windowListenerCount(type) { return (windowListeners[type] || []).length; }
   };
 }
 

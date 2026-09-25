@@ -76,8 +76,22 @@ function repairDarkPurple() {
       if (sinkIntoDark(getComputedStyle(node).color)) node.classList.add('stk-brighter-purple');
     }
   };
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', scan, {once:true});
-  else scan();
+  // Scryfall's own stylesheet is not an obstacle to the first paint of a
+  // content script, so at DOMContentLoaded a link still wears the browser's
+  // default blue and the scan finds no purple to lift. The purple only arrives
+  // with the stylesheet, so the scan waits for the load event as well, and once
+  // more after it: a late stylesheet, a font swap or a client-side route can all
+  // repaint after the first look.
+  // The frame callback is wrapped rather than passed on: a frame hands its
+  // timestamp to the callback, and scan's first argument is the root to read.
+  const settle = () => { scan(); requestAnimationFrame(() => requestAnimationFrame(() => scan())); };
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', settle, {once:true});
+    window.addEventListener('load', settle, {once:true});
+  } else {
+    settle();
+    window.addEventListener('load', settle, {once:true});
+  }
   new MutationObserver(mutations => {
     for (const mutation of mutations) for (const node of mutation.addedNodes) if (node.nodeType === 1) pending.add(node);
     if (!pending.size) return;
