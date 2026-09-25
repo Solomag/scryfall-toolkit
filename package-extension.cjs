@@ -75,9 +75,97 @@ fs.mkdirSync(dist, { recursive: true });
 const zip = path.join(dist, `scryfall-toolkit-${manifest.version}.zip`);
 fs.rmSync(zip, { force: true });
 
-// --no-xattrs, not -X: this bsdtar build reads -X as a flag that takes the next
-// argument, which silently swallowed the first file in the list.
-execFileSync('tar', ['-a', '-c', '-f', zip, '--no-xattrs', ...list], { cwd: ROOT, stdio: 'inherit' });
+// The archive is written here rather than handed to tar, because tar stamps every
+// entry with the file's own modification time and the hash then changes on every
+// rebuild. A published hash is only useful if anyone can reproduce it, so every
+// entry gets a fixed timestamp and the file list is sorted.
+const zlib = require('node:zlib');
+
+const CRC_TABLE = (() => {
+  const table = new Int32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    table[n] = c;
+  }
+  return table;
+})();
+
+const crc32 = buffer => {
+  let crc = -1;
+  for (let i = 0; i < buffer.length; i++) crc = (crc >>> 8) ^ CRC_TABLE[(crc ^ buffer[i]) & 0xff];
+  return (crc ^ -1) >>> 0;
+};
+
+// 2026-09-25 00:00:00, expressed the way the ZIP format wants it.
+const DOS_TIME = 0;
+const DOS_DATE = ((2026 - 1980) << 9) | (9 << 5) | 25;
+
+const localParts = [];
+const centralParts = [];
+let offset = 0;
+
+for (const name of list) {
+  const data = fs.readFileSync(path.join(ROOT, name));
+  const nameBuf = Buffer.from(name, 'utf8');
+  const crc = crc32(data);
+  // -15 tells zlib to emit raw deflate, which is what the ZIP format stores.
+  const packed = zlib.deflateRawSync(data, { level: 9 });
+  const useDeflate = packed.length < data.length;
+  const body = useDeflate ? packed : data;
+  const method = useDeflate ? 8 : 0;
+
+  const local = Buffer.alloc(30 + nameBuf.length);
+  local.writeUInt32LE(0x04034b50, 0);
+  local.writeUInt16LE(20, 4);          // version needed
+  local.writeUInt16LE(0x0800, 6);      // flags: names are UTF-8
+  local.writeUInt16LE(method, 8);
+  local.writeUInt16LE(DOS_TIME, 10);
+  local.writeUInt16LE(DOS_DATE, 12);
+  local.writeUInt32LE(crc, 14);
+  local.writeUInt32LE(body.length, 18);
+  local.writeUInt32LE(data.length, 22);
+  local.writeUInt16LE(nameBuf.length, 26);
+  local.writeUInt16LE(0, 28);
+  nameBuf.copy(local, 30);
+
+  const central = Buffer.alloc(46 + nameBuf.length);
+  central.writeUInt32LE(0x02014b50, 0);
+  central.writeUInt16LE(20, 4);        // version made by
+  central.writeUInt16LE(20, 6);        // version needed
+  central.writeUInt16LE(0x0800, 8);
+  central.writeUInt16LE(method, 10);
+  central.writeUInt16LE(DOS_TIME, 12);
+  central.writeUInt16LE(DOS_DATE, 14);
+  central.writeUInt32LE(crc, 16);
+  central.writeUInt32LE(body.length, 20);
+  central.writeUInt32LE(data.length, 24);
+  central.writeUInt16LE(nameBuf.length, 28);
+  central.writeUInt16LE(0, 30);        // extra
+  central.writeUInt16LE(0, 32);        // comment
+  central.writeUInt16LE(0, 34);        // disk number
+  central.writeUInt16LE(0, 36);        // internal attributes
+  central.writeUInt32LE((0o100644 << 16) >>> 0, 38); // external attributes: a regular file
+  central.writeUInt32LE(offset, 42);
+  nameBuf.copy(central, 46);
+
+  localParts.push(local, body);
+  centralParts.push(central);
+  offset += local.length + body.length;
+}
+
+const centralDirectory = Buffer.concat(centralParts);
+const eocd = Buffer.alloc(22);
+eocd.writeUInt32LE(0x06054b50, 0);
+eocd.writeUInt16LE(0, 4);
+eocd.writeUInt16LE(0, 6);
+eocd.writeUInt16LE(list.length, 8);
+eocd.writeUInt16LE(list.length, 10);
+eocd.writeUInt32LE(centralDirectory.length, 12);
+eocd.writeUInt32LE(offset, 16);
+eocd.writeUInt16LE(0, 20);
+
+fs.writeFileSync(zip, Buffer.concat([...localParts, centralDirectory, eocd]));
 
 console.log('packaged files:');
 for (const file of list) console.log('  ' + file);
