@@ -121,6 +121,7 @@ async function fetchMock(url) {
       }
       return jsonResponse({ data: [PRINT_A, PRINT_B], has_more: false });
     }
+    if (q === 'e:mtgo') return jsonResponse({ data: [{ name: 'Online Card', games: ['mtgo'] }] });
     if (q.includes(PREVIEW_BAD_ID)) {
       return jsonResponse({ data: [{ name: 'Bad Image', image_uris: { normal: 'https://evil.example/img.jpg' }, scryfall_uri: 'https://scryfall.com/card/bad/1' }] });
     }
@@ -149,6 +150,9 @@ page.context.importScripts = (...files) => {
 page.context.__MOXTAGS_ORACLE = { t: ['aggro', 'combo'], d: { [ORACLE_ID]: [0, 1] } };
 page.context.__MOXTAGS_ILLUS_1 = { t: ['sky'], d: { [ILLUS_ID]: [0] } };
 page.context.__MOXTAGS_ILLUS_2 = { t: [], d: {} };
+// The platform snapshot is bundled as data; the fixture keeps a few sets and
+// leaves "mtgo" out so the runtime lookup is exercised.
+page.context.__STK_SET_PLATFORMS = { ysos: ['arena'], omb: ['arena', 'mtgo'] };
 page.script('background.js');
 
 const ctx = page.context;
@@ -277,6 +281,19 @@ const setsFetches = () => fetchLog.filter(url => url === 'https://api.scryfall.c
     const digitalOnly = await send({ type: 'digitalSets' });
     assertEqual(digitalOnly.data, ['mtgo'], 'digitalSets returns only the digital list');
     assertEqual(setsFetches(), 1, 'digitalSets also answers from cache');
+
+    console.log('background.js: setPlatforms message');
+    const gameSearches = () => fetchLog.filter(url => url.includes('q=e%3Amtgo')).length;
+    const platforms = await send({ type: 'setPlatforms' });
+    assertEqual(platforms.data.ysos, ['arena'], 'the bundled snapshot answers for a known Arena set');
+    assertEqual(platforms.data.omb, ['arena', 'mtgo'], 'a set released for both clients keeps both platforms');
+    assertEqual(platforms.data.mtgo, ['mtgo'], 'a digital set missing from the snapshot is looked up');
+    assertEqual(gameSearches(), 1, 'only sets missing from the snapshot are searched');
+    assert(mock.state.setPlatformIndex && mock.state.setPlatformIndex.expires > Date.now(),
+      'platform index persisted with a future expiry');
+    const cachedPlatforms = await send({ type: 'setPlatforms' });
+    assertEqual(cachedPlatforms.data, platforms.data, 'the platform index answers from the stored index');
+    assertEqual(gameSearches(), 1, 'a stored platform index performs no further search');
 
     console.log('background.js: finishes message');
     const finishes = await send({ type: 'finishes', ids: [FIN_ID_1, FIN_ID_2] });

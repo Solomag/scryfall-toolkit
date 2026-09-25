@@ -67,11 +67,13 @@ const routes = {
   card: () => ({ oracle_id: ORACLE_ID, legalities: { premodern: 'legal', legacy: 'banned' } }),
   allPrints: () => ({ prints, truncated: false }),
   cardtrader: () => ({ available: true, url: 'https://www.cardtrader.com/en/cards/test', nonfoil: { cents: 1234, currency: 'EUR' } }),
-  preview: () => ({ name: 'Other Card', image: 'https://cards.scryfall.io/normal/o.jpg', uri: 'https://scryfall.com/card/oth/1/other-card' })
+  preview: () => ({ name: 'Other Card', image: 'https://cards.scryfall.io/normal/o.jpg', uri: 'https://scryfall.com/card/oth/1/other-card' }),
+  setCategories: () => ({ digital: ['ysos', 'me2'], nonTournament: [], oversized: [], foreignBlackBorder: [] }),
+  setPlatforms: () => ({ ysos: ['arena'], me2: ['mtgo'] })
 };
 
-async function loadCardPage(state) {
-  const page = createPage({ url: 'https://scryfall.com/card/tst/1/test-card', html: CARD_HTML, state, routes });
+async function loadCardPage(state, pageRoutes = routes) {
+  const page = createPage({ url: 'https://scryfall.com/card/tst/1/test-card', html: CARD_HTML, state, routes: pageRoutes });
   await page.script('i18n.js');
   await page.script('format-catalog.js');
   await page.script('tag-icons.js');
@@ -805,6 +807,152 @@ async function advancedPriceFilterTest() {
     'with every column visible the currency choices stay as Scryfall made them');
 }
 
+async function setPlatformTest() {
+  console.log('content.js: platform filter decides which sets are shown');
+  const load = async (state, url, html, pageRoutes = routes) => {
+    const page = createPage({ url, html, state, routes: pageRoutes });
+    await page.script('i18n.js');
+    await page.script('format-catalog.js');
+    await page.script('tag-icons.js');
+    await page.script('data/shambleshark-nicknames.js');
+    await page.script('content.js');
+    await sleep(80);
+    return page;
+  };
+
+  const setsHtml = `<!DOCTYPE html><html><body><div id="main">
+    <div class="search-controls"><label for="order">3 of 3 sets in</label><select id="order"><option>Name</option></select></div>
+    <table id="js-checklist"><tbody>
+      <tr><td><a href="https://scryfall.com/sets/mh3">Modern Horizons 3</a></td><td>MH3</td></tr>
+      <tr><td><a href="https://scryfall.com/sets/ysos">Alchemy: Secrets of Strixhaven</a></td><td>YSOS</td></tr>
+      <tr><td><a href="https://scryfall.com/sets/me2">Magic Online</a></td><td>ME2</td></tr>
+    </tbody></table>
+  </div></body></html>`;
+  const hidden = document => [...document.querySelectorAll('#js-checklist tbody tr')]
+    .filter(row => row.classList.contains('stk-digital-set-hidden'))
+    .map(row => row.querySelector('a').textContent);
+
+  const paper = await load({ clipboard: false, setPlatforms: ['paper'] }, 'https://scryfall.com/sets', setsHtml);
+  assertEqual(hidden(paper.document), ['Alchemy: Secrets of Strixhaven', 'Magic Online'],
+    'with only Paper kept the digital sets are hidden from the set list');
+  assertEqual(paper.document.querySelector('.search-controls label[for="order"]').textContent, '1 of 3 sets in',
+    'the set counter follows the platform filter');
+
+  const arena = await load({ clipboard: false, setPlatforms: ['arena'] }, 'https://scryfall.com/sets', setsHtml);
+  assertEqual(hidden(arena.document), ['Modern Horizons 3', 'Magic Online'],
+    'with only Arena kept the paper set and the Magic Online set are hidden');
+
+  const all = await load({ clipboard: false, setPlatforms: ['paper', 'arena', 'mtgo'] }, 'https://scryfall.com/sets', setsHtml);
+  assertEqual(hidden(all.document), [], 'with every platform kept no set is hidden');
+
+  // The same choice decides which printings join the grouped table.
+  const digitalPrint = {
+    id: 'p9', name: 'Test Card', uri: 'https://scryfall.com/card/ysos/7/test-card', set: 'ysos',
+    setName: 'Alchemy: Secrets of Strixhaven', number: '7', lang: 'en', digital: true,
+    finishes: ['nonfoil'], prices: {}
+  };
+  const printRoutes = { ...routes, allPrints: () => ({ prints: [...prints, digitalPrint], truncated: false }) };
+  const groups = page => [...page.document.querySelectorAll('.stk-print-group-row')].map(row => row.textContent);
+  const paperPrints = await loadCardPage({ cards: [], setPlatforms: ['paper'] }, printRoutes);
+  assertEqual(groups(paperPrints), ['Test Set (TST) · 4', 'Modern Horizons 3 (MH3) · 2'],
+    'an Arena printing gets no group while only Paper is kept');
+  const arenaPrints = await loadCardPage({ cards: [], setPlatforms: ['arena'] }, printRoutes);
+  assertEqual(groups(arenaPrints), ['Test Set (TST) · 2'],
+    'with only Arena kept the paper set keeps nothing but the rows Scryfall itself showed');
+  assert([...arenaPrints.document.querySelectorAll('.prints-table tbody tr')]
+    .some(row => /Alchemy: Secrets of Strixhaven/.test(row.textContent)),
+    'the Arena printing is the one added printing the table still holds');
+  const hiddenPrints = await waitFor(() => {
+    const rows = [...arenaPrints.document.querySelectorAll('.prints-table tbody tr')]
+      .filter(row => row.classList.contains('stk-digital-set-hidden'));
+    return rows.length
+      ? rows.map(row => row.querySelector('td:first-child a[href]')?.getAttribute('href') || '') : null;
+  }, 'native paper printings hidden');
+  assert(hiddenPrints.every(href => /\/card\/(?:tst|mh3)\//.test(href)),
+    'the native paper printings are hidden on the card page');
+  assert(!arenaPrints.document.querySelector('.prints-table tbody tr.current').classList.contains('stk-digital-set-hidden'),
+    'the printing being viewed stays visible even when its platform is not kept');
+}
+
+async function advancedSetFilterTest() {
+  console.log('content.js: advanced search set field follows the platform filter');
+  const html = `<!DOCTYPE html><html><body><div id="main"><form class="form-layout">
+    <label><input type="checkbox" name="games[]" value="paper" checked> Paper</label>
+    <label><input type="checkbox" name="games[]" value="arena"> Arena</label>
+    <div class="form-row">
+      <div class="inner-flex">
+        <select name="set[]" id="set" multiple>
+          <option value="mh3">Modern Horizons 3 (MH3)</option>
+          <option value="ysos" selected>Alchemy: Secrets of Strixhaven (YSOS)</option>
+          <option value="me2">Magic Online (ME2)</option>
+        </select>
+      </div>
+      <span class="select2 select2-container select2-container--default">
+        <span class="select2-results"><ul class="select2-results__options" id="select2-set-results">
+        <li class="select2-results__option" role="group"><strong class="select2-results__group">Expansions</strong>
+          <ul class="select2-results__options select2-results__options--nested">
+            <li class="select2-results__option" role="treeitem"><svg><use xlink:href="#sets-mh3-svg"></use></svg><span>Modern Horizons 3 (MH3)</span></li>
+            <li class="select2-results__option" role="treeitem"><svg><use xlink:href="#sets-ysos-svg"></use></svg><span>Alchemy: Secrets of Strixhaven (YSOS)</span></li>
+          </ul>
+        </li>
+        <li class="select2-results__option" role="group"><strong class="select2-results__group">Online</strong>
+          <ul class="select2-results__options select2-results__options--nested">
+            <li class="select2-results__option" role="treeitem"><svg><use xlink:href="#sets-me2-svg"></use></svg><span>Magic Online (ME2)</span></li>
+          </ul>
+        </li>
+      </ul></span>
+    </span>
+    </div>
+  </form></div></body></html>`;
+  const load = async state => {
+    const page = createPage({ url: 'https://scryfall.com/advanced', html, state, routes });
+    await page.script('i18n.js');
+    await page.script('format-catalog.js');
+    await page.script('tag-icons.js');
+    await page.script('data/shambleshark-nicknames.js');
+    await page.script('content.js');
+    await sleep(80);
+    return page;
+  };
+  const selectValues = page => [...page.document.querySelectorAll('select[name="set[]"] option')].map(option => option.value);
+  const listValues = page => [...page.document.querySelectorAll('.select2-results__option[role="treeitem"] use')]
+    .map(use => (use.getAttribute('xlink:href') || '').replace('#sets-', '').replace('-svg', ''));
+  const groups = page => [...page.document.querySelectorAll('.select2-results__option[role="group"] strong')].map(node => node.textContent);
+
+  const paper = await load({ clipboard: false, setPlatforms: ['paper'] });
+  assertEqual(selectValues(paper), ['mh3', 'ysos'], 'the Magic Online set leaves the select while only Paper is kept');
+  assertEqual(listValues(paper), ['mh3'], 'the rendered dropdown is pruned the same way; the chosen set is a chip, not a row');
+  assertEqual(groups(paper), ['Expansions'], 'a group that loses every option is removed with it');
+
+  const arena = await load({ clipboard: false, setPlatforms: ['arena'] });
+  assertEqual(selectValues(arena), ['ysos'], 'only the selected Arena set survives in the select');
+  assertEqual(listValues(arena), ['ysos'], 'and in the rendered dropdown');
+
+  const all = await load({ clipboard: false });
+  assertEqual(selectValues(all), ['mh3', 'ysos', 'me2'], 'with every platform kept the select is untouched');
+  assertEqual(listValues(all), ['mh3', 'ysos', 'me2'], 'and so is the rendered dropdown');
+  assertEqual(groups(all), ['Expansions', 'Online'], 'no group disappears without a platform filter');
+
+  // Scryfall only builds the dropdown when the field is opened, so the list
+  // arrives long after the script has run.
+  const closedHtml = html.replace(/<span class="select2 select2-container[\s\S]*?\n    <\/span>\n/, '');
+  const late = createPage({
+    url: 'https://scryfall.com/advanced', html: closedHtml, state: { clipboard: false, setPlatforms: ['paper'] },
+    routes, mutationObserver: true
+  });
+  await late.script('i18n.js');
+  await late.script('format-catalog.js');
+  await late.script('tag-icons.js');
+  await late.script('data/shambleshark-nicknames.js');
+  await late.script('content.js');
+  await sleep(80);
+  assertEqual(late.document.querySelectorAll('.select2-results__option').length, 0, 'the field starts without a rendered list');
+  late.document.querySelector('.form-row').insertAdjacentHTML('beforeend', html.match(/<span class="select2 select2-container[\s\S]*?\n    <\/span>\n/)[0]);
+  late.flushObservers();
+  assertEqual(listValues(late), ['mh3'], 'a list that appears later is pruned as soon as it is rendered');
+  assertEqual(groups(late), ['Expansions'], 'and its empty group is removed with it');
+}
+
 (async () => {
   try {
     await cardPageTest();
@@ -819,6 +967,8 @@ async function advancedPriceFilterTest() {
     await clipboardDisabledTest();
     await legacyMigrationTest();
     await advancedPriceFilterTest();
+    await setPlatformTest();
+    await advancedSetFilterTest();
     summary('test-preview');
     process.exit(0);
   } catch (error) {

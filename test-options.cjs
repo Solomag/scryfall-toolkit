@@ -23,7 +23,8 @@ const REQUIRED_IDS = [
   'onlyCardmarket', 'cardtraderPrices', 'euroPriceSources', 'edhrecUsage',
   'edhrecSalt', 'showSaltScale', 'edhrecLink', 'edhrecUsageDisplay',
   'legalities', 'exportFormat', 'taggerSearchLinks', 'cardSearchLinks',
-  'cardNicknames', 'deckNoPrices', 'stackedDeckCards', 'deckTokens'
+  'cardNicknames', 'deckNoPrices', 'stackedDeckCards', 'deckTokens',
+  'setPlatformsAll', 'setPlatformsPaper', 'setPlatformsArena', 'setPlatformsMtgo'
 ];
 
 function htmlIdCheck() {
@@ -141,6 +142,43 @@ async function settingsTest() {
   assertEqual(mock.openOptionsPageCalls.length, 1, 'openOptions opens the options page');
 }
 
+async function setPlatformsTest() {
+  console.log('options.js: platform checkboxes');
+  const page = loadOptions({});
+  const { document, mock } = page;
+  const all = document.getElementById('setPlatformsAll');
+  const boxes = ['setPlatformsPaper', 'setPlatformsArena', 'setPlatformsMtgo']
+    .map(id => document.getElementById(id));
+  assertEqual([all.checked, ...boxes.map(box => box.checked)], [true, true, true, true],
+    'every platform starts checked, so All is checked as well');
+
+  boxes[1].checked = false;
+  boxes[2].checked = false;
+  fireEvent(boxes[1], 'change');
+  assertEqual(mock.state.setPlatforms, ['paper'], 'leaving Paper alone is stored as the only platform');
+  assertEqual(all.checked, false, 'All is cleared once a platform is dropped');
+
+  all.checked = true;
+  fireEvent(all, 'change');
+  assertEqual(mock.state.setPlatforms, ['paper', 'arena', 'mtgo'], 'All restores every platform');
+
+  boxes[0].checked = false;
+  boxes[1].checked = false;
+  boxes[2].checked = false;
+  fireEvent(boxes[2], 'change');
+  assertEqual(mock.state.setPlatforms, ['paper', 'arena', 'mtgo'],
+    'dropping the last platform falls back to All instead of an empty list');
+  assertEqual([all.checked, ...boxes.map(box => box.checked)], [true, true, true, true], 'and the boxes show it');
+
+  const stored = loadOptions({ setPlatforms: ['mtgo'] });
+  assertEqual(
+    [stored.document.getElementById('setPlatformsAll').checked,
+      ...['setPlatformsPaper', 'setPlatformsArena', 'setPlatformsMtgo'].map(id => stored.document.getElementById(id).checked)],
+    [false, false, false, true],
+    'a stored single-platform choice is restored'
+  );
+}
+
 async function languageTest() {
   console.log('options.js: settings language');
   const page = loadOptions({});
@@ -173,6 +211,7 @@ async function discoveredFormatsTest() {
     htmlIdCheck();
     await formatListTest();
     await settingsTest();
+    await setPlatformsTest();
     await languageTest();
     await discoveredFormatsTest();
     summary('test-options');

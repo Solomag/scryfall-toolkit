@@ -4,6 +4,7 @@
     clipboard: true, tags: true, cardTags: true, artTags: true, relationships: true,
     onlyCardmarket: false, printAddButtons: true, printPageSameTab: false, hideDigitalSets: false, hideNonTournamentSets: false, hideOversizedSets: false,
     hideForeignBlackBorder: false, hideNonEnglishPrints: false, legalities: true, finishBadges: true, cardtraderPrices: false, euroPriceSources: 'cm',
+    setPlatforms: ['paper', 'arena', 'mtgo'],
     edhrecUsage: false, edhrecSalt: false, showSaltScale: false, edhrecLink: true, edhrecUsageDisplay: 'both',
     usageColorMetric: 'decks', usageMediumDecks: 50000, usageHighDecks: 100000,
     usageMediumPercent: 1, usageHighPercent: 2.6, saltMediumThreshold: 1, saltHighThreshold: 2,
@@ -18,6 +19,33 @@
   const cardPath = location.pathname.match(/^\/card\/([^/]+)\/([^/]+)/);
   const cardPage = Boolean(cardPath && document.querySelector('.card-image') && document.querySelector('#main .prints-table'));
   const advancedPage = location.pathname === '/advanced';
+  // Paper is every set Scryfall does not mark digital; Arena and Magic Online
+  // sets answer for themselves in the platform index.
+  const PLATFORM_NAMES = ['paper', 'arena', 'mtgo'];
+  const chosenPlatforms = new Set(
+    (Array.isArray(settings.setPlatforms) ? settings.setPlatforms : PLATFORM_NAMES).filter(name => PLATFORM_NAMES.includes(name))
+  );
+  if (!chosenPlatforms.size) for (const name of PLATFORM_NAMES) chosenPlatforms.add(name);
+  const platformFilterOn = chosenPlatforms.size < PLATFORM_NAMES.length;
+  // Tells whether a set belongs to a platform the user kept. A digital set the
+  // index could not place stays visible: hiding a set on a guess is worse.
+  const platformSetVisible = (categories, platforms) => {
+    const digital = new Set(categories?.digital || []);
+    const games = platforms || {};
+    return code => {
+      const key = String(code || '').toLowerCase();
+      if (!digital.has(key)) return chosenPlatforms.has('paper');
+      const list = games[key];
+      return !Array.isArray(list) || !list.length || list.some(game => chosenPlatforms.has(game));
+    };
+  };
+  const platformSetRequests = async () => {
+    const [categories, platforms] = await Promise.all([
+      request({type: 'setCategories'}).catch(() => ({ digital: [] })),
+      request({type: 'setPlatforms'}).catch(() => ({}))
+    ]);
+    return { categories, visible: platformSetVisible(categories, platforms) };
+  };
   const identity = cardPage ? { set: cardPath[1], number: decodeURIComponent(cardPath[2]) } : null;
   // Shared with the in-table prints expansion: the Finish column header lands
   // asynchronously (so expansions wait for it before counting columns) and the
@@ -148,7 +176,7 @@
   }
 
   if (settings.clipboard) await initClipboard();
-  if ((settings.hideDigitalSets || settings.hideNonTournamentSets || settings.hideOversizedSets || settings.hideForeignBlackBorder || settings.hideNonEnglishPrints) && (/^\/sets\/?$/.test(location.pathname) || cardPage)) initSetFilter();
+  if ((platformFilterOn || settings.hideDigitalSets || settings.hideNonTournamentSets || settings.hideOversizedSets || settings.hideForeignBlackBorder || settings.hideNonEnglishPrints) && (/^\/sets\/?$/.test(location.pathname) || cardPage)) initSetFilter();
   if (cardPage && settings.tags) initTags();
   if (cardPage) initLegalities();
   if (cardPage && settings.finishBadges) initPrintFinishes();
@@ -157,6 +185,7 @@
   if (cardPage && (settings.edhrecUsage || settings.edhrecSalt)) initEdhrecStats();
   if (settings.onlyCardmarket) initPriceFilter();
   if (advancedPage) initAdvancedPriceFilter();
+  if (advancedPage) initAdvancedSetFilter();
   if (cardPage && (settings.cardtraderPrices || settings.euroPriceSources !== 'cm')) initCardTrader();
   if (cardPage && settings.cardSearchLinks) initCardSearchLinks();
   if (cardPage && settings.cardNicknames) initCardNicknames();
@@ -170,9 +199,11 @@
     // /sets API. Restrict this exception to the twelve online-only cubes.
     const onlineCubes = new Set(['apcube','arena','chromatic','livethedream','tinkerer','grixis','protour','vintage','uncommon','modern','legacy','twisted']);
     const needsSetIndex = settings.hideDigitalSets || settings.hideNonTournamentSets || settings.hideOversizedSets || settings.hideForeignBlackBorder;
-    (needsSetIndex ? request({type:'setCategories'}) : Promise.resolve({digital:[]}))
-      .catch(() => ({digital:[],foreignBlackBorder:['4bb','fbb','bchr']}))
-      .then(categories => {
+    const categoriesRequest = needsSetIndex || platformFilterOn
+      ? platformSetRequests().catch(() => ({categories: {digital: [], foreignBlackBorder: ['4bb', 'fbb', 'bchr']}, visible: () => true}))
+      : Promise.resolve({categories: {digital: []}, visible: () => true});
+    categoriesRequest
+      .then(({categories, visible: setVisible}) => {
       if (!categories || !Array.isArray(categories.digital)) return;
       const hidden = new Set([
         ...(settings.hideDigitalSets ? categories.digital : []),
@@ -191,19 +222,23 @@
           catch { /* Ignore malformed unrelated links. */ }
           const set = path?.match(/^\/sets\/([^/]+)\/?$/)?.[1];
           const cube = path?.match(/^\/cubes\/([^/]+)\/?$/)?.[1];
-          row.classList.toggle('stk-digital-set-hidden', Boolean(set && hidden.has(set.toLowerCase()) || settings.hideDigitalSets && cube && onlineCubes.has(cube.toLowerCase())));
+          row.classList.toggle('stk-digital-set-hidden', Boolean(set && (hidden.has(set.toLowerCase()) || !setVisible(set)) || settings.hideDigitalSets && cube && onlineCubes.has(cube.toLowerCase())));
         }
         // Printings are identified by the set in the card URL. Keep the
         // selected printing visible so its own detail page remains coherent.
         for (const row of main.querySelectorAll('.prints-table tbody tr')) {
           const link = row.querySelector('td:first-child a[href]');
-          const path = link?.getAttribute('href') || '';
-          const set = path.match(/^\/card\/([^/]+)\//)?.[1];
+          // Scryfall prints the link of a printing as a path, but the same row
+          // can carry a full URL; the path is what names the set.
+          let path;
+          try { path = new URL(link?.getAttribute('href') || '', location.href).pathname; }
+          catch { /* Ignore malformed unrelated links. */ }
+          const set = path?.match(/^\/card\/([^/]+)\//)?.[1];
           // English links end after the card slug. A language-specific link
           // has an extra /lang/ segment before that slug (e.g. /ptk/1/ja/name).
-          const foreignPrinting = /^\/card\/[^/]+\/[^/]+\/(?:[a-z]{2,3})\/[^/]+/i.test(path);
+          const foreignPrinting = /^\/card\/[^/]+\/[^/]+\/(?:[a-z]{2,3})\/[^/]+/i.test(path || '');
           row.classList.toggle('stk-digital-set-hidden', Boolean(!row.classList.contains('current') &&
-            (set && hidden.has(set.toLowerCase()) || settings.hideNonEnglishPrints && foreignPrinting)));
+            (set && (hidden.has(set.toLowerCase()) || !setVisible(set)) || settings.hideNonEnglishPrints && foreignPrinting)));
         }
         const counter = main.querySelector('.search-controls label[for="order"]');
         if (counter && rows.length) {
@@ -542,6 +577,50 @@
     }).observe(document.body, { childList: true, subtree: true });
   }
 
+  function initAdvancedSetFilter() {
+    if (!platformFilterOn) return;
+    // The Games checkboxes sit right above this field, so the set list follows
+    // the platforms that are kept. Scryfall's select2 keeps its own copy of the
+    // options it already rendered, so the select and the dropdown are pruned.
+    const select = document.querySelector('#main select[name="set[]"]');
+    if (!select) return;
+    platformSetRequests().then(({visible}) => {
+      const chosen = new Set([...select.options].filter(option => option.selected).map(option => option.value.toLowerCase()));
+      for (const option of [...select.options]) {
+        const code = option.value.toLowerCase();
+        if (code && !chosen.has(code) && !visible(code)) option.remove();
+      }
+      // Scryfall builds this dropdown only when the field is opened, and it puts
+      // the container into the form rather than next to the select, so the list
+      // is looked up again on every change inside the form.
+      const containerOf = () => {
+        const results = document.getElementById(`select2-${select.id || 'set'}-results`);
+        const owner = results?.closest('.select2-container');
+        if (owner) return owner;
+        const sibling = select.nextElementSibling;
+        if (sibling?.classList?.contains('select2-container')) return sibling;
+        return [...(select.parentElement?.querySelectorAll('.select2-container') || [])]
+          .find(node => node.previousElementSibling === select) || null;
+      };
+      // Every option carries the set symbol of its set, which names the code.
+      const prune = () => {
+        const container = containerOf();
+        if (!container) return;
+        for (const item of container.querySelectorAll('.select2-results__option[role="treeitem"]')) {
+          const use = item.querySelector('use');
+          const href = use?.getAttribute('xlink:href') || use?.getAttribute('href') || '';
+          const set = href.match(/^#sets-(.+)-svg$/)?.[1];
+          if (set && !visible(set.toLowerCase())) item.remove();
+        }
+        for (const group of container.querySelectorAll('.select2-results__option[role="group"]')) {
+          if (!group.querySelector('.select2-results__option[role="treeitem"]')) group.remove();
+        }
+      };
+      prune();
+      new MutationObserver(prune).observe(select.closest('form') || document.body, { childList: true, subtree: true });
+    });
+  }
+
   function initEdhrecStats() {
     const legality = document.querySelector('#main .card-text .card-legality');
     const name = [...document.querySelectorAll('#main .card-text-card-name')]
@@ -802,8 +881,16 @@
         oracleId = (await request({type:'card', id})).oracle_id;
       }
       const {prints, truncated} = await request({type:'allPrints', oracleId});
-      const categories = (settings.hideNonTournamentSets || settings.hideOversizedSets || settings.hideForeignBlackBorder || settings.hideDigitalSets)
-        ? await request({type:'setCategories'}).catch(() => ({})) : {};
+      const needsCategories = platformFilterOn || settings.hideNonTournamentSets || settings.hideOversizedSets || settings.hideForeignBlackBorder || settings.hideDigitalSets;
+      // The platform index only says which client carries a digital set, so the
+      // set index is what tells the two apart.
+      const [categories, platforms] = needsCategories
+        ? await Promise.all([
+          request({type:'setCategories'}).catch(() => ({})),
+          platformFilterOn ? request({type:'setPlatforms'}).catch(() => ({})) : Promise.resolve({})
+        ])
+        : [{}, {}];
+      const platformVisible = platformFilterOn ? platformSetVisible(categories, platforms) : () => true;
       const excluded = new Set([
         ...(settings.hideDigitalSets ? categories.digital || [] : []),
         ...(settings.hideNonTournamentSets ? categories.nonTournament || [] : []),
@@ -813,6 +900,7 @@
       const groups = new Map();
       for (const card of prints) {
         if (excluded.has(card.set) || settings.hideDigitalSets && card.digital ||
+            !platformVisible(card.set) ||
             settings.hideNonEnglishPrints && card.lang !== 'en') continue;
         const group = groups.get(card.set) || [];
         group.push(card);

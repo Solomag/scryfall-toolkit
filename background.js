@@ -1,10 +1,16 @@
 // Bundled compact tag data originates from MoxTags v1.8.3 (MIT).
 importScripts("data/oracle-tags.js", "data/illustration-tags-1.js", "data/illustration-tags-2.js");
+importScripts("data/set-platforms.js");
 importScripts("format-overrides.js");
 const cache = new Map();
 const traderCache = new Map();
 const edhrecCache = new Map();
 let digitalSetRequest;
+let setPlatformRequest;
+// The bundled snapshot answers almost every digital set; Scryfall's own index
+// never says which client carries one. See data/set-platforms.js.
+const bundledSetPlatforms = self.__STK_SET_PLATFORMS || {};
+delete self.__STK_SET_PLATFORMS;
 let traderNextMarketplaceRequest = 0;
 chrome.storage.onChanged?.addListener(changes => { if (changes.cardtraderToken) traderCache.clear(); });
 function traderMemo(key, ttl, load) {
@@ -87,35 +93,12 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
       return await getJSON(`https://api.scryfall.com/cards/${message.id}`);
     }
     if (message.type === 'digitalSets' || message.type === 'setCategories') {
-      if (!digitalSetRequest) digitalSetRequest = (async () => {
-        const { digitalSetIndex } = await chrome.storage.local.get('digitalSetIndex');
-        if (digitalSetIndex?.categories?.foreignBlackBorder && digitalSetIndex.expires > Date.now()) return digitalSetIndex.categories;
-        try {
-          const result = await getJSON('https://api.scryfall.com/sets',
-            {headers:{Accept:'application/json'},credentials:'omit'});
-          if (!Array.isArray(result?.data) || result.has_more) throw new Error('Incomplete set index');
-          const categories = {digital:[],nonTournament:[],oversized:[],foreignBlackBorder:[]};
-          for (const set of result.data) {
-            if (!/^[a-z0-9_-]+$/i.test(set.code || '')) continue;
-            const code = set.code.toLowerCase();
-            // Oversized memorabilia are a separate preference: they can be
-            // useful as Commander display cards even when not sanctioned.
-            const oversized = /oversiz/i.test(set.name || '') || /^o(?:cmd|cd|pr|pd)/i.test(code);
-            if (set.digital === true) categories.digital.push(code);
-            if (/foreign black border/i.test(set.name || '')) categories.foreignBlackBorder.push(code);
-            if (oversized) categories.oversized.push(code);
-            else if (['memorabilia','minigame','vanguard','token'].includes(set.set_type) ||
-              /^(?:30a|cei|ced|wc97|wc98|wc99|wc0[0-4])$/.test(code)) categories.nonTournament.push(code);
-          }
-          await chrome.storage.local.set({ digitalSetIndex:{ categories, expires:Date.now() + 24 * 3600000 } });
-          return categories;
-        } catch (error) {
-          if (digitalSetIndex?.categories) return digitalSetIndex.categories;
-          throw error;
-        }
-      })().finally(() => { digitalSetRequest = null; });
-      const categories = await digitalSetRequest;
+      const categories = await loadSetCategories();
       return message.type === 'digitalSets' ? categories.digital : categories;
+    }
+    if (message.type === 'setPlatforms') {
+      if (!setPlatformRequest) setPlatformRequest = loadSetPlatforms().finally(() => { setPlatformRequest = null; });
+      return await setPlatformRequest;
     }
     if (message.type === "finishes") {
       const ids = message.ids;
@@ -265,6 +248,89 @@ async function getJSON(url, options) {
   const response = await fetch(url, options);
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   return response.json();
+}
+
+function loadSetCategories() {
+  if (!digitalSetRequest) digitalSetRequest = (async () => {
+    const { digitalSetIndex } = await chrome.storage.local.get('digitalSetIndex');
+    if (digitalSetIndex?.categories?.foreignBlackBorder && digitalSetIndex.expires > Date.now()) return digitalSetIndex.categories;
+    try {
+      const result = await getJSON('https://api.scryfall.com/sets',
+        {headers:{Accept:'application/json'},credentials:'omit'});
+      if (!Array.isArray(result?.data) || result.has_more) throw new Error('Incomplete set index');
+      const categories = {digital:[],nonTournament:[],oversized:[],foreignBlackBorder:[]};
+      for (const set of result.data) {
+        if (!/^[a-z0-9_-]+$/i.test(set.code || '')) continue;
+        const code = set.code.toLowerCase();
+        // Oversized memorabilia are a separate preference: they can be
+        // useful as Commander display cards even when not sanctioned.
+        const oversized = /oversiz/i.test(set.name || '') || /^o(?:cmd|cd|pr|pd)/i.test(code);
+        if (set.digital === true) categories.digital.push(code);
+        if (/foreign black border/i.test(set.name || '')) categories.foreignBlackBorder.push(code);
+        if (oversized) categories.oversized.push(code);
+        else if (['memorabilia','minigame','vanguard','token'].includes(set.set_type) ||
+          /^(?:30a|cei|ced|wc97|wc98|wc99|wc0[0-4])$/.test(code)) categories.nonTournament.push(code);
+      }
+      await chrome.storage.local.set({ digitalSetIndex:{ categories, expires:Date.now() + 24 * 3600000 } });
+      return categories;
+    } catch (error) {
+      if (digitalSetIndex?.categories) return digitalSetIndex.categories;
+      throw error;
+    }
+  })().finally(() => { digitalSetRequest = null; });
+  return digitalSetRequest;
+}
+
+// Scryfall answers 10 requests a second, so a burst of set lookups earns a 429.
+// The walk is sequential on purpose: it keeps the platform index cheap without
+// ever asking for more than one request at a time.
+let setPlatformNextRequest = 0;
+async function setPlatformGames(code) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const wait = Math.max(0, setPlatformNextRequest - Date.now());
+    if (wait) await new Promise(resolve => setTimeout(resolve, wait));
+    setPlatformNextRequest = Date.now() + 130;
+    try {
+      const result = await getJSON(
+        `https://api.scryfall.com/cards/search?q=${encodeURIComponent(`e:${code}`)}&unique=cards&page_size=1`,
+        {headers:{Accept:'application/json'},credentials:'omit'});
+      const games = Array.isArray(result?.data?.[0]?.games) ? result.data[0].games : [];
+      if (games.length) return games;
+    } catch (error) {
+      // A rate limit or a hiccup is worth one more try; a set that stays
+      // unknown is reported as such instead of being guessed at.
+    }
+    await new Promise(resolve => setTimeout(resolve, 700 * (attempt + 1)));
+  }
+  return null;
+}
+
+async function loadSetPlatforms() {
+  const { setPlatformIndex } = await chrome.storage.local.get('setPlatformIndex');
+  const stale = !setPlatformIndex || setPlatformIndex.expires <= Date.now();
+  // The snapshot ages with the cache: a month later every set is asked again
+  // in case Scryfall moved a printing to another client.
+  const platforms = stale ? { ...bundledSetPlatforms } : { ...bundledSetPlatforms, ...(setPlatformIndex.platforms || {}) };
+  let digital;
+  try { digital = (await loadSetCategories()).digital; }
+  catch (error) {
+    if (Object.keys(platforms).length) return platforms;
+    throw error;
+  }
+  const unknown = digital.filter(code => !(code in platforms));
+  if (!stale && !unknown.length) return platforms;
+  const found = {};
+  try {
+    for (const code of unknown) {
+      const games = await setPlatformGames(code);
+      if (games) { found[code] = games; platforms[code] = games; }
+    }
+  } finally {
+    if (Object.keys(found).length) {
+      await chrome.storage.local.set({ setPlatformIndex:{ platforms, expires:Date.now() + 30 * 24 * 3600000 } }).catch(() => {});
+    }
+  }
+  return platforms;
 }
 
 async function fetchTags(set, number) {

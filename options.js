@@ -6,6 +6,7 @@ const defaults = {
   usageColorMetric: 'decks', usageMediumDecks: 50000, usageHighDecks: 100000,
   usageMediumPercent: 1, usageHighPercent: 2.6, saltMediumThreshold: 1, saltHighThreshold: 2,
   hideCasterIndicator: false, printPageSameTab: false,
+  setPlatforms: ['paper', 'arena', 'mtgo'],
   taggerSearchLinks: false, cardSearchLinks: false, cardNicknames: false, deckNoPrices: true, stackedDeckCards: false, deckTokens: false,
   legalities: true, exportFormat: "moxfield", formatOrder: null, formatVisibility: null,
   discoveredFormats: [], premodern: true, heritage: false, classic: false, peak: false
@@ -77,6 +78,34 @@ chrome.storage.local.get(defaults, values => {
       });
     });
   }
+  // Platform checkboxes behave as one control: "All" mirrors the three
+  // platforms, and unchecking the last one falls back to All so the set lists
+  // never end up empty.
+  const platformBoxes = ['paper', 'arena', 'mtgo'].map(name => ({ name, element: document.getElementById('setPlatforms' + name[0].toUpperCase() + name.slice(1)) }));
+  const platformAll = document.getElementById('setPlatformsAll');
+  function selectedPlatforms() {
+    return platformBoxes.filter(box => box.element.checked).map(box => box.name);
+  }
+  function showPlatforms(chosen) {
+    for (const box of platformBoxes) box.element.checked = chosen.includes(box.name);
+    platformAll.checked = platformBoxes.every(box => box.element.checked);
+  }
+  function savePlatforms() {
+    if (!selectedPlatforms().length) { showPlatforms(platformBoxes.map(box => box.name)); return; }
+    chrome.storage.local.set({ setPlatforms: selectedPlatforms() }, () => { status.textContent = t('Сохранено'); });
+  }
+  const storedPlatforms = Array.isArray(values.setPlatforms) ? values.setPlatforms.filter(name => platformBoxes.some(box => box.name === name)) : [];
+  showPlatforms(storedPlatforms.length ? storedPlatforms : platformBoxes.map(box => box.name));
+  platformAll.addEventListener('change', () => {
+    if (platformAll.checked) showPlatforms(platformBoxes.map(box => box.name));
+    else showPlatforms([]);
+    savePlatforms();
+  });
+  for (const box of platformBoxes) box.element.addEventListener('change', () => {
+    platformAll.checked = platformBoxes.every(entry => entry.element.checked);
+    savePlatforms();
+  });
+
   const usageMetric = document.getElementById('usageColorMetric');
   function showUsageThresholds() {
     document.getElementById('usageCountThresholds').hidden = usageMetric.value === 'percent';

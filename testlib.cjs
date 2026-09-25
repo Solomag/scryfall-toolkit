@@ -176,6 +176,15 @@ function createPage(options) {
     assign(target) { location.assigned.push(target); }
   };
   const confirmQueue = options.confirmQueue || [];
+  const observers = [];
+  // linkedom does not run observers, so a test can ask for a small working one
+  // to prove that late DOM changes are handled.
+  const liveObserver = options.mutationObserver ? class {
+    constructor(callback) { this.callback = callback; this.targets = []; observers.push(this); }
+    observe(node, config = {}) { this.targets.push({ node, config }); }
+    disconnect() { this.targets = []; }
+    takeRecords() { return []; }
+  } : class { observe() {} disconnect() {} takeRecords() { return []; } };
   const context = {
     console,
     URL,
@@ -187,7 +196,7 @@ function createPage(options) {
     navigator: { clipboard: { writeText: text => { mock.clipboardWrites.push(text); return Promise.resolve(); } } },
     localStorage: createLocalStorage(options.localStorage),
     confirm: () => (confirmQueue.length ? confirmQueue.shift() : true),
-    MutationObserver: class { observe() {} disconnect() {} takeRecords() { return []; } },
+    MutationObserver: liveObserver,
     requestAnimationFrame: callback => setTimeout(() => callback(Date.now()), 0),
     cancelAnimationFrame: handle => clearTimeout(handle),
     getComputedStyle: () => ({ color: 'rgb(99, 68, 150)', backgroundColor: 'rgba(0, 0, 0, 0)', getPropertyValue: () => '' }),
@@ -216,6 +225,14 @@ function createPage(options) {
     script(file) {
       const code = fs.readFileSync(path.join(ROOT, file), 'utf8');
       return vm.runInContext(code, context, { filename: file });
+    },
+    // Delivers one childList batch to every observer the page registered, which
+    // is what a real DOM does after the test changed something.
+    flushObservers() {
+      const record = [{ type: 'childList', addedNodes: [], removedNodes: [] }];
+      for (const observer of observers) {
+        if (observer.targets.length) observer.callback(record, observer);
+      }
     }
   };
 }
