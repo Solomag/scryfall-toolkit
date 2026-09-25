@@ -3,7 +3,7 @@ chrome.storage.local.get({ darkTheme: false, hideCasterIndicator: false, siteLan
   document.documentElement.classList.toggle("stk-hide-caster", Boolean(hideCasterIndicator));
   document.documentElement.classList.toggle('stk-site-ru', siteLanguage === 'ru');
   if (siteLanguage === 'ru') translateSiteControls();
-  if (darkTheme) { repairAccountColors(); repairDarkPurple(); repairSetSymbols(); }
+  if (darkTheme) { repairAccountColors(); repairDarkPurple(); }
 });
 if (/^\/(?:settings|profile|decks|@[^/]+(?:\/decks)?|users|account|contact)(?:\/|$)/.test(location.pathname)) {
   document.documentElement.classList.add('stk-account-page');
@@ -22,7 +22,7 @@ chrome.storage.onChanged.addListener(changes => {
   if (changes.siteLanguage) document.documentElement.classList.toggle('stk-site-ru', changes.siteLanguage.newValue === 'ru');
   if (changes.darkTheme) {
     document.documentElement.classList.toggle("stk-dark", Boolean(changes.darkTheme.newValue));
-    if (changes.darkTheme.newValue) { repairAccountColors(); repairDarkPurple(); repairSetSymbols(); }
+    if (changes.darkTheme.newValue) { repairAccountColors(); repairDarkPurple(); }
   }
 });
 
@@ -45,49 +45,6 @@ function repairDarkPurple() {
       if (!node.matches(selector) || !main.contains(node)) continue;
       if (node.classList.contains('stk-brighter-purple')) continue;
       if (getComputedStyle(node).color === 'rgb(99, 68, 150)') node.classList.add('stk-brighter-purple');
-    }
-  };
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', scan, {once:true});
-  else scan();
-  new MutationObserver(mutations => {
-    for (const mutation of mutations) for (const node of mutation.addedNodes) if (node.nodeType === 1) pending.add(node);
-    if (!pending.size) return;
-    if (scheduled) return;
-    scheduled = true;
-    requestAnimationFrame(() => {
-      scheduled = false;
-      for (const root of pending) scan(root);
-      pending.clear();
-    });
-  }).observe(document.documentElement, {childList:true,subtree:true});
-}
-
-// The set symbols in the advanced-search chips are inline SVGs. Most are black
-// line art that disappears on the dark surface, but a few sets (TMT, TDM, ...)
-// ship a light symbol that already reads well and should keep its own colour,
-// so only the genuinely dark ones are lifted.
-function repairSetSymbols() {
-  if (document.documentElement.dataset.stkSymbolRepair === 'true') return;
-  document.documentElement.dataset.stkSymbolRepair = 'true';
-  let scheduled = false;
-  const pending = new Set();
-  const selector = '.select2-selection__choice svg, .select2-results__option svg';
-  const luminance = fill => {
-    const match = fill.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-    return match ? (0.2126 * +match[1] + 0.7152 * +match[2] + 0.0722 * +match[3]) / 255 : null;
-  };
-  const scan = (root = document) => {
-    if (!document.documentElement.classList.contains('stk-dark')) return;
-    const candidates = root.matches?.(selector) ? [root, ...root.querySelectorAll(selector)] :
-      root.querySelectorAll?.(selector) || [];
-    for (const svg of candidates) {
-      if (svg.dataset.stkSymbolChecked) continue;
-      svg.dataset.stkSymbolChecked = '1';
-      const shapes = [...svg.querySelectorAll('path,use,circle,rect,polygon')];
-      const levels = shapes.map(node => luminance(getComputedStyle(node).fill)).filter(level => level !== null);
-      // A single light shape means the set brings its own bright symbol.
-      if (!levels.length || levels.some(level => level > 0.4)) continue;
-      svg.classList.add('stk-light-set-symbol');
     }
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', scan, {once:true});

@@ -221,7 +221,11 @@ html.stk-dark #main .advanced-search-checkbox input[type="checkbox"]:checked{bac
 html.stk-dark #main .form-row-label svg :is(path,g,circle,rect,polygon){fill:#bda1df!important}
 /* The "is"/"not" flags of a type match the legality palette: green for Legal,
    the banned red for Not, so the two agree across the site. */
-html.stk-dark .stk-light-set-symbol :is(path,use,circle,rect,polygon){fill:#bfb4c8!important}
+/* Every set symbol in the advanced-search chips and dropdown is black line art:
+   most inherit the default black, the rest spell it out as fill="#000" inside the
+   sprite's <use>, where no fill rule can reach them. A filter repaints the whole
+   rendered symbol, so all of them become readable on the dark surface. */
+html.stk-dark #main :is(.select2-selection__choice,.select2-results__option) svg{filter:invert(1) brightness(.92) saturate(.9)}
 html.stk-dark #main .select2-polarity{background-color:#75986e!important;color:#fff!important}
 html.stk-dark #main .select2-polarity.negative{background-color:#a71f2a!important;color:#fff!important}
 html.stk-dark .select2-container :is(.select2-selection__rendered,.select2-results__options,.select2-results__option,.select2-search,.select2-search__field){background-color:#292b2c!important;color:#e6e3df!important;border-color:#55575d!important;box-shadow:none!important}
