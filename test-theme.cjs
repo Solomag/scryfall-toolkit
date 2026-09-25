@@ -208,11 +208,11 @@ function cssCheck() {
   assert(theme.includes('html.stk-dark #main .select2-polarity.negative{background-color:#a71f2a!important;color:#fff!important}'),
     'the "not" flag uses the banned red');
   for (const rule of [
-    'html.stk-dark.stk-tagger body,html.stk-dark.stk-tagger #app{background-color:#1d2021',
+    'html.stk-dark.stk-tagger body{background-color:#191820',
+    'html.stk-dark.stk-tagger #app{background-color:transparent',
     'html.stk-dark.stk-tagger .app-header{background-color:#2b253a',
     'html.stk-dark.stk-tagger .app-footer{background-color:#191820',
-    'html.stk-dark.stk-tagger .blurry-background-art{background:#3a3247!important',
-    'html.stk-dark.stk-tagger .tag-input-field{background:#292b2c!important',
+    'html.stk-dark.stk-tagger .tag-input-field{background-color:#292b2c!important',
     'html.stk-dark.stk-tagger .dialog :is(h1,p){color:#e6e3df!important'
   ]) assert(theme.includes(rule), `Tagger rule present: ${rule.slice(0, 52)}`);
   const js = read('theme.js');
@@ -244,6 +244,7 @@ function cssCheck() {
 function auditGapCheck() {
   console.log('static: dark theme covers the surfaces the audit found');
   const theme = read('theme.css');
+  const js = read('theme.js');
   // Each of these was a light surface on a live page with the dark theme on.
   for (const [what, pattern] of [
     ['the "Jump to" menu of a set page', /html\.stk-dark #main :is\(\.dropdown-menu-items,\.dropdown-menu-items ul/],
@@ -275,6 +276,17 @@ function auditGapCheck() {
     ['the lifted purple under the pointer', /a\.stk-brighter-purple:is\(:hover,:active,:focus\)\{color:#d6c2f2/]
   ]) assert(pattern.test(theme), `dark theme repaints ${what}`);
 
+  // A brand band is a picture, not a surface. The Slack band on the bots page is
+  // a white field carrying the Slack logo as its background image; repainting it
+  // took the logo with it, and the background shorthand took the image with it
+  // even where the colour was set on its own.
+  assert(/if \(style\.backgroundImage && style\.backgroundImage !== 'none'\) continue;/.test(js),
+    'the light-surface repair never marks a node that paints a picture');
+  const shorthand = theme.replace(/\/\*[\s\S]*?\*\//g, '').split('\n')
+    .filter(line => /stk-info-light-surface|stk-account-light-bar|stk-tagger/.test(line) && /\{[^}]*background:/.test(line));
+  assert(!shorthand.length,
+    `a light surface or a Tagger surface is never painted through the background shorthand (offenders: ${shorthand.join(' | ')})`);
+
   // Tagger is a separate app: every rule that paints it must be scoped to the
   // host class, and its own light areas have to bring their ink with them.
   const code = theme.replace(/\/\*[\s\S]*?\*\//g, '');
@@ -282,8 +294,12 @@ function auditGapCheck() {
   assert(taggerRules.length >= 10, 'Tagger has its own block of rules');
   assert(taggerRules.every(line => line.trim().startsWith('html.stk-dark.stk-tagger')),
     'no Tagger rule can reach a Scryfall page');
-  assert(/:is\(\.light-mode,\.sample-tags,\.card-layout--tagging\)\{background:#252829/.test(theme),
+  assert(/:is\(\.light-mode,\.sample-tags,\.card-layout--tagging\)\{background-color:#252829/.test(theme),
     'Tagger keeps its own dark design and only its light panels are repainted');
+  assert(/stk-tagger body\{background-color:#191820/.test(theme) && /stk-tagger #app\{background-color:transparent/.test(theme),
+    "Tagger keeps its own page field and a transparent #app, so its soft glow is not painted over");
+  assert(!/stk-tagger \.blurry-background-art\{[^}]*background/.test(theme),
+    "Tagger's own glow keeps the colour it came with");
   assert(/:is\(\.light-mode,\.sample-tags,\.card-layout--tagging\) :is\(a,span,label,li,strong,em,b,i,p,div,section,article,h1,h2,h3,h4,h5,h6,dt,dd,td,th\)\{color:#e6e3df/.test(theme),
     'the ink inside a repainted Tagger panel is repainted with it, not left grey');
   assert(/\/\* Tagger is a separate Vue app/.test(theme), 'the Tagger block explains why it stands alone');

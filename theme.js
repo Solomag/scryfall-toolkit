@@ -177,7 +177,12 @@ function repairAccountColors() {
     // Account forms have several light title bars with no shared CSS class.
     for (const node of main.querySelectorAll('div,section,article,header,h1,h2,h3,h4,h5,h6,legend')) {
       if (node.classList.contains('stk-account-light-bar')) continue;
-      const value = getComputedStyle(node).backgroundColor.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+      const style = getComputedStyle(node);
+      // A band that paints a picture is a picture, not a light surface to flatten:
+      // the Slack band on the bots page is a white field carrying the Slack logo,
+      // and repainting its field would have taken the logo with it.
+      if (style.backgroundImage && style.backgroundImage !== 'none') continue;
+      const value = style.backgroundColor.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/);
       const before = getComputedStyle(node, '::before').backgroundColor.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/);
       const bounds = node.getBoundingClientRect();
       const light = [value,before].some(match => match && match.slice(1).every(channel => Number(channel) >= 235));

@@ -209,7 +209,10 @@ html.stk-dark #main ::selection{background:#705488!important;color:#fff!importan
 html.stk-dark #main :is(mark,.highlight,.search-highlight){background:#59476a!important;color:#fff!important;text-shadow:none!important}
 html.stk-dark.stk-docs-page #main :is(.box,.panel,.well,.bot,.bot-card,.bots-list,.faq,.faq-answer,.faq-question,.reference-example,.reference-block){background:#1d2021!important;color:#e6e3df!important;border-color:#414345!important}
 html.stk-dark.stk-docs-page #main :is(.box-header,.panel-heading,.reference-title,.faq-heading){background:#292b2c!important;color:#e6e3df!important;text-shadow:none!important}
-html.stk-dark.stk-info-page #main .stk-account-light-bar,html.stk-dark.stk-info-page #main .stk-info-light-surface{background:#252829!important;color:#e6e3df!important;border-color:#414345!important;box-shadow:none!important}
+/* The background is set on its own, never through the shorthand: a light bar is
+   sometimes a brand band that carries a logo as its background image (the Slack
+   band on the bots page is one), and the shorthand would take the logo with it. */
+html.stk-dark.stk-info-page #main .stk-account-light-bar,html.stk-dark.stk-info-page #main .stk-info-light-surface{background-color:#252829!important;color:#e6e3df!important;border-color:#414345!important;box-shadow:none!important}
 html.stk-dark.stk-info-page #main :is(.stk-account-light-bar,.stk-info-light-surface) :is(h1,h2,h3,h4,p,span,li){color:#e6e3df!important;text-shadow:none!important}
 html.stk-dark #main :is(.search-results,.search-controls,.set-header-content,.set-header-title,.card-grid-header-content){background:transparent!important}
 html.stk-dark.stk-blog-page #main :is(.blog-content,.blog-index,.blog-category,.blog-articles,.posts){background:#1d2021!important;color:#e6e3df!important}
@@ -469,22 +472,30 @@ html.stk-dark #main .card-grid-header-dot{color:#8f8a96!important}
    an inherited palette, and always paints the ink together with the panel.
    theme.js only adds stk-tagger on the Tagger host, so nothing here can reach
    Scryfall's own components that happen to share a class name. */
-html.stk-dark.stk-tagger body,html.stk-dark.stk-tagger #app{background-color:#1d2021!important;color:#e6e3df!important}
+/* Tagger's own surfaces, by Tagger's own values. The page field is Tagger's
+   #191820, not the site's #1d2021, and #app has to stay transparent: the app
+   keeps its soft glow in a child that sits behind it with a negative z-index, and
+   an opaque #app paints straight over the glow. */
+html.stk-dark.stk-tagger body{background-color:#191820!important;color:#e6e3df!important}
+html.stk-dark.stk-tagger #app{background-color:transparent!important;color:#e6e3df!important}
 html.stk-dark.stk-tagger .app-header{background-color:#2b253a!important;color:#fff!important;border-color:#3a3b3b!important}
 html.stk-dark.stk-tagger .app-footer{background-color:#191820!important;color:#c2c2c2!important;border-color:#3a3b3b!important}
 html.stk-dark.stk-tagger .app-footer :is(a,.footer-link){color:#c2c2c2!important}
-html.stk-dark.stk-tagger .blurry-background-art{background:#3a3247!important;color:#e6e3df!important}
-html.stk-dark.stk-tagger .tag-input-field{background:#292b2c!important;color:#e6e3df!important;border-color:#5a5d61!important}
+/* Tagger's own glow behind its header. Only the ink is stated here: the field is
+   a pale lilac blur of Tagger's own, and painting over it took the one soft
+   gradient the app had. */
+html.stk-dark.stk-tagger .blurry-background-art{color:#e6e3df!important}
+html.stk-dark.stk-tagger .tag-input-field{background-color:#292b2c!important;color:#e6e3df!important;border-color:#5a5d61!important}
 html.stk-dark.stk-tagger :is(.app-status,.app-viewport,.utilities) :is(a,button){color:#c79ce3!important}
 html.stk-dark.stk-tagger .dialog{color:#e6e3df!important}
 html.stk-dark.stk-tagger .dialog :is(h1,p){color:#e6e3df!important}
-html.stk-dark.stk-tagger .suggestion-input-utils{background:#252829!important;color:#e6e3df!important;border-color:#414345!important}
+html.stk-dark.stk-tagger .suggestion-input-utils{background-color:#252829!important;color:#e6e3df!important;border-color:#414345!important}
 html.stk-dark.stk-tagger .suggestion-input-utils :is(a,li,span){color:#c79ce3!important}
 /* Tagger's own light areas: the sample tag list on the front page, the access
    banner and the tagging layout on a card page. The panel and every ink inside
    it are repainted together, because Tagger's own grey would otherwise stay on
    the dark fill. */
-html.stk-dark.stk-tagger :is(.light-mode,.sample-tags,.card-layout--tagging){background:#252829!important;color:#e6e3df!important;border-color:#414345!important}
+html.stk-dark.stk-tagger :is(.light-mode,.sample-tags,.card-layout--tagging){background-color:#252829!important;color:#e6e3df!important;border-color:#414345!important}
 html.stk-dark.stk-tagger :is(.light-mode,.sample-tags,.card-layout--tagging) :is(a,span,label,li,strong,em,b,i,p,div,section,article,h1,h2,h3,h4,h5,h6,dt,dd,td,th){color:#e6e3df!important}
 html.stk-dark.stk-tagger :is(.light-mode,.sample-tags,.card-layout--tagging) :is(a,.tag-row a,.access-banner a){color:#c79ce3!important}
 html.stk-dark.stk-tagger :is(.light-mode,.sample-tags,.card-layout--tagging) :is(.tag-row,.access-banner){background-color:transparent!important}
