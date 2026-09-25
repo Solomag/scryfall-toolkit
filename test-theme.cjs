@@ -327,7 +327,8 @@ function auditGapCheck() {
   // Scryfall's file-input wrapper is a box the control sits in and paints nothing.
   // A broad [class*="file-input"] match filled it, and the fill was wider than the
   // control it held: a band of dark sticking out from under the button.
-  assert(!/\[class\*="file-input"\]/.test(theme),
+  const bareTheme = theme.replace(/\/\*[\s\S]*?\*\//g, '');
+  assert(!/\[class\*="file-input"\]/.test(bareTheme),
     'no rule catches every class that merely contains "file-input"');
   assert(/stk-account-page #main \.form-n-file-input\{background-color:transparent!important/.test(theme),
     "Scryfall's file-input wrapper is left unpainted, so nothing sticks out from under the button");
