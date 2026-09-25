@@ -535,7 +535,12 @@ html.stk-dark.stk-tagger .suggestion-input-utils :is(a,li,span){color:#c79ce3!im
    banner and the tagging layout on a card page. The panel and every ink inside
    it are repainted together, because Tagger's own grey would otherwise stay on
    the dark fill. */
-html.stk-dark.stk-tagger :is(.light-mode,.sample-tags,.card-layout--tagging){background-color:#252829!important;color:#e6e3df!important;border-color:#414345!important}
+/* Tagger marks a panel light and paints the light field itself. On a card page
+   the mark sits on .card-layout, which is the whole layout: the tag panel, the
+   card beside it and the empty space under both. Filling that took away the
+   blurred card art Tagger shows there, so the layout keeps its own field and
+   only the panel inside it is repainted. */
+html.stk-dark.stk-tagger :is(.light-mode:not(.card-layout),.sample-tags,.card-layout--tagging){background-color:#252829!important;color:#e6e3df!important;border-color:#414345!important}
 html.stk-dark.stk-tagger :is(.light-mode,.sample-tags,.card-layout--tagging) :is(a,span,label,li,strong,em,b,i,p,div,section,article,h1,h2,h3,h4,h5,h6,dt,dd,td,th){color:#e6e3df!important}
 html.stk-dark.stk-tagger :is(.light-mode,.sample-tags,.card-layout--tagging) :is(a,.tag-row a,.access-banner a){color:#c79ce3!important}
 html.stk-dark.stk-tagger :is(.light-mode,.sample-tags,.card-layout--tagging) :is(.tag-row,.access-banner){background-color:transparent!important}
