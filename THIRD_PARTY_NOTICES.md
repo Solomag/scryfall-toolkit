@@ -20,6 +20,28 @@ an image, or a behaviour that was followed.
 Every licence text quoted below is also stored verbatim as a file in `third_party/`, and
 all of those files are shipped inside the distributed extension archive.
 
+## The scope of this project's own licence
+
+This project's own code is licensed **MPL-2.0** (see [`LICENSE`](LICENSE)). That licence
+covers only the files this project wrote. It is not applied to anything listed in this
+document, and it grants no rights in anyone's trademarks, logos, card data or service.
+
+In particular, and stated plainly because it is easy to get wrong:
+
+- The MPL-2.0 notice does **not** cover `icons/edhrec.png`, `icons/cardtrader.svg`,
+  `icons/cardtrader.png` or `icons/cardmarket.svg`. Those are third-party brand marks, or
+  in one case an icon whose origin is unconfirmed. Their rights stay with their owners.
+- Nothing in this project has been cleared with EDHREC or CardTrader. No permission was
+  requested from them and none was received. Their marks are shown to identify the
+  service a feature talks to, and the unresolved status in sections 7 to 9 below is the
+  real status.
+- The bundled MoxTags and Shambleshark data and the CardClip icons stay under their own
+  MIT terms with their own copyright notices; re-licensing them as MPL-2.0 would be
+  wrong and has not been done.
+
+This extension is independent of Scryfall, EDHREC and CardTrader. It is not produced,
+endorsed, sponsored or approved by any of them.
+
 ---
 
 ## 1. CardClip — icons copied
@@ -193,6 +215,20 @@ rules this project's request pattern has to respect.
 No font file is bundled. The stylesheets only name font families: `Lato` (Scryfall's own web
 font, referenced by name and not redistributed here) and `system-ui` / `Helvetica Neue` /
 `Arial` fallbacks.
+
+## 12. This project's own artwork
+
+| File | What it is |
+| --- | --- |
+| `icons/icon16.png`, `icons/icon32.png`, `icons/icon48.png`, `icons/icon128.png` | Original artwork, MPL-2.0 like the rest of this project's own files |
+| `icons-src/scryfall-toolkit-icon.svg` | The vector source of that artwork |
+| `tools/render-icons.cjs` | The generator that draws both, so the PNGs can be reproduced from source |
+
+The design is a clipboard with a green clip on a dark plate, using this project's own
+interface colours. It is **not** a logo, wordmark or brand colour of Scryfall, Wizards of
+the Coast, EDHREC, CardTrader or Cardmarket, and it does not resemble any of them closely
+enough to suggest an association. Nothing in the artwork was traced, copied or adapted
+from anyone. The MPL covers this artwork; it covers no one else's mark.
 
 ---
 

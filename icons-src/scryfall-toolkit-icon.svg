@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <title>Scryfall Toolkit</title>
+  <desc>Original artwork: a clipboard with a green clip. No third-party mark is used.</desc>
+  <rect x="0" y="0" width="128" height="128" rx="28" ry="28" fill="#23303e"/>
+  <rect x="30" y="30" width="68" height="80" rx="8" ry="8" fill="#eef2f6"/>
+  <rect x="50" y="16" width="28" height="32" rx="8" ry="8" fill="#2f9e44"/>
+</svg>

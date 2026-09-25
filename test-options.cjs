@@ -1,3 +1,13 @@
+/*
+ * Scryfall Toolkit. Copyright (c) 2026 Scryfall Toolkit contributors.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ *
+ * Third-party data, images and code in this project keep their own licence and
+ * are described in THIRD_PARTY_NOTICES.md. The MPL does not cover them.
+ */
 'use strict';
 // options.js tests: format list rendering, visibility, keyboard and drag
 // reorder, setting persistence and language switching.
@@ -39,7 +49,7 @@ function packagedNoticesTest() {
     'options.html', 'options.js', 'options.css', 'i18n.js', 'tag-icons.js', 'tagger-clipboard.js',
     'format-catalog.js', 'format-overrides.js', 'data/oracle-tags.js', 'data/illustration-tags-1.js',
     'data/illustration-tags-2.js', 'data/shambleshark-nicknames.js', 'data/set-platforms.js',
-    'THIRD_PARTY_NOTICES.md', 'LICENSE', 'README.md'
+    'THIRD_PARTY_NOTICES.md', 'LICENSE', 'README.md', 'PRIVACY.md'
   ];
   for (const file of shipped) {
     assert(fs.existsSync(path.join(ROOT, file)), `${file} is part of the extension and is present`);
@@ -99,6 +109,148 @@ function packagedNoticesTest() {
     'the set-platform snapshot names its source and the date it was taken');
   assert(!/oracle_text|printed_type|layout|watermark|image_uris/.test(platforms),
     'the bundled set-platform snapshot carries no Wizards card content, only set codes and platform names');
+}
+
+function licenceAndPrivacyTest() {
+  console.log('licensing: MPL-2.0 covers our code and nothing else');
+  const licence = read('LICENSE');
+  assert(licence.startsWith('Mozilla Public License Version 2.0'),
+    'LICENSE holds the full official MPL-2.0 text');
+  for (const clause of [
+    '1. Definitions', '3.1. Distribution of Source Form', '3.2. Distribution of Executable Form',
+    '10.2. Effect of New Versions', 'Exhibit A', 'Exhibit B',
+    'https://mozilla.org/MPL/2.0/'
+  ]) assert(licence.includes(clause), `the MPL text keeps "${clause}"`);
+  assert(/"as is"/.test(licence) && /merchantable/.test(licence),
+    'the MPL warranty disclaimer is present, in the wording Mozilla publishes');
+
+  // Every file the project wrote carries the notice; no file copied from another
+  // project does, because re-licensing someone else's MIT work would be wrong.
+  const ours = [
+    'background.js', 'content.js', 'content.css', 'theme.js', 'theme.css',
+    'options.js', 'options.css', 'options.html', 'i18n.js', 'tag-icons.js',
+    'tagger-clipboard.js', 'format-catalog.js', 'format-overrides.js',
+    'data/set-platforms.js', 'testlib.cjs', 'test-preview.cjs', 'test-background.cjs',
+    'test-options.cjs', 'test-theme.cjs', 'test-tagger.cjs', 'package-extension.cjs',
+    'tools/render-icons.cjs'
+  ];
+  for (const file of ours) {
+    const text = read(file);
+    assert(text.includes('subject to the terms of the Mozilla Public'),
+      `${file} carries the MPL-2.0 notice`);
+    assert(text.includes('https://mozilla.org/MPL/2.0/'),
+      `${file} points at the MPL text`);
+    assert(text.includes('Scryfall Toolkit. Copyright (c) 2026 Scryfall Toolkit contributors'),
+      `${file} names its copyright holder`);
+  }
+  const thirdParty = [
+    'data/oracle-tags.js', 'data/illustration-tags-1.js', 'data/illustration-tags-2.js',
+    'data/shambleshark-nicknames.js'
+  ];
+  for (const file of thirdParty) {
+    assert(!read(file).includes('Mozilla Public License'),
+      `${file} keeps its own MIT notice and is not re-licensed`);
+  }
+  // JSON cannot hold a comment, so those two are covered by the list in the README
+  // and must not silently fall out of it.
+  const readme = read('README.md');
+  for (const file of ['manifest.json', 'package.json']) {
+    assert(readme.includes(file), `the README's licence list names ${file}`);
+  }
+  assert(readme.includes('MPL-2.0'), 'the README states the project licence');
+
+  console.log('licensing: the honest status of the third-party marks');
+  const notices = read('THIRD_PARTY_NOTICES.md');
+  assert(/MPL-2\.0 notice does \*{0,2}not\*{0,2}\s+cover[\s\S]{0,160}icons\/edhrec\.png/.test(notices),
+    'the notices say the MPL does not cover the EDHREC mark');
+  assert(/No permission was\s+requested from them and none was received/.test(notices),
+    'the notices say plainly that no permission was requested or received');
+  assert(/This extension is independent of Scryfall, EDHREC and CardTrader/.test(notices),
+    'the notices state independence from Scryfall, EDHREC and CardTrader');
+  assert((notices.match(/Unresolved/g) || []).length >= 3,
+    'the notices keep the unresolved status of the brand marks instead of implying they are cleared');
+
+  console.log('privacy: the policy describes the behaviour the code actually has');
+  const privacy = read('PRIVACY.md');
+  // The claims have to match the code, so each one is checked against the call sites.
+  const background = read('background.js');
+  assert(background.includes('json.edhrec.com/pages/cards/'),
+    'the code really does call EDHREC');
+  assert(/json\.edhrec\.com/.test(privacy) && /the card name, as part of the URL/i.test(privacy),
+    'the policy says EDHREC receives the card name');
+  assert(background.includes('api.cardtrader.com'),
+    'the code really does call CardTrader');
+  assert(/Authorization/.test(background) && /Bearer/.test(background),
+    'the token really is sent as a bearer token');
+  assert(/Bearer/.test(privacy) && /only\s+to CardTrader/i.test(privacy),
+    'the policy says the token goes only to CardTrader');
+  assert(background.includes("credentials: 'omit'") || background.includes('credentials:"omit"') ||
+    /credentials:\s*'omit'/.test(background),
+    'the code omits cookies on API requests, so the policy can say so');
+  for (const service of ['api.scryfall.com', 'tagger.scryfall.com']) {
+    assert(privacy.includes(service), `the policy names ${service}`);
+    assert(background.includes(service), `and the code really calls ${service}`);
+  }
+  // The bulk-data host is only reached through the URL Scryfall hands back, so the
+  // code has no literal for it; the manifest is what grants it.
+  const manifest = JSON.parse(read('manifest.json'));
+  assert((manifest.host_permissions || []).some(host => host.includes('data.scryfall.io')),
+    'the manifest grants the Scryfall bulk-data host the policy names');
+  assert((manifest.host_permissions || []).some(host => host.includes('json.edhrec.com')),
+    'the manifest grants exactly the EDHREC host the policy names');
+  assert((manifest.host_permissions || []).some(host => host.includes('api.cardtrader.com')),
+    'the manifest grants exactly the CardTrader host the policy names');
+  assert(!/analytics|telemetry|gtag|google-analytics|posthog|mixpanel|amplitude|sentry/i.test(
+    [background, read('content.js'), read('options.js'), read('theme.js'), read('tagger-clipboard.js')].join('\n')),
+    'the code contains no analytics or telemetry');
+  assert(privacy.includes('We have no server'), 'the policy says where data would go if it were collected');
+  assert(/cardtraderToken/.test(privacy) || /personal access token/i.test(privacy),
+    'the policy covers the user token');
+  // The extension must not load code from anywhere but itself.
+  const optionsHtml = read('options.html');
+  for (const tag of optionsHtml.matchAll(/<script[^>]*src="([^"]+)"/g)) {
+    assert(!/^https?:/.test(tag[1]), `options.html loads only its own file: ${tag[1]}`);
+  }
+}
+
+function iconArtworkTest() {
+  console.log('artwork: the extension ships its own icons, drawn from source');
+  const manifest = JSON.parse(read('manifest.json'));
+  for (const size of ['16', '32', '48', '128']) {
+    const file = manifest.icons && manifest.icons[size];
+    assert(file, `manifest declares a ${size}px icon`);
+    assert(fs.existsSync(path.join(ROOT, file)), `${file} exists`);
+    const buf = fs.readFileSync(path.join(ROOT, file));
+    assert(buf[0] === 0x89 && buf.slice(1, 4).toString('ascii') === 'PNG', `${file} is a PNG`);
+    const width = buf.readUInt32BE(16);
+    const height = buf.readUInt32BE(20);
+    assertEqual([width, height], [Number(size), Number(size)], `${file} is exactly ${size} by ${size}`);
+  }
+  for (const size of ['16', '32', '48']) {
+    const file = manifest.action.default_icon && manifest.action.default_icon[size];
+    assert(file && fs.existsSync(path.join(ROOT, file)), `the toolbar button has a ${size}px icon`);
+  }
+  // The artwork is this project's own: the store requires an icon, and reaching for
+  // a service's logo to fill the gap would be exactly the wrong thing.
+  for (const size of ['16', '32', '48', '128']) {
+    assert(/^icons\/icon\d+\.png$/.test(manifest.icons[size]),
+      `the ${size}px icon is this project's own file, not a third-party logo`);
+  }
+  assert(fs.existsSync(path.join(ROOT, 'icons-src', 'scryfall-toolkit-icon.svg')),
+    'the vector source of the artwork ships with the extension');
+  const source = read('icons-src/scryfall-toolkit-icon.svg');
+  assert(source.includes('<svg') && source.includes('viewBox="0 0 128 128"'),
+    'the icon source is a real SVG the rasteriser reads');
+  assert(/original artwork|no third-party mark/i.test(source),
+    'the icon source states that the artwork is original');
+  // The generator must still reproduce what is shipped, so a future edit cannot
+  // leave the PNGs out of step with the source.
+  const generator = read('tools/render-icons.cjs');
+  for (const statement of ['Scryfall Toolkit', 'Mozilla Public', 'SHAPES', 'SUPERSAMPLE']) {
+    assert(generator.includes(statement), `the icon generator names ${statement}`);
+  }
+  assert(/EDHREC|CardTrader|Cardmarket/.test(generator) === true,
+    'the generator says out loud which marks it deliberately does not use');
 }
 
 function htmlIdCheck() {
@@ -399,6 +551,8 @@ async function discoveredFormatsTest() {
     switchStyleTest();
     sectionOrderTest();
     packagedNoticesTest();
+    licenceAndPrivacyTest();
+    iconArtworkTest();
     await formatListTest();
     await settingsTest();
     await setPlatformsTest();

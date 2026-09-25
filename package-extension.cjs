@@ -1,3 +1,13 @@
+/*
+ * Scryfall Toolkit. Copyright (c) 2026 Scryfall Toolkit contributors.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ *
+ * Third-party data, images and code in this project keep their own licence and
+ * are described in THIRD_PARTY_NOTICES.md. The MPL does not cover them.
+ */
 // Builds the extension archive from the files the extension actually needs, then
 // verifies the archive rather than the working tree: a notice that only exists in
 // the folder but not in the zip is not a notice the user received.
@@ -45,9 +55,13 @@ for (const entry of manifest.web_accessible_resources || []) {
   }
 }
 
-// Everything the licence obligations and this audit require in the archive.
-for (const extra of ['LICENSE', 'README.md', 'THIRD_PARTY_NOTICES.md']) files.add(extra);
+// Everything the licence obligations and this audit require in the archive. The
+// icon artwork's vector source and its generator travel too: the PNGs are an
+// executable form of that artwork, and the MPL wants the source alongside it.
+for (const extra of ['LICENSE', 'README.md', 'THIRD_PARTY_NOTICES.md', 'PRIVACY.md']) files.add(extra);
 for (const name of fs.readdirSync(path.join(ROOT, 'third_party'))) files.add(`third_party/${name}`);
+for (const name of fs.readdirSync(path.join(ROOT, 'icons-src'))) files.add(`icons-src/${name}`);
+for (const name of fs.readdirSync(path.join(ROOT, 'tools'))) files.add(`tools/${name}`);
 
 const list = [...files].sort();
 const missing = list.filter(file => !fs.existsSync(path.join(ROOT, file)));
@@ -80,7 +94,9 @@ const required = [
   'data/oracle-tags.js', 'data/illustration-tags-1.js', 'data/illustration-tags-2.js',
   'data/shambleshark-nicknames.js', 'data/set-platforms.js', 'format-overrides.js',
   'icons/clip.svg', 'icons/duplicate.svg', 'icons/trash.svg', 'icons/cardmarket.svg',
-  'icons/cardtrader.svg', 'icons/cardtrader.png', 'icons/edhrec.png'
+  'icons/cardtrader.svg', 'icons/cardtrader.png', 'icons/edhrec.png',
+  'icons/icon16.png', 'icons/icon32.png', 'icons/icon48.png', 'icons/icon128.png',
+  'icons-src/scryfall-toolkit-icon.svg', 'tools/render-icons.cjs', 'PRIVACY.md'
 ];
 let bad = 0;
 for (const file of required) {

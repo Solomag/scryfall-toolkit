@@ -1,3 +1,13 @@
+/*
+ * Scryfall Toolkit. Copyright (c) 2026 Scryfall Toolkit contributors.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ *
+ * Third-party data, images and code in this project keep their own licence and
+ * are described in THIRD_PARTY_NOTICES.md. The MPL does not cover them.
+ */
 // The theme follows the operating system until the user picks light or dark,
 // so a machine or phone that switches its own appearance switches Scryfall too.
 const systemDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');

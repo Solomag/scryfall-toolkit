@@ -1,4 +1,4 @@
-# Scryfall Toolkit — preview 0.42.0
+# Scryfall Toolkit — preview 0.43.0
 
 An independent browser extension for Scryfall. The current preview includes a shared card clipboard on Scryfall and Scryfall Tagger, sidebar Tagger card/art tags on individual Scryfall card pages, and extra format legalities. It never runs on Moxfield; keep the official MoxTags extension installed there.
 
@@ -81,7 +81,42 @@ No font files are bundled: the stylesheets only name font families (`Lato`, `sys
 `Helvetica Neue`, `Arial`), and Scryfall's own webfont is referenced by name rather than
 redistributed.
 
-This project's own code is MIT licensed — see [`LICENSE`](LICENSE). Each third-party
-licence stays with that third party's material and is not replaced by this project's
-licence. `THIRD_PARTY_NOTICES.md` also lists the questions still open before wider
-publication.
+## License
+
+This project's own code is **MPL-2.0** — see [`LICENSE`](LICENSE) for the full official
+text. Earlier previews were MIT licensed; the copyright holder moved the project to
+MPL-2.0 for the public release.
+
+**MPL-2.0 covers these files**, which carry the notice in their header or are named here:
+
+| File | What it is |
+| --- | --- |
+| `background.js`, `content.js`, `content.css` | the extension's behaviour and styling |
+| `theme.js`, `theme.css` | the dark theme |
+| `options.html`, `options.js`, `options.css`, `i18n.js` | the settings page and its strings |
+| `tag-icons.js`, `tagger-clipboard.js` | the tag icons table and the Tagger clipboard |
+| `format-catalog.js`, `format-overrides.js` | the extra format list and this project's per-card legality map |
+| `data/set-platforms.js` | this project's derived set-platform snapshot; the underlying set and platform facts come from Scryfall and the MPL grants no rights in them |
+| `testlib.cjs`, `test-*.cjs`, `package-extension.cjs`, `tools/render-icons.cjs` | the test harness, the packaging script and the icon generator |
+| `icons/icon16.png`, `icons/icon32.png`, `icons/icon48.png`, `icons/icon128.png`, `icons-src/scryfall-toolkit-icon.svg` | this project's own original artwork, with its vector source |
+| `manifest.json`, `package.json`, `README.md`, `THIRD_PARTY_NOTICES.md`, `PRIVACY.md`, `LICENSE` | the manifest and this documentation |
+
+JSON files cannot hold a comment, so `manifest.json` and `package.json` have no header;
+they are covered by the list above.
+
+**MPL-2.0 does not cover**, and this project does not re-license:
+
+| Files | Terms |
+| --- | --- |
+| `data/oracle-tags.js`, `data/illustration-tags-1.js`, `data/illustration-tags-2.js` | MoxTags v1.8.3 data, MIT, © 2026 Nate Finch — [`third_party/MoxTags-LICENSE`](third_party/MoxTags-LICENSE) |
+| `data/shambleshark-nicknames.js` | Shambleshark nickname records, MIT, © 2016 Samuel Simões, © 2019 Blade Barringer — [`third_party/Shambleshark-LICENSE`](third_party/Shambleshark-LICENSE) |
+| `icons/clip.svg`, `icons/duplicate.svg`, `icons/trash.svg` | CardClip icons, MIT, © 2022 Jacob Hearst — [`third_party/CardClip-LICENSE`](third_party/CardClip-LICENSE) |
+| `third_party/*` | the licence texts themselves, reproduced as required |
+| `icons/edhrec.png`, `icons/cardtrader.svg`, `icons/cardtrader.png`, `icons/cardmarket.svg` | **not covered by any licence of this project.** These are third-party brand marks or an icon whose origin is unconfirmed. Their rights stay with their owners; this project grants nothing over them and does not claim they are cleared. See [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md). |
+
+Source code for this extension: <https://github.com/Solomag/scryfall-toolkit>. The
+Chrome Web Store listing links the same repository; the release ZIP is built from a
+tagged commit of it with `npm run package`, so the published source and the installed
+extension are the same code.
+
+`THIRD_PARTY_NOTICES.md` also lists the questions still open before wider publication.

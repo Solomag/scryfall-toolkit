@@ -1,3 +1,13 @@
+/*
+ * Scryfall Toolkit. Copyright (c) 2026 Scryfall Toolkit contributors.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ *
+ * Third-party data, images and code in this project keep their own licence and
+ * are described in THIRD_PARTY_NOTICES.md. The MPL does not cover them.
+ */
 *{box-sizing:border-box}
 body{font:14px/1.5 system-ui,sans-serif;margin:0;min-width:340px;background:#211f28;color:#e9e5ee}
 .hero{padding:26px max(18px,calc((100% - 850px)/2));background:linear-gradient(115deg,#292434,#583b59);border-bottom:2px solid #8b7194}
