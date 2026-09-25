@@ -372,6 +372,17 @@ html.stk-dark.stk-blog-page #main :is(.scryfall-decklist-embed,.scryfall-decklis
 html.stk-dark.stk-blog-page #main :is(.scryfall-decklist-embed,.scryfall-decklist-embed-title,.deck-list-section,.deck-list-section-title,.deck-list-entry) :is(h1,h2,h3,h4,h5,h6,p,strong,span){color:#e6e3df!important}
 html.stk-dark.stk-blog-page #main :is(.scryfall-decklist-embed a,.scryfall-decklist-embed-card){color:#c79ce3!important}
 
+/* The team page is a purple marketing page: Scryfall lays a white band over a
+   purple field of its own. Flattening the page took that field with it, so the
+   purple field is left alone and the white band is dimmed instead of removed. */
+html.stk-dark.stk-team-page #main .main{background-color:transparent!important}
+html.stk-dark.stk-team-page #main .team-header{background-color:rgba(255,255,255,0.82)!important}
+html.stk-dark.stk-team-page #main .team-header :is(h1,h2,h3,p,span,strong,em,b){color:#16161d!important;text-shadow:none!important}
+html.stk-dark.stk-team-page #main .team-header a{color:#4a2c8c!important}
+html.stk-dark.stk-team-page #main .team-header a:is(:hover,:active,:focus){color:#634496!important}
+html.stk-dark.stk-team-page #main .team-wrapper{color:#e6e3df!important}
+html.stk-dark.stk-team-page #main .team-wrapper :is(.team-member-name,.team-member-role,.team-member-links){color:#e6e3df!important}
+
 /* The bot documentation buttons sit in their own marketing cards. */
 html.stk-dark.stk-bots-page #main :is(.marketing-features-item,.marketing-features-item-content,.bot-marketing-panel) :is(a.button-n,button.button-n){background-color:#292b2c!important;color:#c79ce3!important;border-color:#595c60!important}
 html.stk-dark.stk-bots-page #main :is(.marketing-features-item,.bot-marketing-panel) :is(a.button-n,button.button-n) svg{fill:currentColor!important}
@@ -528,3 +539,13 @@ html.stk-dark.stk-tagger :is(.light-mode,.sample-tags,.card-layout--tagging){bac
 html.stk-dark.stk-tagger :is(.light-mode,.sample-tags,.card-layout--tagging) :is(a,span,label,li,strong,em,b,i,p,div,section,article,h1,h2,h3,h4,h5,h6,dt,dd,td,th){color:#e6e3df!important}
 html.stk-dark.stk-tagger :is(.light-mode,.sample-tags,.card-layout--tagging) :is(a,.tag-row a,.access-banner a){color:#c79ce3!important}
 html.stk-dark.stk-tagger :is(.light-mode,.sample-tags,.card-layout--tagging) :is(.tag-row,.access-banner){background-color:transparent!important}
+/* Tagger marks a panel light and paints the light field itself, but two of the
+   panels it marks carry their own white on top: the tag sidebar and the tab it
+   hangs from. Both are named here together with the list inside them, so a panel
+   Tagger calls light is dark all the way down. */
+html.stk-dark.stk-tagger :is(.sidebar-panel,.tags-menu,.navigation.active){background-color:#252829!important;color:#e6e3df!important}
+html.stk-dark.stk-tagger :is(.sidebar-panel,.tags-menu) :is(a,span,strong,li,div,p,label,input,button,td,th){color:#e6e3df!important}
+html.stk-dark.stk-tagger :is(.sidebar-panel,.tags-menu) :is(a,.tag-row a,.tag-admin){color:#c79ce3!important}
+html.stk-dark.stk-tagger :is(.sidebar-panel,.tags-menu) :is(.tag-row,.scrollbar,.tag-name-filter,input,button){background-color:transparent!important;border-color:#414345!important}
+html.stk-dark.stk-tagger :is(.sidebar-panel,.tags-menu) .tag-row:is(:hover,:focus-within){background-color:#2f3133!important}
+html.stk-dark.stk-tagger .navigation.active{color:#e6e3df!important}

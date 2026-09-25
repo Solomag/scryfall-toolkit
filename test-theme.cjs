@@ -288,7 +288,16 @@ function auditGapCheck() {
     ['the white field a focused form input turns', /\.form-input,\.form-n-input,\.form-n-file-input-control[^{]*\{background-color:#292b2c/],
     ['the purple Scryfall fills a shape with', /\.prose-complex-h1[^{]*:not\(\[fill="none"\]\)[^{]*\{fill:var\(--stk-link-purple\)/],
     ['the purple notice and warning bar', /\.notification\.purple,\.read-only-warning,\.print-langs-item\.current\)\{background-color:#413949/],
-    ['the purple curve meter of the deck editor', /cmc-stat-meter::\-webkit-progress-value\{background-color:var\(--stk-link-purple\)/]
+    ['the purple curve meter of the deck editor', /cmc-stat-meter::\-webkit-progress-value\{background-color:var\(--stk-link-purple\)/],
+    // Tagger marks a panel light and then paints a white of its own on top of
+    // two of them: the tag sidebar and the tab it hangs from.
+    ['the tag sidebar Tagger paints white inside a panel it calls light', /stk-tagger :is\(\.sidebar-panel,\.tags-menu,\.navigation\.active\)\{background-color:#252829/],
+    ['the ink of the tag list', /stk-tagger :is\(\.sidebar-panel,\.tags-menu\) :is\(a,span,strong,li,div,p,label,input,button,td,th\)\{color:#e6e3df/],
+    // The team page is a purple marketing page: the white band is dimmed rather
+    // than removed, so Scryfall's purple field behind it survives.
+    ['the white band of the team page, dimmed', /stk-team-page #main \.team-header\{background-color:rgba\(255,255,255,0\.82\)/],
+    ['the page field behind the team page', /stk-team-page #main \.main\{background-color:transparent/],
+    ['the dark ink the dimmed band needs', /stk-team-page #main \.team-header :is\(h1,h2,h3,p,span,strong,em,b\)\{color:#16161d/]
   ]) assert(pattern.test(theme), `dark theme repaints ${what}`);
 
   // A brand band is a picture, not a surface. The Slack band on the bots page is
@@ -315,6 +324,8 @@ function auditGapCheck() {
     "Tagger keeps its own page field and a transparent #app, so its soft glow is not painted over");
   assert(!/stk-tagger \.blurry-background-art\{[^}]*background/.test(theme),
     "Tagger's own glow keeps the colour it came with");
+  assert(/stk-tagger :is\(\.sidebar-panel,\.tags-menu,\.navigation\.active\)\{background-color:#252829/.test(theme),
+    'the tag sidebar and its tab are repainted, not only the panel Tagger marks light');
   assert(/:is\(\.light-mode,\.sample-tags,\.card-layout--tagging\) :is\(a,span,label,li,strong,em,b,i,p,div,section,article,h1,h2,h3,h4,h5,h6,dt,dd,td,th\)\{color:#e6e3df/.test(theme),
     'the ink inside a repainted Tagger panel is repainted with it, not left grey');
   assert(/\/\* Tagger is a separate Vue app/.test(theme), 'the Tagger block explains why it stands alone');
