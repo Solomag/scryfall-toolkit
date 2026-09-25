@@ -985,6 +985,32 @@ async function advancedSetFilterTest() {
   assertEqual(groups(late), ['Expansions'], 'and its empty group is hidden with it');
 }
 
+async function cardNicknameTest() {
+  console.log('content.js: historical card nicknames');
+  const load = async (url, state) => {
+    const page = createPage({ url, html: CARD_HTML, state, routes });
+    await page.script('i18n.js');
+    await page.script('format-catalog.js');
+    await page.script('tag-icons.js');
+    await page.script('data/shambleshark-nicknames.js');
+    await page.script('content.js');
+    await sleep(60);
+    return page;
+  };
+  const on = await load('https://scryfall.com/card/iko/19/lavabrink-venturer', { cards: [], cardNicknames: true });
+  const note = on.document.querySelector('.stk-card-nickname');
+  assert(note, 'a card Scryfall previewed under another name gets the nickname line');
+  assertEqual(note.textContent, 'Scryfall Preview Name: “Professional Stunt Performer”',
+    'the line names the source and the nickname under the prints table');
+  assert(note.closest('#main .prints'), 'the nickname sits inside the prints block');
+
+  const off = await load('https://scryfall.com/card/iko/19/lavabrink-venturer', { cards: [] });
+  assert(!off.document.querySelector('.stk-card-nickname'), 'the line stays away while the setting is off');
+
+  const plain = await load('https://scryfall.com/card/tst/1/test-card', { cards: [], cardNicknames: true });
+  assert(!plain.document.querySelector('.stk-card-nickname'), 'a card without a nickname gets no line');
+}
+
 (async () => {
   try {
     await cardPageTest();
@@ -1001,6 +1027,7 @@ async function advancedSetFilterTest() {
     await advancedPriceFilterTest();
     await setPlatformTest();
     await advancedSetFilterTest();
+    await cardNicknameTest();
     summary('test-preview');
     process.exit(0);
   } catch (error) {

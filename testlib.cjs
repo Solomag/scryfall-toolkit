@@ -177,6 +177,9 @@ function createPage(options) {
   };
   const confirmQueue = options.confirmQueue || [];
   const observers = [];
+  // A test can ask the page about the system colour scheme and then flip it,
+  // the way a computer or phone switches its own appearance at dusk.
+  const mediaListeners = {};
   // linkedom does not run observers, so a test can ask for a small working one
   // to prove that late DOM changes are handled.
   const liveObserver = options.mutationObserver ? class {
@@ -200,6 +203,14 @@ function createPage(options) {
     requestAnimationFrame: callback => setTimeout(() => callback(Date.now()), 0),
     cancelAnimationFrame: handle => clearTimeout(handle),
     getComputedStyle: () => ({ color: 'rgb(99, 68, 150)', backgroundColor: 'rgba(0, 0, 0, 0)', getPropertyValue: () => '' }),
+    matchMedia: query => mediaListeners[query] = {
+      media: query,
+      matches: query.includes('dark') ? Boolean(options.mediaDark) : true,
+      listeners: {},
+      addEventListener: (type, listener) => { (mediaListeners[query].listeners[type] ||= []).push(listener); },
+      removeEventListener: () => {},
+      dispatch(type) { for (const listener of mediaListeners[query].listeners[type] || []) listener(); }
+    },
     innerWidth: 1280,
     innerHeight: 900,
     Event: window.Event,
@@ -233,6 +244,13 @@ function createPage(options) {
       for (const observer of observers) {
         if (observer.targets.length) observer.callback(record, observer);
       }
+    },
+    // Turns the emulated system scheme over and tells the page about it.
+    setSystemDark(dark) {
+      const entry = mediaListeners['(prefers-color-scheme: dark)'];
+      if (!entry) return;
+      entry.matches = Boolean(dark);
+      entry.dispatch('change');
     }
   };
 }

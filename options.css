@@ -7,6 +7,8 @@ main{max-width:880px;padding:22px 16px 35px;margin:auto}
 section{padding:18px;margin:0 0 15px;background:#2d2c34;border:1px solid #514858;border-radius:6px;box-shadow:0 3px 12px #0003}
 section.experimental{border-style:dashed;border-color:#7a6a55;background:#2f2b2c}
 section.experimental h2{color:#e8cf9e}
+.experimental-sub{border-style:dashed;border-color:#7a6a55}
+.experimental-sub>legend{color:#e8cf9e}
 label{display:block;margin:9px 0;cursor:pointer}input{accent-color:#aa85b5}
 fieldset{border:1px solid #655968;border-radius:5px;margin:16px 0 4px;padding:7px 12px 12px}legend{padding:0 6px;color:#e4c7ea}
 select,input[type=password]{width:100%;padding:8px;margin-top:4px;color:#e9e5ee;background:#24242a;border:1px solid #6a6070;border-radius:4px}

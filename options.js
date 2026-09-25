@@ -1,6 +1,6 @@
 const defaults = {
   settingsLanguage: 'ru', siteLanguage: 'en',
-  clipboard: true, printAddButtons: true, darkTheme: false, hideDigitalSets: false, hideNonTournamentSets: false, hideOversizedSets: false, hideForeignBlackBorder: false, hideNonEnglishPrints: false, tags: true, cardTags: true, artTags: true, relationships: true, onlyCardmarket: false,
+  clipboard: true, printAddButtons: true, darkTheme: 'auto', hideDigitalSets: false, hideNonTournamentSets: false, hideOversizedSets: false, hideForeignBlackBorder: false, hideNonEnglishPrints: false, tags: true, cardTags: true, artTags: true, relationships: true, onlyCardmarket: false,
   finishBadges: true, cardtraderPrices: false, cardtraderToken: '', euroPriceSources: 'cm',
   edhrecUsage: false, edhrecSalt: false, showSaltScale: false, edhrecLink: true, edhrecUsageDisplay: 'both',
   usageColorMetric: 'decks', usageMediumDecks: 50000, usageHighDecks: 100000,
@@ -11,7 +11,7 @@ const defaults = {
   legalities: true, exportFormat: "moxfield", formatOrder: null, formatVisibility: null,
   discoveredFormats: [], premodern: true, heritage: false, classic: false, peak: false
 };
-const basicFields = ["clipboard", "printAddButtons", "printPageSameTab", "darkTheme", "hideCasterIndicator", "hideDigitalSets", "hideNonTournamentSets", "hideOversizedSets", "hideForeignBlackBorder", "hideNonEnglishPrints", "tags", "cardTags", "artTags", "relationships", "finishBadges", "onlyCardmarket", "cardtraderPrices", "euroPriceSources", "edhrecUsage", "edhrecSalt", "showSaltScale", "edhrecLink", "edhrecUsageDisplay", "usageColorMetric", "legalities", "exportFormat", "taggerSearchLinks", "cardSearchLinks", "cardNicknames", "deckNoPrices", "stackedDeckCards", "deckTokens"];
+const basicFields = ["clipboard", "printAddButtons", "printPageSameTab", "hideCasterIndicator", "hideDigitalSets", "hideNonTournamentSets", "hideOversizedSets", "hideForeignBlackBorder", "hideNonEnglishPrints", "tags", "cardTags", "artTags", "relationships", "finishBadges", "onlyCardmarket", "cardtraderPrices", "euroPriceSources", "edhrecUsage", "edhrecSalt", "showSaltScale", "edhrecLink", "edhrecUsageDisplay", "usageColorMetric", "legalities", "exportFormat", "taggerSearchLinks", "cardSearchLinks", "cardNicknames", "deckNoPrices", "stackedDeckCards", "deckTokens"];
 const status = document.getElementById("status");
 chrome.storage.local.get(defaults, values => {
   let language = values.settingsLanguage === 'en' ? 'en' : 'ru';
@@ -68,6 +68,15 @@ chrome.storage.local.get(defaults, values => {
     });
   });
   document.getElementById('openOptions').addEventListener('click', () => chrome.runtime.openOptionsPage());
+  // The theme choice follows the operating system unless it is set by hand.
+  // Installations that predate the choice stored a boolean: true is a dark
+  // theme the user asked for, false is the light page they were seeing.
+  const darkTheme = document.getElementById('darkTheme');
+  const storedTheme = values.darkTheme === true ? 'dark' : values.darkTheme === false ? 'light' : values.darkTheme;
+  darkTheme.value = ['auto', 'light', 'dark'].includes(storedTheme) ? storedTheme : 'auto';
+  darkTheme.addEventListener('change', () => {
+    chrome.storage.local.set({ darkTheme: darkTheme.value }, () => { status.textContent = t('Сохранено'); });
+  });
   for (const key of basicFields) {
     const element = document.getElementById(key);
     if (element.type === "checkbox") element.checked = Boolean(values[key]);

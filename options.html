@@ -2,13 +2,28 @@
 <html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Scryfall Toolkit</title><link rel="stylesheet" href="options.css"></head>
 <body><header class="hero"><h1>Scryfall Toolkit</h1><p>Настройки расширения для Scryfall</p></header><main>
-<section class="language-settings"><label for="settingsLanguage">Язык настроек</label><select id="settingsLanguage"><option value="ru">Русский</option><option value="en">Английский</option></select>
-<label for="siteLanguage">Язык интерфейса Scryfall и Tagger</label><select id="siteLanguage"><option value="en">Английский</option><option value="ru">Русский</option></select>
-<p class="hint">Язык добавляемых элементов и основных элементов Scryfall. Тексты карт и статей не переводятся.</p></section>
+<section class="language-settings"><label for="settingsLanguage">Язык настроек</label><select id="settingsLanguage"><option value="ru">Русский</option><option value="en">Английский</option></select></section>
 <section><h2>Общее</h2>
-<label><input type="checkbox" id="clipboard"> Общий буфер карт на Scryfall и Tagger</label>
-<label><input type="checkbox" id="darkTheme"> Тёмная тема Scryfall</label>
+<label for="darkTheme">Тема Scryfall</label>
+<select id="darkTheme"><option value="auto">Как в системе</option><option value="light">Светлая</option><option value="dark">Тёмная</option></select>
+<p class="hint">По умолчанию тема повторяет системную тему компьютера или телефона и переключается вместе с ней.</p>
 <label><input type="checkbox" id="hideCasterIndicator"> Скрыть индикатор Caster ON</label>
+<fieldset><legend>Tags</legend>
+<label><input type="checkbox" id="clipboard"> Общий буфер карт на Scryfall и Tagger</label>
+<label><input type="checkbox" id="tags"> Теги карт на странице карты</label>
+<fieldset><legend>Какие теги показывать</legend>
+<label><input type="checkbox" id="cardTags"> Card Tags</label>
+<label><input type="checkbox" id="artTags"> Art Tags</label>
+<label><input type="checkbox" id="relationships"> Связанные карты</label>
+</fieldset>
+<label><input type="checkbox" id="taggerSearchLinks"> Ссылка на Tagger поверх карт в результатах поиска</label>
+</fieldset>
+<fieldset><legend>CardClip</legend>
+<label for="exportFormat">Формат копирования</label>
+<select id="exportFormat"><option value="names">1 Название карты</option><option value="moxfield">1 Название карты (SET) номер</option></select>
+</fieldset>
+</section>
+<section><h2>Скрытие лишнего</h2>
 <label><input type="checkbox" id="hideDigitalSets"> Скрывать цифровые сеты на странице Sets и в Prints</label>
 <p class="hint">Скрываются цифровые сеты и кубы из списка Scryfall; выбранное издание остаётся видимым на собственной странице карты.</p>
 <label><input type="checkbox" id="hideNonTournamentSets"> Скрывать нетурнирные сеты (сувениры, официальные прокси, токены)</label>
@@ -16,27 +31,25 @@
 <label><input type="checkbox" id="hideForeignBlackBorder"> Скрывать Foreign Black Border сеты (4BB, FBB, BCHR)</label>
 <label><input type="checkbox" id="hideNonEnglishPrints"> Скрывать неанглийские издания в Prints (Portal, Secret Lair и другие)</label>
 <p class="hint">Фильтры сетов действуют в Sets и Prints, фильтр языка — только в Prints. Текущее издание остаётся видимым; смешанные сеты с легальными картами сохраняются.</p>
-</section><section><h2>Страница карты</h2>
-<label><input type="checkbox" id="tags"> Теги карт на странице карты</label>
-<fieldset><legend>Какие теги показывать</legend>
-<label><input type="checkbox" id="cardTags"> Card Tags</label>
-<label><input type="checkbox" id="artTags"> Art Tags</label>
-<label><input type="checkbox" id="relationships"> Связанные карты</label>
-</fieldset>
-<label><input type="checkbox" id="finishBadges"> Отдельный столбец отделки выпусков: Nonfoil, Foil, Etched, особый фойл</label>
-<label><input type="checkbox" id="onlyCardmarket"> Скрыть USD, TIX, TCGplayer и Cardhoarder</label>
-</section><section class="experimental"><h2>Экспериментальное</h2>
-<p class="hint">Эти настройки ещё уточняются и могут измениться или исчезнуть.</p>
+<label><input type="checkbox" id="onlyCardmarket"> Скрывать цены в USD, TIX, TCGplayer и Cardhoarder</label>
+<fieldset class="experimental-sub"><legend>Экспериментальное</legend>
+<p class="hint">Эта настройка ещё уточняется и может измениться или исчезнуть.</p>
 <fieldset><legend>Платформы: какие сеты показывать</legend>
 <label><input type="checkbox" id="setPlatformsAll"> Все (Paper, Arena, Magic Online)</label>
 <label><input type="checkbox" id="setPlatformsPaper"> Paper</label>
 <label><input type="checkbox" id="setPlatformsArena"> Arena</label>
 <label><input type="checkbox" id="setPlatformsMtgo"> Magic Online</label>
-<p class="hint" id="setPlatformsHint">Отметьте одну или несколько платформ: показываются только сеты выбранных платформ. Paper — все обычные сеты, Arena и Magic Online — только их цифровые сеты. Фильтр работает в Sets, в Prints и в поле сетов на странице Advanced search, где дополнительно учитываются галки Games над этим полем.</p>
+<p class="hint" id="setPlatformsHint">Отметьте одну или несколько платформ: показываются только сеты выбранных платформ. Paper — все обычные сеты, Arena и Magic Online — только их цифровые сеты. Фильтр работает в Sets и в Prints, а в поле сетов на странице Advanced search учитываются ещё и галки Games над этим полем.</p>
 </fieldset>
-<label><input type="checkbox" id="printAddButtons"> Плюс для отдельного издания при наведении в полном списке</label>
-<label><input type="checkbox" id="printPageSameTab"> Открывать полный список изданий в этой же вкладке</label>
-</section><section><h2>EDHREC</h2>
+</fieldset>
+</section>
+<section><h2>Дополнительная информация</h2>
+<label><input type="checkbox" id="finishBadges"> Отдельный столбец отделки выпусков: Nonfoil, Foil, Etched, особый фойл</label>
+<label><input type="checkbox" id="cardSearchLinks"> Поиск по типу и манакосту со страницы карты</label>
+<label><input type="checkbox" id="cardNicknames"> Исторические прозвища карт в предпросмотре Scryfall</label>
+<p class="hint">Прозвище появляется под таблицей изданий, когда карта выходила под другим именем. Например, Lavabrink Venturer (IKO #19) — «Professional Stunt Performer», Barbed Spike (MH2 #5) — «Barbed Flier».</p>
+</section>
+<section><h2>EDHREC</h2>
 <label><input type="checkbox" id="edhrecUsage"> Показывать использование в колодах Commander</label>
 <label><input type="checkbox" id="edhrecLink"> Показывать значок-ссылку EDHREC</label>
 <label for="edhrecUsageDisplay">Как показывать использование</label>
@@ -63,18 +76,19 @@
 <div id="formatList"></div>
 <p class="hint">Перетащи формат в нужную позицию любой колонки; чекбокс скрывает его. Порядок на карте: слева направо, сверху вниз.</p>
 </fieldset>
-</section><section><h2>Экспорт</h2>
-<label for="exportFormat">Формат копирования</label>
-<select id="exportFormat"><option value="names">1 Название карты</option><option value="moxfield">1 Название карты (SET) номер</option></select>
-</section>
-<section><h2>Функции Shambleshark</h2>
-<label><input type="checkbox" id="taggerSearchLinks"> Ссылка на Tagger поверх карт в результатах поиска</label>
-<label><input type="checkbox" id="cardSearchLinks"> Поиск по типу и манакосту со страницы карты</label>
-<label><input type="checkbox" id="cardNicknames"> Показать исторические прозвища карт при предпросмотре Scryfall</label>
+</section><section><h2>Scryfall Deckbuilder</h2>
 <label><input type="checkbox" id="deckNoPrices"> Режим «No Prices» в выпадающем списке колоды</label>
 <label><input type="checkbox" id="stackedDeckCards"> Карты колоды стопкой вместо развёрнутой сетки</label>
 <label><input type="checkbox" id="deckTokens"> Список токенов, создаваемых картами колоды</label>
 <p class="hint">Модули редактора колод Shambleshark зависят от внутреннего интерфейса Scryfall. Их переношу отдельно после проверки работы в редакторе.</p>
+</section>
+<section class="experimental"><h2>Экспериментальное</h2>
+<p class="hint">Эти настройки ещё уточняются и могут измениться или исчезнуть.</p>
+<label><input type="checkbox" id="printAddButtons"> Плюс для отдельного издания при наведении в полном списке</label>
+<label><input type="checkbox" id="printPageSameTab"> Открывать полный список изданий в этой же вкладке</label>
+<label for="siteLanguage">Язык интерфейса Scryfall и Tagger</label>
+<select id="siteLanguage"><option value="en">Английский</option><option value="ru">Русский</option></select>
+<p class="hint">Язык добавляемых элементов и основных элементов Scryfall. Тексты карт и статей не переводятся.</p>
 </section>
 <p class="hint">После изменения настроек обнови открытые страницы Scryfall и Tagger. MoxTags продолжает работать отдельно на Moxfield.</p>
 <button id="openOptions" type="button">Открыть настройки во вкладке</button><p id="status" role="status" aria-live="polite"></p></main><script src="i18n.js"></script><script src="format-catalog.js"></script><script src="options.js"></script></body></html>

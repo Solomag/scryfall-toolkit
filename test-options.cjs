@@ -35,6 +35,38 @@ function htmlIdCheck() {
   }
 }
 
+function sectionOrderTest() {
+  console.log('options.html: section order and grouping');
+  const html = read('options.html');
+  const headings = [...html.matchAll(/<h2>([^<]+)<\/h2>/g)].map(match => match[1]);
+  assertEqual(headings, ['Общее', 'Скрытие лишнего', 'Дополнительная информация', 'EDHREC', 'CardTrader',
+    'Легальность', 'Scryfall Deckbuilder', 'Экспериментальное'],
+    'sections follow the agreed order with Experimental last');
+  // Every control belongs to the section the user asked for.
+  const sectionOf = id => {
+    const at = html.indexOf(`id="${id}"`);
+    const before = html.slice(0, at);
+    const heading = [...before.matchAll(/<h2>([^<]+)<\/h2>/g)].pop();
+    return heading ? heading[1] : null;
+  };
+  assertEqual(sectionOf('clipboard'), 'Общее', 'the shared buffer sits in the Tags block of Общее');
+  assertEqual(sectionOf('exportFormat'), 'Общее', 'the copy format moved into Общее as CardClip');
+  assertEqual(sectionOf('taggerSearchLinks'), 'Общее', 'the Tagger link on search results sits with Tags');
+  assertEqual(sectionOf('onlyCardmarket'), 'Скрытие лишнего', 'hiding prices moved to Скрытие лишнего');
+  assertEqual(sectionOf('hideNonEnglishPrints'), 'Скрытие лишнего', 'the set filters live in one category');
+  assertEqual(sectionOf('setPlatformsAll'), 'Скрытие лишнего', 'the platform filter is nested under Скрытие лишнего');
+  assert(html.indexOf('id="setPlatformsAll"') > html.indexOf('class="experimental-sub"'),
+    'the platform filter sits inside the experimental sub-block');
+  assertEqual(sectionOf('finishBadges'), 'Дополнительная информация', 'the finish column moved to Additional info');
+  assertEqual(sectionOf('cardSearchLinks'), 'Дополнительная информация', 'type and mana search moved to Additional info');
+  assertEqual(sectionOf('cardNicknames'), 'Дополнительная информация', 'card nicknames moved to Additional info');
+  assertEqual(sectionOf('deckTokens'), 'Scryfall Deckbuilder', 'deck options share one category');
+  assertEqual(sectionOf('printAddButtons'), 'Экспериментальное', 'the print-grouping switches sit in Experimental');
+  assertEqual(sectionOf('siteLanguage'), 'Экспериментальное', 'the site language selector moved to the bottom');
+  assert(html.indexOf('id="siteLanguage"') > html.indexOf('id="deckTokens"'),
+    'the site language selector is the last control of the page');
+}
+
 function loadOptions(state) {
   const page = createPage({
     url: 'chrome-extension://scryfall-toolkit/options.html',
@@ -120,10 +152,10 @@ async function settingsTest() {
   const { document, mock } = page;
 
   const darkTheme = document.getElementById('darkTheme');
-  assertEqual(darkTheme.checked, false, 'darkTheme starts unchecked');
-  darkTheme.checked = true;
+  assertEqual(darkTheme.value, 'auto', 'the theme follows the system until it is chosen by hand');
+  darkTheme.value = 'dark';
   fireEvent(darkTheme, 'change');
-  assertEqual(mock.state.darkTheme, true, 'toggling darkTheme persists');
+  assertEqual(mock.state.darkTheme, 'dark', 'choosing the dark theme persists the mode as text');
   assertEqual(document.getElementById('status').textContent, 'Сохранено', 'save confirmed in Russian');
 
   const sameTab = document.getElementById('printPageSameTab');
@@ -179,6 +211,18 @@ async function setPlatformsTest() {
   );
 }
 
+async function themeModeTest() {
+  console.log('options.js: theme mode');
+  // Installations from before the three-way choice stored a boolean, so the
+  // page has to show what that boolean meant.
+  const legacy = loadOptions({ darkTheme: true });
+  assertEqual(legacy.document.getElementById('darkTheme').value, 'dark', 'a stored true opens on the dark theme');
+  const legacyLight = loadOptions({ darkTheme: false });
+  assertEqual(legacyLight.document.getElementById('darkTheme').value, 'light', 'a stored false opens on the light theme');
+  const stored = loadOptions({ darkTheme: 'light' });
+  assertEqual(stored.document.getElementById('darkTheme').value, 'light', 'a stored mode is shown as it is');
+}
+
 async function languageTest() {
   console.log('options.js: settings language');
   const page = loadOptions({});
@@ -209,9 +253,11 @@ async function discoveredFormatsTest() {
 (async () => {
   try {
     htmlIdCheck();
+    sectionOrderTest();
     await formatListTest();
     await settingsTest();
     await setPlatformsTest();
+    await themeModeTest();
     await languageTest();
     await discoveredFormatsTest();
     summary('test-options');

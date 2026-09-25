@@ -265,6 +265,36 @@ async function darkThemeRuntime() {
   assert(!root.classList.contains('stk-site-ru'), 'storage change restores EN site language');
 }
 
+async function systemThemeTest() {
+  console.log('theme.js: theme follows the system unless it is set by hand');
+  const page = createPage({
+    url: 'https://scryfall.com/',
+    html: '<!DOCTYPE html><html><body><div id="main"></div></body></html>',
+    state: {},
+    mediaDark: false
+  });
+  page.script('theme.js');
+  await sleep(30);
+  const root = page.document.documentElement;
+  assert(!root.classList.contains('stk-dark'), 'a light system leaves Scryfall light while the theme is automatic');
+
+  page.setSystemDark(true);
+  assert(root.classList.contains('stk-dark'), 'the system switching to dark switches the page with it');
+  page.setSystemDark(false);
+  assert(!root.classList.contains('stk-dark'), 'and back again with the system');
+
+  const pinned = createPage({
+    url: 'https://scryfall.com/',
+    html: '<!DOCTYPE html><html><body><div id="main"></div></body></html>',
+    state: { darkTheme: 'light' },
+    mediaDark: true
+  });
+  pinned.script('theme.js');
+  await sleep(30);
+  assert(!pinned.document.documentElement.classList.contains('stk-dark'),
+    'a light theme chosen by hand survives a dark system');
+}
+
 async function pathClasses() {
   console.log('theme.js: page path classes');
   const cases = [
@@ -319,6 +349,7 @@ async function pathClasses() {
     iconCheck();
     cssCheck();
     await darkThemeRuntime();
+    await systemThemeTest();
     await pathClasses();
     summary('test-theme');
     process.exit(0);

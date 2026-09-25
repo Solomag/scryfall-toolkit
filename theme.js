@@ -1,9 +1,29 @@
-chrome.storage.local.get({ darkTheme: false, hideCasterIndicator: false, siteLanguage: 'en' }).then(({ darkTheme, hideCasterIndicator, siteLanguage }) => {
-  document.documentElement.classList.toggle("stk-dark", Boolean(darkTheme));
-  document.documentElement.classList.toggle("stk-hide-caster", Boolean(hideCasterIndicator));
+// The theme follows the operating system until the user picks light or dark,
+// so a machine or phone that switches its own appearance switches Scryfall too.
+const systemDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
+const themeMode = value => {
+  if (value === true) return 'dark';
+  if (value === false || value === 'light') return 'light';
+  if (value === 'dark') return 'dark';
+  return systemDark && systemDark.matches ? 'dark' : 'light';
+};
+let currentTheme = 'auto';
+const applyTheme = value => {
+  // Installations from before the three-way choice stored a boolean.
+  const stored = value === true ? 'dark' : value === false ? 'light' : value;
+  currentTheme = ['auto', 'light', 'dark'].includes(stored) ? stored : 'auto';
+  const dark = themeMode(currentTheme) === 'dark';
+  document.documentElement.classList.toggle("stk-dark", dark);
+  if (dark) { repairAccountColors(); repairDarkPurple(); }
+};
+if (systemDark && systemDark.addEventListener) {
+  systemDark.addEventListener('change', () => { if (currentTheme === 'auto') applyTheme('auto'); });
+}
+chrome.storage.local.get({ darkTheme: 'auto', hideCasterIndicator: false, siteLanguage: 'en' }).then(({ darkTheme, hideCasterIndicator, siteLanguage }) => {
+  document.documentElement.classList.toggle('stk-hide-caster', Boolean(hideCasterIndicator));
   document.documentElement.classList.toggle('stk-site-ru', siteLanguage === 'ru');
   if (siteLanguage === 'ru') translateSiteControls();
-  if (darkTheme) { repairAccountColors(); repairDarkPurple(); }
+  applyTheme(darkTheme);
 });
 if (/^\/(?:settings|profile|decks|@[^/]+(?:\/decks)?|users|account|contact)(?:\/|$)/.test(location.pathname)) {
   document.documentElement.classList.add('stk-account-page');
@@ -20,10 +40,7 @@ if (/^\/(?:@[^/]+\/decks|decks)(?:\/|$)/.test(location.pathname)) initDeckAction
 chrome.storage.onChanged.addListener(changes => {
   if (changes.hideCasterIndicator) document.documentElement.classList.toggle('stk-hide-caster', Boolean(changes.hideCasterIndicator.newValue));
   if (changes.siteLanguage) document.documentElement.classList.toggle('stk-site-ru', changes.siteLanguage.newValue === 'ru');
-  if (changes.darkTheme) {
-    document.documentElement.classList.toggle("stk-dark", Boolean(changes.darkTheme.newValue));
-    if (changes.darkTheme.newValue) { repairAccountColors(); repairDarkPurple(); }
-  }
+  if (changes.darkTheme) applyTheme(changes.darkTheme.newValue);
 });
 
 function repairDarkPurple() {
