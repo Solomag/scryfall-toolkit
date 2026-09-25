@@ -14,7 +14,7 @@ const applyTheme = value => {
   currentTheme = ['auto', 'light', 'dark'].includes(stored) ? stored : 'auto';
   const dark = themeMode(currentTheme) === 'dark';
   document.documentElement.classList.toggle("stk-dark", dark);
-  if (dark) { repairAccountColors(); repairDarkPurple(); }
+  if (dark) { repairAccountColors(); repairDarkPurple(); repairBotsArtwork(); }
 };
 if (systemDark && systemDark.addEventListener) {
   systemDark.addEventListener('change', () => { if (currentTheme === 'auto') applyTheme('auto'); });
@@ -48,10 +48,22 @@ function repairDarkPurple() {
   document.documentElement.dataset.stkPurpleRepair = 'true';
   let scheduled = false;
   const pending = new Set();
+  const selector = 'a,button,label,span,p,li,small,abbr,option,h1,h2,h3,h4,h5,h6,strong,b,em,i,u,s,sub,sup,code,pre,kbd,samp,var,cite,dfn,mark,legend,figcaption,summary,caption,dt,dd,th,td';
   // Scryfall marks its links with one purple, but it hands that colour to plain
   // inline tags too (strong in the empty search, b in the jump bar), so the list
-  // covers the text tags a link or a sentence can be built from.
-  const selector = 'a,button,label,span,p,li,small,abbr,option,h1,h2,h3,h4,h5,h6,strong,b,em,i,u,s,sub,sup,code,pre,kbd,samp,var,cite,dfn,mark,legend,figcaption,summary,caption,dt,dd,th,td';
+  // covers the text tags a link or a sentence can be built from. The test is the
+  // colour itself rather than one literal: a purple dark enough to sink into a
+  // dark surface is replaced whatever shade of purple Scryfall wrote it as, and a
+  // blue or a pink is left alone because a blue needs no lift and a pink is
+  // already light.
+  const sinkIntoDark = value => {
+    const match = String(value).match(/^rgba?\(\s*(\d+),\s*(\d+),\s*(\d+)/);
+    if (!match) return false;
+    const [red, green, blue] = [Number(match[1]), Number(match[2]), Number(match[3])];
+    if (blue < 90 || blue - green < 25 || red - green < 10) return false;
+    const channel = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+    return 0.2126 * channel(red) + 0.7152 * channel(green) + 0.0722 * channel(blue) < 0.22;
+  };
   const scan = (root = document.getElementById('main')) => {
     if (!document.documentElement.classList.contains('stk-dark')) return;
     const main = document.getElementById('main');
@@ -61,7 +73,7 @@ function repairDarkPurple() {
     for (const node of candidates) {
       if (!node.matches(selector) || !main.contains(node)) continue;
       if (node.classList.contains('stk-brighter-purple')) continue;
-      if (getComputedStyle(node).color === 'rgb(99, 68, 150)') node.classList.add('stk-brighter-purple');
+      if (sinkIntoDark(getComputedStyle(node).color)) node.classList.add('stk-brighter-purple');
     }
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', scan, {once:true});
@@ -77,6 +89,45 @@ function repairDarkPurple() {
       pending.clear();
     });
   }).observe(document.documentElement, {childList:true,subtree:true});
+}
+
+// The bots page shows two screenshots of Scryfall's own bot inside Slack, taken
+// while Slack wore its light theme. A white window on a dark card reads as a
+// blank block, so a light screenshot is turned the other way round. The picture
+// is measured rather than guessed at: a screenshot Scryfall publishes later in
+// dark colours keeps the paint it arrived with, and a picture the browser will
+// not let us sample keeps its own too.
+function repairBotsArtwork() {
+  if (!document.documentElement.classList.contains('stk-bots-page')) return;
+  const lightness = image => {
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = 8;
+      canvas.height = 8;
+      const context = canvas.getContext('2d', {willReadFrequently: true});
+      context.drawImage(image, 0, 0, 8, 8);
+      const {data} = context.getImageData(0, 0, 8, 8);
+      let sum = 0;
+      for (let i = 0; i < data.length; i += 4) sum += 0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2];
+      return sum / (data.length / 4);
+    } catch (error) {
+      return null;
+    }
+  };
+  const scan = () => {
+    for (const image of document.querySelectorAll('#main img.marketing-features-item-image')) {
+      if (image.dataset.stkScreenshot) continue;
+      const mark = () => {
+        const value = lightness(image);
+        image.dataset.stkScreenshot = value === null ? 'unreadable' : 'measured';
+        if (value !== null && value > 115) image.classList.add('stk-light-screenshot');
+      };
+      if (image.complete && image.naturalWidth) mark();
+      else image.addEventListener('load', mark, {once: true});
+    }
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', scan, {once: true});
+  else scan();
 }
 
 function translateSiteControls() {

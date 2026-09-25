@@ -155,7 +155,12 @@ html.stk-dark.stk-account-page #deckbuilder :is(.deckbuilder-cmc-stat,.deckbuild
 html.stk-dark.stk-account-page #deckbuilder :is(.deckbuilder-cmc-stat,.deckbuilder-cmc-stat-number) :is(li,span):not(.card-symbol):not(.mana-symbol){color:#bcbac3!important}
 /* A column header sits on its own lighter band, which reads as a second surface
    in the middle of the column. The band takes the column's own colour. */
-html.stk-dark #main #deckbuilder .deckbuilder-section-title-bar{background-color:#252829!important;border-color:#414345!important}
+/* The editor stands on the page with a surface one step lighter, so the columns
+   read as a lighter box inside a dark page. The column and its header take the
+   page's own colour; the card rows keep their own step, so the list still reads
+   as rows. */
+html.stk-dark #main #deckbuilder :is(.deckbuilder-section,.deckbuilder-column){background-color:#1d2021!important}
+html.stk-dark #main #deckbuilder :is(.deckbuilder-section-title-bar,.deckbuilder-entry){background-color:#252829!important;border-color:#414345!important}
 /* The set code and the collector number are Scryfall's own grey badge, which is
    black ink at a quarter opacity and disappears on the dark row. */
 html.stk-dark.stk-account-page #deckbuilder :is(.deckbuilder-entry-badge,.stk-deck-set-badge){color:#dcd8e2!important;background-color:#383a3c!important;border-color:#4b4d52!important}
@@ -195,7 +200,7 @@ html.stk-dark #main .stk-deck-actions-menu :is(a,button):hover{background:#41394
    dark surface, and the first replacement was still too close to it, so the
    pages that carry many links (the search reference, the account pages) read
    almost black. This is the brighter step, applied everywhere. */
-html.stk-dark{--stk-link-purple:#b294dd}
+html.stk-dark{--stk-link-purple:#c4a7ea}
 html.stk-dark #main :is(.reference-block,.reference-jump,.form-row,.search-info,.profile,.account,.deck-list-entry) a:not(.button-n):not([class*="currency-"]),html.stk-dark #main a[href^="/tags/"],html.stk-dark #main a[href^="https://tagger.scryfall.com/"]{color:var(--stk-link-purple)!important}
 html.stk-dark #main #stk-tags a{color:var(--stk-link-purple)!important}
 html.stk-dark #main :is(.reference-block,.reference-block-doc,.reference-block-examples,.reference-jump,h1,h2,h3,h4,h5,h6){text-shadow:none!important;-webkit-text-stroke:0!important}
@@ -379,6 +384,13 @@ html.stk-dark.stk-bots-page #main .bot-marketing-panel-footer .button-n{backgrou
    dark page reads as a second, offset copy of every line. */
 html.stk-dark.stk-bots-page #main :is(p,h1,h2,h3,h4,h5,h6,a,span,b,li,div){text-shadow:none!important;-webkit-text-stroke:0!important}
 
+/* The two screenshots on the bots page are pictures of Scryfall's own bot
+   inside Slack, taken while Slack wore its light theme: a white window on a
+   dark card reads as a blank block rather than as a picture. theme.js measures
+   each one and marks the light ones, so a screenshot Scryfall publishes later in
+   dark colours keeps the paint it arrived with. */
+html.stk-dark.stk-bots-page #main img.stk-light-screenshot{filter:invert(1) hue-rotate(180deg)}
+
 /* The donation tiles and the payment service tiles. */
 html.stk-dark.stk-info-page #main :is(.donation-stripe-amount,.donation-service){background-color:#252829!important;color:#e6e3df!important;border-color:#414345!important}
 html.stk-dark.stk-info-page #main :is(.donation-stripe-amount,.donation-service) :is(b,span,svg){color:#e6e3df!important}
@@ -408,6 +420,13 @@ html.stk-dark #header-search-field::placeholder{color:#8d8894!important;-webkit-
    cream band flashed across the top of a dark page. Scryfall writes them as
    absolute links on some pages and as bare fragments on others. */
 html.stk-dark a:is([href$="#main"],[href$="#footer"]){background-color:#292b2c!important;color:#c79ce3!important;outline-color:#595c60!important}
+
+/* Scryfall's "Nothing Here" page is built straight into the body, with no #main
+   at all, so every rule above missed it: its body carried Scryfall's light
+   gradient, which painted the whole page white, and its drawing was filled with
+   the site purple. Both are stated here, on the body itself. */
+html.stk-dark body{background-image:none!important}
+html.stk-dark body>svg :is(path,g,circle,rect,polygon,ellipse):not([fill="none"]){fill:var(--stk-link-purple)!important}
 
 /* The dot between the counts in a set's card grid header is a faint grey that
    all but vanished on the dark surface. */

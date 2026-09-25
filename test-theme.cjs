@@ -152,7 +152,7 @@ function cssCheck() {
     'WORSE_THAN flips the relation icon');
 
   const theme = read('theme.css');
-  assert(theme.includes('html.stk-dark{--stk-link-purple:#b294dd}'),
+  assert(theme.includes('html.stk-dark{--stk-link-purple:#c4a7ea}'),
     'dark theme link purple variable');
   assert(theme.includes('html.stk-dark #main .stk-brighter-purple{color:var(--stk-link-purple)!important}'),
     'brighter purple rule for dark theme');
@@ -220,6 +220,12 @@ function cssCheck() {
   assert(!/repairSetSymbols|stk-light-set-symbol/.test(js),
     'the set symbols need no per-symbol repair, the stylesheet filter repaints them all');
   assert(/const selector = '[^']*strong/.test(js), 'the purple repair also looks at strong and the other text tags');
+  assert(/const sinkIntoDark = value =>/.test(js) && /< 0\.22/.test(js),
+    'the purple repair judges the colour itself, so any dark purple is lifted, not just one literal');
+  assert(!/color === 'rgb\(99, 68, 150\)'/.test(js), 'the repair no longer matches a single hard-coded purple');
+  assert(/function repairBotsArtwork\(\)/.test(js) && /getImageData/.test(js) && /stk-light-screenshot/.test(js),
+    'a light screenshot is measured and only then repainted');
+  assert(/repairBotsArtwork\(\);/.test(js), 'the screenshot repair runs with the dark theme');
   assert(/Never paint a footer band/.test(theme), 'footer band guard comment present');
   const stripped = theme.replace(/\/\*[\s\S]*?\*\//g, '');
   let offender = '';
@@ -252,11 +258,15 @@ function auditGapCheck() {
     ['the white form wrapper inside a deck menu', /\.dropdown-menu-items form\{background-color:transparent/],
     ['the black curve counts of the deck editor', /deckbuilder-cmc-stat[^{]*:is\(strong,b\)\{color:#e6e3df/],
     ['the set code badge of a deck row', /\.deckbuilder-entry-badge,\.stk-deck-set-badge\)\{color:#dcd8e2/],
-    ['the lighter band behind a deck column title', /\.deckbuilder-section-title-bar\{background-color:#252829/],
+    ['the lighter band behind a deck column title', /#deckbuilder :is\(\.deckbuilder-section-title-bar,\.deckbuilder-entry\)\{background-color:#252829/],
     ['the duplicated panel copy on the bots page', /\.bot-marketing-panel-shadow :is\(\.bot-marketing-panel-desc/],
     ['the white text shadow on the bots page', /stk-bots-page #main :is\(p,h1,h2,h3,h4,h5,h6,a,span,b,li,div\)\{text-shadow:none/],
     ['the account form title band', /\.stk-account-light-bar\.form-n-title/],
-    ['the browser autofill paint in the header search', /#header-search-field:-webkit-autofill/]
+    ['the browser autofill paint in the header search', /#header-search-field:-webkit-autofill/],
+    ['the light screenshot of a Slack window', /img\.stk-light-screenshot\{filter:invert\(1\) hue-rotate\(180deg\)/],
+    ['the light gradient on the page Scryfall builds without a main', /html\.stk-dark body\{background-image:none!important\}/],
+    ['the purple drawing on that page', /body>svg :is\(path,g,circle,rect,polygon,ellipse\):not\(\[fill="none"\]\)\{fill:var\(--stk-link-purple\)/],
+    ['the lighter box the deck columns made inside the page', /#deckbuilder :is\(\.deckbuilder-section,\.deckbuilder-column\)\{background-color:#1d2021/]
   ]) assert(pattern.test(theme), `dark theme repaints ${what}`);
 
   // Tagger is a separate app: every rule that paints it must be scoped to the
