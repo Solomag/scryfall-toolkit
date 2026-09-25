@@ -57,6 +57,11 @@
 .stk-price-hidden{display:none!important}
 #js-checklist tr.stk-digital-set-hidden{display:none!important}
 #main .prints-table tr.stk-digital-set-hidden{display:none!important}
+/* The set field of advanced search hides the sets of other platforms instead of
+   removing them, so ticking another platform in Games can bring them back. */
+#main select[name="set[]"] option[hidden],
+#main .select2-results__option[role="treeitem"][hidden],
+#main .select2-results__option[role="group"][hidden]{display:none!important}
 .card-grid-item>.stk-tagger-link{position:absolute;bottom:5px;left:5px;z-index:8;display:grid;place-items:center;width:25px;height:25px;border-radius:4px;background:#2b2935ba;color:#e3cfed;text-decoration:none;opacity:.68}
 .card-grid-item>.stk-tagger-link:hover,.card-grid-item>.stk-tagger-link:focus-visible{opacity:1}
 .stk-card-nickname{font-style:italic}

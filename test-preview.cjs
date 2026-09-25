@@ -875,10 +875,13 @@ async function setPlatformTest() {
 }
 
 async function advancedSetFilterTest() {
-  console.log('content.js: advanced search set field follows the platform filter');
+  console.log('content.js: advanced search set field follows Games and the platform filter');
   const html = `<!DOCTYPE html><html><body><div id="main"><form class="form-layout">
-    <label><input type="checkbox" name="games[]" value="paper" checked> Paper</label>
-    <label><input type="checkbox" name="games[]" value="arena"> Arena</label>
+    <div class="form-row"><div class="form-row-content-band">
+      <label><input type="checkbox" name="games[]" value="paper" checked> Paper</label>
+      <label><input type="checkbox" name="games[]" value="arena"> Arena</label>
+      <label><input type="checkbox" name="games[]" value="mtgo"> Magic Online</label>
+    </div></div>
     <div class="form-row">
       <div class="inner-flex">
         <select name="set[]" id="set" multiple>
@@ -904,8 +907,13 @@ async function advancedSetFilterTest() {
     </span>
     </div>
   </form></div></body></html>`;
-  const load = async state => {
-    const page = createPage({ url: 'https://scryfall.com/advanced', html, state, routes });
+  const load = async (state, pageHtml = html, pageOptions = {}) => {
+    const page = createPage({ url: 'https://scryfall.com/advanced', html: pageHtml, state, routes, ...pageOptions });
+    // linkedom keeps the checked attribute out of the property Scryfall's own
+    // markup would set, so the fixture states it before the script reads it.
+    for (const box of page.document.querySelectorAll('#main input[name="games[]"]')) {
+      box.checked = box.hasAttribute('checked');
+    }
     await page.script('i18n.js');
     await page.script('format-catalog.js');
     await page.script('tag-icons.js');
@@ -914,43 +922,67 @@ async function advancedSetFilterTest() {
     await sleep(80);
     return page;
   };
-  const selectValues = page => [...page.document.querySelectorAll('select[name="set[]"] option')].map(option => option.value);
-  const listValues = page => [...page.document.querySelectorAll('.select2-results__option[role="treeitem"] use')]
-    .map(use => (use.getAttribute('xlink:href') || '').replace('#sets-', '').replace('-svg', ''));
-  const groups = page => [...page.document.querySelectorAll('.select2-results__option[role="group"] strong')].map(node => node.textContent);
+  // Sets are hidden rather than removed, so a wider platform choice can bring
+  // them back; only the ones on screen count.
+  const selectValues = page => [...page.document.querySelectorAll('select[name="set[]"] option')]
+    .filter(option => !option.hidden).map(option => option.value);
+  const listValues = page => [...page.document.querySelectorAll('.select2-results__option[role="treeitem"]')]
+    .filter(item => !item.hidden)
+    .map(item => (item.querySelector('use').getAttribute('xlink:href') || '').replace('#sets-', '').replace('-svg', ''));
+  const groups = page => [...page.document.querySelectorAll('.select2-results__option[role="group"]')]
+    .filter(group => !group.hidden).map(group => group.querySelector('strong').textContent);
+  const tick = (page, value, on) => {
+    const box = [...page.document.querySelectorAll('#main input[name="games[]"]')]
+      .find(input => input.value === value);
+    box.checked = on;
+    fireEvent(box, 'change');
+  };
 
-  const paper = await load({ clipboard: false, setPlatforms: ['paper'] });
-  assertEqual(selectValues(paper), ['mh3', 'ysos'], 'the Magic Online set leaves the select while only Paper is kept');
-  assertEqual(listValues(paper), ['mh3'], 'the rendered dropdown is pruned the same way; the chosen set is a chip, not a row');
-  assertEqual(groups(paper), ['Expansions'], 'a group that loses every option is removed with it');
+  // The Games field above the set field is what the user works with: with only
+  // Paper ticked, only paper sets stay in the list.
+  const paper = await load({ clipboard: false });
+  assertEqual(selectValues(paper), ['mh3', 'ysos'], 'with only Paper ticked in Games the Arena and Magic Online sets are hidden');
+  assertEqual(listValues(paper), ['mh3'], 'the rendered dropdown follows the same choice');
+  assertEqual(groups(paper), ['Expansions'], 'a group that loses every set is hidden with it');
 
+  // Ticking another platform there brings its sets back, both ways.
+  tick(paper, 'arena', true);
+  tick(paper, 'paper', false);
+  assertEqual(selectValues(paper), ['ysos'], 'switching Games to Arena shows the Arena set again');
+  assertEqual(listValues(paper), ['ysos'], 'in the dropdown as well');
+  tick(paper, 'mtgo', true);
+  assertEqual(selectValues(paper), ['ysos', 'me2'], 'and so does the next platform ticked');
+  assertEqual(groups(paper), ['Expansions', 'Online'], 'both groups are on screen again');
+  tick(paper, 'paper', true);
+  assertEqual(selectValues(paper), ['mh3', 'ysos', 'me2'], 'ticking Paper back restores the paper set');
+  tick(paper, 'arena', false);
+  tick(paper, 'mtgo', false);
+
+  // The settings choice narrows the same field further.
   const arena = await load({ clipboard: false, setPlatforms: ['arena'] });
-  assertEqual(selectValues(arena), ['ysos'], 'only the selected Arena set survives in the select');
-  assertEqual(listValues(arena), ['ysos'], 'and in the rendered dropdown');
+  assertEqual(selectValues(arena), ['mh3', 'ysos'], 'with Games on Paper the Arena-only setting has nothing to show, so Games wins');
+  tick(arena, 'paper', false);
+  tick(arena, 'arena', true);
+  assertEqual(selectValues(arena), ['ysos'], 'with Arena ticked in Games the setting takes over');
+  assertEqual(listValues(arena), ['ysos'], 'and so does the dropdown');
 
+  // With every Games box ticked the field is Scryfall's own again.
   const all = await load({ clipboard: false });
-  assertEqual(selectValues(all), ['mh3', 'ysos', 'me2'], 'with every platform kept the select is untouched');
+  tick(all, 'arena', true);
+  tick(all, 'mtgo', true);
+  assertEqual(selectValues(all), ['mh3', 'ysos', 'me2'], 'with every platform ticked in Games the select is untouched');
   assertEqual(listValues(all), ['mh3', 'ysos', 'me2'], 'and so is the rendered dropdown');
   assertEqual(groups(all), ['Expansions', 'Online'], 'no group disappears without a platform filter');
 
   // Scryfall only builds the dropdown when the field is opened, so the list
   // arrives long after the script has run.
   const closedHtml = html.replace(/<span class="select2 select2-container[\s\S]*?\n    <\/span>\n/, '');
-  const late = createPage({
-    url: 'https://scryfall.com/advanced', html: closedHtml, state: { clipboard: false, setPlatforms: ['paper'] },
-    routes, mutationObserver: true
-  });
-  await late.script('i18n.js');
-  await late.script('format-catalog.js');
-  await late.script('tag-icons.js');
-  await late.script('data/shambleshark-nicknames.js');
-  await late.script('content.js');
-  await sleep(80);
+  const late = await load({ clipboard: false }, closedHtml, { mutationObserver: true });
   assertEqual(late.document.querySelectorAll('.select2-results__option').length, 0, 'the field starts without a rendered list');
-  late.document.querySelector('.form-row').insertAdjacentHTML('beforeend', html.match(/<span class="select2 select2-container[\s\S]*?\n    <\/span>\n/)[0]);
+  late.document.querySelector('.form-row:last-child').insertAdjacentHTML('beforeend', html.match(/<span class="select2 select2-container[\s\S]*?\n    <\/span>\n/)[0]);
   late.flushObservers();
-  assertEqual(listValues(late), ['mh3'], 'a list that appears later is pruned as soon as it is rendered');
-  assertEqual(groups(late), ['Expansions'], 'and its empty group is removed with it');
+  assertEqual(listValues(late), ['mh3'], 'a list that appears later is filtered as soon as it is rendered');
+  assertEqual(groups(late), ['Expansions'], 'and its empty group is hidden with it');
 }
 
 (async () => {

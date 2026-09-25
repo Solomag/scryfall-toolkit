@@ -262,11 +262,9 @@ html.stk-dark.stk-account-page #main .sidebar :is(.sidebar-toolbox,.sidebar-pric
 html.stk-dark.stk-account-page #main .deck-list-entry :is(.dropdown-menu-items,.dropdown-menu-items ul,.dropdown-menu-items li,.dropdown-menu-items a,.dropdown-menu-items button){background-color:#292b2c!important;color:#e6e3df!important;border-color:#55575d!important}
 html.stk-dark.stk-account-page #main .deck-list-entry .dropdown-menu-items :is(a,button):hover{background-color:#413949!important;color:#fff!important}
 
-/* Sets is limited to 1000px by the native checklist wrapper; at desktop
-   widths the extra language chips fit in the page instead of a scroll box. */
-#main .checklist-wrapper:has(#js-checklist){width:min(100%,1580px)!important;max-width:1580px!important;overflow-x:auto!important}
-#main #js-checklist{width:100%!important;max-width:1580px!important;min-width:900px!important}
-#main .checklist-wrapper:has(> #js-checklist)::-webkit-scrollbar:horizontal{height:9px}
+/* Sets keeps Scryfall's own column width; the wrapper only stops asking for a
+   scroll box until the columns really need one. */
+#main .checklist-wrapper:has(#js-checklist){overflow-x:auto!important}
 
 /* Scryfall can nest its deck menu in more than one scrolling wrapper. */
 #main .stk-deck-list-expanded :is(.dropdown-menu-items,[class*="dropdown-menu"]){max-height:none!important;overflow:visible!important}

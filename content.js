@@ -29,22 +29,25 @@
   const platformFilterOn = chosenPlatforms.size < PLATFORM_NAMES.length;
   // Tells whether a set belongs to a platform the user kept. A digital set the
   // index could not place stays visible: hiding a set on a guess is worse.
-  const platformSetVisible = (categories, platforms) => {
-    const digital = new Set(categories?.digital || []);
-    const games = platforms || {};
-    return code => {
-      const key = String(code || '').toLowerCase();
-      if (!digital.has(key)) return chosenPlatforms.has('paper');
-      const list = games[key];
-      return !Array.isArray(list) || !list.length || list.some(game => chosenPlatforms.has(game));
-    };
+  const setPlatformsOf = (categories, platforms, code) => {
+    const key = String(code || '').toLowerCase();
+    // Paper is every set Scryfall does not mark digital.
+    if (!(categories?.digital || []).includes(key)) return ['paper'];
+    const games = (platforms || {})[key];
+    return Array.isArray(games) ? games : [];
   };
-  const platformSetRequests = async () => {
+  const platformSetVisible = (categories, platforms) => code => {
+    const games = setPlatformsOf(categories, platforms, code);
+    return !games.length || games.some(game => chosenPlatforms.has(game));
+  };
+  const platformSetRequests = async (withPlatforms = platformFilterOn) => {
     const [categories, platforms] = await Promise.all([
       request({type: 'setCategories'}).catch(() => ({ digital: [] })),
-      platformFilterOn ? request({type: 'setPlatforms'}).catch(() => ({})) : Promise.resolve({})
+      // The set field on /advanced needs the index even when the settings keep
+      // every platform, because the Games checkboxes decide the list there.
+      withPlatforms ? request({type: 'setPlatforms'}).catch(() => ({})) : Promise.resolve({})
     ]);
-    return { categories, visible: platformSetVisible(categories, platforms) };
+    return { categories, platforms, visible: platformSetVisible(categories, platforms) };
   };
   const identity = cardPage ? { set: cardPath[1], number: decodeURIComponent(cardPath[2]) } : null;
   // Shared with the in-table prints expansion: the Finish column header lands
@@ -578,47 +581,74 @@
   }
 
   function initAdvancedSetFilter() {
-    if (!platformFilterOn) return;
     // The Games checkboxes sit right above this field, so the set list follows
-    // the platforms that are kept. Scryfall's select2 keeps its own copy of the
-    // options it already rendered, so the select and the dropdown are pruned.
+    // the platforms that are ticked there as well as the ones kept in settings.
     const select = document.querySelector('#main select[name="set[]"]');
+    const gamesField = select?.closest('.form-row')?.previousElementSibling
+      || document.querySelector('#main input[name="games[]"]')?.closest('.form-row-content-band');
     if (!select) return;
-    platformSetRequests().then(({visible}) => {
+    const gamesBoxes = [...document.querySelectorAll('#main input[name="games[]"]')];
+    // Scryfall builds this dropdown only when the field is opened, and it puts
+    // the container into the form rather than next to the select, so the list
+    // is looked up again on every change inside the form.
+    const containerOf = () => {
+      const results = document.getElementById(`select2-${select.id || 'set'}-results`);
+      const owner = results?.closest('.select2-container');
+      if (owner) return owner;
+      const sibling = select.nextElementSibling;
+      if (sibling?.classList?.contains('select2-container')) return sibling;
+      return [...(select.parentElement?.querySelectorAll('.select2-container') || [])]
+        .find(node => node.previousElementSibling === select) || null;
+    };
+    // Platforms allowed here: what the Games checkboxes tick, narrowed by the
+    // ones kept in settings. An empty overlap falls back to the Games choice
+    // alone, so the field never ends up without a single set.
+    const allowed = () => {
+      const ticked = new Set(gamesBoxes.filter(box => box.checked)
+        .map(box => box.value).filter(name => PLATFORM_NAMES.includes(name)));
+      if (!ticked.size) return chosenPlatforms;
+      const shared = [...ticked].filter(name => chosenPlatforms.has(name));
+      return new Set(shared.length ? shared : ticked);
+    };
+    const hide = (node, hidden) => {
+      node.hidden = hidden;
+      if (node.tagName === 'OPTION') node.disabled = hidden;
+    };
+    // Every option carries the set symbol of its set, which names the code.
+    const setCodeOf = item => {
+      const use = item.querySelector('use');
+      const href = use?.getAttribute('xlink:href') || use?.getAttribute('href') || '';
+      return href.match(/^#sets-(.+)-svg$/)?.[1]?.toLowerCase() || '';
+    };
+    let visible = () => true;
+    const apply = () => {
       const chosen = new Set([...select.options].filter(option => option.selected).map(option => option.value.toLowerCase()));
       for (const option of [...select.options]) {
         const code = option.value.toLowerCase();
-        if (code && !chosen.has(code) && !visible(code)) option.remove();
+        // Sets already chosen stay put, exactly like the printing on a card page.
+        hide(option, Boolean(code && !chosen.has(code) && !visible(code)));
       }
-      // Scryfall builds this dropdown only when the field is opened, and it puts
-      // the container into the form rather than next to the select, so the list
-      // is looked up again on every change inside the form.
-      const containerOf = () => {
-        const results = document.getElementById(`select2-${select.id || 'set'}-results`);
-        const owner = results?.closest('.select2-container');
-        if (owner) return owner;
-        const sibling = select.nextElementSibling;
-        if (sibling?.classList?.contains('select2-container')) return sibling;
-        return [...(select.parentElement?.querySelectorAll('.select2-container') || [])]
-          .find(node => node.previousElementSibling === select) || null;
+      const container = containerOf();
+      if (!container) return;
+      for (const item of container.querySelectorAll('.select2-results__option[role="treeitem"]')) {
+        const set = setCodeOf(item);
+        if (set) item.hidden = !visible(set);
+      }
+      for (const group of container.querySelectorAll('.select2-results__option[role="group"]')) {
+        const rows = [...group.querySelectorAll('.select2-results__option[role="treeitem"]')];
+        group.hidden = Boolean(rows.length) && rows.every(row => row.hidden);
+      }
+    };
+    platformSetRequests(true).then(index => {
+      visible = code => {
+        const games = setPlatformsOf(index.categories, index.platforms, code);
+        return !games.length || games.some(game => allowed().has(game));
       };
-      // Every option carries the set symbol of its set, which names the code.
-      const prune = () => {
-        const container = containerOf();
-        if (!container) return;
-        for (const item of container.querySelectorAll('.select2-results__option[role="treeitem"]')) {
-          const use = item.querySelector('use');
-          const href = use?.getAttribute('xlink:href') || use?.getAttribute('href') || '';
-          const set = href.match(/^#sets-(.+)-svg$/)?.[1];
-          if (set && !visible(set.toLowerCase())) item.remove();
-        }
-        for (const group of container.querySelectorAll('.select2-results__option[role="group"]')) {
-          if (!group.querySelector('.select2-results__option[role="treeitem"]')) group.remove();
-        }
-      };
-      prune();
-      new MutationObserver(prune).observe(select.closest('form') || document.body, { childList: true, subtree: true });
+      apply();
     });
+    for (const box of gamesBoxes) box.addEventListener('change', apply);
+    if (gamesField) new MutationObserver(apply).observe(gamesField, { attributes: true, subtree: true, attributeFilter: ['checked', 'disabled'] });
+    new MutationObserver(apply).observe(select.closest('form') || document.body, { childList: true, subtree: true });
   }
 
   function initEdhrecStats() {

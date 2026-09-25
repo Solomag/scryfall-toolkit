@@ -16,13 +16,6 @@
 <label><input type="checkbox" id="hideForeignBlackBorder"> Скрывать Foreign Black Border сеты (4BB, FBB, BCHR)</label>
 <label><input type="checkbox" id="hideNonEnglishPrints"> Скрывать неанглийские издания в Prints (Portal, Secret Lair и другие)</label>
 <p class="hint">Фильтры сетов действуют в Sets и Prints, фильтр языка — только в Prints. Текущее издание остаётся видимым; смешанные сеты с легальными картами сохраняются.</p>
-<fieldset><legend>Платформы: какие сеты показывать</legend>
-<label><input type="checkbox" id="setPlatformsAll"> Все (Paper, Arena, Magic Online)</label>
-<label><input type="checkbox" id="setPlatformsPaper"> Paper</label>
-<label><input type="checkbox" id="setPlatformsArena"> Arena</label>
-<label><input type="checkbox" id="setPlatformsMtgo"> Magic Online</label>
-<p class="hint" id="setPlatformsHint">Отметьте одну или несколько платформ: показываются только сеты выбранных платформ. Paper — все обычные сеты, Arena и Magic Online — только их цифровые сеты. Фильтр работает в Sets, в Prints и в поле сетов на странице Advanced search.</p>
-</fieldset>
 </section><section><h2>Страница карты</h2>
 <label><input type="checkbox" id="tags"> Теги карт на странице карты</label>
 <fieldset><legend>Какие теги показывать</legend>
@@ -31,9 +24,18 @@
 <label><input type="checkbox" id="relationships"> Связанные карты</label>
 </fieldset>
 <label><input type="checkbox" id="finishBadges"> Отдельный столбец отделки выпусков: Nonfoil, Foil, Etched, особый фойл</label>
+<label><input type="checkbox" id="onlyCardmarket"> Скрыть USD, TIX, TCGplayer и Cardhoarder</label>
+</section><section class="experimental"><h2>Экспериментальное</h2>
+<p class="hint">Эти настройки ещё уточняются и могут измениться или исчезнуть.</p>
+<fieldset><legend>Платформы: какие сеты показывать</legend>
+<label><input type="checkbox" id="setPlatformsAll"> Все (Paper, Arena, Magic Online)</label>
+<label><input type="checkbox" id="setPlatformsPaper"> Paper</label>
+<label><input type="checkbox" id="setPlatformsArena"> Arena</label>
+<label><input type="checkbox" id="setPlatformsMtgo"> Magic Online</label>
+<p class="hint" id="setPlatformsHint">Отметьте одну или несколько платформ: показываются только сеты выбранных платформ. Paper — все обычные сеты, Arena и Magic Online — только их цифровые сеты. Фильтр работает в Sets, в Prints и в поле сетов на странице Advanced search, где дополнительно учитываются галки Games над этим полем.</p>
+</fieldset>
 <label><input type="checkbox" id="printAddButtons"> Плюс для отдельного издания при наведении в полном списке</label>
 <label><input type="checkbox" id="printPageSameTab"> Открывать полный список изданий в этой же вкладке</label>
-<label><input type="checkbox" id="onlyCardmarket"> Скрыть USD, TIX, TCGplayer и Cardhoarder</label>
 </section><section><h2>EDHREC</h2>
 <label><input type="checkbox" id="edhrecUsage"> Показывать использование в колодах Commander</label>
 <label><input type="checkbox" id="edhrecLink"> Показывать значок-ссылку EDHREC</label>
