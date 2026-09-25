@@ -318,7 +318,7 @@ function auditGapCheck() {
   assert(taggerRules.length >= 10, 'Tagger has its own block of rules');
   assert(taggerRules.every(line => line.trim().startsWith('html.stk-dark.stk-tagger')),
     'no Tagger rule can reach a Scryfall page');
-  assert(/:is\(\.light-mode:not\(\.card-layout\),\.sample-tags,\.card-layout--tagging\)\{background-color:#252829/.test(theme),
+  assert(/:is\(\.light-mode:not\(\.card-layout\):not\(\.sidebar\),\.sample-tags,\.card-layout--tagging\)\{background-color:#252829/.test(theme),
     'Tagger keeps its own dark design and only its light panels are repainted');
   assert(/stk-tagger body\{background-color:#191820/.test(theme) && /stk-tagger #app\{background-color:transparent/.test(theme),
     "Tagger keeps its own page field and a transparent #app, so its soft glow is not painted over");
@@ -329,8 +329,8 @@ function auditGapCheck() {
   // On a card page Tagger puts the light mark on .card-layout, which is the whole
   // layout: the panel, the card and the empty space under both. Filling that took
   // away the blurred card art Tagger shows there.
-  assert(/stk-tagger :is\(\.light-mode:not\(\.card-layout\),\.sample-tags,\.card-layout--tagging\)\{background-color:#252829/.test(theme),
-    'the card layout itself keeps Tagger field, so the blurred card art survives');
+  assert(/stk-tagger :is\(\.light-mode:not\(\.card-layout\):not\(\.sidebar\),\.sample-tags,\.card-layout--tagging\)\{background-color:#252829/.test(theme),
+    'the card layout and the sidebar scrim both keep the field Tagger lays over the page');
   assert(/:is\(\.light-mode,\.sample-tags,\.card-layout--tagging\) :is\(a,span,label,li,strong,em,b,i,p,div,section,article,h1,h2,h3,h4,h5,h6,dt,dd,td,th\)\{color:#e6e3df/.test(theme),
     'the ink inside a repainted Tagger panel is repainted with it, not left grey');
   assert(/\/\* Tagger is a separate Vue app/.test(theme), 'the Tagger block explains why it stands alone');
