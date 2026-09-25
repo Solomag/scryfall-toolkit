@@ -14,12 +14,15 @@ terms. "Used" is meant literally:
 - **visual asset** — an image, icon or logo file is in this repository;
 - **behaviour/idea only** — no file was taken; a feature or an approach was followed.
 
+No external project contributed code to this repository. What exists here is either data,
+an image, or a behaviour that was followed.
+
 Every licence text quoted below is also stored verbatim as a file in `third_party/`, and
 all of those files are shipped inside the distributed extension archive.
 
 ---
 
-## 1. CardClip — code and icons copied
+## 1. CardClip — icons copied
 
 - Upstream: <https://github.com/JacobHearst/CardClip> ("A browser extension that adds
   clipboard functionality for Scryfall", last pushed 2023-08-20)
@@ -105,7 +108,7 @@ MIT notice is retained in `third_party/MoxTags-LICENSE`.
 No Moxfield functionality is included. MoxTags continues to work on its own on Moxfield;
 Scryfall Toolkit deliberately never runs there.
 
-## 5. MTG Enhancements — behaviour and data shape only
+## 5. MTG Enhancements — behaviour and format names only
 
 - Upstream: <https://github.com/notsonic/scryfall-enhancements> ("A browser extension to
   add more stuff to scryfall.com", created 2026-07-16, last pushed 2026-08-13)
