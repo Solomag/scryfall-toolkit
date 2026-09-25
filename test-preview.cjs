@@ -771,6 +771,40 @@ async function legacyMigrationTest() {
   ], 'legacy localStorage entries migrated into storage.cards');
 }
 
+async function advancedPriceFilterTest() {
+  console.log('content.js: advanced search price filter follows the hidden columns');
+  const html = `<!DOCTYPE html><html><body><div id="main">
+    <div class="form-row-content-band">
+      <select name="price_1" id="price_1">
+        <option value="usd">USD</option><option value="eur">Euros</option><option value="tix">MTGO Tickets</option>
+      </select>
+      <select name="price_1_mode" id="price_1_mode">
+        <option value="&lt;">less than</option><option value="&gt;">greater than</option>
+      </select>
+    </div>
+  </div></body></html>`;
+  const load = async (state, url) => {
+    const page = createPage({ url, html, state, routes });
+    await page.script('i18n.js');
+    await page.script('format-catalog.js');
+    await page.script('tag-icons.js');
+    await page.script('data/shambleshark-nicknames.js');
+    await page.script('content.js');
+    await sleep(60);
+    return page;
+  };
+
+  const on = await load({ onlyCardmarket: true, clipboard: false }, 'https://scryfall.com/advanced');
+  const { document } = on;
+  const options = () => [...document.querySelectorAll('#price_1 option')].map(option => `${option.value}:${option.textContent}`);
+  assertEqual(options(), ['eur:Cardmarket (€)'], 'with dollar and ticket columns hidden only the Cardmarket search remains');
+  assertEqual(document.querySelectorAll('#price_1_mode option').length, 2, 'the comparison select is left alone');
+
+  const off = await load({ onlyCardmarket: false, clipboard: false }, 'https://scryfall.com/advanced');
+  assertEqual([...off.document.querySelectorAll('#price_1 option')].map(option => option.value), ['usd', 'eur', 'tix'],
+    'with every column visible the currency choices stay as Scryfall made them');
+}
+
 (async () => {
   try {
     await cardPageTest();
@@ -784,6 +818,7 @@ async function legacyMigrationTest() {
     await searchPageTest();
     await clipboardDisabledTest();
     await legacyMigrationTest();
+    await advancedPriceFilterTest();
     summary('test-preview');
     process.exit(0);
   } catch (error) {

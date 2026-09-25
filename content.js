@@ -17,6 +17,7 @@
   const t = text => window.STK_I18N.t(text, language);
   const cardPath = location.pathname.match(/^\/card\/([^/]+)\/([^/]+)/);
   const cardPage = Boolean(cardPath && document.querySelector('.card-image') && document.querySelector('#main .prints-table'));
+  const advancedPage = location.pathname === '/advanced';
   const identity = cardPage ? { set: cardPath[1], number: decodeURIComponent(cardPath[2]) } : null;
   // Shared with the in-table prints expansion: the Finish column header lands
   // asynchronously (so expansions wait for it before counting columns) and the
@@ -155,6 +156,7 @@
   if (cardPage) initExpandedPrints();
   if (cardPage && (settings.edhrecUsage || settings.edhrecSalt)) initEdhrecStats();
   if (settings.onlyCardmarket) initPriceFilter();
+  if (advancedPage) initAdvancedPriceFilter();
   if (cardPage && (settings.cardtraderPrices || settings.euroPriceSources !== 'cm')) initCardTrader();
   if (cardPage && settings.cardSearchLinks) initCardSearchLinks();
   if (cardPage && settings.cardNicknames) initCardNicknames();
@@ -510,6 +512,34 @@
         if (/^Buy on (?:TCGplayer|Cardhoarder)\b/i.test(control.textContent.trim())) control.classList.add('stk-price-hidden');
       }
     }
+  }
+
+  function initAdvancedPriceFilter() {
+    if (!settings.onlyCardmarket) return;
+    // The Prices filter on /advanced offers USD, Euros and MTGO Tickets per row.
+    // With dollar and ticket columns hidden, only the Cardmarket (EUR) search
+    // still makes sense, so the other currencies are dropped and Euros renamed.
+    const isCurrency = select => select.name && select.name.startsWith('price_') && !select.name.endsWith('_mode');
+    const relabel = select => {
+      if (select.dataset.stkPriceFiltered) return;
+      select.dataset.stkPriceFiltered = '1';
+      for (const option of [...select.querySelectorAll('option')]) {
+        if (option.value === 'usd' || option.value === 'tix') option.remove();
+        else if (option.value === 'eur') option.textContent = 'Cardmarket (€)';
+      }
+    };
+    for (const select of document.querySelectorAll('select[name^="price_"]')) {
+      if (isCurrency(select)) relabel(select);
+    }
+    // Adding another price row duplicates the template, which is caught here.
+    new MutationObserver(mutations => {
+      for (const mutation of mutations) for (const node of mutation.addedNodes) {
+        if (node.nodeType !== 1) continue;
+        for (const select of (node.matches?.('select[name^="price_"]') ? [node] : node.querySelectorAll?.('select[name^="price_"]') || [])) {
+          if (isCurrency(select)) relabel(select);
+        }
+      }
+    }).observe(document.body, { childList: true, subtree: true });
   }
 
   function initEdhrecStats() {
