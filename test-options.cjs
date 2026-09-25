@@ -28,6 +28,79 @@ const REQUIRED_IDS = [
   'printGrouping', 'printFoldGroups', 'printFullPageLink'
 ];
 
+// What the archive ships is not the same as what the working tree holds, so the
+// notices are checked against the file list the extension is actually packaged
+// from, and every licence that third-party material requires is kept verbatim.
+function packagedNoticesTest() {
+  console.log('package: third-party notices ship with the extension');
+  const manifest = JSON.parse(read('manifest.json'));
+  const shipped = [
+    'manifest.json', 'background.js', 'content.js', 'content.css', 'theme.js', 'theme.css',
+    'options.html', 'options.js', 'options.css', 'i18n.js', 'tag-icons.js', 'tagger-clipboard.js',
+    'format-catalog.js', 'format-overrides.js', 'data/oracle-tags.js', 'data/illustration-tags-1.js',
+    'data/illustration-tags-2.js', 'data/shambleshark-nicknames.js', 'data/set-platforms.js',
+    'THIRD_PARTY_NOTICES.md', 'LICENSE', 'README.md'
+  ];
+  for (const file of shipped) {
+    assert(fs.existsSync(path.join(ROOT, file)), `${file} is part of the extension and is present`);
+  }
+  // Every file the manifest loads has to exist, and every loaded data file has to
+  // say where it came from.
+  for (const entry of manifest.content_scripts) {
+    for (const file of [...(entry.js || []), ...(entry.css || [])]) {
+      assert(fs.existsSync(path.join(ROOT, file)), `manifest loads ${file} and it exists`);
+    }
+  }
+  for (const script of manifest.background ? [manifest.background.service_worker] : []) {
+    assert(fs.existsSync(path.join(ROOT, script)), `service worker ${script} exists`);
+  }
+  const notice = read('THIRD_PARTY_NOTICES.md');
+  for (const source of [
+    'https://github.com/JacobHearst/CardClip', 'https://github.com/Paruhas/CardClip',
+    'https://github.com/crookedneighbor/shambleshark', 'https://github.com/natefinch/moxtags',
+    'https://github.com/notsonic/scryfall-enhancements', 'https://scryfall.com/',
+    'https://tagger.scryfall.com/', 'https://www.edhrec.com/', 'https://www.cardtrader.com/',
+    'https://www.cardmarket.com/', 'https://github.com/WebReflection/linkedom'
+  ]) assert(notice.includes(source), `notices link ${source}`);
+  assert(/not produced, endorsed, sponsored or\s+approved by/i.test(notice),
+    'the notices state that nothing here is an official product');
+  // The licence text of each project whose material is actually in the archive.
+  const licences = {
+    'third_party/CardClip-LICENSE': 'Copyright (c) 2022 Jacob Hearst',
+    'third_party/Paruhas-CardClip-LICENSE': 'Copyright (c) 2022 Jacob Hearst',
+    'third_party/Shambleshark-LICENSE': 'Copyright (c) 2016 Samuel Simões',
+    'third_party/MoxTags-LICENSE': 'Copyright (c) 2026 Nate Finch',
+    'third_party/MTG-Enhancements-LICENSE': 'Copyright (c) 2026 notsonic'
+  };
+  for (const [file, noticeLine] of Object.entries(licences)) {
+    assert(fs.existsSync(path.join(ROOT, file)), `${file} ships with the extension`);
+    const text = read(file);
+    assert(text.includes(noticeLine), `${file} keeps the copyright line "${noticeLine}"`);
+    assert(/Permission is hereby granted, free of charge/.test(text), `${file} keeps the full MIT permission text`);
+    assert(notice.includes(file), `the notices point at ${file}`);
+  }
+  // Data copied from another project names its source, author, version and licence
+  // in the file itself, not only in the notices document.
+  for (const file of ['data/oracle-tags.js', 'data/illustration-tags-1.js', 'data/illustration-tags-2.js']) {
+    const head = read(file).slice(0, 600);
+    for (const statement of ['MoxTags v1.8.3', 'natefinch/moxtags', 'Copyright (c) 2026 Nate Finch', 'MIT']) {
+      assert(head.includes(statement), `${file} header states ${statement}`);
+    }
+  }
+  const nicknames = read('data/shambleshark-nicknames.js').slice(0, 700);
+  for (const statement of [
+    'crookedneighbor/shambleshark', 'Samuel Sim\u00f5es', 'Blade Barringer', 'MIT', 'third_party/Shambleshark-LICENSE'
+  ]) {
+    assert(nicknames.includes(statement), `data/shambleshark-nicknames.js header states ${statement}`);
+  }
+  // The derived Scryfall snapshot says what it is and when it was taken.
+  const platforms = read('data/set-platforms.js');
+  assert(/Scryfall/.test(platforms) && /2026-09-25/.test(platforms),
+    'the set-platform snapshot names its source and the date it was taken');
+  assert(!/oracle_text|printed_type|layout|watermark|image_uris/.test(platforms),
+    'the bundled set-platform snapshot carries no Wizards card content, only set codes and platform names');
+}
+
 function htmlIdCheck() {
   console.log('options.html: element ids');
   const html = read('options.html');
@@ -54,8 +127,20 @@ function sectionOrderTest() {
   const html = read('options.html');
   const headings = [...html.matchAll(/<h2>([^<]+)<\/h2>/g)].map(match => match[1]);
   assertEqual(headings, ['Общее', 'Tags', 'CardClip', 'Издания', 'Скрытие лишнего', 'Дополнительная информация',
-    'Легальность', 'Scryfall Deckbuilder', 'Экспериментальное'],
-    'sections follow the agreed order with Experimental last');
+    'Легальность', 'Scryfall Deckbuilder', 'Экспериментальное', 'Авторы и сторонние проекты'],
+    'sections follow the agreed order, with Experimental before the credits block');
+  // The installed extension has to say out loud what it is not, and where the
+  // full notices are, because a reviewer reads the settings page and not the repo.
+  const credits = html.slice(html.indexOf('<section class="credits">'));
+  for (const statement of [
+    'не создано, не одобрено и не спонсировано',
+    'CardClip (Jacob Hearst)',
+    'MoxTags v1.8.3 (Nate Finch)',
+    'Shambleshark (Samuel Simões, Blade Barringer)',
+    'MTG Enhancements (notsonic)',
+    'THIRD_PARTY_NOTICES.md',
+    'third_party/'
+  ]) assert(credits.includes(statement), `credits block states: ${statement}`);
   // Every control belongs to the section the user asked for.
   const sectionOf = id => {
     const at = html.indexOf(`id="${id}"`);
@@ -313,6 +398,7 @@ async function discoveredFormatsTest() {
     htmlIdCheck();
     switchStyleTest();
     sectionOrderTest();
+    packagedNoticesTest();
     await formatListTest();
     await settingsTest();
     await setPlatformsTest();

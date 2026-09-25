@@ -1,12 +1,14 @@
-# Scryfall Toolkit — preview 0.41.0
+# Scryfall Toolkit — preview 0.42.0
 
 An independent browser extension for Scryfall. The current preview includes a shared card clipboard on Scryfall and Scryfall Tagger, sidebar Tagger card/art tags on individual Scryfall card pages, and extra format legalities. It never runs on Moxfield; keep the official MoxTags extension installed there.
+
+Scryfall Toolkit is not produced, endorsed or approved by Scryfall, Wizards of the Coast, EDHREC, CardTrader, Cardmarket or Moxfield. Bundled data, images and code from other MIT-licensed projects keep their own notices — see [Credits and third-party notices](#credits-and-third-party-notices) and [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 
 ## Install in Opera GX
 
 If you already installed an earlier preview, replace the contents of the same `scryfall-toolkit` directory, click **Reload** for this extension on `opera://extensions`, and reload Scryfall tabs. Keep the same unpacked extension path so its stored clipboard and settings remain available.
 
-1. Unzip the archive to a permanent folder.
+1. Unzip the archive to a permanent folder. To rebuild it from this repository, run `npm run package`: it collects the files the manifest and the service worker actually load, adds `LICENSE`, `README.md`, `THIRD_PARTY_NOTICES.md` and `third_party/`, writes `dist/scryfall-toolkit-<version>.zip`, and then reads the archive back to confirm every licence and notice is really inside it. The command fails if one is missing.
 2. Open `opera://extensions`, enable developer mode, select **Load unpacked** (or **Load extension**) and choose the unzipped `scryfall-toolkit` folder that contains `manifest.json`.
 3. Open the extension icon to change feature and export settings. Reload existing Scryfall tabs after changing them.
 4. Keep MoxTags' site access restricted to Moxfield and `api.scryfall.com`, as already tested. Disable the old CardClip, Shambleshark Tag Menu and MTG Enhancements on Scryfall when evaluating overlapping features. You can turn this preview off again without touching those original extensions.
@@ -50,12 +52,36 @@ Settings are grouped as **General** (settings language, theme), **Tags** (card p
 - CardClip's old Scryfall-site clipboard is imported on the first Scryfall run only if the extension has no `cards` value. It reads Scryfall's `localStorage.cardClipboard` array, transfers each card's name and link into `chrome.storage.local`, and then the two clipboards stop syncing. Imported CardClip entries may lack the set and collector number needed for the Moxfield export; newly added cards include both. Installing an older preview that already saved an empty `cards` array prevents a later automatic import.
 - The interface was checked against public Scryfall and Tagger pages and fixture-based tests. The bundled CardTrader monochrome icon comes from CardTrader's pinned-tab icon; the Cardmarket icon follows Scryfall's own purchase-link SVG. The extension has not run inside your Opera GX profile; use this as an installable preview.
 
-## Sources
+## Credits and third-party notices
 
-- [CardClip](https://github.com/JacobHearst/CardClip): original clipboard behavior.
-- [Paruhas/CardClip](https://github.com/Paruhas/CardClip): export with printing set and number.
-- [Shambleshark](https://github.com/crookedneighbor/shambleshark): inline card/art tag presentation.
-- [MoxTags](https://github.com/natefinch/moxtags): compact bundled tag data and search token behavior. Moxfield functionality is *not* included.
-- [MTG Enhancements](https://github.com/notsonic/scryfall-enhancements): format definitions and manual legality overrides.
+Scryfall Toolkit is an independent project. It is **not** produced, endorsed, sponsored or
+approved by Scryfall, Scryfall LLC, Wizards of the Coast, EDHREC, CardTrader, Cardmarket,
+Moxfield, or the authors of the projects below. Nothing here should be read as their
+endorsement, and the bundled card artwork and game data are not redistributed here.
 
-The retained MIT copyright notices are in `third_party/`. The new implementation is MIT licensed (see `LICENSE`). This project is independent of Scryfall and the authors of these extensions.
+`THIRD_PARTY_NOTICES.md` records, for each source, exactly what was taken: a copied file, a
+re-serialised dataset, a bundled image, or a behaviour that was only followed. The full
+licence texts are kept in `third_party/` and ship inside the extension archive. The short
+version:
+
+| Source | Author | Licence | What this project took |
+| --- | --- | --- | --- |
+| [CardClip](https://github.com/JacobHearst/CardClip) | Jacob Hearst | MIT (2022) | The three toolbar icons `clip.svg`, `duplicate.svg` and `trash.svg`, copied verbatim (SHA-256 verified). The clipboard feature itself is original code; only the legacy `cardClipboard` key is read, to import an older clipboard once. |
+| [Paruhas/CardClip](https://github.com/Paruhas/CardClip) | fork of CardClip | MIT (Jacob Hearst) | Behaviour only: the export format that appends the printing's set code and collector number. No file copied. |
+| [Shambleshark](https://github.com/crookedneighbor/shambleshark) | Samuel Simões, Blade Barringer | MIT | The 396 card-nickname records, re-serialised from their per-set modules into one JSON array. The tag panels themselves are original code. |
+| [MoxTags v1.8.3](https://github.com/natefinch/moxtags) | Nate Finch | MIT (2026) | Three bundled tag-data files, copied byte-for-byte (SHA-256 verified against tag `v1.8.3`). Moxfield functionality is **not** included. |
+| [MTG Enhancements](https://github.com/notsonic/scryfall-enhancements) | notsonic | MIT (2026) | The extra format definitions and their display names (Heritage, Classic Legacy, Peak Legacy). The per-card legality map is original. |
+| [Scryfall](https://scryfall.com/) / [Tagger](https://tagger.scryfall.com/) | Scryfall, LLC | service terms | No code or artwork copied. A derived snapshot of 61 digital set codes and their platforms (`data/set-platforms.js`); everything else is read live from the pages and public APIs a user is already using. |
+| [EDHREC](https://www.edhrec.com/) | EDHREC | *unresolved* | Run-time data only. `icons/edhrec.png` looks like EDHREC's own logo; its redistribution terms are still to be confirmed. |
+| [CardTrader](https://www.cardtrader.com/) | CardTrader | *unresolved* | Run-time API data only, with the user's own token. `icons/cardtrader.svg` and `.png` are CardTrader's marks; their redistribution terms are still to be confirmed. |
+| [Cardmarket](https://www.cardmarket.com/) | Cardmarket | *unresolved* | A link only. `icons/cardmarket.svg` is a hand-and-bag glyph in Scryfall's icon style; whether it copies a Scryfall asset is still to be confirmed. |
+| [linkedom](https://github.com/WebReflection/linkedom) | WebReflection | ISC | Development-only dependency for the test harness; nothing it provides ships in the extension. |
+
+No font files are bundled: the stylesheets only name font families (`Lato`, `system-ui`,
+`Helvetica Neue`, `Arial`), and Scryfall's own webfont is referenced by name rather than
+redistributed.
+
+This project's own code is MIT licensed — see [`LICENSE`](LICENSE). Each third-party
+licence stays with that third party's material and is not replaced by this project's
+licence. `THIRD_PARTY_NOTICES.md` also lists the questions still open before wider
+publication.
