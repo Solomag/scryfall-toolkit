@@ -7,7 +7,7 @@
     'Язык добавляемых элементов и основных элементов Scryfall. Тексты карт и статей не переводятся.': 'Language of extension controls and common Scryfall controls. Card text and articles are not translated.',
     'Русский': 'Russian', 'Английский': 'English',
     'Общее': 'General', 'Общий буфер карт на Scryfall и Tagger': 'Shared card clipboard on Scryfall and Tagger',
-    'Тема Scryfall': 'Scryfall theme', 'Как в системе': 'Follow the system', 'Светлая': 'Light', 'Тёмная': 'Dark',
+    'Тема Scryfall и Tagger': 'Scryfall and Tagger theme', 'Как в системе': 'Follow the system', 'Светлая': 'Light', 'Тёмная': 'Dark',
     'По умолчанию тема повторяет системную тему компьютера или телефона и переключается вместе с ней.': 'By default the theme follows the system theme of your computer or phone and switches with it.',
     'Скрытие лишнего': 'Hide extras',
     'Скрывать цены в USD, TIX, TCGplayer и Cardhoarder': 'Hide USD, TIX, TCGplayer and Cardhoarder prices',

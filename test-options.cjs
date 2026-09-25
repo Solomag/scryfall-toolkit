@@ -39,7 +39,7 @@ function sectionOrderTest() {
   console.log('options.html: section order and grouping');
   const html = read('options.html');
   const headings = [...html.matchAll(/<h2>([^<]+)<\/h2>/g)].map(match => match[1]);
-  assertEqual(headings, ['Общее', 'Скрытие лишнего', 'Дополнительная информация', 'EDHREC', 'CardTrader',
+  assertEqual(headings, ['Общее', 'Tags', 'CardClip', 'Скрытие лишнего', 'Дополнительная информация',
     'Легальность', 'Scryfall Deckbuilder', 'Экспериментальное'],
     'sections follow the agreed order with Experimental last');
   // Every control belongs to the section the user asked for.
@@ -49,9 +49,15 @@ function sectionOrderTest() {
     const heading = [...before.matchAll(/<h2>([^<]+)<\/h2>/g)].pop();
     return heading ? heading[1] : null;
   };
-  assertEqual(sectionOf('clipboard'), 'Общее', 'the shared buffer sits in the Tags block of Общее');
-  assertEqual(sectionOf('exportFormat'), 'Общее', 'the copy format moved into Общее as CardClip');
-  assertEqual(sectionOf('taggerSearchLinks'), 'Общее', 'the Tagger link on search results sits with Tags');
+  assertEqual(sectionOf('settingsLanguage'), 'Общее', 'the settings language sits in Общее');
+  assertEqual(sectionOf('darkTheme'), 'Общее', 'the theme selector sits in Общее');
+  assertEqual(sectionOf('tags'), 'Tags', 'card page tags got their own category');
+  assertEqual(sectionOf('cardTags'), 'Tags', 'the tag kinds stay with the tag switch');
+  assertEqual(sectionOf('taggerSearchLinks'), 'Tags', 'the Tagger link on search results stays in Tags');
+  assertEqual(sectionOf('clipboard'), 'CardClip', 'the shared buffer moved to CardClip');
+  assertEqual(sectionOf('exportFormat'), 'CardClip', 'the copy format stays in CardClip');
+  assertEqual(sectionOf('printAddButtons'), 'CardClip', 'the per-printing plus button moved to CardClip');
+  assertEqual(sectionOf('hideCasterIndicator'), 'Скрытие лишнего', 'the Caster indicator moved to Скрытие лишнего');
   assertEqual(sectionOf('onlyCardmarket'), 'Скрытие лишнего', 'hiding prices moved to Скрытие лишнего');
   assertEqual(sectionOf('hideNonEnglishPrints'), 'Скрытие лишнего', 'the set filters live in one category');
   assertEqual(sectionOf('setPlatformsAll'), 'Скрытие лишнего', 'the platform filter is nested under Скрытие лишнего');
@@ -60,11 +66,17 @@ function sectionOrderTest() {
   assertEqual(sectionOf('finishBadges'), 'Дополнительная информация', 'the finish column moved to Additional info');
   assertEqual(sectionOf('cardSearchLinks'), 'Дополнительная информация', 'type and mana search moved to Additional info');
   assertEqual(sectionOf('cardNicknames'), 'Дополнительная информация', 'card nicknames moved to Additional info');
+  assertEqual(sectionOf('edhrecUsage'), 'Дополнительная информация', 'EDHREC is a sub-category of Additional info');
+  assertEqual(sectionOf('cardtraderPrices'), 'Дополнительная информация', 'CardTrader is a sub-category of Additional info');
   assertEqual(sectionOf('deckTokens'), 'Scryfall Deckbuilder', 'deck options share one category');
-  assertEqual(sectionOf('printAddButtons'), 'Экспериментальное', 'the print-grouping switches sit in Experimental');
+  assertEqual(sectionOf('printPageSameTab'), 'Экспериментальное', 'the same-tab printings switch stays in Experimental');
   assertEqual(sectionOf('siteLanguage'), 'Экспериментальное', 'the site language selector moved to the bottom');
   assert(html.indexOf('id="siteLanguage"') > html.indexOf('id="deckTokens"'),
     'the site language selector is the last control of the page');
+  // EDHREC and CardTrader are grouped, not separate sections of their own.
+  const additional = html.slice(html.indexOf('<h2>Дополнительная информация</h2>'), html.indexOf('<h2>Легальность</h2>'));
+  assertEqual([...additional.matchAll(/<legend>([^<]+)<\/legend>/g)].map(match => match[1]), ['EDHREC', 'CardTrader'],
+    'EDHREC and CardTrader are labelled sub-categories inside Additional info');
 }
 
 function loadOptions(state) {
