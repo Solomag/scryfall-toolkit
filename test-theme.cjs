@@ -192,6 +192,18 @@ function cssCheck() {
     'the bot panels lose their own light text surfaces');
   assert(theme.includes('html.stk-dark.stk-bots-page #main :is(.bot-marketing-panel,.bot-marketing-panel-shadow) .bot-marketing-panel-footer .button-n{'),
     'and the button inside a panel footer is repainted too, ahead of the transparent rule');
+  assert(theme.includes('html.stk-dark #main .advanced-search-checkbox input[type="checkbox"]:checked{background-color:#756287!important;background-image:none!important;color:#e6e3df!important}'),
+    'the advanced-search checkbox reuses its own checkmark instead of stacking a second one');
+  assert(!/advanced-search-checkbox input\[type="checkbox"\]:checked\{[^}]*background-image:url/.test(theme),
+    'no duplicate checkmark image is layered over the native glyph');
+  assert(theme.includes('html.stk-dark #main .form-row-label svg :is(path,g,circle,rect,polygon){fill:#bda1df!important}'),
+    'the black label icons are brightened in the dark theme');
+  assert(theme.includes('html.stk-dark #main .select2-selection__choice svg'),
+    'the set symbols in the select2 chips are brightened too');
+  assert(theme.includes('html.stk-dark #main .select2-polarity{background-color:#75986e!important;color:#fff!important}'),
+    'the "is" flag of a type uses the legality green');
+  assert(theme.includes('html.stk-dark #main .select2-polarity.negative{background-color:#a71f2a!important;color:#fff!important}'),
+    'the "not" flag uses the banned red');
   for (const rule of [
     'html.stk-dark.stk-tagger :is(.sample-tags,.light-mode){background:#252829!important',
     'html.stk-dark.stk-tagger .blurry-background-art{background:#3a3247!important',
