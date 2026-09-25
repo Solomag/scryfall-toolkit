@@ -303,18 +303,82 @@ html.stk-dark.stk-account-page :is(#deckbuilder,[class*="deckbuilder"]) .stk-dec
 html.stk-dark .left-tray :is(.deck-tray-option,.deck-tray-buttons,.deck-tray-option .button-n,[class*="add-to-deck"]){background-color:#292b2c!important;color:#e6e3df!important;border-color:#59535e!important}
 html.stk-dark #main :is(.add-to-deck,.add-to-deck-button,[class*="add-to-deck"]):is(a,button){background-color:#413949!important;color:#f7f2fb!important;border-color:#756782!important}
 
-/* Tagger is a small Vue app with its own dark surfaces. The generic body and
-   field rules already line its palette up with the rest of the site; these
-   repaint the few light panels it still keeps, plus its "lost in the wild"
-   page. The stk-tagger class is set by theme.js, so these rules cannot reach
+/* Gaps the dark audit of 0.31 found. Each one is a surface Scryfall paints with
+   its own class that no earlier rule reached, on a page that was otherwise
+   dark. */
+
+/* The "Jump to" menu of a set page: the button already looked right, the menu
+   it opens did not. The account rules above covered the same menu, but only on
+   pages that need a login. */
+html.stk-dark :is(.dropdown-menu,.dropdown-menu-items,.dropdown-menu-items ul,.dropdown-menu-items li){background-color:#292b2c!important;color:#e6e3df!important;border-color:#595c60!important}
+html.stk-dark .dropdown-menu-items :is(a,button){background-color:transparent!important;color:#c79ce3!important;border-color:transparent!important}
+html.stk-dark .dropdown-menu-items :is(a,button):hover,html.stk-dark .dropdown-menu-items :is(a,button):focus-visible{background-color:#413949!important;color:#fff!important}
+
+/* The jump bar of the search reference: the pills were repainted long ago, but
+   their icons kept Scryfall's black and dark purple, which all but disappears
+   on a dark pill. Stroke-only shapes keep their own paint. */
+html.stk-dark #main .reference-jump :is(svg,g,path,circle,rect):not([fill="none"]){fill:#bfb4c8!important}
+html.stk-dark #main .reference-jump svg [fill="#000"]{fill:#bfb4c8!important}
+
+/* The blog index keeps its post cards, its embedded deck lists and the pills
+   above them in Scryfall's white. */
+html.stk-dark.stk-blog-page #main :is(.blog-post-small,.blog-post-small-header,.blog-post-small-content,.blog-post-small>.inner-flex){background-color:#1d2021!important;color:#e6e3df!important;border-color:#414345!important}
+html.stk-dark.stk-blog-page #main :is(.blog-post-metadata,.blog-index,.blog-category) :is(.button-n.tiny-n,.tiny-n){background-color:#252829!important;color:#c79ce3!important;border-color:#414345!important}
+html.stk-dark.stk-blog-page #main :is(.blog-post-metadata,.blog-index,.blog-category) :is(.muted-n,.tiny-n.muted-n){color:#a8a2af!important}
+html.stk-dark.stk-blog-page #main :is(.blog-post-small,.blog-post-large) :is(p,strong,span,h1,h2,h3,h4){color:#e6e3df!important}
+/* A post can embed a deck list, which brings its own white panel and its own
+   grey ink with it. */
+html.stk-dark.stk-blog-page #main :is(.scryfall-decklist-embed,.scryfall-decklist-embed-title,.deck-list-section,.deck-list-section-title,.deck-list-entry){background-color:#1d2021!important;color:#e6e3df!important;border-color:#414345!important}
+html.stk-dark.stk-blog-page #main :is(.scryfall-decklist-embed,.scryfall-decklist-embed-title,.deck-list-section,.deck-list-section-title,.deck-list-entry) :is(h1,h2,h3,h4,h5,h6,p,strong,span){color:#e6e3df!important}
+html.stk-dark.stk-blog-page #main :is(.scryfall-decklist-embed a,.scryfall-decklist-embed-card){color:#c79ce3!important}
+
+/* The bot documentation buttons sit in their own marketing cards. */
+html.stk-dark.stk-bots-page #main :is(.marketing-features-item,.marketing-features-item-content,.bot-marketing-panel) :is(a.button-n,button.button-n){background-color:#292b2c!important;color:#c79ce3!important;border-color:#595c60!important}
+html.stk-dark.stk-bots-page #main :is(.marketing-features-item,.bot-marketing-panel) :is(a.button-n,button.button-n) svg{fill:currentColor!important}
+
+/* The donation tiles and the payment service tiles. */
+html.stk-dark.stk-info-page #main :is(.donation-stripe-amount,.donation-service){background-color:#252829!important;color:#e6e3df!important;border-color:#414345!important}
+html.stk-dark.stk-info-page #main :is(.donation-stripe-amount,.donation-service) :is(b,span,svg){color:#e6e3df!important}
+html.stk-dark.stk-info-page #main :is(.donation-stripe-amount,.donation-service):hover{background-color:#2f3133!important}
+
+/* The button on Scryfall's own error pages, which it renders straight into the
+   body, and the buttons a post carries in its own prose. */
+html.stk-dark :is(a.button,button.button){background-color:#292b2c!important;color:#c79ce3!important;border-color:#595c60!important}
+html.stk-dark.stk-blog-page #main .blog-post-large-content a.button-n{background-color:#292b2c!important;color:#c79ce3!important;border-color:#595c60!important}
+
+/* The skip links stay out of sight until the keyboard reaches them, and then a
+   cream band flashed across the top of a dark page. */
+html.stk-dark a:is([href="#main"],[href="#footer"]){background-color:#292b2c!important;color:#c79ce3!important;outline-color:#595c60!important}
+
+/* The dot between the counts in a set's card grid header is a faint grey that
+   all but vanished on the dark surface. */
+html.stk-dark #main .card-grid-header-dot{color:#8f8a96!important}
+
+/* Tagger is a separate Vue app on its own host, with its own stylesheet and
+   its own dark design: `.light-mode` is how Tagger itself marks the few panels
+   it keeps light, and its ink inside them is a dark grey. So of everything
+   above only the body colour ever reached Tagger, and repainting those light
+   panels without repainting their ink left grey text on a dark panel. The
+   block below therefore states every surface Tagger owns rather than assuming
+   an inherited palette, and always paints the ink together with the panel.
+   theme.js only adds stk-tagger on the Tagger host, so nothing here can reach
    Scryfall's own components that happen to share a class name. */
-html.stk-dark.stk-tagger :is(.app-header,.app-footer){border-color:#3a3b3b!important}
-html.stk-dark.stk-tagger :is(.sample-tags,.light-mode){background:#252829!important;color:#e6e3df!important;border-color:#414345!important}
-html.stk-dark.stk-tagger :is(.sample-tags,.light-mode) :is(a,span,label,li){color:#c79ce3!important}
+html.stk-dark.stk-tagger body,html.stk-dark.stk-tagger #app{background-color:#1d2021!important;color:#e6e3df!important}
+html.stk-dark.stk-tagger .app-header{background-color:#2b253a!important;color:#fff!important;border-color:#3a3b3b!important}
+html.stk-dark.stk-tagger .app-footer{background-color:#191820!important;color:#c2c2c2!important;border-color:#3a3b3b!important}
+html.stk-dark.stk-tagger .app-footer :is(a,.footer-link){color:#c2c2c2!important}
 html.stk-dark.stk-tagger .blurry-background-art{background:#3a3247!important;color:#e6e3df!important}
-html.stk-dark.stk-tagger :is(.app-status,.app-viewport,.utilities) :is(a,button){color:#c79ce3!important}
 html.stk-dark.stk-tagger .tag-input-field{background:#292b2c!important;color:#e6e3df!important;border-color:#5a5d61!important}
+html.stk-dark.stk-tagger :is(.app-status,.app-viewport,.utilities) :is(a,button){color:#c79ce3!important}
+html.stk-dark.stk-tagger .dialog{color:#e6e3df!important}
+html.stk-dark.stk-tagger .dialog :is(h1,p){color:#e6e3df!important}
 html.stk-dark.stk-tagger .suggestion-input-utils{background:#252829!important;color:#e6e3df!important;border-color:#414345!important}
 html.stk-dark.stk-tagger .suggestion-input-utils :is(a,li,span){color:#c79ce3!important}
-html.stk-dark.stk-tagger .dialog :is(h1,p){color:#e6e3df!important}
-html.stk-dark.stk-tagger .app-footer :is(a,.footer-link){color:#c2c2c2!important}
+/* Tagger's own light areas: the sample tag list on the front page, the access
+   banner and the tagging layout on a card page. The panel and every ink inside
+   it are repainted together, because Tagger's own grey would otherwise stay on
+   the dark fill. */
+html.stk-dark.stk-tagger :is(.light-mode,.sample-tags,.card-layout--tagging){background:#252829!important;color:#e6e3df!important;border-color:#414345!important}
+html.stk-dark.stk-tagger :is(.light-mode,.sample-tags,.card-layout--tagging) :is(a,span,label,li,strong,em,b,i,p,div,section,article,h1,h2,h3,h4,h5,h6,dt,dd,td,th){color:#e6e3df!important}
+html.stk-dark.stk-tagger :is(.light-mode,.sample-tags,.card-layout--tagging) :is(a,.tag-row a,.access-banner a){color:#c79ce3!important}
+html.stk-dark.stk-tagger :is(.light-mode,.sample-tags,.card-layout--tagging) :is(.tag-row,.access-banner){background-color:transparent!important}

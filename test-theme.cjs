@@ -207,7 +207,9 @@ function cssCheck() {
   assert(theme.includes('html.stk-dark #main .select2-polarity.negative{background-color:#a71f2a!important;color:#fff!important}'),
     'the "not" flag uses the banned red');
   for (const rule of [
-    'html.stk-dark.stk-tagger :is(.sample-tags,.light-mode){background:#252829!important',
+    'html.stk-dark.stk-tagger body,html.stk-dark.stk-tagger #app{background-color:#1d2021',
+    'html.stk-dark.stk-tagger .app-header{background-color:#2b253a',
+    'html.stk-dark.stk-tagger .app-footer{background-color:#191820',
     'html.stk-dark.stk-tagger .blurry-background-art{background:#3a3247!important',
     'html.stk-dark.stk-tagger .tag-input-field{background:#292b2c!important',
     'html.stk-dark.stk-tagger .dialog :is(h1,p){color:#e6e3df!important'
@@ -228,6 +230,38 @@ function cssCheck() {
     }
   }
   assert(!offender, `footer rules never paint a background (offender: ${offender})`);
+}
+
+function auditGapCheck() {
+  console.log('static: dark theme covers the surfaces the audit found');
+  const theme = read('theme.css');
+  // Each of these was a light surface on a live page with the dark theme on.
+  for (const [what, pattern] of [
+    ['the "Jump to" menu of a set page', /html\.stk-dark :is\(\.dropdown-menu,\.dropdown-menu-items/],
+    ['the drop-down items themselves', /\.dropdown-menu-items :is\(a,button\)\{background-color:transparent/],
+    ['the jump bar icons of the search reference', /\.reference-jump :is\(svg,g,path,circle,rect\):not\(\[fill="none"\]\)/],
+    ['the blog index post cards', /\.blog-post-small[^{]*\{background-color:#1d2021/],
+    ['the blog post pills', /\.blog-post-metadata[^{]*\.button-n\.tiny-n/],
+    ['the deck list a post can embed', /\.scryfall-decklist-embed[^{]*\{background-color:#1d2021/],
+    ['the bot documentation buttons', /\.marketing-features-item[^{]*:is\(a\.button-n/],
+    ['the donation tiles', /\.donation-stripe-amount,\.donation-service\)\{background-color:#252829/],
+    ['the button on Scryfall error pages', /html\.stk-dark :is\(a\.button,button\.button\)\{background-color:#292b2c/],
+    ['the keyboard skip links', /a:is\(\[href="#main"\],\[href="#footer"\]\)\{background-color:#292b2c/],
+    ['the faint dot in a set card grid header', /\.card-grid-header-dot\{color:#8f8a96/]
+  ]) assert(pattern.test(theme), `dark theme repaints ${what}`);
+
+  // Tagger is a separate app: every rule that paints it must be scoped to the
+  // host class, and its own light areas have to bring their ink with them.
+  const code = theme.replace(/\/\*[\s\S]*?\*\//g, '');
+  const taggerRules = code.split('\n').filter(line => /stk-tagger/.test(line));
+  assert(taggerRules.length >= 10, 'Tagger has its own block of rules');
+  assert(taggerRules.every(line => line.trim().startsWith('html.stk-dark.stk-tagger')),
+    'no Tagger rule can reach a Scryfall page');
+  assert(/:is\(\.light-mode,\.sample-tags,\.card-layout--tagging\)\{background:#252829/.test(theme),
+    'Tagger keeps its own dark design and only its light panels are repainted');
+  assert(/:is\(\.light-mode,\.sample-tags,\.card-layout--tagging\) :is\(a,span,label,li,strong,em,b,i,p,div,section,article,h1,h2,h3,h4,h5,h6,dt,dd,td,th\)\{color:#e6e3df/.test(theme),
+    'the ink inside a repainted Tagger panel is repainted with it, not left grey');
+  assert(/\/\* Tagger is a separate Vue app/.test(theme), 'the Tagger block explains why it stands alone');
 }
 
 async function darkThemeRuntime() {
@@ -344,6 +378,7 @@ async function pathClasses() {
 (async () => {
   try {
     await manifestIntegrity();
+    auditGapCheck();
     syntaxCheck();
     importScriptsCheck();
     iconCheck();
