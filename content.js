@@ -42,7 +42,7 @@
   const platformSetRequests = async () => {
     const [categories, platforms] = await Promise.all([
       request({type: 'setCategories'}).catch(() => ({ digital: [] })),
-      request({type: 'setPlatforms'}).catch(() => ({}))
+      platformFilterOn ? request({type: 'setPlatforms'}).catch(() => ({})) : Promise.resolve({})
     ]);
     return { categories, visible: platformSetVisible(categories, platforms) };
   };
