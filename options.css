@@ -10,6 +10,17 @@ section.experimental h2{color:#e8cf9e}
 .experimental-sub{border-style:dashed;border-color:#7a6a55}
 .experimental-sub>legend{color:#e8cf9e}
 label{display:block;margin:9px 0;cursor:pointer}input{accent-color:#aa85b5}
+/* Every checkbox is drawn as a switch: the input stays a real checkbox, so
+   keyboard and screen readers keep working while it looks like a toggle. The
+   knob is a background of the input itself — a pseudo-element on a form control
+   is computed but never painted. */
+label:has(> input[type=checkbox]){display:flex;align-items:center;gap:11px}
+input[type=checkbox]{appearance:none;-webkit-appearance:none;position:relative;flex:0 0 auto;width:40px;height:22px;margin:0;border:1px solid #6a6070;border-radius:12px;background-color:#484250;background-image:radial-gradient(circle 8px at 9px 50%,#c8c1d0 99%,transparent);background-repeat:no-repeat;cursor:pointer;transition:background-color .15s,border-color .15s}
+input[type=checkbox]:checked{background-color:#7b5c8c;border-color:#a98cbb;background-image:radial-gradient(circle 8px at 29px 50%,#fff 99%,transparent)}
+input[type=checkbox]:focus-visible{outline:2px solid #c9a4d5;outline-offset:2px}
+input[type=checkbox]:disabled{opacity:.4;cursor:default}
+label:has(> input[type=checkbox]:disabled){cursor:default;opacity:.55}
+fieldset:disabled{opacity:.55}
 fieldset{border:1px solid #655968;border-radius:5px;margin:16px 0 4px;padding:7px 12px 12px}legend{padding:0 6px;color:#e4c7ea}
 select,input[type=password]{width:100%;padding:8px;margin-top:4px;color:#e9e5ee;background:#24242a;border:1px solid #6a6070;border-radius:4px}
 .salt-thresholds{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px}.salt-thresholds label{display:flex;align-items:center;gap:8px}.salt-thresholds input{width:72px;padding:5px;color:#e9e5ee;background:#24242a;border:1px solid #6a6070;border-radius:4px}

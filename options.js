@@ -6,12 +6,13 @@ const defaults = {
   usageColorMetric: 'decks', usageMediumDecks: 50000, usageHighDecks: 100000,
   usageMediumPercent: 1, usageHighPercent: 2.6, saltMediumThreshold: 1, saltHighThreshold: 2,
   hideCasterIndicator: false, printPageSameTab: false,
+  printGrouping: true, printFoldGroups: true, printFullPageLink: true,
   setPlatforms: ['paper', 'arena', 'mtgo'],
   taggerSearchLinks: false, cardSearchLinks: false, cardNicknames: false, deckNoPrices: true, stackedDeckCards: false, deckTokens: false,
   legalities: true, exportFormat: "moxfield", formatOrder: null, formatVisibility: null,
   discoveredFormats: [], premodern: true, heritage: false, classic: false, peak: false
 };
-const basicFields = ["clipboard", "printAddButtons", "printPageSameTab", "hideCasterIndicator", "hideDigitalSets", "hideNonTournamentSets", "hideOversizedSets", "hideForeignBlackBorder", "hideNonEnglishPrints", "tags", "cardTags", "artTags", "relationships", "finishBadges", "onlyCardmarket", "cardtraderPrices", "euroPriceSources", "edhrecUsage", "edhrecSalt", "showSaltScale", "edhrecLink", "edhrecUsageDisplay", "usageColorMetric", "legalities", "exportFormat", "taggerSearchLinks", "cardSearchLinks", "cardNicknames", "deckNoPrices", "stackedDeckCards", "deckTokens"];
+const basicFields = ["clipboard", "printAddButtons", "printPageSameTab", "hideCasterIndicator", "hideDigitalSets", "hideNonTournamentSets", "hideOversizedSets", "hideForeignBlackBorder", "hideNonEnglishPrints", "tags", "cardTags", "artTags", "relationships", "finishBadges", "onlyCardmarket", "cardtraderPrices", "euroPriceSources", "edhrecUsage", "edhrecSalt", "showSaltScale", "edhrecLink", "edhrecUsageDisplay", "usageColorMetric", "legalities", "exportFormat", "taggerSearchLinks", "cardSearchLinks", "cardNicknames", "deckNoPrices", "stackedDeckCards", "deckTokens", "printGrouping", "printFoldGroups", "printFullPageLink"];
 const status = document.getElementById("status");
 chrome.storage.local.get(defaults, values => {
   let language = values.settingsLanguage === 'en' ? 'en' : 'ru';
@@ -86,6 +87,21 @@ chrome.storage.local.get(defaults, values => {
         status.textContent = t('Сохранено');
       });
     });
+  }
+  // Master switches lock the settings that only mean something while they are
+  // on, so a disabled control can never look active.
+  const lockGroups = [
+    { master: 'clipboard', inside: ['exportFormat', 'printAddButtons'] },
+    { master: 'tags', inside: ['cardTags', 'artTags', 'relationships'], fieldset: true }
+  ];
+  for (const group of lockGroups) {
+    const master = document.getElementById(group.master);
+    const apply = () => {
+      for (const id of group.inside) document.getElementById(id).disabled = !master.checked;
+      if (group.fieldset) master.closest('section').querySelector('fieldset').disabled = !master.checked;
+    };
+    master.addEventListener('change', apply);
+    apply();
   }
   // Platform checkboxes behave as one control: "All" mirrors the three
   // platforms, and unchecking the last one falls back to All so the set lists

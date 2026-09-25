@@ -24,7 +24,8 @@ const REQUIRED_IDS = [
   'edhrecSalt', 'showSaltScale', 'edhrecLink', 'edhrecUsageDisplay',
   'legalities', 'exportFormat', 'taggerSearchLinks', 'cardSearchLinks',
   'cardNicknames', 'deckNoPrices', 'stackedDeckCards', 'deckTokens',
-  'setPlatformsAll', 'setPlatformsPaper', 'setPlatformsArena', 'setPlatformsMtgo'
+  'setPlatformsAll', 'setPlatformsPaper', 'setPlatformsArena', 'setPlatformsMtgo',
+  'printGrouping', 'printFoldGroups', 'printFullPageLink'
 ];
 
 function htmlIdCheck() {
@@ -35,11 +36,24 @@ function htmlIdCheck() {
   }
 }
 
+function switchStyleTest() {
+  console.log('options.css: checkboxes are drawn as switches');
+  const css = read('options.css');
+  assert(/input\[type=checkbox\]\s*\{[^}]*appearance:\s*none/.test(css), 'the native checkbox look is removed');
+  assert(/input\[type=checkbox\]\s*\{[^}]*width:\s*40px[^}]*height:\s*22px/.test(css), 'the control is a pill of a fixed size');
+  assert(/input\[type=checkbox\]\s*\{[^}]*background-image:\s*radial-gradient/.test(css),
+    'the knob is a background of the input, because a pseudo-element on a form control never paints');
+  assert(/input\[type=checkbox\]:checked\s*\{[^}]*background-image/.test(css), 'the checked state moves the knob');
+  assert(/label:has\(> input\[type=checkbox\]\)\s*\{[^}]*display:\s*flex/.test(css), 'the label puts the switch in a row with its text');
+  assert(/input\[type=checkbox\]:disabled\s*\{[^}]*opacity/.test(css), 'a locked switch is dimmed');
+  assert(/fieldset:disabled\s*\{[^}]*opacity/.test(css), 'and so is a locked block');
+}
+
 function sectionOrderTest() {
   console.log('options.html: section order and grouping');
   const html = read('options.html');
   const headings = [...html.matchAll(/<h2>([^<]+)<\/h2>/g)].map(match => match[1]);
-  assertEqual(headings, ['Общее', 'Tags', 'CardClip', 'Скрытие лишнего', 'Дополнительная информация',
+  assertEqual(headings, ['Общее', 'Tags', 'CardClip', 'Издания', 'Скрытие лишнего', 'Дополнительная информация',
     'Легальность', 'Scryfall Deckbuilder', 'Экспериментальное'],
     'sections follow the agreed order with Experimental last');
   // Every control belongs to the section the user asked for.
@@ -57,6 +71,9 @@ function sectionOrderTest() {
   assertEqual(sectionOf('clipboard'), 'CardClip', 'the shared buffer moved to CardClip');
   assertEqual(sectionOf('exportFormat'), 'CardClip', 'the copy format stays in CardClip');
   assertEqual(sectionOf('printAddButtons'), 'CardClip', 'the per-printing plus button moved to CardClip');
+  assertEqual(sectionOf('printGrouping'), 'Издания', 'the grouped prints table has its own category');
+  assertEqual(sectionOf('printFoldGroups'), 'Издания', 'the fold line is configurable next to it');
+  assertEqual(sectionOf('printFullPageLink'), 'Издания', 'the full-page link is configurable next to it');
   assertEqual(sectionOf('hideCasterIndicator'), 'Скрытие лишнего', 'the Caster indicator moved to Скрытие лишнего');
   assertEqual(sectionOf('onlyCardmarket'), 'Скрытие лишнего', 'hiding prices moved to Скрытие лишнего');
   assertEqual(sectionOf('hideNonEnglishPrints'), 'Скрытие лишнего', 'the set filters live in one category');
@@ -223,6 +240,35 @@ async function setPlatformsTest() {
   );
 }
 
+async function lockedDependentsTest() {
+  console.log('options.js: master switches lock their own settings');
+  const page = loadOptions({});
+  const { document, mock } = page;
+  const cardClip = document.getElementById('clipboard');
+  const format = document.getElementById('exportFormat');
+  const plus = document.getElementById('printAddButtons');
+  assertEqual([format.disabled, plus.disabled], [false, false], 'CardClip on leaves its settings usable');
+
+  cardClip.checked = false;
+  fireEvent(cardClip, 'change');
+  assertEqual([format.disabled, plus.disabled], [true, true], 'turning CardClip off locks the copy format and the plus button');
+  assertEqual(mock.state.clipboard, false, 'the CardClip switch persists');
+  cardClip.checked = true;
+  fireEvent(cardClip, 'change');
+  assertEqual([format.disabled, plus.disabled], [false, false], 'and turning it back on releases them');
+
+  const tags = document.getElementById('tags');
+  const kinds = document.querySelector('section fieldset');
+  const taggerLink = document.getElementById('taggerSearchLinks');
+  tags.checked = false;
+  fireEvent(tags, 'change');
+  assertEqual([document.getElementById('cardTags').disabled, document.getElementById('artTags').disabled,
+    document.getElementById('relationships').disabled], [true, true, true], 'turning tags off locks their kinds');
+  assertEqual(kinds.disabled, true, 'and the block around them');
+  assertEqual(taggerLink.disabled, false, 'the Tagger link stays available on its own');
+  assertEqual(taggerLink.checked, false, 'and keeps its own value');
+}
+
 async function themeModeTest() {
   console.log('options.js: theme mode');
   // Installations from before the three-way choice stored a boolean, so the
@@ -265,11 +311,13 @@ async function discoveredFormatsTest() {
 (async () => {
   try {
     htmlIdCheck();
+    switchStyleTest();
     sectionOrderTest();
     await formatListTest();
     await settingsTest();
     await setPlatformsTest();
     await themeModeTest();
+    await lockedDependentsTest();
     await languageTest();
     await discoveredFormatsTest();
     summary('test-options');

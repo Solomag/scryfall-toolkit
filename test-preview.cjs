@@ -1011,6 +1011,44 @@ async function cardNicknameTest() {
   assert(!plain.document.querySelector('.stk-card-nickname'), 'a card without a nickname gets no line');
 }
 
+async function printsSettingsTest() {
+  console.log('content.js: grouped prints can be switched off and trimmed');
+  const heads = page => [...page.document.querySelectorAll('.stk-print-group-row')].map(row => row.textContent);
+  const foldArrow = page => Boolean(page.document.querySelector('.prints-table.stk-fold-groups'));
+
+  const off = await loadCardPage({ cards: [], printGrouping: false });
+  assertEqual(off.document.querySelectorAll('.stk-print-group-row, .stk-print-entry, .stk-print-new-page').length, 0,
+    'with grouping off nothing of the rework is added to the table');
+  assert(off.document.querySelector('.view-all a'), 'Scryfall’s own View all prints link stays in place');
+  assertEqual(off.document.querySelectorAll('.view-all a').length, 1, 'and it is the only link left on the line');
+  assertEqual(foldArrow(off), false, 'and no folding is offered');
+
+  const noFold = await loadCardPage({ cards: [], printFoldGroups: false });
+  assertEqual(heads(noFold).length, 2, 'groups are still built when only folding is off');
+  assertEqual(foldArrow(noFold), false, 'without folding the headers are not marked as toggles');
+  assertEqual(noFold.document.querySelectorAll('.stk-group-collapsed').length, 0, 'and no group starts folded');
+  const line = noFold.document.querySelector('.stk-print-new-page');
+  assertEqual(line.textContent, 'View all prints on a new page →', 'the line falls back to the full-page link only');
+  assertEqual(noFold.document.querySelector('.stk-print-new-page-line .prints-all a, .view-all a').textContent, '',
+    'without folding there is nothing to expand or fold, so the native label is cleared');
+  click(line);
+  assertEqual(heads(noFold).length, 2, 'the full page opens in a new tab, so the table stays as it is');
+
+  const noPageLink = await loadCardPage({ cards: [], printFullPageLink: false });
+  assertEqual(noPageLink.document.querySelectorAll('.stk-print-new-page').length, 0,
+    'the full-page link is not added when the setting is off');
+  const native = noPageLink.document.querySelector('.prints-all a') || noPageLink.document.querySelector('.view-all a');
+  assert(native && !native.closest('.stk-print-new-page-line'), 'the native expand link is left where Scryfall put it');
+  assertEqual(native.closest('tr').className, 'view-all', 'and keeps its own row');
+  click(native);
+  assert(heads(noPageLink).length, 'pressing it still expands the printings in place');
+
+  const all = await loadCardPage({ cards: [] });
+  assertEqual(heads(all).length, 2, 'the default keeps the grouped table');
+  assertEqual(foldArrow(all), true, 'with folding offered');
+  assertEqual(all.document.querySelectorAll('.stk-print-new-page').length, 1, 'and the full-page link on the line');
+}
+
 (async () => {
   try {
     await cardPageTest();
@@ -1028,6 +1066,7 @@ async function cardNicknameTest() {
     await setPlatformTest();
     await advancedSetFilterTest();
     await cardNicknameTest();
+    await printsSettingsTest();
     summary('test-preview');
     process.exit(0);
   } catch (error) {

@@ -5,6 +5,7 @@
     onlyCardmarket: false, printAddButtons: true, printPageSameTab: false, hideDigitalSets: false, hideNonTournamentSets: false, hideOversizedSets: false,
     hideForeignBlackBorder: false, hideNonEnglishPrints: false, legalities: true, finishBadges: true, cardtraderPrices: false, euroPriceSources: 'cm',
     setPlatforms: ['paper', 'arena', 'mtgo'],
+    printGrouping: true, printFoldGroups: true, printFullPageLink: true,
     edhrecUsage: false, edhrecSalt: false, showSaltScale: false, edhrecLink: true, edhrecUsageDisplay: 'both',
     usageColorMetric: 'decks', usageMediumDecks: 50000, usageHighDecks: 100000,
     usageMediumPercent: 1, usageHighPercent: 2.6, saltMediumThreshold: 1, saltHighThreshold: 2,
@@ -184,7 +185,9 @@
   if (cardPage) initLegalities();
   if (cardPage && settings.finishBadges) initPrintFinishes();
   if (cardPage && settings.clipboard && settings.printAddButtons) initNativePrintButtons();
-  if (cardPage) initExpandedPrints();
+  // The grouped prints table is the extension's own rework of the card page, so
+  // it can be switched off and Scryfall's own table stays untouched.
+  if (cardPage && settings.printGrouping) initExpandedPrints();
   if (cardPage && (settings.edhrecUsage || settings.edhrecSalt)) initEdhrecStats();
   if (settings.onlyCardmarket) initPriceFilter();
   if (advancedPage) initAdvancedPriceFilter();
@@ -819,6 +822,8 @@
   }
 
   function initExpandedPrints() {
+    const foldGroups = settings.printFoldGroups !== false;
+    const withPageLink = settings.printFullPageLink !== false;
     const table = document.querySelector('#main .prints > .prints-table');
     const native = document.querySelector('#main .prints .prints-all a') ||
       [...(table?.querySelectorAll('a[href]') || [])].find(link => /^(?:view all prints|показать все издания)/i.test(link.textContent.trim()));
@@ -839,10 +844,15 @@
       pageLink.target = '_blank';
       pageLink.rel = 'noopener noreferrer';
     }
+    // The line only exists for the pair; without the full-page link the native
+    // expand link stays exactly where Scryfall put it.
     const pageLine = document.createElement('span');
     pageLine.className = 'stk-print-new-page-line';
-    native.parentNode?.insertBefore(pageLine, native);
-    pageLine.append(native, pageLink);
+    if (withPageLink) {
+      native.parentNode?.insertBefore(pageLine, native);
+      pageLine.append(native, pageLink);
+    }
+    table.classList.toggle('stk-fold-groups', foldGroups);
     const openPageLabel = () => language === 'ru'
       ? (sameTab ? 'Открыть на этой странице' : 'Открыть на новой странице')
       : (sameTab ? 'Open on this page' : 'Open on a new page');
@@ -1055,6 +1065,7 @@
         head.classList.toggle('stk-group-folded-end', collapsed);
         for (const row of rows) row.hidden = collapsed;
       };
+      if (!foldGroups) return;
       // Groups start folded, unless the whole table fits into ten rows anyway.
       setCollapsed(groupFolded.has(set) ? groupFolded.get(set) : defaultFolded);
       head.addEventListener('click', () => {
@@ -1070,12 +1081,14 @@
       const grouped = placedUnits.filter(unit => unit.grouped);
       const folded = grouped.filter(unit => groupFolded.has(unit.set) ? groupFolded.get(unit.set) : defaultFolded);
       let left = showingAll ? fewerLabel : totalUnits > 10 ? nativeLabel : '';
-      if (!left && grouped.length) left = folded.length ? expandLabel() : collapseLabel();
+      if (!left && foldGroups && grouped.length) left = folded.length ? expandLabel() : collapseLabel();
       native.hidden = !left;
       native.textContent = left;
       const bare = !left;
-      pageLink.textContent = bare ? fullPageLabel() : openPageLabel();
-      pageLine.classList.toggle('stk-print-line-end', bare);
+      if (withPageLink) {
+        pageLink.textContent = bare ? fullPageLabel() : openPageLabel();
+        pageLine.classList.toggle('stk-print-line-end', bare);
+      }
       const open = showingAll || grouped.some(unit => !(groupFolded.has(unit.set) ? groupFolded.get(unit.set) : defaultFolded));
       table.classList.toggle('stk-prints-expanded', open);
       native.setAttribute('aria-expanded', String(open));

@@ -10,19 +10,28 @@
 <p class="hint">По умолчанию тема повторяет системную тему компьютера или телефона и переключается вместе с ней.</p>
 </section>
 <section><h2>Tags</h2>
-<label><input type="checkbox" id="tags"> Теги карт на странице карты</label>
+<label><input type="checkbox" id="tags"> Теги</label>
+<p class="hint">Таблицы тегов и связанных карт на странице карты. Пока выключено, настройки ниже заблокированы.</p>
 <fieldset><legend>Какие теги показывать</legend>
 <label><input type="checkbox" id="cardTags"> Card Tags</label>
 <label><input type="checkbox" id="artTags"> Art Tags</label>
 <label><input type="checkbox" id="relationships"> Связанные карты</label>
 </fieldset>
 <label><input type="checkbox" id="taggerSearchLinks"> Ссылка на Tagger поверх карт в результатах поиска</label>
+<p class="hint">Ссылка на Tagger работает независимо от переключателя «Теги».</p>
 </section>
 <section><h2>CardClip</h2>
-<label><input type="checkbox" id="clipboard"> Общий буфер карт на Scryfall и Tagger</label>
+<label><input type="checkbox" id="clipboard"> CardClip</label>
+<p class="hint">Общий буфер карт на Scryfall и Tagger. Пока выключено, формат копирования и плюс у отдельных изданий заблокированы.</p>
 <label for="exportFormat">Формат копирования</label>
 <select id="exportFormat"><option value="names">1 Название карты</option><option value="moxfield">1 Название карты (SET) номер</option></select>
 <label><input type="checkbox" id="printAddButtons"> Плюс для отдельного издания при наведении в полном списке</label>
+</section>
+<section><h2>Издания</h2>
+<label><input type="checkbox" id="printGrouping"> Группировать издания по сетам</label>
+<p class="hint">Собирает все издания карты в нативной таблице и делит их на группы по сетам. Пока выключено, страница остаётся в обычном виде Scryfall.</p>
+<label><input type="checkbox" id="printFoldGroups"> Сворачивать группы (Collapse all groups)</label>
+<label><input type="checkbox" id="printFullPageLink"> Ссылка на полный список изданий рядом</label>
 </section>
 <section><h2>Скрытие лишнего</h2>
 <label><input type="checkbox" id="hideCasterIndicator"> Скрыть индикатор Caster ON</label>
