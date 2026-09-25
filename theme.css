@@ -118,7 +118,15 @@ html.stk-dark.stk-account-page #main :is(.box,.panel,.well,.sidebar,.deck-list,.
 html.stk-dark.stk-account-page #main :is(div,section,article)[class*="header"],html.stk-dark.stk-account-page #main :is(.panel-heading,.box-heading,.form-section-heading){background-color:#292b2c!important;color:#e6e3df!important}
 html.stk-dark.stk-account-page #main :is(div,section,article)[class*="header"] :is(h1,h2,h3,h4,p,span){color:#e6e3df!important}
 html.stk-dark.stk-account-page #main :is(.panel-heading,.box-heading,.form-section-heading){background-color:#292b2c!important;color:#e6e3df!important;border-color:#424447!important}
-html.stk-dark.stk-account-page #main :is(input[type="file"],[class*="file-upload"],[class*="file-input"]){background-color:#292b2c!important;color:#e6e3df!important;border-color:#595c60!important}
+html.stk-dark.stk-account-page #main :is(input[type="file"],[class*="file-upload"]){background-color:#292b2c!important;color:#e6e3df!important;border-color:#595c60!important}
+/* Scryfall's file-input wrapper is a box the control sits in, not a surface: it
+   paints nothing of its own and no border. The broad [class*="file-input"] match
+   caught it anyway, so the theme filled a box Scryfall left empty, and the fill
+   was wider than the control it holds — a band of dark sticking out from under
+   the button. The wrapper is named here and left alone, and the control inside it
+   is given a surface of its own so it still reads on a dark page. */
+html.stk-dark.stk-account-page #main .form-n-file-input{background-color:transparent!important;border-color:transparent!important}
+html.stk-dark.stk-account-page #main :is(.form-n-file-input-control,.stk-account-upload-button){background-color:#292b2c!important;color:#e6e3df!important;border-color:#595c60!important}
 html.stk-dark.stk-account-page #main :is(label[for*="avatar"],label[for*="image"]):not(.stk-account-upload-button){background:transparent!important;color:#e6e3df!important}
 html.stk-dark.stk-account-page #main input[type="file"]::file-selector-button{padding:7px;border:1px solid #595c60;border-radius:3px;cursor:pointer}
 html.stk-dark.stk-account-page #main .stk-account-light-bar{background-color:#292b2c!important;color:#e6e3df!important}

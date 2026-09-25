@@ -324,6 +324,15 @@ function auditGapCheck() {
     "Tagger keeps its own page field and a transparent #app, so its soft glow is not painted over");
   assert(!/stk-tagger \.blurry-background-art\{[^}]*background/.test(theme),
     "Tagger's own glow keeps the colour it came with");
+  // Scryfall's file-input wrapper is a box the control sits in and paints nothing.
+  // A broad [class*="file-input"] match filled it, and the fill was wider than the
+  // control it held: a band of dark sticking out from under the button.
+  assert(!/\[class\*="file-input"\]/.test(theme),
+    'no rule catches every class that merely contains "file-input"');
+  assert(/stk-account-page #main \.form-n-file-input\{background-color:transparent!important/.test(theme),
+    "Scryfall's file-input wrapper is left unpainted, so nothing sticks out from under the button");
+  assert(/stk-account-page #main :is\(\.form-n-file-input-control,\.stk-account-upload-button\)\{background-color:#292b2c!important/.test(theme),
+    'the file control itself still has a surface of its own on the dark page');
   assert(/stk-tagger :is\(\.sidebar-panel,\.tags-menu,\.navigation\.active\)\{background-color:#252829/.test(theme),
     'the tag sidebar and its tab are repainted, not only the panel Tagger marks light');
   // On a card page Tagger puts the light mark on .card-layout, which is the whole
