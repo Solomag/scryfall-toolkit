@@ -1,4 +1,4 @@
-# Chrome Web Store listing — Scryfall Toolkit 0.43.0
+# Chrome Web Store listing — Scryfall Toolkit 0.44.0
 
 Everything here is written from the shipped code, so that the answers given in the store
 console match what the extension actually does. Where a field needs a decision from the
@@ -175,12 +175,37 @@ These cannot be done from here, and each is listed with the exact screen.
 1. **Developer registration** — the one-time $5 fee at
    https://chrome.google.com/webstore/devconsole if the account has not paid it yet.
 2. **Upload the ZIP** at https://chrome.google.com/webstore/devconsole → **New item** →
-   choose `dist/scryfall-toolkit-0.43.0.zip`.
+   choose `dist/scryfall-toolkit-<version>.zip`.
 3. **Privacy practices tab** — fill in the section 4 answers above.
-4. **Store listing tab** — paste section 1's fields, and upload at least one screenshot and
-   the 128×128 icon the store requires. The extension has no 128×128 icon of its own yet;
-   the store will reject the submission without one.
+4. **Store listing tab** - paste section 1's fields, and upload the screenshots from
+   section 7. The 128x128 icon is already in the ZIP at `icons/icon128.png`; use that
+   same file if the form asks for the icon as a separate upload.
 5. **Distribution tab** — choose visibility (Public) and the regions.
 6. **Review and publish** — the submission is a *review*, not a publication. It becomes
    public only when Google approves it. Tick automatic publication after approval if the
    console offers it.
+
+---
+
+## 7. Screenshots
+
+Ready in `store-assets/`, each exactly **1280×800** (PNG), in English:
+
+| File | What it shows |
+| --- | --- |
+| `store-assets/01-settings-01-of-05.png` | the header, General (settings language, theme), Tags |
+| `store-assets/02-settings-02-of-05.png` | CardClip, Prints, the top of Hide extras |
+| `store-assets/03-settings-03-of-05.png` | Hide extras with the set filters and the platform block |
+| `store-assets/04-settings-04-of-05.png` | Additional info: EDHREC and CardTrader |
+| `store-assets/05-settings-05-of-05.png` | Legality with the format grid, Scryfall Deckbuilder, Experimental, Credits |
+
+All five come from one real capture of the settings page
+(`store-assets/settings-page-full.png`, 1280×4322), so nothing is repeated or cropped
+away between them. Each tile is scaled uniformly to 800 rows and the margins continue
+the page's own colour, so no screenshot is stretched. Rebuild from the source:
+
+```
+powershell -File store-assets/make-store-shots.ps1 -Source store-assets/settings-page-full.png -OutDir store-assets -Tiles 5
+```
+
+The store accepts up to 5 screenshots, and five is what covers the whole page.
