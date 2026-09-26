@@ -209,3 +209,73 @@ powershell -File store-assets/make-store-shots.ps1 -Source store-assets/settings
 ```
 
 The store accepts up to 5 screenshots, and five is what covers the whole page.
+
+---
+
+## 8. Privacy practices tab — the justifications, ready to paste
+
+Chrome's privacy tab asks for a justification per permission and for a purpose
+description. Every line below is true of the shipped code: the tag data really is
+11.7 MB, the alarm really is a 7-day refresh, and there really is no remote code
+(`eval`, `new Function`, dynamic `import`, remote `<script>`/`<link>` appear in no
+shipped file, and the manifest declares no CSP override, so the Manifest V3 default
+`script-src 'self'` applies).
+
+**Purpose description / Single purpose:**
+
+> Scryfall Toolkit improves browsing Scryfall and Scryfall Tagger with a shared card
+> clipboard, card and art tag panels, extra format legalities, a dark theme, and
+> optional EDHREC and CardTrader data.
+
+**`alarms`:**
+
+> The extension bundles a large index of Scryfall card and art tags. The single alarm
+> "stk-tags-refresh" runs once every 7 days (periodInMinutes 10080) to re-download
+> Scryfall's published tag bulk files and replace the cached copy. The alarm does
+> nothing else: no other network call, no tracking, no user activity of any kind.
+
+**`storage`:**
+
+> Storage holds the user's settings (theme, feature switches, format order and
+> visibility, thresholds), the shared card clipboard (card name, set code, collector
+> number, Scryfall link), and the cached tag index. All of it is local to the browser
+> profile and is never uploaded anywhere. A CardTrader API token, if the user chooses
+> to enter one, is kept here too and is sent only to api.cardtrader.com.
+
+**`unlimitedStorage`:**
+
+> The cached tag index exceeds the 10 MB default quota of chrome.storage.local: the
+> three tag data files alone are 11.7 MB (3.75 + 4.38 + 3.58). Without this permission
+> the card and art tag panels on card pages cannot work. Nothing else in the extension
+> grows without bound.
+
+**Host permissions** — if the form gives one box, use the block below; if it gives one
+box per host, use the matching line:
+
+> Access is limited to five hosts and every one of them serves a named feature.
+> api.scryfall.com — card, print, set and search lookups, sending Scryfall card and set
+> identifiers. data.scryfall.io — Scryfall's own published tag bulk files, read into the
+> local cache. tagger.scryfall.com — a POST to graphql/registry with the set code and
+> collector number of the card being viewed, for card/art tags and related cards.
+> json.edhrec.com — optional, off by default; when enabled, the card name is sent as
+> part of a request URL. api.cardtrader.com — optional, off by default; with the user's
+> own token, the exact printing and its cheapest EUR offers. Content scripts run only
+> on scryfall.com, www.scryfall.com and tagger.scryfall.com.
+
+Per host, if the form asks separately:
+
+| Host | Text |
+| --- | --- |
+| `api.scryfall.com` | Core feature. Card lookups by Scryfall ID, print lists by Oracle ID, set lists and search queries such as `oracleid:…` and `e:<set>`. Sends Scryfall card and set identifiers only, never account data. |
+| `data.scryfall.io` | Core feature. Downloads Scryfall's published tag bulk files (`oracle_tags`, `art_tags`) into the local cache. The extension only reads them. |
+| `tagger.scryfall.com` | Core feature. A POST to `graphql/registry` carrying the set code and collector number of the card the user is viewing, for card and art tags and related cards. |
+| `json.edhrec.com` | Optional feature, off by default. When the user turns on EDHREC indicators, the card name is sent as part of the request URL to read its public JSON. |
+| `api.cardtrader.com` | Optional feature, off by default. With the user's own personal access token, looks up the exact printing and its cheapest listed EUR offers. The token is sent only to this host. |
+
+**Remote code — answer "No".** If the form still asks for text:
+
+> This extension does not use remote code. All HTML, CSS and JavaScript is inside the
+> package; nothing is fetched from a server and executed. The manifest declares no
+> content_security_policy override, so the default Manifest V3 policy (script-src 'self')
+> applies. The only data received at run time is JSON from Scryfall, Scryfall Tagger,
+> EDHREC and CardTrader, which is rendered as page text and is never executed.
