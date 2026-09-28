@@ -137,9 +137,19 @@ async function fetchMock(url) {
     }
     return jsonResponse({ data: [{ name: 'Other Card', image_uris: { normal: 'https://cards.scryfall.io/normal/o.jpg' }, scryfall_uri: 'https://scryfall.com/card/oth/1/other-card' }] });
   }
+  if (target.startsWith('https://json.edhrec.com/pages/cards/')) {
+    edhrecFetches.push(Date.now());
+    if (edhrecNextStatus) { const status = edhrecNextStatus; edhrecNextStatus = null; return jsonResponse({}, status); }
+    const slug = target.slice(target.lastIndexOf('/') + 1).replace(/\.json$/, '');
+    return jsonResponse({ container: { json_dict: { card: { ...edhrecCard, name: slug.replace(/-/g, ' ') } } } });
+  }
   if (target.startsWith('https://api.scryfall.com/cards/')) return jsonResponse(SCRYFALL_CARD);
   throw new Error(`Unmocked fetch: ${target}`);
 }
+
+const edhrecFetches = [];
+let edhrecNextStatus = null;
+const edhrecCard = { name: 'Test Card', num_decks: 1200, potential_decks: 40000, salt: 1.5 };
 
 const mock = createChrome({});
 
@@ -168,16 +178,41 @@ page.script('background.js');
 const ctx = page.context;
 const listener = mock.messageListeners[0];
 
-function send(message, senderUrl = 'https://scryfall.com/card/tst/1/test-card') {
+function send(message, senderUrl = 'https://scryfall.com/card/tst/1/test-card', timeoutMs = 100) {
   return new Promise(resolve => {
     let done = false;
     const respond = response => { if (!done) { done = true; resolve(response); } };
     listener(message, { url: senderUrl }, respond);
-    setTimeout(() => { if (!done) { done = true; resolve({ noResponse: true }); } }, 100);
+    setTimeout(() => { if (!done) { done = true; resolve({ noResponse: true }); } }, timeoutMs);
   });
 }
 
 const setsFetches = () => fetchLog.filter(url => url === 'https://api.scryfall.com/sets').length;
+
+// EDHREC's published policy: one request a second at most, at least two seconds
+// before trying again after a 429, and no hammering while something is broken.
+// Their note says violators may be banned, so this is checked rather than assumed.
+async function edhrecThrottleTest() {
+  console.log('background.js: EDHREC asks no faster than their policy allows');
+  const name = 'Test Card';
+  edhrecFetches.length = 0;
+  edhrecNextStatus = null;
+
+  await send({ type: 'edhrec', name }, undefined, 4000);
+  await send({ type: 'edhrec', name: 'Second Card' }, undefined, 4000);
+  const spacing = edhrecFetches[1] - edhrecFetches[0];
+  assert(edhrecFetches.length === 2, 'two EDHREC requests were made');
+  assert(spacing >= 1000, `requests are at least a second apart (${spacing}ms)`);
+
+  // A 429 must hold the next attempt back by at least the two seconds they ask for.
+  edhrecNextStatus = 429;
+  const rejected = await send({ type: 'edhrec', name: 'Third Card' }, undefined, 4000);
+  assert(rejected && rejected.ok === false, 'a 429 is reported to the page');
+  const heldFrom = Date.now();
+  await send({ type: 'edhrec', name: 'Fourth Card' }, undefined, 4000);
+  const held = Date.now() - heldFrom;
+  assert(held >= 2000, `a 429 holds the next request back (${held}ms)`);
+}
 
 (async () => {
   try {
@@ -253,7 +288,7 @@ const setsFetches = () => fetchLog.filter(url => url === 'https://api.scryfall.c
     assertEqual(invalidNumber, { ok: false, error: 'Invalid card identity' }, 'invalid collector number is rejected');
 
     const tags = await send({ type: 'tags', set: 'tst', number: '1' });
-    if (!tags.ok) console.error('DEBUG tags error:', tags.error);
+    if (!tags.ok) assert(false, 'tags lookup failed: ' + tags.error);
     assertEqual(tags.ok, true, 'valid tags request succeeds');
     assertEqual(tags.data.card.map(item => item.name), ['Aggro', 'Other Card', 'combo'],
       'live card tags merge with bundled tags, deduplicated by slug');
@@ -382,6 +417,7 @@ const setsFetches = () => fetchLog.filter(url => url === 'https://api.scryfall.c
     assert(fetchLog.includes('https://data.scryfall.io/bulk/oracle-tags.json'), 'oracle bulk file downloaded');
     assert(fetchLog.includes('https://data.scryfall.io/bulk/art-tags.json'), 'art bulk file downloaded');
 
+    await edhrecThrottleTest();
     summary('test-background');
     process.exit(0);
   } catch (error) {

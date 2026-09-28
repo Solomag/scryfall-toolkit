@@ -172,16 +172,40 @@ unofficial, is not endorsed by Scryfall, and bundles none of that material. See
 [the terms](https://scryfall.com/terms) for the full text, including the acceptable-use
 rules this project's request pattern has to respect.
 
-## 7. EDHREC — service, logo unresolved
+## 7. EDHREC — service used under their published data policy
 
 - <https://www.edhrec.com/> and the public card JSON at `json.edhrec.com`
 - Used: **service data fetched at run time only.** Nothing from EDHREC is bundled except
   the logo file listed below. The card name is sent to EDHREC only when the user has
   enabled the EDHREC feature.
 
+**Their data policy.** EDHREC and Space Cow Media encourage community developers to use
+EDHREC data, and allow HTTP requests like those a browser makes, subject to a rate limit.
+The terms they set out, in their words:
+
+- limit requests to **1 per second**, "especially in the face of errors";
+- on a **429 Too Many Requests**, wait **at least 2 seconds** before retrying;
+- identify requests with a **User-Agent carrying the project name and a contact email** —
+  though "direct requests from user browsers do not need this";
+- they provide **no documentation** and may change or remove data, fields or API
+  behaviour **at any time and without notice**;
+- the policy **is subject to change** while they re-evaluate it.
+
+**How this project complies.** `background.js` enforces the rate limit rather than
+leaving it to how fast someone clicks through cards: `edhrecRequest()` spaces requests at
+least one second apart, and a failure holds the next attempt back by at least the two
+seconds they ask for, doubling to a minute so a broken endpoint is not hammered. Responses
+are cached for six hours, so a card is looked up at most once. Requests are made by the
+user's own browser, which is the case their policy exempts from the User-Agent
+requirement; if they ask for identification regardless, it would need
+`declarativeNetRequest` to set the header and that is a decision to take then.
+
+Their warning that they may change the data without notice is why the feature shows
+nothing at all when a field is missing, rather than an error or a wrong number.
+
 | File in this repo | Status |
 | --- | --- |
-| `icons/edhrec.png` | **Unresolved — see the open questions below.** Appears to be EDHREC's own logo. Provenance and permission to redistribute are not established. |
+| `icons/edhrec.png` | **Unresolved.** Appears to be EDHREC's own logo. Their data policy covers data use; it says nothing about the logo, and permission to redistribute it has not been established. |
 
 ## 8. CardTrader — service, brand marks unresolved
 
@@ -246,9 +270,9 @@ decision before the archive is published widely.
 3. **`icons/cardmarket.svg`** — either confirm it is a copy of a Scryfall asset (and get
    permission) or state plainly that it is an original redraw in Scryfall's icon style. Do
    not ship a Scryfall asset without permission.
-4. **EDHREC's terms for `json.edhrec.com`** — no licence or terms document for the public
-   card JSON could be found. Confirm the permitted use and whether the EDHREC name may be
-   shown as a data source.
+4. **EDHREC's logo** — their data policy covers using their data and says nothing about
+   the mark. Either establish that it may be redistributed or replace it with a text
+   label. The policy itself is now recorded in section 7.
 5. **CardTrader API terms** — confirm the display rules for a third-party extension
    showing prices with the user's own token.
 6. **Scryfall's acceptable-use rules** — the Terms say "You may not scrape Scryfall" and

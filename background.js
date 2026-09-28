@@ -65,6 +65,45 @@ async function cardTraderPrices(id, set, token) {
   }
   return { available: true, url: `https://www.cardtrader.com/en/cards/${blueprint.id}`, ...cheapest };
 }
+// EDHREC publishes a data policy for community projects: at most one request a
+// second, at least two seconds before trying again after a 429, and no repeated
+// attempts while something is broken -- "requestors that violate this may be
+// banned". The spacing is enforced here rather than left to how fast someone
+// clicks through cards, and a failure holds the next attempt back further each
+// time. The requests themselves are made by the user's own browser, which is the
+// case their policy exempts from the User-Agent requirement.
+let edhrecNextRequest = 0;
+let edhrecHeldUntil = 0;
+let edhrecFailures = 0;
+
+function edhrecPenalty() {
+  edhrecFailures = Math.min(edhrecFailures + 1, 6);
+  // Always at least the two seconds EDHREC asks for, doubling to a minute.
+  edhrecHeldUntil = Date.now() + Math.min(60000, 2000 * 2 ** (edhrecFailures - 1));
+}
+
+async function edhrecRequest(slug) {
+  const now = Date.now();
+  const waitUntil = Math.max(edhrecNextRequest, edhrecHeldUntil);
+  if (waitUntil > now) await new Promise(resolve => setTimeout(resolve, waitUntil - now));
+  edhrecNextRequest = Date.now() + 1000;
+  let response;
+  try {
+    response = await fetch(`https://json.edhrec.com/pages/cards/${encodeURIComponent(slug)}.json`,
+      { headers: { Accept: 'application/json' }, credentials: 'omit' });
+  } catch (error) {
+    edhrecPenalty();
+    throw error;
+  }
+  if (response.status === 429) {
+    edhrecPenalty();
+    throw new Error('EDHREC HTTP 429');
+  }
+  if (!response.ok) edhrecPenalty();
+  else edhrecFailures = 0;
+  return response;
+}
+
 let tagIndexes = {
   oracle: self.__MOXTAGS_ORACLE,
   art1: self.__MOXTAGS_ILLUS_1,
@@ -159,8 +198,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
       const cached = edhrecCache.get(slug);
       if (cached && cached.expires > Date.now()) return cached.promise;
       const promise = (async () => {
-        const response = await fetch(`https://json.edhrec.com/pages/cards/${encodeURIComponent(slug)}.json`,
-          {headers:{Accept:'application/json'},credentials:'omit'});
+        const response = await edhrecRequest(slug);
         if (!response.ok) throw new Error(`EDHREC HTTP ${response.status}`);
         const card = (await response.json())?.container?.json_dict?.card;
         const canonical = value => String(value || '').toLowerCase().replace(/[^a-z0-9]/g,'');
