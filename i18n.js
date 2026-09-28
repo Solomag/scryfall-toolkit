@@ -12,7 +12,9 @@
 (() => {
 // The settings language can follow the browser rather than being pinned. The
 // three languages the interface is written in get Russian; every other
-// language gets English, so nobody lands on a page that is neither.
+// language gets English, so nobody lands on a page that is neither. These are
+// language codes, not countries: uk is Ukrainian, while the United Kingdom is
+// GB and arrives as en-GB, which correctly falls through to English.
 const SETTINGS_LANGUAGES = ['ru', 'be', 'uk'];
 const resolveSettingsLanguage = value => {
   if (value === 'ru' || value === 'en') return value;
