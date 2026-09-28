@@ -1,6 +1,6 @@
 # Privacy policy — Scryfall Toolkit
 
-**Last updated: 2026-09-25 · Extension version 0.49.0**
+**Last updated: 2026-09-25 · Extension version 0.50.0**
 
 This is what this extension actually does with data, written from the shipped code in
 this repository rather than from intention. If the code changes, this document changes

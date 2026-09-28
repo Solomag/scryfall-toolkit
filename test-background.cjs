@@ -220,14 +220,41 @@ async function edhrecThrottleTest() {
   assert(edhrecFetches.length === 2, 'two EDHREC requests were made');
   assert(spacing >= 1000, `requests are at least a second apart (${spacing}ms)`);
 
+  // Three tabs, three cards, all at once. The slot has to be taken before the
+  // wait, not after, or these three sleep into the same second and fetch
+  // together -- which is what the first version did.
+  edhrecFetches.length = 0;
+  await Promise.all([
+    send({ type: 'edhrec', name: 'Parallel Card A' }, undefined, 8000),
+    send({ type: 'edhrec', name: 'Parallel Card B' }, undefined, 8000),
+    send({ type: 'edhrec', name: 'Parallel Card C' }, undefined, 8000)
+  ]);
+  assertEqual(edhrecFetches.length, 3, 'three at once still make three requests');
+  const gaps = [edhrecFetches[1] - edhrecFetches[0], edhrecFetches[2] - edhrecFetches[1]];
+  assert(gaps.every(gap => gap >= 1000),
+    'and each lands at least a second after the one before (' + gaps.join(', ') + 'ms)');
+  assert(edhrecFetches[2] - edhrecFetches[0] >= 2000,
+    'so the three are spread over at least two seconds');
+
   // A 429 must hold the next attempt back by at least the two seconds they ask for.
   edhrecNextStatus = 429;
   const rejected = await send({ type: 'edhrec', name: 'Third Card' }, undefined, 4000);
   assert(rejected && rejected.ok === false, 'a 429 is reported to the page');
   const heldFrom = Date.now();
-  await send({ type: 'edhrec', name: 'Fourth Card' }, undefined, 4000);
+  await send({ type: 'edhrec', name: 'Fourth Card' }, undefined, 8000);
   const held = Date.now() - heldFrom;
   assert(held >= 2000, `a 429 holds the next request back (${held}ms)`);
+
+  // The other race: a request already waiting its turn when the 429 lands. It
+  // must see the new hold after it wakes rather than the one it computed before.
+  edhrecNextStatus = 429;
+  edhrecFetches.length = 0;
+  const one = send({ type: 'edhrec', name: 'Queued Victim One' }, undefined, 8000);
+  const two = send({ type: 'edhrec', name: 'Queued Victim Two' }, undefined, 8000);
+  await Promise.all([one, two]);
+  assertEqual(edhrecFetches.length, 2, 'both queued requests are made');
+  const spread = edhrecFetches[1] - edhrecFetches[0];
+  assert(spread >= 2000, 'the queued request sees the hold the 429 set (' + spread + 'ms)');
 }
 
 (async () => {
