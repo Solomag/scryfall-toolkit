@@ -57,6 +57,13 @@ function referencedBy(file) {
       for (const argument of call[1].split(',')) add(argument.trim().replace(/^["']|["']$/g, ''));
     }
     for (const m of text.matchAll(/chrome\.runtime\.getURL\s*\(\s*["']([^"'$]+)["']/g)) add(m[1]);
+    // Files can be named through a map or a variable rather than a literal, as
+    // the tag snapshot is. Anything that names a file of this project is a
+    // reference to it.
+    for (const m of text.matchAll(/["']([^"'\s]+\.(?:js|css|png|svg|json))["']/g)) {
+      const name = m[1].replace(/^\.\//, '');
+      if (name.includes('/') || fs.existsSync(path.join(ROOT, name))) add(name);
+    }
   }
   return [...found];
 }

@@ -302,6 +302,15 @@ function packagedArchiveTest() {
   for (const file of ['options.html', 'options.css', 'options.js', 'popup.html', 'popup.css', 'popup.js', 'i18n.js', 'format-catalog.js']) {
     assert(listed.includes(file), `${file} is inside the archive, so no page ships bare`);
   }
+  // And the second: the tag snapshot is named through a map in background.js
+  // rather than a literal, and a walker that only read literals let it leave the
+  // archive -- a 143 KB package with no tags in it.
+  for (const file of ['data/oracle-tags.js', 'data/illustration-tags-1.js', 'data/illustration-tags-2.js']) {
+    assert(listed.includes(file), `${file} is inside the archive, so the tag panels have data`);
+  }
+  const tagBytes = ['data/oracle-tags.js', 'data/illustration-tags-1.js', 'data/illustration-tags-2.js']
+    .reduce((sum, file) => sum + fs.statSync(path.join(ROOT, file)).size, 0);
+  assert(tagBytes > 10 * 1024 * 1024, 'the bundled tag snapshot is the size it should be');
   // Whatever the manifest names has to be in the archive. This is what let the
   // popup go missing: the manifest was read for content scripts and options_page
   // but not for action.default_popup.
