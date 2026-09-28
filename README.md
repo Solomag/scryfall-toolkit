@@ -1,123 +1,89 @@
 # Scryfall Toolkit 0.48.0
 
-An independent browser extension for Scryfall. The current preview includes a shared card clipboard on Scryfall and Scryfall Tagger, sidebar Tagger card/art tags on individual Scryfall card pages, and extra format legalities. It never runs on Moxfield; keep the official MoxTags extension installed there.
+An independent browser extension for **Scryfall** and **Scryfall Tagger**: a shared card clipboard, tag panels on card pages, extra format legalities, a dark theme, and optional EDHREC and CardTrader data.
 
-Scryfall Toolkit is not produced, endorsed or approved by Scryfall, Wizards of the Coast, EDHREC, CardTrader, Cardmarket or Moxfield. Bundled data, images and code from other MIT-licensed projects keep their own notices — see [Credits and third-party notices](#credits-and-third-party-notices) and [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
+[Chrome Web Store](https://chromewebstore.google.com/detail/scryfall-toolkit-preview/ofpociogpmmgfjgjnfppnllabhjjnclf) · [Source](https://github.com/Solomag/scryfall-toolkit) · [Releases](https://github.com/Solomag/scryfall-toolkit/releases) · [Privacy](PRIVACY.md) · [Third-party notices](THIRD_PARTY_NOTICES.md)
 
-## Install in Opera GX
+Not produced, endorsed or approved by Scryfall, Wizards of the Coast, EDHREC, CardTrader or Cardmarket.
 
-If you already installed an earlier preview, replace the contents of the same `scryfall-toolkit` directory, click **Reload** for this extension on `opera://extensions`, and reload Scryfall tabs. Keep the same unpacked extension path so its stored clipboard and settings remain available.
+## What it looks like
 
-1. Unzip the archive to a permanent folder. To rebuild it from this repository, run `npm run package`: it collects the files the manifest and the service worker actually load, adds `LICENSE`, `README.md`, `THIRD_PARTY_NOTICES.md` and `third_party/`, writes `dist/scryfall-toolkit-<version>.zip`, and then reads the archive back to confirm every licence and notice is really inside it. The command fails if one is missing.
-2. Open `opera://extensions`, enable developer mode, select **Load unpacked** (or **Load extension**) and choose the unzipped `scryfall-toolkit` folder that contains `manifest.json`.
-3. Open the extension icon to change feature and export settings. Reload existing Scryfall tabs after changing them.
-4. Keep MoxTags' site access restricted to Moxfield and `api.scryfall.com`, as already tested. Disable the old CardClip, Shambleshark Tag Menu and MTG Enhancements on Scryfall when evaluating overlapping features. You can turn this preview off again without touching those original extensions.
+The whole settings page, top to bottom:
 
-The **Settings language** selector is the first control of **General**; the **Scryfall and Tagger interface language** selector is the last control of the page, in its **Experimental** section. It controls the extension's controls on those sites and common Scryfall navigation/status labels. The defaults are Russian settings and English site controls. Card names, Oracle text, user content and articles stay in their original language. Reload Scryfall or Tagger after changing the site language.
+![Scryfall Toolkit settings page, showing all ten sections from General to Credits](store-assets/settings-page-full.png)
 
-Settings are grouped as **General** (settings language, theme), **Tags** (card page tags, their kinds, the Tagger link on search results), **CardClip** (shared clipboard, copy format, per-printing plus button), **Prints** (the grouped printings table, folding, the full-page link), **Hide extras** (Caster indicator, every set and price filter, with the platform filter in an experimental sub-block), **Additional info** (finish column, type/mana search, card nicknames, with EDHREC and CardTrader as sub-categories), **Legality**, **Scryfall Deckbuilder**, and **Experimental** at the bottom. Every checkbox is drawn as a switch, and a master switch locks the settings below it: turning **Tags** or **CardClip** off greys out its own options, which then do nothing. The Tagger link keeps working on its own.
+## Install
 
-## Try it
+1. Download `scryfall-toolkit-<version>.zip` from the [latest release](https://github.com/Solomag/scryfall-toolkit/releases/latest).
+2. Unzip it into a folder you keep.
+3. Open `opera://extensions` (or `chrome://extensions`), turn on **Developer mode**, choose **Load unpacked** and pick the unzipped folder — the one that contains `manifest.json`.
 
-- On a Scryfall or Tagger search page, press `+` on a card, then open the clipboard at the bottom right. Each row shows the card's set code and collector number beside its name. Copy the whole list from the toolbar or copy one card with the small copy button beside its name; both follow the selected export format, which includes set codes by default. Hovering the toolbar copy button reveals a small menu above it with a one-off **names only** choice that drops the set codes. The same clipboard and add/remove button also appear on individual Tagger card pages.
-- On a single card page, tags appear in the right column below Prints as separate Card Tags and Art Tags tables. Each shows six tags initially; expand or collapse the full list with the native-style link underneath. You can switch off either kind in the extension popup. Click a tag to append its search token to Scryfall's search field without moving the page; a brief notification confirms it. Click several tags to combine them, then submit the search yourself. Loading now uses a muted native-style panel.
-- Tagger's live relationships (similar, better, prototype, and other linked cards) appear in a third **Related Cards** table only when the card has relationships. They are ordered by relationship type and card name, and can be hidden independently in the popup. Hover or focus a related card for an image preview; move the cursor onto the preview to keep it open and use the browser's image context menu to copy the image. Click its name to open the related card's detail page with the extension's card features. The bundled index adds tags omitted by the live direct-tag list.
-- Click **View all prints** in a card's Prints section to expand the remaining printings directly inside the native Prints table. Rows are grouped by set with collapsible headers; the last row keeps a link to Scryfall's original full page. When the clipboard option is on, every printing row — including the current one — shows a plus button that adds the printing with its set code, even in names-only export mode. The whole rework is the **Prints** category: **Group printings by set** turns the grouped table off and leaves Scryfall's own table untouched (native labels, native stars, no added rows), **Fold groups** removes the collapse/expand arrows and the "Collapse all groups" label, and **Full printings link beside it** removes the extra link on the bottom line. The per-printing plus button is a **CardClip** setting; opening the full list in the same tab sits in **Experimental**.
-- Extra format legalities use Scryfall's native legality rows, labels and badges inside the main legality block. All native and extra formats can be reordered by dragging in a two-column grid or hidden individually in the settings tab. The extra rows appear when their API results are ready; there is no transient Loading badge. Random card pages work even when Scryfall omits the usual metadata tags.
-- The popup has a theme selector for card pages, set listings, advanced search, search notices, and account/deck panels: **Follow the system** (the default) reads the operating system's own appearance and switches with it, and light or dark can be pinned instead. The header search icon remains visible. In dark mode rarity stars retain their rarity colors with a thin dark outline. Caster Mode's large button becomes a subtle indicator at bottom left while active. The clipboard uses CardClip's compact copy, trash and paperclip icons. The `+` button sits above and to the right of the card to avoid its mana cost.
-- A dark audit over the live site also covers the surfaces Scryfall paints with classes of its own: the "Jump to" menu of a set page (the button keeps Scryfall's own translucent pill), the icons of the search reference jump bar, the blog index with its post cards, pills and embedded deck lists, the bot documentation buttons, the donation tiles, the button on Scryfall's own error pages, the keyboard skip links and the dot in a set's card grid header. A band that carries a logo is treated as a picture and never as a light surface to flatten, and a repainted surface is never filled through the `background` shorthand, so a logo held as a background image survives the dark theme. A link that looks like a button is Scryfall's own white pill with dark purple ink, so the theme states the button itself and every state it has: Scryfall paints the hover and the press white with a purple border, and a disabled button black, so the pointer used to bring a flash of light and a line of ink that could not be read. The bots page keeps its Slack and Discord brand bands: Scryfall's decorative second copy of a panel, which fakes its drop shadow, is painted like the panel it lies on so it cannot let a second copy of the text through, the white one-pixel text shadow Scryfall lifts that page with is removed, and a screenshot of the bot inside Slack is turned the other way round when it is light all over — a picture that mixes a light window with a dark one is a picture of two things, and turning it round would only move the bright block from one half to the other. In the deck editor the curve counts, which Scryfall draws in black, and the set-code badges, which it draws as black ink at a quarter opacity, are given readable ink, and the columns take the colour of the page they stand on instead of reading as a lighter box inside it. Scryfall's "Nothing Here" page is built straight into the body with no `#main` at all, so the theme states its light gradient and its purple drawing itself. The header search field no longer takes the browser's autofill paint, though the suggestion list under it is browser UI that no stylesheet can reach. A wrapper that only holds a control is not a surface: Scryfall's file-input box paints nothing of its own, and a broad class match filled it, which left a band of dark sticking out from under the avatar button. The wrapper is named and left alone now, and the control inside it carries the surface. Every purple in the dark theme is the same lifted one, and it is lifted wherever it appears: in the ink of a link, in the fill of an icon, in the frame of a member's picture, in the meter of a deck curve and in a notice bar. The runtime repair judges the colour itself rather than one literal, so a purple dark enough to sink into a dark surface is lifted wherever Scryfall wrote it — and it waits for the page's own stylesheet before it looks, because at the moment the document is ready Scryfall's stylesheet is still in flight and every link is wearing the browser's default blue. Every pointer state Scryfall paints with a light-mode colour is answered as well: its prose, forms and checklists turn a line of text near-black under the cursor and turn a field white under focus, which is why hovering used to blacken the text. Tagger is a separate app with its own dark design, so the theme states each of its surfaces explicitly and repaints only the few panels Tagger itself marks light — together with the ink inside them, which is what left grey text on a dark panel before. Marking a panel light is not always the whole of it: Tagger paints a white of its own on top of two of them, the tag sidebar and the tab it hangs from, so those are repainted by name as well. On a card page the mark sits on the whole layout rather than on the panel, and the sidebar that the guide and the tag list slide in behind is not a panel at all but a 55% black wash laid over the page. Neither is a surface to fill: the layout keeps Tagger's own field, so the blurred card art behind the panel survives, and the wash keeps its own, so opening the guide or the tag list dims the page instead of flooding it flat. Tagger's own page field and its soft glow behind the header are left exactly as the app paints them: the field is Tagger's own `#191820` rather than the site's, `#app` stays transparent because the glow sits behind it at a negative z-index, and the glow keeps the pale lilac it came with. The team page is a purple marketing page rather than a text page: Scryfall lays a white band over a purple field of its own, so the field is left alone and the band is dimmed instead of being flattened into the dark, which is what took the purple away.
-- The set counters above and below the Sets list both follow the platform filter, so the number of shown sets is stated in both places.
-- **Hide Digital only sets** filters Scryfall's `/sets` index and the Prints table on individual card pages. It uses Scryfall's digital flag plus the twelve online cubes listed under `/cubes/`; it keeps paper sets and the currently selected printing visible. Card searches, individual set pages and decks are unaffected. The set index is cached for one day.
-- **Hide non-tournament sets** independently filters Scryfall's memorabilia, minigame, Vanguard and token set categories, plus official proxy set codes (Collector's Edition, 30th Anniversary Edition and World Championship Decks). **Hide oversized sets** has its own toggle; oversized Commander cards remain listed unless it is enabled. Mixed "funny" sets are retained because some contain tournament-legal cards. Both preferences affect Sets and individual card Prints; the currently selected printing remains visible. Categories refresh with the daily set index.
-- **Hide Foreign Black Border sets** independently removes 4BB, FBB and BCHR from Sets and Prints. **Hide non-English printings** filters only language-specific rows in Prints, including Portal and Secret Lair; English printings in those sets remain. Neither filter hides the printing on its own card page. Search results are not changed.
-- **Platforms** is an experimental checkbox group — All, Paper, Arena, Magic Online — kept in an experimental sub-block of **Hide extras**. It decides which sets are shown in the `/sets` index and in the Prints table on a card page. Paper is every set Scryfall does not mark digital; Arena and Magic Online are their digital-only sets, so ticking Arena alone leaves Alchemy, Arena Anthology, Historic Anthology and similar sets. Scryfall's set index does not name the client behind a digital set, so the extension ships a snapshot of the platform of every known digital set, looks up sets missing from it through one card of the set, and keeps that answer for a month. A set the lookup cannot place stays visible rather than being hidden on a guess. Online cubes listed under `/cubes/` stay with the **Hide Digital only sets** switch.
-- The set field of Advanced search follows the **Games** checkboxes Scryfall already shows above it: ticking only Paper leaves paper sets in the list, and ticking another platform brings its sets back. Hidden sets are only marked, never removed, so the field can widen again at any time, and the platforms kept in the experimental setting narrow it further. A set already chosen in the field stays selected.
-- The Sets table keeps Scryfall's own width and column spacing, and its horizontal scrollbar appears only when the columns actually exceed the available space. The deck action menu uses the full popup panel, including when Scryfall adds its contents after a click. The footer has no theme background, and deck-editor color rules leave mana symbols untouched.
-- When a card has finish-only printings, one narrow finish column appears between printing names and prices for foil-only (✶), nonfoil-only (○), etched-only (◈), or known special foil treatments (✧). The price columns keep their native layout and native foil stars in printing names are not duplicated. Hover to see the marker's meaning. Disable these markers in settings. They use Scryfall's collection API and may arrive after the page loads.
-- The price filter hides USD and TIX columns and TCGplayer and Cardhoarder purchase links, including Buy buttons in deck sidebars; it keeps Cardmarket links. Separately choose Cardmarket, CardTrader, or both as the EUR price source in the Prints table. When both are selected their columns have provider icons. Existing Scryfall prices are never altered.
-- Optional **CardTrader** prices use a personal API token entered in settings. The token stays in extension local storage and is sent by the background worker only to CardTrader's API. Settings show when a token is already stored; the input remains blank and is only used to replace it. The extension matches Scryfall print IDs against CardTrader blueprints, links the exact printing and shows the cheapest listed foil and nonfoil offers when available. Its EUR table column fills gradually to respect the marketplace rate limit; only offers priced in EUR appear. If CardTrader fails, a CardTrader-only table restores the native Cardmarket column. Cardmarket and CardTrader monochrome icons are bundled with the extension. Listed prices exclude shipping and do not guarantee language, condition or stock. This integration has been checked against a live CardTrader token as well as against API-shaped fixtures.
-- Optional **EDHREC** indicators sit inside Scryfall's legality block. Usage and Salt Meter each have a same-size colored badge before their labels, under the legality badges in the left and right columns. Choose a stacked fraction (decks containing the card / decks eligible by color identity), the percentage of eligible decks, or both; the default shows both with the fraction below the label. Usage colors can use absolute deck counts (green below 50,000, yellow from 50,000, red from 100,000 by default) or percentages (green through 1%, yellow above 1%, red from 2.6%); adjust either pair of thresholds in settings. Salt Meter is EDHREC's community vote average on a 0–4 scale, not a power rating; yellow starts at 1 and red at 2. The `/4` suffix is optional and hidden by default. Usage, salt and the optional EDHREC favicon/link can be switched independently; missing data produces no panel. Their lookup uses EDHREC's public card JSON and sends the card's name to EDHREC only when enabled.
-- Selectable Shambleshark features now include a Tagger shortcut in search results (in **Tags**), search links for a card's type and mana cost, archived card nicknames (both in **Additional info**), a No Prices mode, stacked images and a Show Tokens dialog on deck pages (in **Scryfall Deckbuilder**). The nickname line appears under the prints table of a card Scryfall previewed under another name, for example Lavabrink Venturer (IKO #19) as “Professional Stunt Performer” or Barbed Spike (MH2 #5) as “Barbed Flier”; the bundled list holds 396 of them across 21 sets. The token list looks up deck cards and their associated tokens through Scryfall; at most 150 unique deck cards are inspected. These extras are off by default except No Prices and do not install Shambleshark itself.
+To update, replace the contents of that folder and press **Reload** on the extension. Keeping the same folder keeps your clipboard and settings.
 
-## Limitations and known gaps
+To build the archive yourself: `npm run package`. It writes `dist/scryfall-toolkit-<version>.zip` and then reads the archive back, failing if any file a page needs is missing.
 
-- Tag panels currently appear on single card pages; tag panels in search results are planned for a later version.
-- Related cards need a separate request to Tagger's card-edge service. If that service is unavailable or its response changes, the extension shows bundled Card and Art Tags and a small notice that relationships were not loaded.
-- Related card preview images come from Scryfall on first hover and may appear after a short delay. If the request fails, the links remain usable.
-- CardTrader API access needs your own personal token and may be rate limited; the extension does not share a token between browsers. Remove it using the settings button when you no longer want prices. This integration has been checked against a live token by the project's author as well as against API-shaped fixtures.
-- EDHREC card JSON is a public endpoint without a documented stability guarantee. If its response changes, the optional indicators simply do not appear.
-- Shambleshark's deckbuilder search, EDHREC suggestions, cleanup and card input editing are not integrated. Its Card Notes and Legality Check modules are empty placeholders upstream.
-- Tag data shipped in this archive comes from MoxTags v1.8.3 (June 2026). The extension attempts to refresh it using Scryfall's published art and oracle tag bulk files on installation and every seven days. The bundled snapshot remains usable if refresh fails.
-- Extra format results, especially Heritage and historical Legacy variants, mirror the source project's search logic and overrides. Check uncertain cases against current format rules before relying on them.
-- CardClip's old Scryfall-site clipboard is imported on the first Scryfall run only if the extension has no `cards` value. It reads Scryfall's `localStorage.cardClipboard` array, transfers each card's name and link into `chrome.storage.local`, and then the two clipboards stop syncing. Imported CardClip entries may lack the set and collector number needed for the Moxfield export; newly added cards include both. Installing an older build that already saved an empty `cards` array prevents a later automatic import.
-- The dark theme is applied by this extension over Scryfall's own styles, so it depends on Scryfall's markup. Pages that change their markup can come out partly unthemed until the extension is updated. Behaviour on private, signed-in pages depends on what that page renders and has been checked in ordinary use rather than automated tests.
-- The CardTrader and Cardmarket icons are third-party marks and the EDHREC icon appears to be one. Their provenance is not settled; `THIRD_PARTY_NOTICES.md` records exactly what is unconfirmed and what has to be established before wider distribution.
+## What it does
 
-## Credits and third-party notices
-
-Scryfall Toolkit is an independent project. It is **not** produced, endorsed, sponsored or
-approved by Scryfall, Scryfall LLC, Wizards of the Coast, EDHREC, CardTrader, Cardmarket,
-Moxfield, or the authors of the projects below. Nothing here should be read as their
-endorsement, and the bundled card artwork and game data are not redistributed here.
-
-`THIRD_PARTY_NOTICES.md` records, for each source, exactly what was taken: a copied file, a
-re-serialised dataset, a bundled image, or a behaviour that was only followed. The full
-licence texts are kept in `third_party/` and ship inside the extension archive. The short
-version:
-
-| Source | Author | Licence | What this project took |
-| --- | --- | --- | --- |
-| [CardClip](https://github.com/JacobHearst/CardClip) | Jacob Hearst | MIT (2022) | The three toolbar icons `clip.svg`, `duplicate.svg` and `trash.svg`, copied verbatim (SHA-256 verified). The clipboard feature itself is original code; only the legacy `cardClipboard` key is read, to import an older clipboard once. |
-| [Paruhas/CardClip](https://github.com/Paruhas/CardClip) | fork of CardClip | MIT (Jacob Hearst) | Behaviour only: the export format that appends the printing's set code and collector number. No file copied. |
-| [Shambleshark](https://github.com/crookedneighbor/shambleshark) | Samuel Simões, Blade Barringer | MIT | The 396 card-nickname records, re-serialised from their per-set modules into one JSON array. The tag panels themselves are original code. |
-| [MoxTags v1.8.3](https://github.com/natefinch/moxtags) | Nate Finch | MIT (2026) | Three bundled tag-data files, copied byte-for-byte (SHA-256 verified against tag `v1.8.3`). Moxfield functionality is **not** included. |
-| [MTG Enhancements](https://github.com/notsonic/scryfall-enhancements) | notsonic | MIT (2026) | The extra format definitions and their display names (Heritage, Classic Legacy, Peak Legacy). The per-card legality map is original. |
-| [Scryfall](https://scryfall.com/) / [Tagger](https://tagger.scryfall.com/) | Scryfall, LLC | service terms | No code or artwork copied. A derived snapshot of 61 digital set codes and their platforms (`data/set-platforms.js`); everything else is read live from the pages and public APIs a user is already using. |
-| [EDHREC](https://www.edhrec.com/) | EDHREC | *unresolved* | Run-time data only. `icons/edhrec.png` looks like EDHREC's own logo; its redistribution terms are still to be confirmed. |
-| [CardTrader](https://www.cardtrader.com/) | CardTrader | *unresolved* | Run-time API data only, with the user's own token. `icons/cardtrader.svg` and `.png` are CardTrader's marks; their redistribution terms are still to be confirmed. |
-| [Cardmarket](https://www.cardmarket.com/) | Cardmarket | *unresolved* | A link only. `icons/cardmarket.svg` is a hand-and-bag glyph in Scryfall's icon style; whether it copies a Scryfall asset is still to be confirmed. |
-| [linkedom](https://github.com/WebReflection/linkedom) | WebReflection | ISC | Development-only dependency for the test harness; nothing it provides ships in the extension. |
-
-No font files are bundled: the stylesheets only name font families (`Lato`, `system-ui`,
-`Helvetica Neue`, `Arial`), and Scryfall's own webfont is referenced by name rather than
-redistributed.
-
-## License
-
-This project's own code is **MPL-2.0** — see [`LICENSE`](LICENSE) for the full official
-text. Earlier previews were MIT licensed; the copyright holder moved the project to
-MPL-2.0 for the public release.
-
-**MPL-2.0 covers these files**, which carry the notice in their header or are named here:
-
-| File | What it is |
+| | |
 | --- | --- |
-| `background.js`, `content.js`, `content.css` | the extension's behaviour and styling |
-| `theme.js`, `theme.css` | the dark theme |
-| `options.html`, `options.js`, `options.css`, `i18n.js` | the settings page and its strings |
-| `tag-icons.js`, `tagger-clipboard.js` | the tag icons table and the Tagger clipboard |
-| `format-catalog.js`, `format-overrides.js` | the extra format list and this project's per-card legality map |
-| `data/set-platforms.js` | this project's derived set-platform snapshot; the underlying set and platform facts come from Scryfall and the MPL grants no rights in them |
-| `testlib.cjs`, `test-*.cjs`, `package-extension.cjs`, `tools/render-icons.cjs` | the test harness, the packaging script and the icon generator |
-| `icons/icon16.png`, `icons/icon32.png`, `icons/icon48.png`, `icons/icon128.png`, `icons-src/scryfall-toolkit-icon.svg` | this project's own original artwork, with its vector source |
-| `manifest.json`, `package.json`, `README.md`, `THIRD_PARTY_NOTICES.md`, `PRIVACY.md`, `LICENSE` | the manifest and this documentation |
+| **Shared clipboard** | Press `+` on any printing. The list follows you across Scryfall and Tagger, with set codes and collector numbers, and copies as a deck list. An older CardClip clipboard is imported once. |
+| **Card and art tags** | Tag panels on a card page, next to the printings. Click a tag to add it to the search box. Related cards from Tagger, with image previews. |
+| **Extra format legalities** | Heritage, Classic Legacy, Peak Legacy and Premodern in Scryfall's own legality block, in its own badges. Reorder or hide any row. |
+| **Dark theme** | For Scryfall and Tagger. Follows your system until you pick otherwise. |
+| **Optional extras** | EDHREC deck usage and Salt Meter, CardTrader prices for the exact printing, finish badges, card nicknames, type and mana search links, set and printing filters, a No Prices mode, a token list on deck pages. All off until you turn them on. |
 
-JSON files cannot hold a comment, so `manifest.json` and `package.json` have no header;
-they are covered by the list above.
+Everything each one does, in detail: **[docs/FEATURES.md](docs/FEATURES.md)**.
 
-**MPL-2.0 does not cover**, and this project does not re-license:
+## Settings
+
+The toolbar button opens a small popup with the five switches you reach for most — theme, tags, clipboard, EDHREC, CardTrader — and a button to the full page.
+
+| Section | What is in it |
+| --- | --- |
+| **General** | Settings language, theme |
+| **Tags** | Card/art tags, related cards, the Tagger link on search results |
+| **CardClip** | The clipboard, the copy format, the per-printing `+` |
+| **Prints** | Grouping printings by set, folding groups, the full-list link |
+| **Hide extras** | Caster indicator, set and price filters, the platform filter |
+| **Additional info** | Finish column, type and mana search, nicknames, EDHREC, CardTrader |
+| **Legality** | The extra formats and their order |
+| **Scryfall Deckbuilder** | No Prices, stacked cards, the token list |
+| **Experimental** | Settings still being worked on |
+
+## FAQ
+
+**[docs/FAQ.md](docs/FAQ.md)** covers the questions that come up: where the data comes from, what is sent where, how the CardTrader token is handled, why some sets stay visible, and what to do when something looks wrong.
+
+## Privacy, in one paragraph
+
+Settings and the clipboard live in `chrome.storage.local` and never leave your browser. There is no account, no analytics and no server of ours. The extension asks Scryfall, Scryfall Tagger, EDHREC and CardTrader for data because that is where the features come from; EDHREC and CardTrader are off until you enable them. Full detail, request by request: **[PRIVACY.md](PRIVACY.md)**.
+
+## Development
+
+```
+npm install     # linkedom, for the tests
+npm test        # six suites, 1045 assertions
+npm run package # build the release archive
+```
+
+The last suite is a smoke test of the package: it builds the archive, unpacks it and turns it on. Two earlier releases shipped with a file missing from the zip while the working folder was fine, which is what that suite exists to stop.
+
+Source code: <https://github.com/Solomag/scryfall-toolkit>
+
+## License and third-party notices
+
+This project's own code is **MPL-2.0** — see [`LICENSE`](LICENSE) for the full official text.
+
+Material from other projects keeps its own licence and its own notice. The MPL covers none of it and grants no rights in anyone's trademarks:
 
 | Files | Terms |
 | --- | --- |
-| `data/oracle-tags.js`, `data/illustration-tags-1.js`, `data/illustration-tags-2.js` | MoxTags v1.8.3 data, MIT, © 2026 Nate Finch — [`third_party/MoxTags-LICENSE`](third_party/MoxTags-LICENSE) |
-| `data/shambleshark-nicknames.js` | Shambleshark nickname records, MIT, © 2016 Samuel Simões, © 2019 Blade Barringer — [`third_party/Shambleshark-LICENSE`](third_party/Shambleshark-LICENSE) |
-| `icons/clip.svg`, `icons/duplicate.svg`, `icons/trash.svg` | CardClip icons, MIT, © 2022 Jacob Hearst — [`third_party/CardClip-LICENSE`](third_party/CardClip-LICENSE) |
-| `third_party/*` | the licence texts themselves, reproduced as required |
-| `icons/edhrec.png`, `icons/cardtrader.svg`, `icons/cardtrader.png`, `icons/cardmarket.svg` | **not covered by any licence of this project.** These are third-party brand marks or an icon whose origin is unconfirmed. Their rights stay with their owners; this project grants nothing over them and does not claim they are cleared. See [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md). |
+| `data/oracle-tags.js`, `data/illustration-tags-1.js`, `data/illustration-tags-2.js` | MoxTags v1.8.3 data — MIT, © 2026 Nate Finch |
+| `data/shambleshark-nicknames.js` | Shambleshark nickname records — MIT, © 2016 Samuel Simões, © 2019 Blade Barringer |
+| `icons/clip.svg`, `icons/duplicate.svg`, `icons/trash.svg` | CardClip icons — MIT, © 2022 Jacob Hearst |
+| `icons/edhrec.png`, `icons/cardtrader.svg`, `icons/cardtrader.png`, `icons/cardmarket.svg` | Third-party brand marks. **Not covered by any licence of this project**, and not cleared: no permission was requested from those services and none was received. |
+| `manifest.json`, `package.json` and the rest of this project's own files | MPL-2.0 |
 
-Source code for this extension: <https://github.com/Solomag/scryfall-toolkit>. The
-Chrome Web Store listing links the same repository; the release ZIP is built from a
-tagged commit of it with `npm run package`, so the published source and the installed
-extension are the same code.
+Full detail, source by source: **[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)**. Licence texts are in [`third_party/`](third_party/) and ship inside the extension archive.
 
-`THIRD_PARTY_NOTICES.md` also lists the questions still open before wider publication.
+Limitations and what is still open: **[docs/FEATURES.md](docs/FEATURES.md)** and **[docs/FAQ.md](docs/FAQ.md)**.

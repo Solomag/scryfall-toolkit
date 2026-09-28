@@ -1,0 +1,188 @@
+# Features
+
+What each part of Scryfall Toolkit does, in detail. The [README](../README.md) is the
+short version; this is the one to read when you want to know exactly what a setting
+changes.
+
+Everything here is off until you turn it on, except the clipboard, the tag panels and
+the dark theme.
+
+---
+
+## Shared clipboard
+
+On a Scryfall or Tagger search page, press `+` on a card. Open the clipboard at the
+bottom right. Each row shows the card's set code and collector number beside its name.
+
+- Copy the whole list from the toolbar, or one card with the small copy button beside
+  its name. Both follow the selected export format, which includes set codes by default.
+- Hovering the toolbar copy button reveals a **names only** choice that drops the set
+  codes, for a list of plain card names.
+- The same clipboard and add/remove button appear on individual Tagger card pages.
+- An older **CardClip** clipboard is imported once, on the first Scryfall run, if this
+  extension has no `cards` value yet. It reads Scryfall's `localStorage.cardClipboard`
+  array, transfers each card's name and link into `chrome.storage.local`, and then the
+  two stop syncing. Imported entries may lack the set and collector number the deck
+  export wants; newly added cards have both. An older build that already saved an empty
+  `cards` array prevents a later import.
+
+## Card and art tags
+
+On a single card page, tags appear in the right column below Prints as separate **Card
+Tags** and **Art Tags** tables.
+
+- Each shows six tags initially; expand or collapse the full list with the link
+  underneath. Either kind can be switched off in the popup.
+- Click a tag to append its search token to Scryfall's search box without moving the
+  page; a brief notification confirms it. Click several to combine them, then submit the
+  search yourself.
+
+**Related cards.** Tagger's live relationships — similar, better, prototype and other
+linked cards — appear in a third table, only when the card has relationships. They are
+ordered by relationship type and card name, and can be hidden independently.
+
+- Hover or focus a related card for an image preview; move the cursor onto the preview to
+  keep it open, and use the browser's image menu to copy it. Click its name to open that
+  card with this extension's features.
+- These need a separate request to Tagger's card-edge service. If that service is
+  unavailable, the bundled Card and Art Tags still appear with a small notice.
+
+## Prints
+
+Click **View all prints** in a card's Prints section to expand the remaining printings
+inside the native Prints table.
+
+- Rows are grouped by set with collapsible headers; the last row keeps a link to
+  Scryfall's own full page.
+- With the clipboard option on, every printing row — including the current one — shows a
+  `+` that adds that printing with its set code.
+- **Group printings by set** turns the grouped table off and leaves Scryfall's table
+  untouched. **Fold groups** removes the collapse arrows and the "Collapse all groups"
+  label. **Full printings link beside it** removes the extra link on the bottom line.
+- Opening the full list in the same tab is under **Experimental**.
+
+## Extra format legalities
+
+Heritage, Classic Legacy, Peak Legacy and Premodern sit in Scryfall's own legality
+block, in Scryfall's own rows, labels and badges.
+
+- Reorder any format by dragging it in the two-column settings grid, or hide it
+  individually. Display is left to right, then top to bottom.
+- The extra rows appear when their API results are ready; there is no transient Loading
+  badge. Random card pages work even when Scryfall omits the usual metadata tags.
+- Results follow the source project's search logic and overrides. Check uncertain cases
+  against current format rules before relying on them.
+
+## Dark theme
+
+A theme for card pages, set listings, advanced search, search notices, account and deck
+panels, and Tagger.
+
+- **Follow the system** (the default) reads the operating system's own appearance and
+  switches with it. Light or dark can be pinned instead.
+- The theme is applied before the first paint, so a page does not flash white while the
+  stored preference loads.
+- Rarity stars keep their rarity colours with a thin dark outline. The header search icon
+  stays visible and no longer takes the browser's autofill paint. Caster Mode's large
+  button becomes a small indicator at the bottom left while active.
+- Every purple in the theme is the same lifted one, wherever it appears: link ink, icon
+  fill, a member's picture frame, a deck curve meter, a notice bar. The repair judges the
+  colour itself rather than one literal, so a purple dark enough to sink into a dark
+  surface is lifted wherever Scryfall wrote it.
+- A band that carries a logo is treated as a picture and never flattened. A repainted
+  surface is never filled through the `background` shorthand, so a logo held as a
+  background image survives.
+- A wrapper that only holds a control is not a surface: Scryfall's file-input box paints
+  nothing of its own and is left alone.
+
+Tagger is a separate app with its own dark design, so the theme states each of its
+surfaces explicitly and repaints only the panels Tagger itself marks light. Tagger's own
+page field and its soft glow behind the header are left exactly as the app paints them.
+
+## Optional extras
+
+**Finish column.** When a card has finish-only printings, one narrow column appears
+between printing names and prices: foil-only, nonfoil-only, etched-only, or a known
+special foil treatment. Hover for the meaning. Native foil stars in printing names are
+not duplicated. Uses Scryfall's collection API and may arrive after the page loads.
+
+**Price filter.** Hides the USD and TIX columns and the TCGplayer and Cardhoarder
+purchase links, including Buy buttons in deck sidebars. Keeps Cardmarket links. Existing
+Scryfall prices are never altered. Choose Cardmarket, CardTrader or both as the EUR
+source in the Prints table; with both, their columns carry provider icons.
+
+**CardTrader prices.** With your own personal API token, the extension matches Scryfall
+print IDs against CardTrader blueprints, links the exact printing and shows the cheapest
+listed foil and nonfoil offers. Its EUR column fills gradually to respect the marketplace
+rate limit, and only EUR offers appear. If CardTrader fails, a CardTrader-only table
+restores the native Cardmarket column. Listed prices exclude shipping and do not
+guarantee language, condition or stock. The token is stored locally and sent only to
+`api.cardtrader.com`.
+
+**EDHREC indicators.** Usage and Salt Meter sit inside the legality block, each with a
+same-size badge before its label. Choose a stacked fraction (decks containing the card /
+decks eligible by colour identity), the percentage of eligible decks, or both. Usage
+colouring can use absolute deck counts or percentages, with adjustable thresholds. Salt
+Meter is EDHREC's community vote average on a 0–4 scale, not a power rating. Usage, salt
+and the EDHREC link switch independently; missing data produces no panel. The lookup
+sends the card's name to EDHREC only when the feature is on.
+
+**Search and nickname extras.** A Tagger shortcut on search results; search links for a
+card's type and mana cost; archived card nicknames under the prints table of a card
+Scryfall previewed under another name (for example Lavabrink Venturer (IKO #19) as
+"Professional Stunt Performer"). The bundled list holds 396 of them across 21 sets.
+
+**Deck pages.** A No Prices mode, stacked deck cards, and a Show Tokens dialog that looks
+up deck cards and their tokens through Scryfall (at most 150 unique deck cards). These do
+not install Shambleshark itself.
+
+## Hiding and filtering
+
+These affect the **Sets** index and the **Prints** table on a card page. Card searches,
+individual set pages and decks are not changed, and the currently selected printing
+stays visible.
+
+- **Hide digital-only sets** — Scryfall's digital flag plus the online cubes under
+  `/cubes/`. The set index is cached for one day.
+- **Hide non-tournament sets** — memorabilia, minigame, Vanguard and token categories,
+  plus official proxy set codes (Collector's Edition, 30th Anniversary Edition, World
+  Championship Decks). Mixed "funny" sets stay, because some contain tournament-legal
+  cards.
+- **Hide oversized sets** — its own toggle. Oversized Commander cards stay unless it is
+  on.
+- **Hide Foreign Black Border sets** — 4BB, FBB and BCHR.
+- **Hide non-English printings** — language-specific rows in Prints, including Portal and
+  Secret Lair. English printings in those sets stay.
+- **Hide USD, TIX, TCGplayer and Cardhoarder prices** — see the price filter above.
+
+**Platforms** (experimental) — All, Paper, Arena, Magic Online. Decides which sets appear
+in `/sets` and in the Prints table. Paper is every set Scryfall does not mark digital;
+Arena and Magic Online are their digital-only sets. Scryfall's index does not name the
+client behind a digital set, so the extension ships a snapshot of every known digital
+set's platform, looks up anything missing through one card of the set, and keeps that
+answer for a month. A set the lookup cannot place stays visible rather than being hidden
+on a guess.
+
+The set field of Advanced search follows the **Games** checkboxes Scryfall already shows
+above it. Hidden sets are marked, never removed, so the field can widen again at any
+time.
+
+---
+
+## What is not done yet
+
+- Tag panels appear on single card pages. Panels in search results are planned for a
+  later version.
+- Shambleshark's deckbuilder search, EDHREC suggestions, cleanup and card input editing
+  are not integrated. Its Card Notes and Legality Check modules are empty placeholders
+  upstream.
+- The dark theme is applied over Scryfall's own styles, so it depends on Scryfall's
+  markup. A page that changes its markup can come out partly unthemed until this
+  extension is updated. Behaviour on private, signed-in pages depends on what that page
+  renders and has been checked in ordinary use rather than in automated tests.
+- Tag data ships from MoxTags v1.8.3 (June 2026). The extension tries to refresh it from
+  Scryfall's published tag bulk files on installation and every seven days; the bundled
+  snapshot stays usable if that fails.
+- The CardTrader and Cardmarket icons are third-party marks, and the EDHREC icon appears
+  to be one. Their provenance is not settled. `THIRD_PARTY_NOTICES.md` records exactly
+  what is unconfirmed and what has to be established before wider distribution.
