@@ -314,7 +314,7 @@ function auditGapCheck() {
     ['the "Jump to" menu of a set page', /html\.stk-dark #main :is\(\.dropdown-menu-items,\.dropdown-menu-items ul/],
     ['the drop-down items themselves', /\.dropdown-menu-items :is\(a,button\)\{background-color:transparent/],
     ['the jump bar icons of the search reference', /\.reference-jump :is\(svg,g,path,circle,rect\):not\(\[fill="none"\]\)/],
-    ['the blog index post cards', /\.blog-post-small[^{]*\{background-color:#1d2021/],
+    ['the blog index post cards', /\.blog-post-small[^{]*\{[^}]*background-color:#1d2021/],
     ['the blog post pills', /\.blog-post-metadata[^{]*\.button-n\.tiny-n/],
     ['the deck list a post can embed', /\.scryfall-decklist-embed[^{]*\{background-color:#1d2021/],
     // Three mana symbols are bare black glyphs with no coin behind them in the
@@ -338,6 +338,21 @@ function auditGapCheck() {
     // A native option list is drawn from the page's own colours, and was the one
     // light rectangle left on a dark page.
     ['the open option list carries no light field', /html\.stk-dark select option,html\.stk-dark select optgroup/],
+    // Scryfall paints the blog post a light gradient. Setting only the colour
+    // left that gradient painting over the dark field, so the page stayed white.
+    // A gradient is a background-image, and reading backgroundColor says nothing.
+    ['the blog post gradient is cleared', /html\.stk-dark\.stk-blog-page #main :is\(\.blog-post-large,[^{]*\)\{[^}]*background-image:none!important/],
+    // The account forms are panels with a faint black border. On a dark page the
+    // panel took the colour of the page and the border stayed a black hairline,
+    // so the rectangle vanished on three of the four blocks.
+    ['the account panels keep a visible edge', /html\.stk-dark\.stk-account-page #main \.form-n\{background-color:#252829!important;border:1px solid rgba\(255,255,255,0\.22\)/],
+    // The header's inverted controls carry Scryfall's own translucent look, and
+    // the broad button repaint was darkening one of them while the selects beside
+    // it stayed translucent.
+    ['the inverted controls keep their translucent look', /html\.stk-dark :is\(\.button-n,\.select-n\)\.inverted\{background-color:rgba\(255,255,255,\.09\)/],
+    // The deck tray is a wrapper: Scryfall leaves it transparent and only the
+    // button shows, so painting it put a grey slab beside the button.
+    ['the deck tray is not a surface', /html\.stk-dark \.left-tray \.deck-tray\{background:transparent/],
     ['the bot documentation buttons', /\.marketing-features-item[^{]*:is\(a\.button-n/],
     ['the donation tiles', /\.donation-stripe-amount,\.donation-service\)\{background-color:#252829/],
     ['the button on Scryfall error pages', /html\.stk-dark :is\(a\.button,button\.button\)\{background-color:#292b2c/],
@@ -355,7 +370,7 @@ function auditGapCheck() {
     ['the light gradient on the page Scryfall builds without a main', /html\.stk-dark body\{background-image:none!important\}/],
     ['the purple drawing on that page', /body>svg :is\(path,g,circle,rect,polygon,ellipse\):not\(\[fill="none"\]\)\{fill:var\(--stk-link-purple\)/],
     ['the lighter box the deck columns made inside the page', /#deckbuilder :is\(\.deckbuilder-section,\.deckbuilder-column\)\{background-color:#1d2021/],
-    ['the white link button of a page that writes one into its prose', /html\.stk-dark \.button-n,html\.stk-dark \.select-n\{background-color:#292b2c!important;color:#c79ce3/],
+    ['the white link button of a page that writes one into its prose', /html\.stk-dark \.button-n:not\(\.inverted\),html\.stk-dark \.select-n:not\(\.inverted\)\{background-color:#292b2c!important;color:#c79ce3/],
     ['the white hover Scryfall paints on every button', /\.button-n:is\(:hover,:active,:focus,:focus-visible\)[^{]*\{background-color:#413949!important;color:#fff/],
     ['the black ink a disabled button shows under the pointer', /\.button-n:is\(\.disabled,:disabled\)[^{]*\{background-color:#252829!important;color:#6f6b74/],
     ['the lifted purple under the pointer', /a\.stk-brighter-purple:is\(:hover,:active,:focus\)\{color:#d6c2f2/],
