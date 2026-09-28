@@ -634,3 +634,14 @@ html.stk-dark.stk-account-page #main .form-n .form-n-title{background-color:tran
 html.stk-dark :is(.button-n,.select-n).inverted{background-color:rgba(255,255,255,.09)!important;color:#fff!important;border-color:rgba(255,255,255,.6)!important}
 html.stk-dark :is(.button-n,.select-n).inverted:is(:hover,:active,:focus){background-color:rgba(255,255,255,.18)!important;color:#fff!important}
 html.stk-dark :is(.button-n,.select-n).inverted svg :is(path,g,circle,rect,polygon):not([fill="none"]){fill:#fff!important;stroke:#fff!important}
+
+/* Jump to is the dropdown of an .inverted header control -- the same control
+   Images, Set/Number and Auto are. Its button already took that look, but the
+   menu underneath still dropped as an ordinary link menu: a grey panel with
+   purple text, where the selects beside it drop a dark list with light text and
+   a purple row for the one under the pointer. The menu is that list now. */
+html.stk-dark #main .dropdown-menu-items:has(.dropdown-menu-item.inverted){background-color:#24242a!important;color:#e9e5ee!important;border-color:#4a2c8c!important}
+html.stk-dark #main .dropdown-menu-item.inverted{background-color:transparent!important;color:#e9e5ee!important;border-color:transparent!important}
+html.stk-dark #main .dropdown-menu-item.inverted:is(:hover,:active,:focus,:focus-visible){background-color:#4a2c8c!important;color:#fff!important}
+html.stk-dark #main .dropdown-menu-item.inverted svg :is(path,g,circle,rect,polygon):not([fill="none"]):not([stroke="none"]){fill:#e9e5ee!important;stroke:#e9e5ee!important}
+html.stk-dark #main .dropdown-menu-item.inverted:is(:hover,:active,:focus) svg :is(path,g,circle,rect,polygon):not([fill="none"]):not([stroke="none"]){fill:#fff!important;stroke:#fff!important}
