@@ -260,6 +260,26 @@ function cssCheck() {
 
 // A hover that paints the same colour as the resting state is not a hover. Two
 // rows were doing exactly that, so the highlight the light page shows vanished.
+// Every rule hangs off html.stk-dark, so until that class is on the document the
+// page renders in Scryfall's own light theme. Setting it from the stored
+// preference meant waiting on an asynchronous answer, and Scryfall painted white
+// first on every navigation.
+function firstPaintTest() {
+  console.log('static: the dark class is set before the first paint');
+  const js = read('theme.js');
+  const syncDefault = js.indexOf('themeMode(\'auto\') === \'dark\'');
+  const storageCall = js.indexOf('chrome.storage.local.get({ darkTheme');
+  assert(syncDefault !== -1,
+    'theme.js decides the theme from the system without waiting for storage');
+  assert(storageCall !== -1, 'theme.js still reads the stored preference');
+  assert(syncDefault < storageCall,
+    'the synchronous decision comes first, so nothing paints light while storage answers');
+  // The repairs run from the stored value only: they walk the DOM and must not
+  // be called while the document is still empty.
+  assert(/if \(themeMode\('auto'\) === 'dark'\) document\.documentElement\.classList\.add\('stk-dark'\);\s*\n\s*chrome\.storage\.local\.get/.test(js),
+    'the synchronous step adds the class and does not run the repairs');
+}
+
 function hoverStatesTest() {
   console.log('static: hover states differ from the resting state');
   const css = read('theme.css').replace(/\/\*[\s\S]*?\*\//g, '');
@@ -290,6 +310,13 @@ function auditGapCheck() {
     // The docs left column is Scryfall's own purple field. Flattening it to grey
     // took the page's colour with it, so it is left as Scryfall paints it.
     ['the docs left menu keeps Scryfall purple', /html\.stk-dark\.stk-docs-page #main :is\(\.reference-doc-menu,\.reference-doc-menu-expander\)\{background-color:#4f4255/],
+    // The narrow-viewport search block kept Scryfall's own light field: a white
+    // slab with dark buttons. Its controls are the set header's controls.
+    ['the narrow search controls keep no light field', /html\.stk-dark \.search-controls-mobile\{background:#252829/],
+    ['the narrow search controls match the header controls', /html\.stk-dark \.search-controls-mobile :is\(\.button-n,\.select-n\)\{background-color:rgba\(255,255,255,\.09\)/],
+    // The deck tray wrapper held only buttons, and painting it as well left a
+    // grey slab beside the backpack button.
+    ['the deck tray buttons are not a surface', /html\.stk-dark \.deck-tray-buttons\{background-color:transparent/],
     ['the bot documentation buttons', /\.marketing-features-item[^{]*:is\(a\.button-n/],
     ['the donation tiles', /\.donation-stripe-amount,\.donation-service\)\{background-color:#252829/],
     ['the button on Scryfall error pages', /html\.stk-dark :is\(a\.button,button\.button\)\{background-color:#292b2c/],
@@ -527,6 +554,7 @@ async function pathClasses() {
 (async () => {
   try {
     await manifestIntegrity();
+    firstPaintTest();
     hoverStatesTest();
     auditGapCheck();
     syntaxCheck();

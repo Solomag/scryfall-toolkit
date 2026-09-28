@@ -193,7 +193,7 @@ html.stk-dark #main #deckbuilder :is(.deckbuilder-entry,.deckbuilder-section) :i
 html.stk-dark #main #deckbuilder :is(.deckbuilder-section-title-bar,.deckbuilder-section-count,.deckbuilder-section-name,.deckbuilder-entry-menu-visual){color:#d5d1d8!important}
 /* Scryfall renders the backpack tray outside #main, and pagination has its own white buttons. */
 html.stk-dark .left-tray .deck-tray,html.stk-dark .left-tray .deck-tray-options{background:#222426!important;color:#e6e3df!important;border-color:#55515a!important}
-html.stk-dark .left-tray :is(.deck-tray-option,.deck-tray-buttons,.deck-tray-option .button-n){background:#292b2c!important;color:#e6e3df!important;border-color:#59535e!important}
+html.stk-dark .left-tray :is(.deck-tray-option,.deck-tray-option .button-n){background:#292b2c!important;color:#e6e3df!important;border-color:#59535e!important}
 html.stk-dark .left-tray .deck-tray-option .button-n.primary{background:#554267!important;color:#f4eff7!important}
 html.stk-dark .left-tray .deck-tray-option .button-n.danger{color:#ee9d9d!important;border-color:#915c65!important}
 html.stk-dark .left-tray .deck-tray-option svg,html.stk-dark .left-tray .deck-tray-option svg :is(path,g){fill:currentColor!important}
@@ -359,7 +359,7 @@ html.stk-dark.stk-account-page :is(#deckbuilder,[class*="deckbuilder"]) .stk-dec
 html.stk-dark.stk-account-page :is(#deckbuilder,[class*="deckbuilder"]) .stk-deck-set-badge *{color:#e6e3df!important;background:#3b3c42!important;opacity:1!important}
 html.stk-dark.stk-account-page :is(#deckbuilder,[class*="deckbuilder"]) .stk-deck-editor-label,
 html.stk-dark.stk-account-page :is(#deckbuilder,[class*="deckbuilder"]) .stk-deck-editor-label *{color:#e6e3df!important;opacity:1!important}
-html.stk-dark .left-tray :is(.deck-tray-option,.deck-tray-buttons,.deck-tray-option .button-n,[class*="add-to-deck"]){background-color:#292b2c!important;color:#e6e3df!important;border-color:#59535e!important}
+html.stk-dark .left-tray :is(.deck-tray-option,.deck-tray-option .button-n,[class*="add-to-deck"]){background-color:#292b2c!important;color:#e6e3df!important;border-color:#59535e!important}
 html.stk-dark #main :is(.add-to-deck,.add-to-deck-button,[class*="add-to-deck"]):is(a,button){background-color:#413949!important;color:#f7f2fb!important;border-color:#756782!important}
 
 /* Gaps the dark audit of 0.31 found. Each one is a surface Scryfall paints with
@@ -589,3 +589,22 @@ html.stk-dark.stk-tagger .navigation.active{color:#e6e3df!important}
    inside the image, so on a dark page only these three go black and disappear.
    Give them the same coin the others already have. */
 html.stk-dark :is(.card-symbol-H,.card-symbol-L,.card-symbol-D){background-color:#c9c4be!important;border-radius:50%!important}
+
+/* The narrow-viewport search block carries Scryfall's own light field, and the
+   theme was leaving it: a white slab with dark buttons in the middle of a dark
+   page. Its controls are the same ones the set header shows as Images /
+   Set-Number / Auto, so they are given that look. */
+html.stk-dark .search-controls-mobile{background:#252829!important;color:#e6e3df!important;border-color:#55515a!important}
+html.stk-dark .search-controls-mobile-options{background:transparent!important;border-color:#55515a!important}
+html.stk-dark .search-controls-mobile :is(label,.search-controls-mobile-option){color:#ded8e3!important}
+html.stk-dark .search-controls-mobile :is(.button-n,.select-n){background-color:rgba(255,255,255,.09)!important;color:#fff!important;border-color:rgba(255,255,255,.6)!important;border-radius:3px!important}
+html.stk-dark .search-controls-mobile .button-n.primary-n{background-color:#413949!important;color:#f3ecfb!important;border-color:#6d5a7d!important}
+html.stk-dark .search-controls-mobile .button-n.disabled{background-color:rgba(255,255,255,.05)!important;color:#8d8992!important}
+
+/* .deck-tray-buttons holds the tray's buttons and nothing else. Painting the
+   wrapper too left a grey slab sticking out beside the backpack button; the
+   buttons inside carry their own surfaces. */
+html.stk-dark .deck-tray-buttons{background-color:transparent!important;border-color:transparent!important}
+html.stk-dark .deck-tray-buttons .button-n{background:#292b2c!important;color:#e6e3df!important;border-color:#59535e!important}
+html.stk-dark .deck-tray-buttons .button-n.primary{background:#554267!important;color:#f4eff7!important}
+html.stk-dark .deck-tray-buttons .button-n svg :is(path,g){fill:currentColor!important}

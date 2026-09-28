@@ -29,6 +29,14 @@ const applyTheme = value => {
 if (systemDark && systemDark.addEventListener) {
   systemDark.addEventListener('change', () => { if (currentTheme === 'auto') applyTheme('auto'); });
 }
+// The stylesheet is injected by the manifest before anything paints, but every
+// rule in it hangs off html.stk-dark, and that class was only added once the
+// stored preference came back. Storage is asynchronous, so Scryfall painted a
+// light page first — the white flash on every navigation, and on a slow answer a
+// white page. The default preference is "follow the system", and the system
+// answers synchronously, so the class is set before the first paint and storage
+// simply corrects it a moment later.
+if (themeMode('auto') === 'dark') document.documentElement.classList.add('stk-dark');
 chrome.storage.local.get({ darkTheme: 'auto', hideCasterIndicator: false, siteLanguage: 'en' }).then(({ darkTheme, hideCasterIndicator, siteLanguage }) => {
   document.documentElement.classList.toggle('stk-hide-caster', Boolean(hideCasterIndicator));
   document.documentElement.classList.toggle('stk-site-ru', siteLanguage === 'ru');
