@@ -12,7 +12,9 @@
 // options.js tests: format list rendering, visibility, keyboard and drag
 // reorder, setting persistence and language switching.
 const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
+const { execFileSync } = require('node:child_process');
 const {
   assert, assertEqual, summary, createPage, click, keyDown, fireEvent,
   dataTransferObject, ROOT
@@ -251,6 +253,55 @@ function iconArtworkTest() {
   }
   assert(/EDHREC|CardTrader|Cardmarket/.test(generator) === true,
     'the generator says out loud which marks it deliberately does not use');
+}
+
+// The 0.44.0 archive shipped options.html without options.css and options.js: the
+// manifest names the page, but only the html itself was packaged, so the settings
+// page arrived as bare markup with dead switches. The working tree always had the
+// files, which is why checking the tree did not catch it. This builds the archive
+// and inspects the archive.
+function packagedArchiveTest() {
+  console.log('package: the built archive is complete');
+  const out = path.join(os.tmpdir(), `stk-package-test-${process.pid}`);
+  fs.rmSync(out, { recursive: true, force: true });
+  let output = '';
+  let code = 0;
+  try {
+    output = execFileSync(process.execPath, [path.join(ROOT, 'package-extension.cjs')], {
+      cwd: ROOT,
+      encoding: 'utf8',
+      env: { ...process.env, STK_PACKAGE_OUT: out },
+      stdio: ['ignore', 'pipe', 'pipe']
+    });
+  } catch (error) {
+    code = error.status === undefined ? 1 : error.status;
+    output = String(error.stdout || '') + String(error.stderr || '');
+  }
+  for (const line of output.split('\n')) {
+    if (/MISSING|references|FAILED|LEAKED|unexpected|archive:/.test(line)) console.log('   ' + line.trim());
+  }
+  assertEqual(code, 0, 'npm run package succeeds and reports no missing file');
+
+  const manifest = JSON.parse(read('manifest.json'));
+  const zip = path.join(out, `scryfall-toolkit-${manifest.version}.zip`);
+  assert(fs.existsSync(zip), `the build produced scryfall-toolkit-${manifest.version}.zip`);
+  const listed = execFileSync('tar', ['-tf', zip], { cwd: ROOT, encoding: 'utf8' })
+    .split('\n').map(line => line.trim()).filter(Boolean);
+
+  // The exact regression: the settings page must bring its own styles and script.
+  for (const file of ['options.html', 'options.css', 'options.js', 'i18n.js', 'format-catalog.js']) {
+    assert(listed.includes(file), `${file} is inside the archive, so the settings page is not bare HTML`);
+  }
+  // Every script and stylesheet a packaged page names must travel with it.
+  for (const file of listed.filter(name => /\.html$/.test(name))) {
+    const html = read(file);
+    for (const m of html.matchAll(/<(?:script|link)[^>]+(?:src|href)\s*=\s*["']([^"']+)["']/gi)) {
+      const name = m[1].replace(/^\.\//, '');
+      if (name.startsWith('http') || name.startsWith('data:')) continue;
+      assert(listed.includes(name), `${file} references ${name}, which is inside the archive`);
+    }
+  }
+  fs.rmSync(out, { recursive: true, force: true });
 }
 
 function htmlIdCheck() {
@@ -551,6 +602,7 @@ async function discoveredFormatsTest() {
     switchStyleTest();
     sectionOrderTest();
     packagedNoticesTest();
+    packagedArchiveTest();
     licenceAndPrivacyTest();
     iconArtworkTest();
     await formatListTest();

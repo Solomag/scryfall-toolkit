@@ -8,60 +8,102 @@
  * Third-party data, images and code in this project keep their own licence and
  * are described in THIRD_PARTY_NOTICES.md. The MPL does not cover them.
  */
-// Builds the extension archive from the files the extension actually needs, then
-// verifies the archive rather than the working tree: a notice that only exists in
-// the folder but not in the zip is not a notice the user received.
+
+// Builds the release archive from the files the extension actually needs, then
+// verifies the archive rather than the working tree: a file that exists in the
+// folder but not in the zip is exactly what a user ends up installing.
+//
+// The file list is not written down here. It is walked out of the manifest and
+// then out of every file already in the list, so a page that references its own
+// stylesheet cannot be shipped without it. That is what happened to options.css
+// and options.js in 0.44.0: the manifest names options.html, but only the html
+// itself was packaged, and the settings page arrived as bare markup.
+//
+//   node package-extension.cjs
+//
+// Set STK_PACKAGE_OUT to build somewhere other than dist/, which the tests use.
+
 const { execFileSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
+const zlib = require('node:zlib');
 const { ROOT } = require('./testlib.cjs');
 
 const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'manifest.json'), 'utf8'));
+
+// --- what the extension needs ------------------------------------------------
+
+// A packaged file can refer to more of the project than the manifest does, so
+// every reference found in an already-accepted file is added and walked too.
+function referencedBy(file) {
+  const text = fs.readFileSync(path.join(ROOT, file), 'utf8');
+  const found = new Set();
+  const add = value => {
+    const name = value.replace(/^\.\//, '').split(/[?#]/)[0];
+    if (name && !name.includes('${') && !name.startsWith('http') && !name.startsWith('data:')) found.add(name);
+  };
+
+  if (file.endsWith('.html')) {
+    for (const m of text.matchAll(/<script[^>]+src\s*=\s*["']([^"']+)["']/gi)) add(m[1]);
+    for (const m of text.matchAll(/<link[^>]+href\s*=\s*["']([^"']+)["']/gi)) add(m[1]);
+    for (const m of text.matchAll(/<img[^>]+src\s*=\s*["']([^"']+)["']/gi)) add(m[1]);
+    for (const m of text.matchAll(/<source[^>]+src\s*=\s*["']([^"']+)["']/gi)) add(m[1]);
+  }
+  if (file.endsWith('.css')) {
+    for (const m of text.matchAll(/url\(\s*["']?([^"')]+)["']?\s*\)/g)) add(m[1]);
+  }
+  if (file.endsWith('.js')) {
+    for (const call of text.matchAll(/importScripts\s*\(([^)]*)\)/g)) {
+      for (const argument of call[1].split(',')) add(argument.trim().replace(/^["']|["']$/g, ''));
+    }
+    for (const m of text.matchAll(/chrome\.runtime\.getURL\s*\(\s*["']([^"'$]+)["']/g)) add(m[1]);
+  }
+  return [...found];
+}
+
+function expandGlob(pattern) {
+  if (!pattern.includes('*')) return [pattern];
+  const dir = path.dirname(pattern);
+  const expression = new RegExp('^' + path.basename(pattern)
+    .replace(/[.+^${}()|[\]\\]/g, '\\$&')
+    .replace(/\*/g, '[^/]*') + '$');
+  if (!fs.existsSync(path.join(ROOT, dir))) return [];
+  return fs.readdirSync(path.join(ROOT, dir))
+    .filter(name => expression.test(name))
+    .map(name => path.join(dir, name).split(path.sep).join('/'));
+}
+
 const files = new Set(['manifest.json']);
 for (const entry of manifest.content_scripts) {
   for (const file of [...(entry.js || []), ...(entry.css || [])]) files.add(file);
 }
 if (manifest.background) files.add(manifest.background.service_worker);
 if (manifest.options_page) files.add(manifest.options_page);
-
-// The service worker pulls its data in with importScripts, so those files belong to
-// the extension exactly as much as the manifest does. They are read out of the code
-// instead of being written down here, so a new import cannot slip out unnoticed.
-if (manifest.background) {
-  const worker = fs.readFileSync(path.join(ROOT, manifest.background.service_worker), 'utf8');
-  for (const call of worker.matchAll(/importScripts\(([^)]*)\)/g)) {
-    for (const argument of call[1].split(',')) {
-      const file = argument.trim().replace(/^["']|["']$/g, '');
-      if (file) files.add(file);
-    }
-  }
-}
-
+if (manifest.options_ui && manifest.options_ui.page) files.add(manifest.options_ui.page);
 for (const entry of manifest.web_accessible_resources || []) {
-  for (const pattern of entry.resources) {
-    if (!pattern.includes('*')) {
-      files.add(pattern);
-      continue;
-    }
-    // A web_accessible_resources pattern is a glob: "icons/*.svg" has to match
-    // icons/cardtrader.svg, and "*.svg" must not be read as the literal name.
-    const dir = path.dirname(pattern);
-    const expression = new RegExp('^' + path.basename(pattern)
-      .replace(/[.+^${}()|[\]\\]/g, '\\$&')
-      .replace(/\*/g, '[^/]*') + '$');
-    for (const name of fs.readdirSync(path.join(ROOT, dir))) {
-      if (expression.test(name)) files.add(path.join(dir, name).split(path.sep).join('/'));
-    }
+  for (const pattern of entry.resources) for (const file of expandGlob(pattern)) files.add(file);
+}
+
+// Walk whatever those files pull in, until nothing new appears.
+const queue = [...files];
+const walked = new Set();
+while (queue.length) {
+  const file = queue.shift();
+  if (walked.has(file)) continue;
+  walked.add(file);
+  if (!/\.(html|js|css)$/.test(file)) continue;
+  if (!fs.existsSync(path.join(ROOT, file))) continue;
+  for (const name of referencedBy(file)) {
+    if (!files.has(name)) { files.add(name); queue.push(name); }
   }
 }
 
-// Everything the licence obligations and this audit require in the archive. The
-// icon artwork's vector source and its generator travel too: the PNGs are an
-// executable form of that artwork, and the MPL wants the source alongside it.
+// What the licence obligations and this audit require alongside the code.
 for (const extra of ['LICENSE', 'README.md', 'THIRD_PARTY_NOTICES.md', 'PRIVACY.md']) files.add(extra);
-for (const name of fs.readdirSync(path.join(ROOT, 'third_party'))) files.add(`third_party/${name}`);
-for (const name of fs.readdirSync(path.join(ROOT, 'icons-src'))) files.add(`icons-src/${name}`);
-for (const name of fs.readdirSync(path.join(ROOT, 'tools'))) files.add(`tools/${name}`);
+for (const dir of ['third_party', 'icons-src', 'tools']) {
+  const full = path.join(ROOT, dir);
+  if (fs.existsSync(full)) for (const name of fs.readdirSync(full)) files.add(`${dir}/${name}`);
+}
 
 const list = [...files].sort();
 const missing = list.filter(file => !fs.existsSync(path.join(ROOT, file)));
@@ -70,16 +112,12 @@ if (missing.length) {
   process.exit(1);
 }
 
-const dist = path.join(ROOT, 'dist');
-fs.mkdirSync(dist, { recursive: true });
-const zip = path.join(dist, `scryfall-toolkit-${manifest.version}.zip`);
-fs.rmSync(zip, { force: true });
+// --- build it ----------------------------------------------------------------
 
 // The archive is written here rather than handed to tar, because tar stamps every
 // entry with the file's own modification time and the hash then changes on every
 // rebuild. A published hash is only useful if anyone can reproduce it, so every
 // entry gets a fixed timestamp and the file list is sorted.
-const zlib = require('node:zlib');
 
 const CRC_TABLE = (() => {
   const table = new Int32Array(256);
@@ -165,36 +203,51 @@ eocd.writeUInt32LE(centralDirectory.length, 12);
 eocd.writeUInt32LE(offset, 16);
 eocd.writeUInt16LE(0, 20);
 
+const dist = process.env.STK_PACKAGE_OUT || path.join(ROOT, 'dist');
+fs.mkdirSync(dist, { recursive: true });
+const zip = path.join(dist, `scryfall-toolkit-${manifest.version}.zip`);
+fs.rmSync(zip, { force: true });
 fs.writeFileSync(zip, Buffer.concat([...localParts, centralDirectory, eocd]));
 
 console.log('packaged files:');
 for (const file of list) console.log('  ' + file);
 console.log(`\narchive: ${zip} (${fs.statSync(zip).size} bytes)`);
 
-// Read the archive back and check the notices are really inside it.
+// --- read it back ------------------------------------------------------------
+
 const listed = execFileSync('tar', ['-tf', zip], { cwd: ROOT, encoding: 'utf8' })
   .split('\n').map(line => line.trim()).filter(Boolean);
-const required = [
-  'THIRD_PARTY_NOTICES.md', 'LICENSE',
-  'third_party/CardClip-LICENSE', 'third_party/Paruhas-CardClip-LICENSE',
-  'third_party/Shambleshark-LICENSE', 'third_party/MoxTags-LICENSE',
-  'third_party/MTG-Enhancements-LICENSE',
-  'data/oracle-tags.js', 'data/illustration-tags-1.js', 'data/illustration-tags-2.js',
-  'data/shambleshark-nicknames.js', 'data/set-platforms.js', 'format-overrides.js',
-  'icons/clip.svg', 'icons/duplicate.svg', 'icons/trash.svg', 'icons/cardmarket.svg',
-  'icons/cardtrader.svg', 'icons/cardtrader.png', 'icons/edhrec.png',
-  'icons/icon16.png', 'icons/icon32.png', 'icons/icon48.png', 'icons/icon128.png',
-  'icons-src/scryfall-toolkit-icon.svg', 'tools/render-icons.cjs', 'PRIVACY.md'
-];
+
 let bad = 0;
-for (const file of required) {
-  const ok = listed.includes(file);
-  if (!ok) bad++;
-  console.log(`${ok ? 'in archive ' : 'MISSING   '} ${file}`);
+for (const file of list) {
+  if (listed.includes(file)) continue;
+  bad++;
+  console.log(`MISSING from the archive    ${file}`);
 }
+
+// The check that would have caught 0.44.0: every file a packaged page or script
+// references must be in the archive, or the page ships half-built.
+for (const file of listed) {
+  if (!/\.(html|js|css)$/.test(file)) continue;
+  for (const name of referencedBy(file)) {
+    if (!listed.includes(name)) {
+      bad++;
+      console.log(`${file} references ${name}, which is not in the archive`);
+    }
+  }
+}
+
+for (const required of ['LICENSE', 'THIRD_PARTY_NOTICES.md', 'PRIVACY.md']) {
+  if (!listed.includes(required)) { bad++; console.log(`MISSING licence or notice    ${required}`); }
+}
+for (const name of fs.readdirSync(path.join(ROOT, 'third_party'))) {
+  if (!listed.includes(`third_party/${name}`)) { bad++; console.log(`MISSING third-party licence  ${name}`); }
+}
+
 const stray = listed.filter(name => !files.has(name));
 if (stray.length) { console.log('unexpected entries: ' + stray.join(', ')); bad++; }
-const leaked = listed.filter(name => /(^|\/)(node_modules|test-|package-extension|debug-harness|\.git)/.test(name));
+const leaked = listed.filter(name => /(^|\/)(node_modules|test-|package-extension|debug-harness|store-assets|\.git)/.test(name));
 if (leaked.length) { console.log('LEAKED dev files: ' + leaked.join(', ')); bad++; }
-console.log(bad ? `\nFAILED: ${bad} problem(s)` : '\nOK: notices, licences and data are all inside the archive');
+
+console.log(bad ? `\nFAILED: ${bad} problem(s)` : '\nOK: every file the archive needs is inside it, and the pages are complete');
 process.exit(bad ? 1 : 0);
