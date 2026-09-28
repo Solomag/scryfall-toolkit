@@ -258,6 +258,19 @@ function cssCheck() {
   assert(!offender, `footer rules never paint a background (offender: ${offender})`);
 }
 
+// A hover that paints the same colour as the resting state is not a hover. Two
+// rows were doing exactly that, so the highlight the light page shows vanished.
+function hoverStatesTest() {
+  console.log('static: hover states differ from the resting state');
+  const css = read('theme.css').replace(/\/\*[\s\S]*?\*\//g, '');
+  const resting = css.match(/\.faq-link\{background:(#[0-9a-f]{6})/i);
+  const hovered = css.match(/\.faq-link:is\(:hover,:active,:focus\)\{background:(#[0-9a-f]{6})/i);
+  assert(resting, 'the FAQ row has a resting colour');
+  assert(hovered, 'the FAQ row has a hover colour');
+  assert(resting[1] !== hovered[1],
+    `the FAQ row changes under the pointer (${resting[1]} -> ${hovered[1]})`);
+}
+
 function auditGapCheck() {
   console.log('static: dark theme covers the surfaces the audit found');
   const theme = read('theme.css');
@@ -270,6 +283,13 @@ function auditGapCheck() {
     ['the blog index post cards', /\.blog-post-small[^{]*\{background-color:#1d2021/],
     ['the blog post pills', /\.blog-post-metadata[^{]*\.button-n\.tiny-n/],
     ['the deck list a post can embed', /\.scryfall-decklist-embed[^{]*\{background-color:#1d2021/],
+    // Three mana symbols are bare black glyphs with no coin behind them in the
+    // artwork, so on a dark page they disappeared. They get the coin the other
+    // symbols already carry inside their own image.
+    ['the three coinless mana symbols', /html\.stk-dark :is\(\.card-symbol-H,\.card-symbol-L,\.card-symbol-D\)\{background-color:#c9c4be/],
+    // The docs left column is Scryfall's own purple field. Flattening it to grey
+    // took the page's colour with it, so it is left as Scryfall paints it.
+    ['the docs left menu keeps Scryfall purple', /html\.stk-dark\.stk-docs-page #main :is\(\.reference-doc-menu,\.reference-doc-menu-expander\)\{background-color:#4f4255/],
     ['the bot documentation buttons', /\.marketing-features-item[^{]*:is\(a\.button-n/],
     ['the donation tiles', /\.donation-stripe-amount,\.donation-service\)\{background-color:#252829/],
     ['the button on Scryfall error pages', /html\.stk-dark :is\(a\.button,button\.button\)\{background-color:#292b2c/],
@@ -507,6 +527,7 @@ async function pathClasses() {
 (async () => {
   try {
     await manifestIntegrity();
+    hoverStatesTest();
     auditGapCheck();
     syntaxCheck();
     importScriptsCheck();

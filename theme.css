@@ -281,8 +281,17 @@ html.stk-dark #main .select2-polarity.negative{background-color:#a71f2a!importan
 html.stk-dark .select2-container :is(.select2-selection__rendered,.select2-results__options,.select2-results__option,.select2-search,.select2-search__field){background-color:#292b2c!important;color:#e6e3df!important;border-color:#55575d!important;box-shadow:none!important}
 html.stk-dark .select2-container :is(.select2-results__option--highlighted,.select2-results__option[aria-selected="true"]){background-color:#493e53!important;color:#fff!important}
 html.stk-dark #main :is(.form-row-label :is(svg,svg path),.reference-block-icon :is(svg,svg path)){fill:var(--stk-link-purple)!important;color:var(--stk-link-purple)!important}
-html.stk-dark.stk-docs-page #main :is(.reference-doc,.reference-doc-content,.reference-doc-menu,.reference-doc-menu-expander,.prose){background:#1d2021!important;color:#e6e3df!important}
-html.stk-dark.stk-docs-page #main .faq-link,html.stk-dark.stk-docs-page #main .faq-link:hover,html.stk-dark.stk-docs-page #main .faq-link:focus-visible{background:#292b2c!important;color:#e6e3df!important;box-shadow:none!important}
+/* The docs left column is Scryfall's own purple field, and its expander bar is
+   the same colour. Repainting them flattened the page's purple into grey, so the
+   menu is left exactly as Scryfall paints it — the same call already made on the
+   team page. */
+html.stk-dark.stk-docs-page #main :is(.reference-doc,.reference-doc-content,.prose){background:#1d2021!important;color:#e6e3df!important}
+html.stk-dark.stk-docs-page #main :is(.reference-doc-menu,.reference-doc-menu-expander){background-color:#4f4255!important}
+/* Scryfall highlights a hovered row with a white wash at 8%. On a dark page that
+   wash is the wrong direction, and painting the hover the same as the resting
+   row removed the highlight altogether. Hover is one clear step lighter. */
+html.stk-dark.stk-docs-page #main .faq-link{background:#292b2c!important;color:#e6e3df!important;box-shadow:none!important}
+html.stk-dark.stk-docs-page #main .faq-link:is(:hover,:active,:focus){background:#3a3e40!important}
 html.stk-dark.stk-docs-page #main .faq-link :is(.faq-link-title,.faq-link-subtitle){color:#e6e3df!important;text-shadow:none!important}
 html.stk-dark.stk-bots-page #main :is(.reference-jump,.bot-marketing,.bot-marketing-panel,.bot-marketing-panel-shadow,.marketing-features,.marketing-features-item,.marketing-features-item-content){background-color:#1d2021!important;color:#e6e3df!important;border-color:#45464a!important}
 html.stk-dark.stk-bots-page #main :is(.bot-marketing-panel,.marketing-features-item){background-color:#252829!important}
@@ -574,3 +583,9 @@ html.stk-dark.stk-tagger :is(.sidebar-panel,.tags-menu) :is(a,.tag-row a,.tag-ad
 html.stk-dark.stk-tagger :is(.sidebar-panel,.tags-menu) :is(.tag-row,.scrollbar,.tag-name-filter,input,button){background-color:transparent!important;border-color:#414345!important}
 html.stk-dark.stk-tagger :is(.sidebar-panel,.tags-menu) .tag-row:is(:hover,:focus-within){background-color:#2f3133!important}
 html.stk-dark.stk-tagger .navigation.active{color:#e6e3df!important}
+
+/* Three mana symbols are bare glyphs with nothing behind them: {H} is filled
+   #111212, {L} and {D} are #000. Every other symbol carries its own light coin
+   inside the image, so on a dark page only these three go black and disappear.
+   Give them the same coin the others already have. */
+html.stk-dark :is(.card-symbol-H,.card-symbol-L,.card-symbol-D){background-color:#c9c4be!important;border-radius:50%!important}
