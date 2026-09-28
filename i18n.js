@@ -10,6 +10,20 @@
  */
 // Keep the popup language independent of labels added to Scryfall and Tagger.
 (() => {
+// The settings language can follow the browser rather than being pinned. The
+// three languages the interface is written in get Russian; every other
+// language gets English, so nobody lands on a page that is neither.
+const SETTINGS_LANGUAGES = ['ru', 'be', 'uk'];
+const resolveSettingsLanguage = value => {
+  if (value === 'ru' || value === 'en') return value;
+  const list = (navigator.languages && navigator.languages.length
+    ? navigator.languages : [navigator.language || ''].filter(Boolean));
+  return list.some(tag => {
+    const base = String(tag).toLowerCase().split('-')[0];
+    return SETTINGS_LANGUAGES.includes(base);
+  }) ? 'ru' : 'en';
+};
+
   const en = {
     'Настройки расширения для Scryfall': 'Extension settings for Scryfall',
     'Язык настроек': 'Settings language',
@@ -145,5 +159,5 @@
       }
     }
   };
-  window.STK_I18N = { t, localizeOptions };
+  window.STK_I18N = { t, localizeOptions, resolveSettingsLanguage };
 })();

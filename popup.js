@@ -16,7 +16,7 @@
   const KEYS = ['darkTheme', 'tags', 'clipboard', 'edhrecUsage', 'cardtraderPrices', 'settingsLanguage'];
 
   chrome.storage.local.get(Object.fromEntries(KEYS.map(key => [key, null])), values => {
-    const language = values.settingsLanguage === 'en' ? 'en' : 'ru';
+    const language = window.STK_I18N.resolveSettingsLanguage(values.settingsLanguage);
     if (window.STK_I18N) window.STK_I18N.localizeOptions(language);
 
     const theme = document.getElementById('darkTheme');

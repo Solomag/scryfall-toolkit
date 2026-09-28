@@ -208,7 +208,10 @@ function createPage(options) {
     document,
     location,
     chrome: mock.chrome,
-    navigator: { clipboard: { writeText: text => { mock.clipboardWrites.push(text); return Promise.resolve(); } } },
+    // The settings language follows the browser. Tests run as a Russian browser
+    // so the Russian interface is exercised; resolveSettingsLanguage is checked
+    // against other languages separately.
+    navigator: { language: 'ru-RU', languages: ['ru-RU', 'ru', 'en-US'], clipboard: { writeText: text => { mock.clipboardWrites.push(text); return Promise.resolve(); } } },
     localStorage: createLocalStorage(options.localStorage),
     confirm: () => (confirmQueue.length ? confirmQueue.shift() : true),
     MutationObserver: liveObserver,

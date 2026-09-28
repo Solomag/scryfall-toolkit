@@ -364,6 +364,33 @@ function popupTest() {
     'and it asks the browser where it is running before deciding');
 }
 
+// The settings language follows the browser. Russian, Belarusian and Ukrainian
+// get the Russian interface; everything else gets English rather than a page
+// that is neither.
+function settingsLanguageTest() {
+  console.log('settings: the language follows the browser');
+  const page = createPage({ url: 'https://scryfall.com/', html: '<!doctype html><html><body></body></html>', state: {} });
+  page.script('i18n.js');
+  const resolve = page.context.STK_I18N.resolveSettingsLanguage;
+  const as = tags => {
+    page.context.navigator.languages = tags;
+    page.context.navigator.language = tags[0] || '';
+    return resolve('auto');
+  };
+
+  for (const tag of ['ru', 'ru-RU', 'be', 'be-BY', 'uk', 'uk-UA']) {
+    assertEqual(as([tag]), 'ru', `${tag} gets the Russian interface`);
+  }
+  for (const tag of ['en', 'en-US', 'de', 'de-DE', 'fr', 'ja', 'pt-BR', 'zh-CN', '']) {
+    assertEqual(as([tag]), 'en', `${tag || '(empty)'} gets English`);
+  }
+  // A Russian browser with English pinned still gets English.
+  assertEqual(as(['ru-RU']), 'ru', 'the browser language is used when nothing is pinned');
+  page.context.navigator.languages = ['ru-RU'];
+  assertEqual(resolve('en'), 'en', 'a pinned English stays English');
+  assertEqual(resolve('ru'), 'ru', 'a pinned Russian stays Russian');
+}
+
 function htmlIdCheck() {
   console.log('options.html: element ids');
   const html = read('options.html');
@@ -389,9 +416,9 @@ function sectionOrderTest() {
   console.log('options.html: section order and grouping');
   const html = read('options.html');
   const headings = [...html.matchAll(/<h2>([^<]+)<\/h2>/g)].map(match => match[1]);
-  assertEqual(headings, ['Общее', 'Tags', 'CardClip', 'Издания', 'Скрытие лишнего', 'Дополнительная информация',
-    'Легальность', 'Scryfall Deckbuilder', 'Экспериментальное', 'Авторы и сторонние проекты'],
-    'sections follow the agreed order, with Experimental before the credits block');
+  assertEqual(headings, ['Общее', 'Tags', 'CardClip', 'Скрытие лишнего', 'Дополнительная информация',
+    'Легальность', 'Scryfall Deckbuilder', 'Издания', 'Экспериментальное', 'Авторы и сторонние проекты'],
+    'sections follow the agreed order, with the Prints group and Experimental before the credits block');
   // The installed extension has to say out loud what it is not, and where the
   // full notices are, because a reviewer reads the settings page and not the repo.
   const credits = html.slice(html.indexOf('<section class="credits">'));
@@ -664,6 +691,7 @@ async function discoveredFormatsTest() {
     packagedNoticesTest();
     packagedArchiveTest();
     popupTest();
+    settingsLanguageTest();
     licenceAndPrivacyTest();
     iconArtworkTest();
     await formatListTest();

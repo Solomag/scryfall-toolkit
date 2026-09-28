@@ -14,7 +14,7 @@
 <body><header class="hero"><h1>Scryfall Toolkit</h1><p>Настройки расширения для Scryfall</p></header><main>
 <section><h2>Общее</h2>
 <label for="settingsLanguage">Язык настроек</label>
-<select id="settingsLanguage"><option value="ru">Русский</option><option value="en">Английский</option></select>
+<select id="settingsLanguage"><option value="auto">Как в браузере</option><option value="ru">Русский</option><option value="en">Английский</option></select>
 <label for="darkTheme">Тема Scryfall и Tagger</label>
 <select id="darkTheme"><option value="auto">Как в системе</option><option value="light">Светлая</option><option value="dark">Тёмная</option></select>
 <p class="hint">По умолчанию тема повторяет системную тему компьютера или телефона и переключается вместе с ней.</p>
@@ -37,12 +37,7 @@
 <select id="exportFormat"><option value="names">1 Название карты</option><option value="moxfield">1 Название карты (SET) номер</option></select>
 <label><input type="checkbox" id="printAddButtons"> Плюс для отдельного издания при наведении в полном списке</label>
 </section>
-<section><h2>Издания</h2>
-<label><input type="checkbox" id="printGrouping"> Группировать издания по сетам</label>
-<p class="hint">Собирает все издания карты в нативной таблице и делит их на группы по сетам. Пока выключено, страница остаётся в обычном виде Scryfall.</p>
-<label><input type="checkbox" id="printFoldGroups"> Сворачивать группы (Collapse all groups)</label>
-<label><input type="checkbox" id="printFullPageLink"> Ссылка на полный список изданий рядом</label>
-</section>
+
 <section><h2>Скрытие лишнего</h2>
 <label><input type="checkbox" id="hideCasterIndicator"> Скрыть индикатор Caster ON</label>
 <label><input type="checkbox" id="hideDigitalSets"> Скрывать цифровые сеты на странице Sets и в Prints</label>
@@ -104,9 +99,15 @@
 <label><input type="checkbox" id="deckTokens"> Список токенов, создаваемых картами колоды</label>
 <p class="hint">Модули редактора колод Shambleshark зависят от внутреннего интерфейса Scryfall. Их переношу отдельно после проверки работы в редакторе.</p>
 </section>
-<section class="experimental"><h2>Экспериментальное</h2>
+<section class="experimental">
+<h2>Издания</h2>
+<label><input type="checkbox" id="printGrouping"> Группировать издания по сетам</label>
+<p class="hint">Собирает все издания карты в нативной таблице и делит их на группы по сетам. Пока выключено, страница остаётся в обычном виде Scryfall.</p>
+<label><input type="checkbox" id="printFoldGroups"> Сворачивать группы (Collapse all groups)</label>
+<label><input type="checkbox" id="printFullPageLink"> Ссылка на полный список изданий рядом</label>
+<h2>Экспериментальное</h2>
 <p class="hint">Эти настройки ещё уточняются и могут измениться или исчезнуть.</p>
-<label><input type="checkbox" id="printPageSameTab"> Открывать полный список изданий в этой же вкладке</label>
+<label><input type="checkbox" id="printPageSameTab"> Ссылка «Все издания» открывается в этой же вкладке</label>
 <label for="siteLanguage">Язык интерфейса Scryfall и Tagger</label>
 <select id="siteLanguage"><option value="en">Английский</option><option value="ru">Русский</option></select>
 <p class="hint">Язык добавляемых элементов и основных элементов Scryfall. Тексты карт и статей не переводятся.</p>

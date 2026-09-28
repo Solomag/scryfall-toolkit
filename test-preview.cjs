@@ -95,7 +95,12 @@ async function loadCardPage(state, pageRoutes = routes) {
 
 async function cardPageTest() {
   console.log('content.js: card page');
-  const page = await loadCardPage({ cards: [], euroPriceSources: 'both' });
+  // The Prints group is off by default now, so this test turns it on to check
+  // what it does when a user enables it.
+  const page = await loadCardPage({
+    cards: [], euroPriceSources: 'both',
+    printGrouping: true, printFoldGroups: true, printFullPageLink: true
+  });
   const { document, mock, location } = page;
 
   // Clipboard shell.
@@ -112,8 +117,9 @@ async function cardPageTest() {
   assert(scanButton, 'grid-less card page gets an add button on the card image');
   assertEqual(scanButton.textContent, '+', 'fresh card is not selected yet');
 
-  // Native print buttons live inside the prints table. The full print list is
-  // grouped on load, so Scryfall's rows and the added printings all have one.
+  // Native print buttons live inside the prints table. Grouping is off by
+  // default now, so this test turns it on and checks that Scryfall's rows and
+  // the added printings all get one.
   const buttonOf = href => [...document.querySelectorAll('#main .prints-table .stk-native-print-add')]
     .find(button => button.closest('tr').querySelector('a[href]')?.getAttribute('href').includes(href));
   assert(buttonOf('/tst/1/'), 'current printing row gets an add button');
@@ -457,7 +463,7 @@ async function printsGroupsEdgeTest() {
       truncated: false
     })
   };
-  const page = createPage({ url: 'https://scryfall.com/card/aaa/1/edge-card', html, state: { cards: [] }, routes: edgeRoutes });
+  const page = createPage({ url: 'https://scryfall.com/card/aaa/1/edge-card', html, state: { cards: [], printGrouping: true, printFoldGroups: true, printFullPageLink: true }, routes: edgeRoutes });
   await page.script('i18n.js');
   await page.script('format-catalog.js');
   await page.script('tag-icons.js');
@@ -514,7 +520,7 @@ async function printsGroupsEdgeTest() {
 
 async function printsSameTabTest() {
   console.log('content.js: printings link in the same tab');
-  const page = await loadCardPage({ cards: [], printPageSameTab: true });
+  const page = await loadCardPage({ cards: [], printGrouping: true, printFoldGroups: true, printFullPageLink: true, printPageSameTab: true });
   const { document } = page;
   const link = document.querySelector('#main .prints .stk-print-new-page');
   assertEqual(link.textContent, 'Open on this page', 'the full-page link says on this page when the setting is on');
@@ -543,7 +549,7 @@ async function promoParentMergeTest() {
       truncated: false
     })
   };
-  const page = createPage({ url: 'https://scryfall.com/card/abc/7/edge-card', html, state: { cards: [] }, routes: promoRoutes });
+  const page = createPage({ url: 'https://scryfall.com/card/abc/7/edge-card', html, state: { cards: [], printGrouping: true, printFoldGroups: true, printFullPageLink: true }, routes: promoRoutes });
   await page.script('i18n.js');
   await page.script('format-catalog.js');
   await page.script('tag-icons.js');
@@ -588,7 +594,7 @@ async function printsOrderTest() {
     };
   };
   const load = async setup => {
-    const page = createPage({ url: 'https://scryfall.com/card/old/1/order-card', html: setup.html, state: { cards: [] }, routes: setup.routes });
+    const page = createPage({ url: 'https://scryfall.com/card/old/1/order-card', html: setup.html, state: { cards: [], printGrouping: true, printFoldGroups: true, printFullPageLink: true }, routes: setup.routes });
     await page.script('i18n.js');
     await page.script('format-catalog.js');
     await page.script('tag-icons.js');
@@ -645,7 +651,7 @@ async function printsWindowTest() {
         <tr class="view-all"><td colspan="5"><a href="https://scryfall.com/search?unique=prints">View all prints →</a></td></tr>`;
   const html = CARD_HTML.replace(/<tbody>[\s\S]*?<\/tbody>/, `<tbody>${native}</tbody>`);
   const page = createPage({
-    url: 'https://scryfall.com/card/n06/1/window-card', html, state: { cards: [] },
+    url: 'https://scryfall.com/card/n06/1/window-card', html, state: { cards: [], printGrouping: true, printFoldGroups: true, printFullPageLink: true },
     routes: { ...routes, finishes: () => ({}), allPrints: () => ({ prints: apiOrder, truncated: false }) }
   });
   await page.script('i18n.js');
@@ -706,7 +712,7 @@ async function starNumberTest() {
     print('xyz', 'Set XYZ', '12★', ['foil'])
   ];
   const page = createPage({
-    url: 'https://scryfall.com/card/7ed/67%E2%98%85/star-card', html, state: { cards: [] },
+    url: 'https://scryfall.com/card/7ed/67%E2%98%85/star-card', html, state: { cards: [], printGrouping: true, printFoldGroups: true, printFullPageLink: true },
     routes: { ...routes, finishes: () => ({}), allPrints: () => ({ prints, truncated: false }) }
   });
   await page.script('i18n.js');
@@ -743,7 +749,7 @@ async function singlePrintingTest() {
       truncated: false
     })
   };
-  const page = createPage({ url: 'https://scryfall.com/card/uni/1/only', html, state: { cards: [] }, routes: onlyRoutes });
+  const page = createPage({ url: 'https://scryfall.com/card/uni/1/only', html, state: { cards: [], printGrouping: true, printFoldGroups: true, printFullPageLink: true }, routes: onlyRoutes });
   await page.script('i18n.js');
   await page.script('format-catalog.js');
   await page.script('tag-icons.js');
@@ -863,10 +869,10 @@ async function setPlatformTest() {
   };
   const printRoutes = { ...routes, allPrints: () => ({ prints: [...prints, digitalPrint], truncated: false }) };
   const groups = page => [...page.document.querySelectorAll('.stk-print-group-row')].map(row => row.textContent);
-  const paperPrints = await loadCardPage({ cards: [], setPlatforms: ['paper'] }, printRoutes);
+  const paperPrints = await loadCardPage({ cards: [], setPlatforms: ['paper'], printGrouping: true, printFoldGroups: true, printFullPageLink: true }, printRoutes);
   assertEqual(groups(paperPrints), ['Test Set (TST) · 4', 'Modern Horizons 3 (MH3) · 2'],
     'an Arena printing gets no group while only Paper is kept');
-  const arenaPrints = await loadCardPage({ cards: [], setPlatforms: ['arena'] }, printRoutes);
+  const arenaPrints = await loadCardPage({ cards: [], setPlatforms: ['arena'], printGrouping: true, printFoldGroups: true, printFullPageLink: true }, printRoutes);
   assertEqual(groups(arenaPrints), ['Test Set (TST) · 2'],
     'with only Arena kept the paper set keeps nothing but the rows Scryfall itself showed');
   assert([...arenaPrints.document.querySelectorAll('.prints-table tbody tr')]
@@ -1014,7 +1020,7 @@ async function cardNicknameTest() {
     'the line names the source and the nickname under the prints table');
   assert(note.closest('#main .prints'), 'the nickname sits inside the prints block');
 
-  const off = await load('https://scryfall.com/card/iko/19/lavabrink-venturer', { cards: [] });
+  const off = await load('https://scryfall.com/card/iko/19/lavabrink-venturer', { cards: [], cardNicknames: false });
   assert(!off.document.querySelector('.stk-card-nickname'), 'the line stays away while the setting is off');
 
   const plain = await load('https://scryfall.com/card/tst/1/test-card', { cards: [], cardNicknames: true });
@@ -1033,7 +1039,7 @@ async function printsSettingsTest() {
   assertEqual(off.document.querySelectorAll('.view-all a').length, 1, 'and it is the only link left on the line');
   assertEqual(foldArrow(off), false, 'and no folding is offered');
 
-  const noFold = await loadCardPage({ cards: [], printFoldGroups: false });
+  const noFold = await loadCardPage({ cards: [], printGrouping: true, printFoldGroups: false, printFullPageLink: true });
   assertEqual(heads(noFold).length, 2, 'groups are still built when only folding is off');
   assertEqual(foldArrow(noFold), false, 'without folding the headers are not marked as toggles');
   assertEqual(noFold.document.querySelectorAll('.stk-group-collapsed').length, 0, 'and no group starts folded');
@@ -1044,7 +1050,7 @@ async function printsSettingsTest() {
   click(line);
   assertEqual(heads(noFold).length, 2, 'the full page opens in a new tab, so the table stays as it is');
 
-  const noPageLink = await loadCardPage({ cards: [], printFullPageLink: false });
+  const noPageLink = await loadCardPage({ cards: [], printGrouping: true, printFullPageLink: false });
   assertEqual(noPageLink.document.querySelectorAll('.stk-print-new-page').length, 0,
     'the full-page link is not added when the setting is off');
   const native = noPageLink.document.querySelector('.prints-all a') || noPageLink.document.querySelector('.view-all a');
@@ -1054,9 +1060,14 @@ async function printsSettingsTest() {
   assert(heads(noPageLink).length, 'pressing it still expands the printings in place');
 
   const all = await loadCardPage({ cards: [] });
-  assertEqual(heads(all).length, 2, 'the default keeps the grouped table');
-  assertEqual(foldArrow(all), true, 'with folding offered');
-  assertEqual(all.document.querySelectorAll('.stk-print-new-page').length, 1, 'and the full-page link on the line');
+  assertEqual(heads(all).length, 0, 'the default leaves Scryfall’s table alone');
+  assertEqual(foldArrow(all), false, 'and offers no folding');
+  assertEqual(all.document.querySelectorAll('.stk-print-new-page').length, 0, 'and adds no full-page link');
+
+  const on = await loadCardPage({ cards: [], printGrouping: true, printFoldGroups: true, printFullPageLink: true });
+  assertEqual(heads(on).length, 2, 'switching the group on builds the groups');
+  assertEqual(foldArrow(on), true, 'with folding offered');
+  assertEqual(on.document.querySelectorAll('.stk-print-new-page').length, 1, 'and the full-page link on the line');
 }
 
 (async () => {

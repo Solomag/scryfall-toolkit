@@ -200,7 +200,7 @@ async function settingsPowerOnTest(dir) {
   const items = page.document.querySelectorAll('#formatList .format-item');
   assert(items.length === 18, `the settings page renders its format list (${items.length} of 18)`);
   assertEqual([...page.document.querySelectorAll('#settingsLanguage option')].map(o => o.getAttribute('value')),
-    ['ru', 'en'], 'the settings page offers both settings languages');
+    ['auto', 'ru', 'en'], 'the settings page offers the browser-following choice and both languages');
   // The button that opens a new tab must not sit on a page that is already in one.
   const openOptions = page.document.getElementById('openOptions');
   assert(openOptions, 'the settings page still offers the new-tab button where it helps');

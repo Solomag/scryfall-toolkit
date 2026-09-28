@@ -9,23 +9,23 @@
  * are described in THIRD_PARTY_NOTICES.md. The MPL does not cover them.
  */
 const defaults = {
-  settingsLanguage: 'ru', siteLanguage: 'en',
-  clipboard: true, printAddButtons: true, darkTheme: 'auto', hideDigitalSets: false, hideNonTournamentSets: false, hideOversizedSets: false, hideForeignBlackBorder: false, hideNonEnglishPrints: false, tags: true, cardTags: true, artTags: true, relationships: true, onlyCardmarket: false,
+  settingsLanguage: 'auto', siteLanguage: 'en',
+  clipboard: true, printAddButtons: true, darkTheme: 'auto', hideDigitalSets: false, hideNonTournamentSets: false, hideOversizedSets: false, hideForeignBlackBorder: false, hideNonEnglishPrints: false, tags: true, cardTags: true, artTags: false, relationships: true, onlyCardmarket: false,
   finishBadges: true, cardtraderPrices: false, cardtraderToken: '', euroPriceSources: 'cm',
-  edhrecUsage: false, edhrecSalt: false, showSaltScale: false, edhrecLink: true, edhrecUsageDisplay: 'both',
+  edhrecUsage: false, edhrecSalt: false, showSaltScale: false, edhrecLink: false, edhrecUsageDisplay: 'both',
   usageColorMetric: 'decks', usageMediumDecks: 50000, usageHighDecks: 100000,
   usageMediumPercent: 1, usageHighPercent: 2.6, saltMediumThreshold: 1, saltHighThreshold: 2,
   hideCasterIndicator: false, printPageSameTab: false,
-  printGrouping: true, printFoldGroups: true, printFullPageLink: true,
+  printGrouping: false, printFoldGroups: false, printFullPageLink: false,
   setPlatforms: ['paper', 'arena', 'mtgo'],
-  taggerSearchLinks: false, cardSearchLinks: false, cardNicknames: false, deckNoPrices: true, stackedDeckCards: false, deckTokens: false,
+  taggerSearchLinks: false, cardSearchLinks: true, cardNicknames: true, deckNoPrices: true, stackedDeckCards: true, deckTokens: true,
   legalities: true, exportFormat: "moxfield", formatOrder: null, formatVisibility: null,
   discoveredFormats: [], premodern: true, heritage: false, classic: false, peak: false
 };
 const basicFields = ["clipboard", "printAddButtons", "printPageSameTab", "hideCasterIndicator", "hideDigitalSets", "hideNonTournamentSets", "hideOversizedSets", "hideForeignBlackBorder", "hideNonEnglishPrints", "tags", "cardTags", "artTags", "relationships", "finishBadges", "onlyCardmarket", "cardtraderPrices", "euroPriceSources", "edhrecUsage", "edhrecSalt", "showSaltScale", "edhrecLink", "edhrecUsageDisplay", "usageColorMetric", "legalities", "exportFormat", "taggerSearchLinks", "cardSearchLinks", "cardNicknames", "deckNoPrices", "stackedDeckCards", "deckTokens", "printGrouping", "printFoldGroups", "printFullPageLink"];
 const status = document.getElementById("status");
 chrome.storage.local.get(defaults, values => {
-  let language = values.settingsLanguage === 'en' ? 'en' : 'ru';
+  let language = window.STK_I18N.resolveSettingsLanguage(values.settingsLanguage);
   const t = text => window.STK_I18N.t(text, language);
   const settingsLanguage = document.getElementById('settingsLanguage');
   const siteLanguage = document.getElementById('siteLanguage');
@@ -47,7 +47,7 @@ chrome.storage.local.get(defaults, values => {
   }
   showTokenState(Boolean(values.cardtraderToken));
   settingsLanguage.addEventListener('change', () => {
-    language = settingsLanguage.value === 'en' ? 'en' : 'ru';
+    language = window.STK_I18N.resolveSettingsLanguage(settingsLanguage.value);
     window.STK_I18N.localizeOptions(language);
     showTokenState(tokenStatus.dataset.stored === 'yes');
     document.querySelectorAll('#formatList .format-item').forEach(row => { row.title = language === 'ru' ? `Перетащи ${formats.get(row.dataset.key)} в нужную колонку` : `Drag ${formats.get(row.dataset.key)} to either column`; });

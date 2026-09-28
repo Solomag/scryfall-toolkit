@@ -11,15 +11,15 @@
 (async () => {
   const defaults = {
     siteLanguage: 'en',
-    clipboard: true, tags: true, cardTags: true, artTags: true, relationships: true,
+    clipboard: true, tags: true, cardTags: true, artTags: false, relationships: true,
     onlyCardmarket: false, printAddButtons: true, printPageSameTab: false, hideDigitalSets: false, hideNonTournamentSets: false, hideOversizedSets: false,
     hideForeignBlackBorder: false, hideNonEnglishPrints: false, legalities: true, finishBadges: true, cardtraderPrices: false, euroPriceSources: 'cm',
     setPlatforms: ['paper', 'arena', 'mtgo'],
-    printGrouping: true, printFoldGroups: true, printFullPageLink: true,
-    edhrecUsage: false, edhrecSalt: false, showSaltScale: false, edhrecLink: true, edhrecUsageDisplay: 'both',
+    printGrouping: false, printFoldGroups: false, printFullPageLink: false,
+    edhrecUsage: false, edhrecSalt: false, showSaltScale: false, edhrecLink: false, edhrecUsageDisplay: 'both',
     usageColorMetric: 'decks', usageMediumDecks: 50000, usageHighDecks: 100000,
     usageMediumPercent: 1, usageHighPercent: 2.6, saltMediumThreshold: 1, saltHighThreshold: 2,
-    taggerSearchLinks: false, cardSearchLinks: false, cardNicknames: false, deckNoPrices: true, stackedDeckCards: false, deckTokens: false,
+    taggerSearchLinks: false, cardSearchLinks: true, cardNicknames: true, deckNoPrices: true, stackedDeckCards: true, deckTokens: true,
     premodern: true, heritage: false, classic: false, peak: false,
     formatOrder: null, formatVisibility: null,
     exportFormat: "moxfield", cards: null
