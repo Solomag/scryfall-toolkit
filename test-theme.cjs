@@ -280,6 +280,20 @@ function firstPaintTest() {
     'the synchronous step adds the class and does not run the repairs');
 }
 
+// Two rules once painted the same team-page band different colours and gave it
+// different inks, so the background came from one and the text from the other:
+// dark grey on dark grey. Only the dimmed band may remain.
+function noDoublePaintingTest() {
+  console.log('static: no surface is painted twice with disagreeing colours');
+  const css = read('theme.css').replace(/\/\*[\s\S]*?\*\//g, '');
+  const bands = css.match(/[^\n{]*\.team-header[^\n{]*\{[^}]*background[^}]*\}/g) || [];
+  const paintsBackground = bands.filter(rule => /background-color:(?!transparent)/.test(rule));
+  assertEqual(paintsBackground.length, 1,
+    'exactly one rule paints the team header band');
+  assert(/background-color:rgba\(255,255,255,0\.82\)/.test(paintsBackground[0] || ''),
+    'and it is the dimmed white band the purple field is meant to keep');
+}
+
 function hoverStatesTest() {
   console.log('static: hover states differ from the resting state');
   const css = read('theme.css').replace(/\/\*[\s\S]*?\*\//g, '');
@@ -317,6 +331,13 @@ function auditGapCheck() {
     // The deck tray wrapper held only buttons, and painting it as well left a
     // grey slab beside the backpack button.
     ['the deck tray buttons are not a surface', /html\.stk-dark \.deck-tray-buttons\{background-color:transparent/],
+    // The team page's white band is dimmed over the purple field and keeps its
+    // dark ink. A second rule painted the same band a dark grey and left the ink
+    // dark too, which made the title unreadable.
+    ['the team header band agrees with its ink', /html\.stk-dark\.stk-team-page #main \.team-header\{background-color:rgba\(255,255,255,0\.82\)/],
+    // A native option list is drawn from the page's own colours, and was the one
+    // light rectangle left on a dark page.
+    ['the open option list carries no light field', /html\.stk-dark select option,html\.stk-dark select optgroup/],
     ['the bot documentation buttons', /\.marketing-features-item[^{]*:is\(a\.button-n/],
     ['the donation tiles', /\.donation-stripe-amount,\.donation-service\)\{background-color:#252829/],
     ['the button on Scryfall error pages', /html\.stk-dark :is\(a\.button,button\.button\)\{background-color:#292b2c/],
@@ -555,6 +576,7 @@ async function pathClasses() {
   try {
     await manifestIntegrity();
     firstPaintTest();
+    noDoublePaintingTest();
     hoverStatesTest();
     auditGapCheck();
     syntaxCheck();

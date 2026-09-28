@@ -302,9 +302,13 @@ html.stk-dark.stk-bots-page #main :is(.bot-marketing-panel-desc,.marketing-featu
 html.stk-dark.stk-bots-page #main :is(.bot-marketing-panel,.bot-marketing-panel-shadow) :is(p,span,div){background-color:transparent!important}
 html.stk-dark.stk-bots-page #main :is(.bot-marketing-panel,.bot-marketing-panel-shadow) .bot-marketing-panel-footer{background:#2a2c2d!important;color:#e6e3df!important}
 html.stk-dark.stk-bots-page #main :is(.bot-marketing-panel,.bot-marketing-panel-shadow) .bot-marketing-panel-footer .button-n{background:#3a3d40!important;color:#c79ce3!important;border-color:#595c60!important}
-html.stk-dark.stk-team-page #main :is(.team-header,.team-header .inner-flex){background-color:#252829!important;color:#e6e3df!important}
-html.stk-dark.stk-team-page #main .team-header :is(h1,p,a){color:#e6e3df!important;text-shadow:none!important}
-html.stk-dark.stk-team-page #main .team-header a{color:#bda1df!important}
+/* The team page is a purple marketing page with a white band laid over its
+   purple field. One earlier rule painted that band a dark grey while a later one
+   dimmed the same band to a translucent white with dark ink on it; the later
+   rule lost the background and won the ink, which is how the title ended up dark
+   grey on dark grey. The dimmed band is the intent, so the earlier rule is gone
+   and only the inner layout of the band is left transparent. */
+html.stk-dark.stk-team-page #main .team-header .inner-flex{background-color:transparent!important;color:inherit}
 html.stk-dark.stk-blog-page #main :is(.blog-post-large,.blog-post-large>.inner-flex,.blog-post-large-header,.blog-post-large-content,.blog-post-content,.blog-post-large-body,.blog-post,.blog-index,.blog-category,.blog-pagination){background-color:#1d2021!important;color:#e6e3df!important}
 html.stk-dark.stk-blog-page #main .blog-orbit{background:transparent!important}
 html.stk-dark.stk-blog-page #main .blog-orbit img{filter:none!important}
@@ -608,3 +612,10 @@ html.stk-dark .deck-tray-buttons{background-color:transparent!important;border-c
 html.stk-dark .deck-tray-buttons .button-n{background:#292b2c!important;color:#e6e3df!important;border-color:#59535e!important}
 html.stk-dark .deck-tray-buttons .button-n.primary{background:#554267!important;color:#f4eff7!important}
 html.stk-dark .deck-tray-buttons .button-n svg :is(path,g){fill:currentColor!important}
+
+/* A native option list is drawn by the browser from the page's own colours, and
+   Scryfall leaves those options dark ink on a light field. On a dark page the
+   open list was the one light rectangle left -- the black text of the contact
+   page's Topic list. */
+html.stk-dark select option,html.stk-dark select optgroup,html.stk-dark select optgroup>option{background-color:#24242a!important;color:#e9e5ee!important}
+html.stk-dark select option:checked,html.stk-dark select option:hover{background-color:#4a2c8c!important;color:#fff!important}
