@@ -165,8 +165,12 @@ function licenceAndPrivacyTest() {
   const notices = read('THIRD_PARTY_NOTICES.md');
   assert(/MPL-2\.0 notice does \*{0,2}not\*{0,2}\s+cover[\s\S]{0,160}icons\/edhrec\.png/.test(notices),
     'the notices say the MPL does not cover the EDHREC mark');
-  assert(/No permission was\s+requested from them and none was received/.test(notices),
-    'the notices say plainly that no permission was requested or received');
+  // EDHREC answered with a data policy that permits this use, so the data side
+  // is settled. The logos are a separate question and nothing claims they are.
+  assert(/Data access and logos are different questions/.test(notices),
+    'the notices separate settled data use from the unsettled marks');
+  assert(/policy says nothing about the logo/.test(notices),
+    'and say plainly that the logos are still not cleared');
   assert(/This extension is independent of Scryfall, EDHREC and CardTrader/.test(notices),
     'the notices state independence from Scryfall, EDHREC and CardTrader');
   assert((notices.match(/Unresolved/g) || []).length >= 3,
@@ -198,10 +202,16 @@ function licenceAndPrivacyTest() {
   const manifest = JSON.parse(read('manifest.json'));
   assert((manifest.host_permissions || []).some(host => host.includes('data.scryfall.io')),
     'the manifest grants the Scryfall bulk-data host the policy names');
-  assert((manifest.host_permissions || []).some(host => host.includes('json.edhrec.com')),
-    'the manifest grants exactly the EDHREC host the policy names');
-  assert((manifest.host_permissions || []).some(host => host.includes('api.cardtrader.com')),
-    'the manifest grants exactly the CardTrader host the policy names');
+  // EDHREC and CardTrader are optional features and so is their access: the
+  // host is asked for when the switch goes on, not at install time.
+  assert(!(manifest.host_permissions || []).some(host => host.includes('json.edhrec.com')),
+    'the EDHREC host is not demanded at install');
+  assert((manifest.optional_host_permissions || []).some(host => host.includes('json.edhrec.com')),
+    'and is asked for when the EDHREC feature is turned on');
+  assert(!(manifest.host_permissions || []).some(host => host.includes('api.cardtrader.com')),
+    'the CardTrader host is not demanded at install');
+  assert((manifest.optional_host_permissions || []).some(host => host.includes('api.cardtrader.com')),
+    'and is asked for when the CardTrader feature is turned on');
   assert(!/analytics|telemetry|gtag|google-analytics|posthog|mixpanel|amplitude|sentry/i.test(
     [background, read('content.js'), read('options.js'), read('theme.js'), read('tagger-clipboard.js')].join('\n')),
     'the code contains no analytics or telemetry');
@@ -367,6 +377,37 @@ function popupTest() {
 // The settings language follows the browser. Russian, Belarusian and Ukrainian
 // get the Russian interface; everything else gets English rather than a page
 // that is neither.
+// The choice and the outcome are different things and were being confused: the
+// page showed the resolved language and saved it back, which turned Auto into a
+// pinned language the first time anyone touched the select. This walks the whole
+// chain rather than the pieces of it.
+async function settingsLanguageChainTest() {
+  console.log('settings: the language choice survives the round trip');
+  const page = await loadOptions({ settingsLanguage: 'auto', siteLanguage: 'en' });
+  const select = page.document.getElementById('settingsLanguage');
+  assertEqual(select.value, 'auto', 'storage: auto shows as auto');
+
+  // Choosing Auto again must store Auto, not what it resolves to right now.
+  select.value = 'auto';
+  fireEvent(select, 'change');
+  assertEqual(page.mock.state.settingsLanguage, 'auto', 'choosing Auto stores Auto');
+
+  // A pinned choice stores the choice and speaks its language.
+  select.value = 'ru';
+  fireEvent(select, 'change');
+  assertEqual(page.mock.state.settingsLanguage, 'ru', 'choosing Russian stores Russian');
+
+  select.value = 'en';
+  fireEvent(select, 'change');
+  assertEqual(page.mock.state.settingsLanguage, 'en', 'choosing English stores English');
+
+  // And a reload of a pinned choice shows the pin, not its outcome.
+  const pinned = await loadOptions({ settingsLanguage: 'en', siteLanguage: 'en' });
+  assertEqual(pinned.document.getElementById('settingsLanguage').value, 'en',
+    'a pinned choice is shown as pinned');
+}
+
+
 function settingsLanguageTest() {
   console.log('settings: the language follows the browser');
   const page = createPage({ url: 'https://scryfall.com/', html: '<!doctype html><html><body></body></html>', state: {} });
@@ -663,7 +704,7 @@ async function languageTest() {
   assertEqual(document.documentElement.lang, 'ru', 'document language starts Russian');
 
   const settingsLanguage = document.getElementById('settingsLanguage');
-  assertEqual(settingsLanguage.value, 'ru', 'language select starts Russian');
+  assertEqual(settingsLanguage.value, 'auto', 'the language select starts on the browser-following choice');
   settingsLanguage.value = 'en';
   fireEvent(settingsLanguage, 'change');
   assertEqual(mock.state.settingsLanguage, 'en', 'language choice persists');
@@ -692,6 +733,7 @@ async function discoveredFormatsTest() {
     packagedArchiveTest();
     popupTest();
     settingsLanguageTest();
+    await settingsLanguageChainTest();
     licenceAndPrivacyTest();
     iconArtworkTest();
     await formatListTest();

@@ -23,13 +23,39 @@ const defaults = {
   discoveredFormats: [], premodern: true, heritage: false, classic: false, peak: false
 };
 const basicFields = ["clipboard", "printAddButtons", "printPageSameTab", "hideCasterIndicator", "hideDigitalSets", "hideNonTournamentSets", "hideOversizedSets", "hideForeignBlackBorder", "hideNonEnglishPrints", "tags", "cardTags", "artTags", "relationships", "finishBadges", "onlyCardmarket", "cardtraderPrices", "euroPriceSources", "edhrecUsage", "edhrecSalt", "showSaltScale", "edhrecLink", "edhrecUsageDisplay", "usageColorMetric", "legalities", "exportFormat", "taggerSearchLinks", "cardSearchLinks", "cardNicknames", "deckNoPrices", "stackedDeckCards", "deckTokens", "printGrouping", "printFoldGroups", "printFullPageLink"];
+// EDHREC and CardTrader are optional features, and so is the access they need.
+// Chrome has a place for exactly this: optional_host_permissions, granted only
+// when the user turns one of them on. Turning a switch off and on again is also
+// how access is put back after it is revoked or after an update.
+const OPTIONAL_HOSTS = {
+  edhrecUsage: ['https://json.edhrec.com/*'],
+  edhrecSalt: ['https://json.edhrec.com/*'],
+  edhrecLink: ['https://json.edhrec.com/*'],
+  cardtraderPrices: ['https://api.cardtrader.com/*']
+};
+function requestHostAccess(key) {
+  const origins = OPTIONAL_HOSTS[key];
+  if (!origins || !chrome.permissions || !chrome.permissions.request) return Promise.resolve(true);
+  return new Promise(resolve => {
+    try {
+      chrome.permissions.request({ origins }, granted => resolve(Boolean(granted)));
+    } catch (error) {
+      resolve(false);
+    }
+  });
+}
+
 const status = document.getElementById("status");
 chrome.storage.local.get(defaults, values => {
-  let language = window.STK_I18N.resolveSettingsLanguage(values.settingsLanguage);
+  // What the user chose and what the interface speaks are different things. The
+  // choice is stored; the language is derived from it and never stored back.
+  let selected = ['auto', 'ru', 'en'].includes(values.settingsLanguage)
+    ? values.settingsLanguage : 'auto';
+  let language = window.STK_I18N.resolveSettingsLanguage(selected);
   const t = text => window.STK_I18N.t(text, language);
   const settingsLanguage = document.getElementById('settingsLanguage');
   const siteLanguage = document.getElementById('siteLanguage');
-  settingsLanguage.value = language;
+  settingsLanguage.value = selected;
   siteLanguage.value = values.siteLanguage === 'ru' ? 'ru' : 'en';
   window.STK_I18N.localizeOptions(language);
   const token = document.getElementById('cardtraderToken');
@@ -47,12 +73,14 @@ chrome.storage.local.get(defaults, values => {
   }
   showTokenState(Boolean(values.cardtraderToken));
   settingsLanguage.addEventListener('change', () => {
-    language = window.STK_I18N.resolveSettingsLanguage(settingsLanguage.value);
+    // The raw selection is saved, whatever it resolves to right now.
+    selected = ['auto', 'ru', 'en'].includes(settingsLanguage.value) ? settingsLanguage.value : 'auto';
+    language = window.STK_I18N.resolveSettingsLanguage(selected);
     window.STK_I18N.localizeOptions(language);
     showTokenState(tokenStatus.dataset.stored === 'yes');
     document.querySelectorAll('#formatList .format-item').forEach(row => { row.title = language === 'ru' ? `Перетащи ${formats.get(row.dataset.key)} в нужную колонку` : `Drag ${formats.get(row.dataset.key)} to either column`; });
     status.textContent = t('Сохранено');
-    chrome.storage.local.set({ settingsLanguage: language });
+    chrome.storage.local.set({ settingsLanguage: selected });
   });
   siteLanguage.addEventListener('change', () => {
     chrome.storage.local.set({ siteLanguage: siteLanguage.value === 'ru' ? 'ru' : 'en' }, () => { status.textContent = t('Сохранено'); });
@@ -102,7 +130,18 @@ chrome.storage.local.get(defaults, values => {
     if (element.type === "checkbox") element.checked = Boolean(values[key]);
     else element.value = values[key];
     element.addEventListener("change", () => {
-      chrome.storage.local.set({ [key]: element.type === "checkbox" ? element.checked : element.value }, () => {
+      const wanted = element.type === "checkbox" ? element.checked : element.value;
+      // Turning an optional feature on is the moment the browser is asked for
+      // its host. Refusing leaves the switch off rather than saving a feature
+      // that cannot reach anything.
+      if (element.type === "checkbox" && wanted === true && OPTIONAL_HOSTS[key]) {
+        requestHostAccess(key).then(granted => {
+          if (!granted) { element.checked = false; return; }
+          chrome.storage.local.set({ [key]: true }, () => { status.textContent = t('Сохранено'); });
+        });
+        return;
+      }
+      chrome.storage.local.set({ [key]: wanted }, () => {
         status.textContent = t('Сохранено');
       });
     });

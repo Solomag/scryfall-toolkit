@@ -62,7 +62,7 @@ Settings and the clipboard live in `chrome.storage.local` and never leave your b
 
 ```
 npm install     # linkedom, for the tests
-npm test        # six suites, 1045 assertions
+npm test        # six suites
 npm run package # build the release archive
 ```
 

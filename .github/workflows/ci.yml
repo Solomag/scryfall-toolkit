@@ -1,0 +1,39 @@
+name: CI
+
+# The tests were always meant to run before a release and until now depended on
+# someone remembering to run them. Two releases already shipped with a file
+# missing from the archive; this is the step that stops the third.
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Test
+        run: npm test
+
+      - name: Build the release archive
+        run: npm run package
+
+      # The archive is checked back by package-extension.cjs as it is written, so
+      # this only has to prove that a fresh machine produces one at all.
+      - name: Keep the archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: scryfall-toolkit-${{ github.ref_name }}
+          path: dist/*.zip
+          if-no-files-found: error

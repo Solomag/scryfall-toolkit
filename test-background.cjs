@@ -96,6 +96,12 @@ const ART_BULK = Array.from({ length: 110 }, (_, i) => ({ slug: `art-${i}`, illu
 const fetchLog = [];
 let registryBehavior = 'ok';
 
+// The bundled tag snapshot is read as text and parsed, the way upstream ships
+// it: a global assignment whose value is JSON.
+function textResponse(text, status = 200) {
+  return { ok: status >= 200 && status < 300, status, text: async () => text };
+}
+
 function jsonResponse(data, status = 200) {
   return { ok: status >= 200 && status < 300, status, json: async () => data };
 }
@@ -137,6 +143,12 @@ async function fetchMock(url) {
     }
     return jsonResponse({ data: [{ name: 'Other Card', image_uris: { normal: 'https://cards.scryfall.io/normal/o.jpg' }, scryfall_uri: 'https://scryfall.com/card/oth/1/other-card' }] });
   }
+  if (target.startsWith('chrome-extension://scryfall-toolkit/data/')) {
+    const name = target.slice(target.lastIndexOf('/') + 1);
+    const fixture = bundledTagFixtures['data/' + name];
+    if (!fixture) throw new Error('Unmocked bundled file: ' + name);
+    return textResponse('self.__MOXTAGS_FIXTURE = ' + JSON.stringify(fixture) + ';');
+  }
   if (target.startsWith('https://json.edhrec.com/pages/cards/')) {
     edhrecFetches.push(Date.now());
     if (edhrecNextStatus) { const status = edhrecNextStatus; edhrecNextStatus = null; return jsonResponse({}, status); }
@@ -161,15 +173,19 @@ const page = createPage({
 });
 page.context.importScripts = (...files) => {
   for (const file of files) {
-    // The multi-megabyte bundled tag files are replaced with fixtures below;
-    // test-theme.cjs compiles them to prove they are valid JavaScript.
+    // The tag data is no longer imported at start-up; the fixtures below stand
+    // in for it and are read through getURL instead.
     if (file.startsWith('data/')) continue;
     page.script(file);
   }
 };
-page.context.__MOXTAGS_ORACLE = { t: ['aggro', 'combo'], d: { [ORACLE_ID]: [0, 1] } };
-page.context.__MOXTAGS_ILLUS_1 = { t: ['sky'], d: { [ILLUS_ID]: [0] } };
-page.context.__MOXTAGS_ILLUS_2 = { t: [], d: {} };
+// The worker reads the bundled tag snapshot as text and parses it. The mock
+// serves fixtures in the same shape: a global assignment whose value is JSON.
+const bundledTagFixtures = {
+  'data/oracle-tags.js': { t: ['aggro', 'combo'], d: { [ORACLE_ID]: [0, 1] } },
+  'data/illustration-tags-1.js': { t: ['sky'], d: { [ILLUS_ID]: [0] } },
+  'data/illustration-tags-2.js': { t: [], d: {} }
+};
 // The platform snapshot is bundled as data; the fixture keeps a few sets and
 // leaves "mtgo" out so the runtime lookup is exercised.
 page.context.__STK_SET_PLATFORMS = { ysos: ['arena'], omb: ['arena', 'mtgo'] };

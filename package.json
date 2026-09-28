@@ -7,7 +7,7 @@
     "test": "node test-preview.cjs && node test-background.cjs && node test-options.cjs && node test-theme.cjs && node test-tagger.cjs && node test-package.cjs",
     "package": "node package-extension.cjs"
   },
-  "license": "MIT",
+  "license": "MPL-2.0",
   "type": "commonjs",
   "devDependencies": {
     "linkedom": "^0.18.13"

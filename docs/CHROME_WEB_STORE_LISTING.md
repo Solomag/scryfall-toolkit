@@ -88,8 +88,13 @@ The store asks why each permission is needed. These are the answers, matched to
 | `https://api.scryfall.com/*` | card, print, set and search lookups, and the tag bulk files | `background.js` |
 | `https://data.scryfall.io/*` | the tag bulk files Scryfall serves from this host | `background.js` (through the URL Scryfall returns) |
 | `https://tagger.scryfall.com/*` | live tag and related-card data for the card on the page | `background.js` |
-| `https://json.edhrec.com/*` | optional EDHREC usage and Salt Meter, only when the user enables it | `background.js` |
-| `https://api.cardtrader.com/*` | optional CardTrader prices, only when the user enables it and stores a token | `background.js` |
+| `https://json.edhrec.com/*` | **optional permission.** Optional EDHREC usage and Salt Meter, off by default. The host is asked for when the user turns EDHREC on, not at install. | `background.js` |
+| `https://api.cardtrader.com/*` | **optional permission.** Optional CardTrader prices, off by default. The host is asked for when the user turns CardTrader on, not at install. Needs the user's own token as well. | `background.js` |
+
+Two of the five are **optional permissions**: `json.edhrec.com` and `api.cardtrader.com`
+serve features that are off by default, so the browser is asked for them when the user
+turns the feature on and not before. Turning a switch off and on again is how access is
+put back if it is ever revoked.
 
 Content scripts run only on `https://scryfall.com/*`, `https://www.scryfall.com/*` and
 `https://tagger.scryfall.com/*`, to render the extension's own panels on those pages.

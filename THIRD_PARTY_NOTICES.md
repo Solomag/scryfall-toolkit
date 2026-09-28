@@ -31,10 +31,12 @@ In particular, and stated plainly because it is easy to get wrong:
 - The MPL-2.0 notice does **not** cover `icons/edhrec.png`, `icons/cardtrader.svg`,
   `icons/cardtrader.png` or `icons/cardmarket.svg`. Those are third-party brand marks, or
   in one case an icon whose origin is unconfirmed. Their rights stay with their owners.
-- Nothing in this project has been cleared with EDHREC or CardTrader. No permission was
-  requested from them and none was received. Their marks are shown to identify the
-  service a feature talks to, and the unresolved status in sections 7 to 9 below is the
-  real status.
+- **Data access and logos are different questions, and only the first is settled.**
+  EDHREC answered with their published data policy and it permits this use, so the data
+  side is covered and recorded in section 7. Their policy says nothing about the logo,
+  and neither did their answer. CardTrader and Cardmarket have not been asked at all.
+  Nothing here claims a logo is cleared: the unresolved status in sections 7 to 9 is
+  about the marks, and that is the real status.
 - The bundled MoxTags and Shambleshark data and the CardClip icons stay under their own
   MIT terms with their own copyright notices; re-licensing them as MPL-2.0 would be
   wrong and has not been done.
@@ -199,6 +201,12 @@ are cached for six hours, so a card is looked up at most once. Requests are made
 user's own browser, which is the case their policy exempts from the User-Agent
 requirement; if they ask for identification regardless, it would need
 `declarativeNetRequest` to set the header and that is a decision to take then.
+
+The throttle, the hold-back and the EDHREC cache all live in `chrome.storage.local`,
+because a Manifest V3 service worker is unloaded when idle and its globals go with it.
+The two caches this extension keeps for its own convenience — the previews and print
+lists in `cache`, and the CardTrader responses in `traderCache` — are in memory and
+last only as long as a worker does; losing them costs a repeat request, nothing more.
 
 Their warning that they may change the data without notice is why the feature shows
 nothing at all when a field is missing, rather than an error or a wrong number.

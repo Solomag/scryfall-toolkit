@@ -4,10 +4,32 @@
   "version": "0.49.0",
   "homepage_url": "https://github.com/Solomag/scryfall-toolkit",
   "description": "Scryfall clipboard, tags, legality, dark theme, optional CardTrader prices and EDHREC statistics.",
-  "permissions": ["storage", "unlimitedStorage", "alarms"],
-  "host_permissions": ["https://api.scryfall.com/*", "https://data.scryfall.io/*", "https://tagger.scryfall.com/*", "https://api.cardtrader.com/*", "https://json.edhrec.com/*"],
-  "web_accessible_resources": [{ "resources": ["icons/*.svg", "icons/*.png"], "matches": ["https://scryfall.com/*", "https://www.scryfall.com/*", "https://tagger.scryfall.com/*"] }],
-  "background": { "service_worker": "background.js" },
+  "permissions": [
+    "storage",
+    "unlimitedStorage",
+    "alarms"
+  ],
+  "host_permissions": [
+    "https://api.scryfall.com/*",
+    "https://data.scryfall.io/*",
+    "https://tagger.scryfall.com/*"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "icons/*.svg",
+        "icons/*.png"
+      ],
+      "matches": [
+        "https://scryfall.com/*",
+        "https://www.scryfall.com/*",
+        "https://tagger.scryfall.com/*"
+      ]
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
   "icons": {
     "16": "icons/icon16.png",
     "32": "icons/icon32.png",
@@ -16,27 +38,58 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://scryfall.com/*", "https://www.scryfall.com/*"],
-      "js": ["theme.js"],
-      "css": ["theme.css"],
+      "matches": [
+        "https://scryfall.com/*",
+        "https://www.scryfall.com/*"
+      ],
+      "js": [
+        "theme.js"
+      ],
+      "css": [
+        "theme.css"
+      ],
       "run_at": "document_start"
     },
     {
-      "matches": ["https://scryfall.com/*", "https://www.scryfall.com/*"],
-      "js": ["i18n.js", "format-catalog.js", "tag-icons.js", "data/shambleshark-nicknames.js", "content.js"],
-      "css": ["content.css"],
+      "matches": [
+        "https://scryfall.com/*",
+        "https://www.scryfall.com/*"
+      ],
+      "js": [
+        "i18n.js",
+        "format-catalog.js",
+        "tag-icons.js",
+        "data/shambleshark-nicknames.js",
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ],
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://tagger.scryfall.com/*"],
-      "js": ["theme.js"],
-      "css": ["theme.css"],
+      "matches": [
+        "https://tagger.scryfall.com/*"
+      ],
+      "js": [
+        "theme.js"
+      ],
+      "css": [
+        "theme.css"
+      ],
       "run_at": "document_start"
     },
     {
-      "matches": ["https://tagger.scryfall.com/*"],
-      "js": ["i18n.js", "tagger-clipboard.js"],
-      "css": ["content.css"],
+      "matches": [
+        "https://tagger.scryfall.com/*"
+      ],
+      "js": [
+        "i18n.js",
+        "tagger-clipboard.js"
+      ],
+      "css": [
+        "content.css"
+      ],
       "run_at": "document_idle"
     }
   ],
@@ -49,5 +102,9 @@
       "48": "icons/icon48.png"
     }
   },
-  "options_page": "options.html"
+  "options_page": "options.html",
+  "optional_host_permissions": [
+    "https://api.cardtrader.com/*",
+    "https://json.edhrec.com/*"
+  ]
 }

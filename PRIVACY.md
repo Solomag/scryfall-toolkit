@@ -103,8 +103,8 @@ only this project's own files.
 | `storage`, `unlimitedStorage` | your settings, clipboard and the cached tag indexes, which are large |
 | `alarms` | refresh the bundled tag data at most once every seven days |
 | Host access to `api.scryfall.com`, `data.scryfall.io`, `tagger.scryfall.com` | the features above |
-| Host access to `json.edhrec.com` | the optional EDHREC feature |
-| Host access to `api.cardtrader.com` | the optional CardTrader price feature |
+| Host access to `json.edhrec.com` *(asked for when the feature is turned on)* | the optional EDHREC feature |
+| Host access to `api.cardtrader.com` *(asked for when the feature is turned on)* | the optional CardTrader price feature |
 
 Content scripts run only on `scryfall.com`, `www.scryfall.com` and `tagger.scryfall.com`.
 

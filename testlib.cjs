@@ -142,6 +142,33 @@ function createChrome(options = {}) {
     connect: () => ({ onDisconnect: { addListener() {} }, onMessage: { addListener() {} } })
   };
 
+  // EDHREC and CardTrader take optional host permissions, granted when the user
+  // turns them on. Set deny to watch what happens when it is refused.
+  const permissions = {
+    grantedOrigins: [],
+    deny: false,
+    request(options, callback) {
+      const granted = permissions.deny !== true;
+      if (granted) permissions.grantedOrigins.push(...(options.origins || []));
+      if (typeof callback === 'function') { callback(granted); return undefined; }
+      return Promise.resolve(granted);
+    },
+    contains(options, callback) {
+      const wanted = options.origins || [];
+      const has = wanted.every(origin => permissions.grantedOrigins.includes(origin));
+      if (typeof callback === 'function') { callback(has); return undefined; }
+      return Promise.resolve(has);
+    },
+    remove(options, callback) {
+      for (const origin of (options.origins || [])) {
+        const at = permissions.grantedOrigins.indexOf(origin);
+        if (at >= 0) permissions.grantedOrigins.splice(at, 1);
+      }
+      if (typeof callback === 'function') { callback(); return undefined; }
+      return Promise.resolve();
+    }
+  };
+
   const chrome = {
     runtime,
     storage: { local, sync: local, onChanged: { addListener: fn => changeListeners.push(fn) } },

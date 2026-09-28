@@ -9,19 +9,30 @@
  * are described in THIRD_PARTY_NOTICES.md. The MPL does not cover them.
  */
 // Bundled compact tag data originates from MoxTags v1.8.3 (MIT).
-importScripts("data/oracle-tags.js", "data/illustration-tags-1.js", "data/illustration-tags-2.js");
 importScripts("data/set-platforms.js");
 importScripts("format-overrides.js");
 const cache = new Map();
 const traderCache = new Map();
-const edhrecCache = new Map();
 let digitalSetRequest;
 let setPlatformRequest;
 // The bundled snapshot answers almost every digital set; Scryfall's own index
 // never says which client carries one. See data/set-platforms.js.
 const bundledSetPlatforms = self.__STK_SET_PLATFORMS || {};
 delete self.__STK_SET_PLATFORMS;
+// Marketplace calls are spaced 1.1s apart by CardTrader's own expectations, and
+// the moment until which the next one must wait is kept in storage: a global
+// would reset to zero when the worker is unloaded and let the next start burst.
 let traderNextMarketplaceRequest = 0;
+let traderThrottleLoading = null;
+function loadTraderThrottle() {
+  if (!traderThrottleLoading) {
+    traderThrottleLoading = chrome.storage.local.get('traderThrottle').then(stored => {
+      const saved = stored && stored.traderThrottle;
+      if (Number.isFinite(saved)) traderNextMarketplaceRequest = saved;
+    }).catch(() => {});
+  }
+  return traderThrottleLoading;
+}
 chrome.storage.onChanged?.addListener(changes => { if (changes.cardtraderToken) traderCache.clear(); });
 function traderMemo(key, ttl, load) {
   const old = traderCache.get(key);
@@ -32,8 +43,10 @@ function traderMemo(key, ttl, load) {
 }
 async function cardTrader(path, token) {
   if (path.startsWith('marketplace/products?')) {
+    await loadTraderThrottle();
     const wait = Math.max(0, traderNextMarketplaceRequest - Date.now());
     traderNextMarketplaceRequest = Date.now() + wait + 1100;
+    Promise.resolve(chrome.storage.local.set({ traderThrottle: traderNextMarketplaceRequest })).catch(() => {});
     if (wait) await new Promise(resolve => setTimeout(resolve, wait));
   }
   return getJSON(`https://api.cardtrader.com/api/v2/${path}`, {
@@ -68,25 +81,92 @@ async function cardTraderPrices(id, set, token) {
 // EDHREC publishes a data policy for community projects: at most one request a
 // second, at least two seconds before trying again after a 429, and no repeated
 // attempts while something is broken -- "requestors that violate this may be
-// banned". The spacing is enforced here rather than left to how fast someone
-// clicks through cards, and a failure holds the next attempt back further each
-// time. The requests themselves are made by the user's own browser, which is the
-// case their policy exempts from the User-Agent requirement.
-let edhrecNextRequest = 0;
-let edhrecHeldUntil = 0;
-let edhrecFailures = 0;
+// banned". The requests are made by the user's own browser, which is the case
+// their policy exempts from the User-Agent requirement.
+//
+// What makes this hold up rather than merely look like it does:
+//
+//   - Every request joins one queue and the next slot is taken before waiting,
+//     so two callers cannot wake into the same second.
+//   - The cache and the backoff live in chrome.storage.local, because an MV3
+//     worker is unloaded when idle and its globals go with it. In memory a
+//     "six hour" cache is six hours at most, and the hold-back after a 429
+//     disappears exactly when it matters.
+let edhrecState = { cache: {}, nextRequest: 0, heldUntil: 0, failures: 0 };
+let edhrecStateLoading = null;
+let edhrecQueue = Promise.resolve();
+let edhrecInFlight = new Map();
+let edhrecSaveTimer = null;
 
-function edhrecPenalty() {
-  edhrecFailures = Math.min(edhrecFailures + 1, 6);
-  // Always at least the two seconds EDHREC asks for, doubling to a minute.
-  edhrecHeldUntil = Date.now() + Math.min(60000, 2000 * 2 ** (edhrecFailures - 1));
+const EDHREC_TTL = 6 * 3600000;
+
+function loadEdhrecState() {
+  if (!edhrecStateLoading) {
+    edhrecStateLoading = chrome.storage.local.get('edhrecState').then(stored => {
+      const saved = stored && stored.edhrecState;
+      if (saved && typeof saved === 'object') {
+        edhrecState = {
+          cache: saved.cache && typeof saved.cache === 'object' ? saved.cache : {},
+          nextRequest: Number.isFinite(saved.nextRequest) ? saved.nextRequest : 0,
+          heldUntil: Number.isFinite(saved.heldUntil) ? saved.heldUntil : 0,
+          failures: Number.isFinite(saved.failures) ? saved.failures : 0
+        };
+      }
+    }).catch(() => {});
+  }
+  return edhrecStateLoading;
 }
 
-async function edhrecRequest(slug) {
-  const now = Date.now();
-  const waitUntil = Math.max(edhrecNextRequest, edhrecHeldUntil);
-  if (waitUntil > now) await new Promise(resolve => setTimeout(resolve, waitUntil - now));
-  edhrecNextRequest = Date.now() + 1000;
+// Coalesced onto the next turn, so a page that looks up ten cards costs one
+// write rather than ten.
+function saveEdhrecState() {
+  if (edhrecSaveTimer !== null) return;
+  edhrecSaveTimer = setTimeout(() => {
+    edhrecSaveTimer = null;
+    Promise.resolve(chrome.storage.local.set({ edhrecState })).catch(() => {});
+  }, 0);
+}
+
+function edhrecPenalty() {
+  edhrecState.failures = Math.min(edhrecState.failures + 1, 6);
+  // Well over the two seconds EDHREC asks for rather than exactly two: measured
+  // from the request that follows, in-flight work already eats a millisecond or
+  // two, and "at least" should not mean "by a hair". Doubles to a minute.
+  edhrecState.heldUntil = Date.now() + Math.min(60000, 2500 * 2 ** (edhrecState.failures - 1));
+  saveEdhrecState();
+}
+
+function edhrecCached(slug) {
+  const hit = edhrecState.cache[slug];
+  return hit && hit.expires > Date.now() ? hit : null;
+}
+
+// Two tabs on the same card ask for the same slug; only one request goes out.
+function edhrecFetch(slug) {
+  const running = edhrecInFlight.get(slug);
+  if (running) return running;
+  const run = edhrecQueue.then(() => edhrecRoundTrip(slug));
+  edhrecQueue = run.then(() => {}, () => {});
+  edhrecInFlight.set(slug, run);
+  run.then(() => {}, () => {}).then(() => { edhrecInFlight.delete(slug); });
+  return run;
+}
+
+async function edhrecRoundTrip(slug) {
+  await loadEdhrecState();
+  // The slot is taken before the wait, not after. Taking it afterwards is what
+  // let three callers sleep into the same second and fetch together.
+  for (;;) {
+    const now = Date.now();
+    const waitUntil = Math.max(edhrecState.nextRequest, edhrecState.heldUntil);
+    if (waitUntil <= now) break;
+    // Re-read on the way round: a 429 raised while this one slept must hold it
+    // back too.
+    await new Promise(resolve => setTimeout(resolve, waitUntil - now));
+  }
+  edhrecState.nextRequest = Date.now() + 1000;
+  saveEdhrecState();
+
   let response;
   try {
     response = await fetch(`https://json.edhrec.com/pages/cards/${encodeURIComponent(slug)}.json`,
@@ -99,24 +179,53 @@ async function edhrecRequest(slug) {
     edhrecPenalty();
     throw new Error('EDHREC HTTP 429');
   }
-  if (!response.ok) edhrecPenalty();
-  else edhrecFailures = 0;
+  if (!response.ok) {
+    edhrecPenalty();
+  } else {
+    edhrecState.failures = 0;
+  }
   return response;
 }
 
-let tagIndexes = {
-  oracle: self.__MOXTAGS_ORACLE,
-  art1: self.__MOXTAGS_ILLUS_1,
-  art2: self.__MOXTAGS_ILLUS_2
+// The bundled tag snapshot ships as upstream wrote it: JavaScript that assigns a
+// global. Its value is JSON, so it is read as text and parsed here rather than
+// executed -- and rather than being parsed at every worker start through
+// importScripts, which cannot be deferred.
+const BUNDLED_TAG_FILES = {
+  oracle: 'data/oracle-tags.js',
+  art1: 'data/illustration-tags-1.js',
+  art2: 'data/illustration-tags-2.js'
 };
-delete self.__MOXTAGS_ORACLE;
-delete self.__MOXTAGS_ILLUS_1;
-delete self.__MOXTAGS_ILLUS_2;
+
+async function loadBundledIndex(part) {
+  const response = await fetch(chrome.runtime.getURL(BUNDLED_TAG_FILES[part]));
+  if (!response.ok) throw new Error('Bundled tag index unavailable: ' + part);
+  const text = await response.text();
+  const at = text.indexOf('=');
+  if (at === -1) throw new Error('Bundled tag index is not in the expected shape: ' + part);
+  return JSON.parse(text.slice(at + 1).trim().replace(/;\s*$/, ''));
+}
+
+let tagIndexes = { oracle: null, art1: null, art2: null };
 let indexesLoading = null;
 
 chrome.alarms.onAlarm.addListener(alarm => {
   if (alarm.name === "stk-tags-refresh") refreshIndexes().catch(() => {});
 });
+// A service worker starts and stops on its own, and some Chromium builds do not
+// keep alarms across that. Checking at every start and putting the alarm back is
+// what Chrome recommends for one that matters; onInstalled alone only runs on
+// install and update.
+function ensureRefreshAlarm() {
+  if (!chrome.alarms?.get || !chrome.alarms?.create) return;
+  chrome.alarms.get("stk-tags-refresh", existing => {
+    if (chrome.runtime.lastError || !existing) {
+      chrome.alarms.create("stk-tags-refresh", { periodInMinutes: 7 * 24 * 60 });
+    }
+  });
+}
+ensureRefreshAlarm();
+
 chrome.runtime.onInstalled.addListener(() => {
   chrome.alarms.create("stk-tags-refresh", { periodInMinutes: 7 * 24 * 60 });
   refreshIndexes().catch(() => {});
@@ -195,10 +304,11 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
       const slug = name.normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase()
         .replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
       if (!slug || slug.length > 180) throw new Error('Invalid EDHREC slug');
-      const cached = edhrecCache.get(slug);
-      if (cached && cached.expires > Date.now()) return cached.promise;
+      await loadEdhrecState();
+      const already = edhrecCached(slug);
+      if (already) return already.value;
       const promise = (async () => {
-        const response = await edhrecRequest(slug);
+        const response = await edhrecFetch(slug);
         if (!response.ok) throw new Error(`EDHREC HTTP ${response.status}`);
         const card = (await response.json())?.container?.json_dict?.card;
         const canonical = value => String(value || '').toLowerCase().replace(/[^a-z0-9]/g,'');
@@ -210,9 +320,17 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
           salt: Number.isFinite(card.salt) && card.salt >= 0 && card.salt <= 4 ? card.salt : null,
           url: `https://edhrec.com/cards/${slug}`
         };
-      })().catch(error => { edhrecCache.delete(slug); throw error; });
-      if (edhrecCache.size >= 250) edhrecCache.delete(edhrecCache.keys().next().value);
-      edhrecCache.set(slug,{promise,expires:Date.now() + 6 * 3600000});
+      })().then(value => {
+        // Bounded so the storage entry cannot grow with browsing: the oldest
+        // entries go first, and a card is asked for again only after six hours.
+        const cache = edhrecState.cache;
+        delete cache[slug];
+        cache[slug] = { value, expires: Date.now() + EDHREC_TTL };
+        const keys = Object.keys(cache);
+        for (let i = 0; i < keys.length - 250; i++) delete cache[keys[i]];
+        saveEdhrecState();
+        return value;
+      });
       return promise;
     }
     if (message.type === 'cardtrader') {
@@ -441,11 +559,22 @@ function lookup(compact, id) {
 }
 
 async function loadStoredIndexes() {
-  if (!indexesLoading) indexesLoading = chrome.storage.local.get("tagIndexes").then(stored => {
-    if (stored.tagIndexes?.oracle && stored.tagIndexes?.art1 && stored.tagIndexes?.art2) {
-      tagIndexes = stored.tagIndexes;
-    }
-  });
+  if (!indexesLoading) {
+    indexesLoading = (async () => {
+      const stored = await chrome.storage.local.get("tagIndexes");
+      const saved = stored.tagIndexes;
+      if (saved?.oracle && saved?.art1 && saved?.art2) {
+        tagIndexes = saved;
+        return;
+      }
+      // Nothing fresher in storage: read the bundled snapshot. This is the only
+      // place it is paid for, and a tag lookup is the only thing that needs it.
+      const [oracle, art1, art2] = await Promise.all([
+        loadBundledIndex('oracle'), loadBundledIndex('art1'), loadBundledIndex('art2')
+      ]);
+      tagIndexes = { oracle, art1, art2 };
+    })().catch(error => { indexesLoading = null; throw error; });
+  }
   await indexesLoading;
 }
 

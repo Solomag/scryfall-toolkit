@@ -27,6 +27,27 @@
       box.checked = Boolean(values[id]);
     }
 
+// EDHREC and CardTrader are optional, and so is the access they need. The browser
+// only grants these hosts when the user turns one of them on -- turning a switch
+// off and on again is also how access is put back after an update or a revoke.
+const OPTIONAL_HOSTS = {
+  edhrecUsage: ['https://json.edhrec.com/*'],
+  edhrecSalt: ['https://json.edhrec.com/*'],
+  edhrecLink: ['https://json.edhrec.com/*'],
+  cardtraderPrices: ['https://api.cardtrader.com/*']
+};
+function requestHostAccess(key) {
+  const origins = OPTIONAL_HOSTS[key];
+  if (!origins || !chrome.permissions || !chrome.permissions.request) return Promise.resolve(true);
+  return new Promise(resolve => {
+    try {
+      chrome.permissions.request({ origins }, granted => resolve(Boolean(granted)));
+    } catch (error) {
+      resolve(false);
+    }
+  });
+}
+
     const status = document.getElementById('status');
     const saved = () => {
       status.textContent = window.STK_I18N ? window.STK_I18N.t('Сохранено', language) : 'Saved';
@@ -38,7 +59,15 @@
 
     for (const id of ['tags', 'clipboard', 'edhrecUsage', 'cardtraderPrices']) {
       document.getElementById(id).addEventListener('change', event => {
-        chrome.storage.local.set({ [id]: event.target.checked }, saved);
+        const wanted = event.target.checked;
+        if (wanted && OPTIONAL_HOSTS[id]) {
+          requestHostAccess(id).then(granted => {
+            if (!granted) { event.target.checked = false; return; }
+            chrome.storage.local.set({ [id]: true }, saved);
+          });
+          return;
+        }
+        chrome.storage.local.set({ [id]: wanted }, saved);
       });
     }
 
