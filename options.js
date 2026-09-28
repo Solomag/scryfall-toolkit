@@ -78,7 +78,16 @@ chrome.storage.local.get(defaults, values => {
       status.textContent = t('Токен удалён');
     });
   });
-  document.getElementById('openOptions').addEventListener('click', () => chrome.runtime.openOptionsPage());
+  // The popup is a page of its own now, so this page always opens in a tab —
+  // which makes "open in a new tab" a button that does nothing. It is shown
+  // only in the case where it would actually help.
+  const openOptions = document.getElementById('openOptions');
+  const offerNewTab = () => {
+    if (!chrome.tabs || !chrome.tabs.getCurrent) return;
+    chrome.tabs.getCurrent(tab => { if (tab) openOptions.hidden = true; });
+  };
+  offerNewTab();
+  openOptions.addEventListener('click', () => chrome.runtime.openOptionsPage());
   // The theme choice follows the operating system unless it is set by hand.
   // Installations that predate the choice stored a boolean: true is a dark
   // theme the user asked for, false is the light page they were seeing.

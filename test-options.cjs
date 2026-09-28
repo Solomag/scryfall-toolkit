@@ -289,8 +289,23 @@ function packagedArchiveTest() {
     .split('\n').map(line => line.trim()).filter(Boolean);
 
   // The exact regression: the settings page must bring its own styles and script.
-  for (const file of ['options.html', 'options.css', 'options.js', 'i18n.js', 'format-catalog.js']) {
-    assert(listed.includes(file), `${file} is inside the archive, so the settings page is not bare HTML`);
+  for (const file of ['options.html', 'options.css', 'options.js', 'popup.html', 'popup.css', 'popup.js', 'i18n.js', 'format-catalog.js']) {
+    assert(listed.includes(file), `${file} is inside the archive, so no page ships bare`);
+  }
+  // Whatever the manifest names has to be in the archive. This is what let the
+  // popup go missing: the manifest was read for content scripts and options_page
+  // but not for action.default_popup.
+  const named = [];
+  for (const entry of manifest.content_scripts || []) named.push(...(entry.js || []), ...(entry.css || []));
+  if (manifest.background && manifest.background.service_worker) named.push(manifest.background.service_worker);
+  if (manifest.options_page) named.push(manifest.options_page);
+  if (manifest.action) {
+    if (manifest.action.default_popup) named.push(manifest.action.default_popup);
+    if (manifest.action.default_icon) named.push(...Object.values(manifest.action.default_icon));
+  }
+  named.push(...Object.values(manifest.icons || {}));
+  for (const file of named) {
+    assert(listed.includes(file), `the manifest names ${file}, which is inside the archive`);
   }
   // Every script and stylesheet a packaged page names must travel with it.
   for (const file of listed.filter(name => /\.html$/.test(name))) {
@@ -302,6 +317,51 @@ function packagedArchiveTest() {
     }
   }
   fs.rmSync(out, { recursive: true, force: true });
+}
+
+// The toolbar popup is a compact view of the same settings the full page edits.
+// It has to reach for the same keys, or the two views will disagree and the user
+// will not know which one is true.
+function popupTest() {
+  console.log('popup: compact controls, and the same settings as the full page');
+  const manifest = JSON.parse(read('manifest.json'));
+  assertEqual(manifest.action.default_popup, 'popup.html',
+    'the toolbar button opens the small popup, not the whole settings page');
+  assert(!/\(Preview\)/.test(manifest.name),
+    'the name does not call a released extension a preview');
+  assert(manifest.homepage_url === 'https://github.com/Solomag/scryfall-toolkit',
+    'the manifest links the source repository');
+
+  const html = read('popup.html');
+  for (const file of ['popup.css', 'popup.js', 'i18n.js', 'icons/icon32.png']) {
+    assert(html.includes(file), `popup.html references ${file}`);
+  }
+  for (const id of ['darkTheme', 'tags', 'clipboard', 'edhrecUsage', 'cardtraderPrices', 'openAll']) {
+    assert(html.includes(`id="${id}"`), `the popup has a control for ${id}`);
+  }
+  assert(/Открыть все настройки/.test(html),
+    'the popup offers the full settings page');
+
+  const popup = read('popup.js');
+  const options = read('options.js');
+  // Whatever the popup writes, the full page must write too.
+  for (const key of ['darkTheme', 'tags', 'clipboard', 'edhrecUsage', 'cardtraderPrices']) {
+    assert(popup.includes(`'${key}'`) || popup.includes(`"${key}"`),
+      `the popup handles ${key}`);
+    assert(options.includes(key),
+      `the full settings page handles ${key} too, so the two cannot disagree`);
+  }
+  assert(/openOptionsPage\(\)/.test(popup),
+    'the popup opens the real settings page rather than growing its own');
+
+  // The settings page used to offer "open in a new tab" even when it was already
+  // in one. Now that the popup is separate the page is always in a tab, and the
+  // button hides itself instead of sitting there doing nothing.
+  const page = read('options.js');
+  assert(/openOptions.*hidden\s*=\s*true|hidden\s*=\s*true.*openOptions/s.test(page),
+    'the redundant "open in a new tab" button hides when the page is already in a tab');
+  assert(/chrome\.tabs\.getCurrent/.test(page),
+    'and it asks the browser where it is running before deciding');
 }
 
 function htmlIdCheck() {
@@ -603,6 +663,7 @@ async function discoveredFormatsTest() {
     sectionOrderTest();
     packagedNoticesTest();
     packagedArchiveTest();
+    popupTest();
     licenceAndPrivacyTest();
     iconArtworkTest();
     await formatListTest();

@@ -1,0 +1,34 @@
+/*
+ * Scryfall Toolkit. Copyright (c) 2026 Scryfall Toolkit contributors.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ *
+ * Third-party data, images and code in this project keep their own licence and
+ * are described in THIRD_PARTY_NOTICES.md. The MPL does not cover them.
+ */
+
+/* The toolbar popup: five switches and one button. It borrows the settings
+   page's palette and its switch, sized down so the whole thing fits a popup
+   without scrolling. */
+*{box-sizing:border-box}
+body{width:320px;margin:0;font:13px/1.45 system-ui,sans-serif;background:#211f28;color:#e9e5ee}
+.bar{display:flex;align-items:center;gap:9px;padding:11px 13px;background:linear-gradient(115deg,#292434,#583b59);border-bottom:2px solid #8b7194}
+.bar img{border-radius:4px}
+h1{margin:0;font-size:14px;font-weight:700;letter-spacing:.2px}
+main{padding:7px 12px 12px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0;padding:8px 2px;border-bottom:1px solid #3a3542;cursor:pointer}
+.row:last-of-type{border-bottom:0}
+.what{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+select{flex:0 0 auto;max-width:148px;padding:5px 6px;font:inherit;color:#e9e5ee;background:#24242a;border:1px solid #6a6070;border-radius:4px}
+
+/* The same switch as the settings page: a real checkbox that looks like a
+   toggle, so keyboard and screen readers keep working. */
+input[type=checkbox]{appearance:none;-webkit-appearance:none;position:relative;flex:0 0 auto;width:38px;height:21px;margin:0;border:1px solid #6a6070;border-radius:11px;background-color:#484250;background-image:radial-gradient(circle 8px at 8px 50%,#c8c1d0 99%,transparent);background-repeat:no-repeat;cursor:pointer;transition:background-color .15s,border-color .15s}
+input[type=checkbox]:checked{background-color:#7b5c8c;border-color:#a98cbb;background-image:radial-gradient(circle 8px at 28px 50%,#fff 99%,transparent)}
+input[type=checkbox]:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid #c9a4d5;outline-offset:2px}
+
+button{width:100%;margin-top:11px;padding:9px 10px;font:600 13px/1.2 system-ui,sans-serif;color:#f1e8f3;background:#473b50;border:1px solid #88758d;border-radius:5px;cursor:pointer}
+button:hover{background:#5d4b68}
+#status{min-height:15px;margin:7px 0 0;font-size:11px;color:#abdfb7}

@@ -1,0 +1,63 @@
+<!--
+  Scryfall Toolkit. Copyright (c) 2026 Scryfall Toolkit contributors.
+
+  This Source Code Form is subject to the terms of the Mozilla Public
+  License, v. 2.0. If a copy of the MPL was not distributed with this
+  file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+  Third-party data, images and code in this project keep their own licence and
+  are described in THIRD_PARTY_NOTICES.md. The MPL does not cover them.
+-->
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Scryfall Toolkit</title>
+<link rel="stylesheet" href="popup.css">
+</head>
+<body>
+<header class="bar">
+  <img src="icons/icon32.png" alt="" width="20" height="20">
+  <h1>Scryfall Toolkit</h1>
+</header>
+
+<main>
+  <!-- The switches write the same settings the full page does, so the two can
+       never disagree: there is one set of values and two views of it. -->
+  <label class="row" for="darkTheme">
+    <span class="what">Тема</span>
+    <select id="darkTheme">
+      <option value="auto">Как в системе</option>
+      <option value="light">Светлая</option>
+      <option value="dark">Тёмная</option>
+    </select>
+  </label>
+
+  <label class="row" for="tags">
+    <span class="what">Теги</span>
+    <input type="checkbox" id="tags">
+  </label>
+
+  <label class="row" for="clipboard">
+    <span class="what">CardClip</span>
+    <input type="checkbox" id="clipboard">
+  </label>
+
+  <label class="row" for="edhrecUsage">
+    <span class="what">EDHREC</span>
+    <input type="checkbox" id="edhrecUsage">
+  </label>
+
+  <label class="row" for="cardtraderPrices">
+    <span class="what">CardTrader</span>
+    <input type="checkbox" id="cardtraderPrices">
+  </label>
+
+  <button id="openAll" type="button">Открыть все настройки</button>
+  <p id="status" role="status" aria-live="polite"></p>
+</main>
+
+<script src="i18n.js"></script>
+<script src="popup.js"></script>
+</body>
+</html>

@@ -38,8 +38,8 @@ async function manifestIntegrity() {
   for (const file of referenced) assert(exists(file), `manifest references existing file: ${file}`);
 
   const readmeFirstLine = read('README.md').split('\n')[0];
-  assertEqual(readmeFirstLine, `# Scryfall Toolkit — preview ${manifest.version}`,
-    'README version matches manifest');
+  assertEqual(readmeFirstLine, `# Scryfall Toolkit ${manifest.version}`,
+    'README version matches manifest, and does not call a released extension a preview');
   const pkg = JSON.parse(read('package.json'));
   assertEqual(pkg.version, manifest.version, 'package.json version matches manifest');
   const taggerGroups = manifest.content_scripts.filter(group => group.matches.some(host => host.includes('tagger.scryfall.com')));

@@ -74,15 +74,32 @@ function expandGlob(pattern) {
 }
 
 const files = new Set(['manifest.json']);
-for (const entry of manifest.content_scripts) {
-  for (const file of [...(entry.js || []), ...(entry.css || [])]) files.add(file);
-}
-if (manifest.background) files.add(manifest.background.service_worker);
-if (manifest.options_page) files.add(manifest.options_page);
-if (manifest.options_ui && manifest.options_ui.page) files.add(manifest.options_ui.page);
-for (const entry of manifest.web_accessible_resources || []) {
-  for (const pattern of entry.resources) for (const file of expandGlob(pattern)) files.add(file);
-}
+
+// Every file the manifest itself names. Missing one of these is how 0.44.0 lost
+// options.css and 0.46.0 nearly lost the popup: the manifest was read for some
+// of its fields and not others. Read all of them.
+const namedByManifest = () => {
+  const found = ['manifest.json'];
+  for (const entry of manifest.content_scripts || []) found.push(...(entry.js || []), ...(entry.css || []));
+  if (manifest.background) {
+    if (manifest.background.service_worker) found.push(manifest.background.service_worker);
+    if (manifest.background.scripts) found.push(...manifest.background.scripts);
+  }
+  if (manifest.options_page) found.push(manifest.options_page);
+  if (manifest.options_ui && manifest.options_ui.page) found.push(manifest.options_ui.page);
+  if (manifest.action) {
+    if (manifest.action.default_popup) found.push(manifest.action.default_popup);
+    if (manifest.action.default_icon) found.push(...Object.values(manifest.action.default_icon));
+  }
+  if (manifest.options_ui && manifest.options_ui.page) found.push(manifest.options_ui.page);
+  for (const size of Object.values(manifest.icons || {})) found.push(size);
+  for (const entry of manifest.web_accessible_resources || []) {
+    for (const pattern of entry.resources) found.push(...expandGlob(pattern));
+  }
+  return found;
+};
+
+for (const file of namedByManifest()) files.add(file);
 
 // Walk whatever those files pull in, until nothing new appears.
 const queue = [...files];
@@ -223,6 +240,16 @@ for (const file of list) {
   if (listed.includes(file)) continue;
   bad++;
   console.log(`MISSING from the archive    ${file}`);
+}
+
+// The manifest is the contract with the browser: if it names a file, that file
+// has to be inside. Checking only what happened to be walked let the popup go
+// missing once already.
+for (const file of namedByManifest()) {
+  if (!listed.includes(file)) {
+    bad++;
+    console.log(`manifest names ${file}, which is not in the archive`);
+  }
 }
 
 // The check that would have caught 0.44.0: every file a packaged page or script

@@ -1,7 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Scryfall Toolkit (Preview)",
-  "version": "0.45.0",
+  "name": "Scryfall Toolkit",
+  "version": "0.46.0",
+  "homepage_url": "https://github.com/Solomag/scryfall-toolkit",
   "description": "Scryfall clipboard, tags, legality, dark theme, optional CardTrader prices and EDHREC statistics.",
   "permissions": ["storage", "unlimitedStorage", "alarms"],
   "host_permissions": ["https://api.scryfall.com/*", "https://data.scryfall.io/*", "https://tagger.scryfall.com/*", "https://api.cardtrader.com/*", "https://json.edhrec.com/*"],
@@ -41,7 +42,7 @@
   ],
   "action": {
     "default_title": "Scryfall Toolkit",
-    "default_popup": "options.html",
+    "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon16.png",
       "32": "icons/icon32.png",
