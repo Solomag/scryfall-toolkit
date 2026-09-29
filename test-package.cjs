@@ -26,6 +26,7 @@ const os = require('node:os');
 const path = require('node:path');
 const vm = require('node:vm');
 const { execFileSync } = require('node:child_process');
+const { extractZip, listZip } = require('./tools/zip.cjs');
 const {
   assert, assertEqual, summary, createPage, ROOT
 } = require('./testlib.cjs');
@@ -59,7 +60,7 @@ function buildArchive() {
   // browser gets.
   const unpacked = path.join(out, 'unpacked');
   fs.mkdirSync(unpacked, { recursive: true });
-  execFileSync('tar', ['-xf', zip, '-C', unpacked], { cwd: ROOT });
+  extractZip(zip, unpacked);
   return unpacked;
 }
 
@@ -208,9 +209,156 @@ async function settingsPowerOnTest(dir) {
 
 // -----------------------------------------------------------------------------
 
+
+// from, and every licence that third-party material requires is kept verbatim.
+function packagedNoticesTest() {
+  console.log('package: third-party notices ship with the extension');
+  const manifest = JSON.parse(read('manifest.json'));
+  const shipped = [
+    'manifest.json', 'background.js', 'content.js', 'content.css', 'theme.js', 'theme.css',
+    'options.html', 'options.js', 'options.css', 'i18n.js', 'tag-icons.js', 'tagger-clipboard.js',
+    'format-catalog.js', 'format-overrides.js', 'data/oracle-tags.js', 'data/illustration-tags-1.js',
+    'data/illustration-tags-2.js', 'data/shambleshark-nicknames.js', 'data/set-platforms.js',
+    'THIRD_PARTY_NOTICES.md', 'LICENSE', 'README.md', 'PRIVACY.md'
+  ];
+  for (const file of shipped) {
+    assert(fs.existsSync(path.join(ROOT, file)), `${file} is part of the extension and is present`);
+  }
+  // Every file the manifest loads has to exist, and every loaded data file has to
+  // say where it came from.
+  for (const entry of manifest.content_scripts) {
+    for (const file of [...(entry.js || []), ...(entry.css || [])]) {
+      assert(fs.existsSync(path.join(ROOT, file)), `manifest loads ${file} and it exists`);
+    }
+  }
+  for (const script of manifest.background ? [manifest.background.service_worker] : []) {
+    assert(fs.existsSync(path.join(ROOT, script)), `service worker ${script} exists`);
+  }
+  const notice = read('THIRD_PARTY_NOTICES.md');
+  for (const source of [
+    'https://github.com/JacobHearst/CardClip', 'https://github.com/Paruhas/CardClip',
+    'https://github.com/crookedneighbor/shambleshark', 'https://github.com/natefinch/moxtags',
+    'https://github.com/notsonic/scryfall-enhancements', 'https://scryfall.com/',
+    'https://tagger.scryfall.com/', 'https://www.edhrec.com/', 'https://www.cardtrader.com/',
+    'https://www.cardmarket.com/', 'https://github.com/WebReflection/linkedom'
+  ]) assert(notice.includes(source), `notices link ${source}`);
+  assert(/not produced, endorsed, sponsored or\s+approved by/i.test(notice),
+    'the notices state that nothing here is an official product');
+  // The licence text of each project whose material is actually in the archive.
+  const licences = {
+    'third_party/CardClip-LICENSE': 'Copyright (c) 2022 Jacob Hearst',
+    'third_party/Paruhas-CardClip-LICENSE': 'Copyright (c) 2022 Jacob Hearst',
+    'third_party/Shambleshark-LICENSE': 'Copyright (c) 2016 Samuel Simões',
+    'third_party/MoxTags-LICENSE': 'Copyright (c) 2026 Nate Finch',
+    'third_party/MTG-Enhancements-LICENSE': 'Copyright (c) 2026 notsonic'
+  };
+  for (const [file, noticeLine] of Object.entries(licences)) {
+    assert(fs.existsSync(path.join(ROOT, file)), `${file} ships with the extension`);
+    const text = read(file);
+    assert(text.includes(noticeLine), `${file} keeps the copyright line "${noticeLine}"`);
+    assert(/Permission is hereby granted, free of charge/.test(text), `${file} keeps the full MIT permission text`);
+    assert(notice.includes(file), `the notices point at ${file}`);
+  }
+  // Data copied from another project names its source, author, version and licence
+  // in the file itself, not only in the notices document.
+  for (const file of ['data/oracle-tags.js', 'data/illustration-tags-1.js', 'data/illustration-tags-2.js']) {
+    const head = read(file).slice(0, 600);
+    for (const statement of ['MoxTags v1.8.3', 'natefinch/moxtags', 'Copyright (c) 2026 Nate Finch', 'MIT']) {
+      assert(head.includes(statement), `${file} header states ${statement}`);
+    }
+  }
+  const nicknames = read('data/shambleshark-nicknames.js').slice(0, 700);
+  for (const statement of [
+    'crookedneighbor/shambleshark', 'Samuel Sim\u00f5es', 'Blade Barringer', 'MIT', 'third_party/Shambleshark-LICENSE'
+  ]) {
+    assert(nicknames.includes(statement), `data/shambleshark-nicknames.js header states ${statement}`);
+  }
+  // The derived Scryfall snapshot says what it is and when it was taken.
+  const platforms = read('data/set-platforms.js');
+  assert(/Scryfall/.test(platforms) && /2026-09-25/.test(platforms),
+    'the set-platform snapshot names its source and the date it was taken');
+  assert(!/oracle_text|printed_type|layout|watermark|image_uris/.test(platforms),
+    'the bundled set-platform snapshot carries no Wizards card content, only set codes and platform names');
+}
+
+
+// and inspects the archive.
+function packagedArchiveTest() {
+  console.log('package: the built archive is complete');
+  const out = path.join(os.tmpdir(), `stk-package-test-${process.pid}`);
+  fs.rmSync(out, { recursive: true, force: true });
+  let output = '';
+  let code = 0;
+  try {
+    output = execFileSync(process.execPath, [path.join(ROOT, 'package-extension.cjs')], {
+      cwd: ROOT,
+      encoding: 'utf8',
+      env: { ...process.env, STK_PACKAGE_OUT: out },
+      stdio: ['ignore', 'pipe', 'pipe']
+    });
+  } catch (error) {
+    code = error.status === undefined ? 1 : error.status;
+    output = String(error.stdout || '') + String(error.stderr || '');
+  }
+  for (const line of output.split('\n')) {
+    if (/MISSING|references|FAILED|LEAKED|unexpected|archive:/.test(line)) console.log('   ' + line.trim());
+  }
+  assertEqual(code, 0, 'npm run package succeeds and reports no missing file');
+
+  const manifest = JSON.parse(read('manifest.json'));
+  const zip = path.join(out, `scryfall-toolkit-${manifest.version}.zip`);
+  assert(fs.existsSync(zip), `the build produced scryfall-toolkit-${manifest.version}.zip`);
+  const listed = listZip(zip);
+
+  // The exact regression: the settings page must bring its own styles and script.
+  for (const file of ['options.html', 'options.css', 'options.js', 'popup.html', 'popup.css', 'popup.js', 'i18n.js', 'format-catalog.js']) {
+    assert(listed.includes(file), `${file} is inside the archive, so no page ships bare`);
+  }
+  // And the second: the tag snapshot is named through a map in background.js
+  // rather than a literal, and a walker that only read literals let it leave the
+  // archive -- a 143 KB package with no tags in it.
+  for (const file of ['data/oracle-tags.js', 'data/illustration-tags-1.js', 'data/illustration-tags-2.js']) {
+    assert(listed.includes(file), `${file} is inside the archive, so the tag panels have data`);
+  }
+  const tagBytes = ['data/oracle-tags.js', 'data/illustration-tags-1.js', 'data/illustration-tags-2.js']
+    .reduce((sum, file) => sum + fs.statSync(path.join(ROOT, file)).size, 0);
+  assert(tagBytes > 10 * 1024 * 1024, 'the bundled tag snapshot is the size it should be');
+  // Whatever the manifest names has to be in the archive. This is what let the
+  // popup go missing: the manifest was read for content scripts and options_page
+  // but not for action.default_popup.
+  const named = [];
+  for (const entry of manifest.content_scripts || []) named.push(...(entry.js || []), ...(entry.css || []));
+  if (manifest.background && manifest.background.service_worker) named.push(manifest.background.service_worker);
+  if (manifest.options_page) named.push(manifest.options_page);
+  if (manifest.action) {
+    if (manifest.action.default_popup) named.push(manifest.action.default_popup);
+    if (manifest.action.default_icon) named.push(...Object.values(manifest.action.default_icon));
+  }
+  named.push(...Object.values(manifest.icons || {}));
+  for (const file of named) {
+    assert(listed.includes(file), `the manifest names ${file}, which is inside the archive`);
+  }
+  // Every script and stylesheet a packaged page names must travel with it.
+  for (const file of listed.filter(name => /\.html$/.test(name))) {
+    const html = read(file);
+    for (const m of html.matchAll(/<(?:script|link)[^>]+(?:src|href)\s*=\s*["']([^"']+)["']/gi)) {
+      const name = m[1].replace(/^\.\//, '');
+      if (name.startsWith('http') || name.startsWith('data:')) continue;
+      assert(listed.includes(name), `${file} references ${name}, which is inside the archive`);
+    }
+  }
+  fs.rmSync(out, { recursive: true, force: true });
+}
+
+// The toolbar popup is a compact view of the same settings the full page edits.
+// It has to reach for the same keys, or the two views will disagree and the user
+// will not know which one is true.
+
 (async () => {
   try {
     const dir = buildArchive();
+    packagedNoticesTest(dir);
+    packagedArchiveTest(dir);
     scriptsParseTest(dir);
     pagesAreCompleteTest(dir);
     await themeTurnsOnTest(dir);

@@ -248,7 +248,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
     }
     if (message.type === "card") {
       if (!/^[0-9a-f-]{36}$/.test(String(message.id))) throw new Error("Invalid Scryfall ID");
-      return await getJSON(`https://api.scryfall.com/cards/${message.id}`);
+      return await scryfallJSON(`https://api.scryfall.com/cards/${message.id}`);
     }
     if (message.type === 'digitalSets' || message.type === 'setCategories') {
       const categories = await loadSetCategories();
@@ -263,7 +263,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
       if (!Array.isArray(ids) || ids.length > 75 || ids.some(id => !/^[0-9a-f-]{36}$/.test(String(id)))) {
         throw new Error("Invalid printing IDs");
       }
-      const result = await getJSON("https://api.scryfall.com/cards/collection", {
+      const result = await scryfallJSON("https://api.scryfall.com/cards/collection", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ identifiers: ids.map(id => ({ id })) })
       });
@@ -279,7 +279,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
       const collect = async identifiers => {
         const output = [];
         for (let i = 0; i < identifiers.length; i += 75) {
-          const result = await getJSON('https://api.scryfall.com/cards/collection', {
+          const result = await scryfallJSON('https://api.scryfall.com/cards/collection', {
             method:'POST', headers:{'Content-Type':'application/json'},
             body:JSON.stringify({identifiers:identifiers.slice(i,i+75)})
           });
@@ -410,8 +410,23 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
   return true;
 });
 
-async function getJSON(url, options) {
-  const response = await fetch(url, options);
+// Scryfall asks that traffic to api.scryfall.com stay under ten requests a
+// second. The extension reached it from several places and two of them paced
+// themselves while the rest did not, so the pacing is in one place now: a slot
+// every 130 ms, which keeps a burst of card pages well inside that.
+let scryfallNextRequest = 0;
+async function scryfallJSON(url, options = {}) {
+  const wait = Math.max(0, scryfallNextRequest - Date.now());
+  scryfallNextRequest = Date.now() + wait + 130;
+  if (wait) await new Promise(resolve => setTimeout(resolve, wait));
+  return getJSON(url, options);
+}
+
+async function getJSON(url, options = {}) {
+  // No cookies go out on any of these calls: the extension asks services for
+  // data, it does not act as the user on them. Set once here rather than at
+  // thirteen call sites, one of which used to forget.
+  const response = await fetch(url, { credentials: 'omit', ...options });
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   return response.json();
 }
@@ -421,7 +436,7 @@ function loadSetCategories() {
     const { digitalSetIndex } = await chrome.storage.local.get('digitalSetIndex');
     if (digitalSetIndex?.categories?.foreignBlackBorder && digitalSetIndex.expires > Date.now()) return digitalSetIndex.categories;
     try {
-      const result = await getJSON('https://api.scryfall.com/sets',
+      const result = await scryfallJSON('https://api.scryfall.com/sets',
         {headers:{Accept:'application/json'},credentials:'omit'});
       if (!Array.isArray(result?.data) || result.has_more) throw new Error('Incomplete set index');
       const categories = {digital:[],nonTournament:[],oversized:[],foreignBlackBorder:[]};
@@ -453,9 +468,7 @@ function loadSetCategories() {
 let setPlatformNextRequest = 0;
 async function setPlatformGames(code) {
   for (let attempt = 0; attempt < 3; attempt++) {
-    const wait = Math.max(0, setPlatformNextRequest - Date.now());
-    if (wait) await new Promise(resolve => setTimeout(resolve, wait));
-    setPlatformNextRequest = Date.now() + 130;
+    // Pacing lives in scryfallJSON now.
     try {
       const result = await getJSON(
         `https://api.scryfall.com/cards/search?q=${encodeURIComponent(`e:${code}`)}&unique=cards&page_size=1`,
@@ -501,7 +514,7 @@ async function loadSetPlatforms() {
 
 async function fetchTags(set, number) {
   await loadStoredIndexes();
-  const cardRequest = getJSON(`https://api.scryfall.com/cards/${encodeURIComponent(set)}/${encodeURIComponent(number)}`)
+  const cardRequest = scryfallJSON(`https://api.scryfall.com/cards/${encodeURIComponent(set)}/${encodeURIComponent(number)}`)
     .then(card => ({ card }), error => ({ error }));
   let live = null;
   // Tagger exposes relationship edges that are absent from the bulk tag files.
@@ -599,8 +612,8 @@ async function refreshIndexes() {
   const headers = { Accept: "application/json" };
   // Download URIs are read from Scryfall's documented public bulk-data API.
   const [oracleMeta, artMeta] = await Promise.all([
-    getJSON("https://api.scryfall.com/bulk-data/oracle_tags", { headers }),
-    getJSON("https://api.scryfall.com/bulk-data/art_tags", { headers })
+    scryfallJSON("https://api.scryfall.com/bulk-data/oracle_tags", { headers }),
+    scryfallJSON("https://api.scryfall.com/bulk-data/art_tags", { headers })
   ]);
   const download = async metadata => {
     const uri = new URL(metadata.download_uri);

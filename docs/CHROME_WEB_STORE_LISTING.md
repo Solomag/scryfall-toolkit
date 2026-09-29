@@ -38,7 +38,7 @@ developer account, it says so.
 > **Dark theme.** A dark theme for Scryfall and Scryfall Tagger that follows your system
 > until you pick otherwise.
 >
-> **Optional extras, all off until you turn them on.** EDHREC deck usage and Salt Meter
+> **Optional extras.** EDHREC and CardTrader are off until you turn them on; the rest have their own defaults and each can be switched off. EDHREC deck usage and Salt Meter
 > inside the legality block. CardTrader prices for the exact printing, using your own
 > personal access token. Finish badges, card nicknames, type and mana search links, set and
 > printing filters, a No Prices mode and a token list on deck pages.

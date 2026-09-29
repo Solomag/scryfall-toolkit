@@ -28,6 +28,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const zlib = require('node:zlib');
 const { ROOT } = require('./testlib.cjs');
+const { listZip } = require('./tools/zip.cjs');
 
 const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'manifest.json'), 'utf8'));
 
@@ -124,10 +125,13 @@ while (queue.length) {
 
 // What the licence obligations and this audit require alongside the code.
 for (const extra of ['LICENSE', 'README.md', 'THIRD_PARTY_NOTICES.md', 'PRIVACY.md']) files.add(extra);
-for (const dir of ['third_party', 'icons-src', 'tools']) {
+for (const dir of ['third_party', 'icons-src']) {
   const full = path.join(ROOT, dir);
   if (fs.existsSync(full)) for (const name of fs.readdirSync(full)) files.add(`${dir}/${name}`);
 }
+// tools/ is build tooling. The icon generator alone is shipped, because it is the
+// source of the PNG artwork and the MPL asks for that source beside the PNGs.
+files.add('tools/render-icons.cjs');
 
 const list = [...files].sort();
 const missing = list.filter(file => !fs.existsSync(path.join(ROOT, file)));
@@ -239,8 +243,7 @@ console.log(`\narchive: ${zip} (${fs.statSync(zip).size} bytes)`);
 
 // --- read it back ------------------------------------------------------------
 
-const listed = execFileSync('tar', ['-tf', zip], { cwd: ROOT, encoding: 'utf8' })
-  .split('\n').map(line => line.trim()).filter(Boolean);
+const listed = listZip(zip);
 
 let bad = 0;
 for (const file of list) {

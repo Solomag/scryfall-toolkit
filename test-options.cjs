@@ -15,6 +15,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { execFileSync } = require('node:child_process');
+const { listZip } = require('./tools/zip.cjs');
 const {
   assert, assertEqual, summary, createPage, click, keyDown, fireEvent,
   dataTransferObject, ROOT
@@ -42,77 +43,6 @@ const REQUIRED_IDS = [
 
 // What the archive ships is not the same as what the working tree holds, so the
 // notices are checked against the file list the extension is actually packaged
-// from, and every licence that third-party material requires is kept verbatim.
-function packagedNoticesTest() {
-  console.log('package: third-party notices ship with the extension');
-  const manifest = JSON.parse(read('manifest.json'));
-  const shipped = [
-    'manifest.json', 'background.js', 'content.js', 'content.css', 'theme.js', 'theme.css',
-    'options.html', 'options.js', 'options.css', 'i18n.js', 'tag-icons.js', 'tagger-clipboard.js',
-    'format-catalog.js', 'format-overrides.js', 'data/oracle-tags.js', 'data/illustration-tags-1.js',
-    'data/illustration-tags-2.js', 'data/shambleshark-nicknames.js', 'data/set-platforms.js',
-    'THIRD_PARTY_NOTICES.md', 'LICENSE', 'README.md', 'PRIVACY.md'
-  ];
-  for (const file of shipped) {
-    assert(fs.existsSync(path.join(ROOT, file)), `${file} is part of the extension and is present`);
-  }
-  // Every file the manifest loads has to exist, and every loaded data file has to
-  // say where it came from.
-  for (const entry of manifest.content_scripts) {
-    for (const file of [...(entry.js || []), ...(entry.css || [])]) {
-      assert(fs.existsSync(path.join(ROOT, file)), `manifest loads ${file} and it exists`);
-    }
-  }
-  for (const script of manifest.background ? [manifest.background.service_worker] : []) {
-    assert(fs.existsSync(path.join(ROOT, script)), `service worker ${script} exists`);
-  }
-  const notice = read('THIRD_PARTY_NOTICES.md');
-  for (const source of [
-    'https://github.com/JacobHearst/CardClip', 'https://github.com/Paruhas/CardClip',
-    'https://github.com/crookedneighbor/shambleshark', 'https://github.com/natefinch/moxtags',
-    'https://github.com/notsonic/scryfall-enhancements', 'https://scryfall.com/',
-    'https://tagger.scryfall.com/', 'https://www.edhrec.com/', 'https://www.cardtrader.com/',
-    'https://www.cardmarket.com/', 'https://github.com/WebReflection/linkedom'
-  ]) assert(notice.includes(source), `notices link ${source}`);
-  assert(/not produced, endorsed, sponsored or\s+approved by/i.test(notice),
-    'the notices state that nothing here is an official product');
-  // The licence text of each project whose material is actually in the archive.
-  const licences = {
-    'third_party/CardClip-LICENSE': 'Copyright (c) 2022 Jacob Hearst',
-    'third_party/Paruhas-CardClip-LICENSE': 'Copyright (c) 2022 Jacob Hearst',
-    'third_party/Shambleshark-LICENSE': 'Copyright (c) 2016 Samuel Simões',
-    'third_party/MoxTags-LICENSE': 'Copyright (c) 2026 Nate Finch',
-    'third_party/MTG-Enhancements-LICENSE': 'Copyright (c) 2026 notsonic'
-  };
-  for (const [file, noticeLine] of Object.entries(licences)) {
-    assert(fs.existsSync(path.join(ROOT, file)), `${file} ships with the extension`);
-    const text = read(file);
-    assert(text.includes(noticeLine), `${file} keeps the copyright line "${noticeLine}"`);
-    assert(/Permission is hereby granted, free of charge/.test(text), `${file} keeps the full MIT permission text`);
-    assert(notice.includes(file), `the notices point at ${file}`);
-  }
-  // Data copied from another project names its source, author, version and licence
-  // in the file itself, not only in the notices document.
-  for (const file of ['data/oracle-tags.js', 'data/illustration-tags-1.js', 'data/illustration-tags-2.js']) {
-    const head = read(file).slice(0, 600);
-    for (const statement of ['MoxTags v1.8.3', 'natefinch/moxtags', 'Copyright (c) 2026 Nate Finch', 'MIT']) {
-      assert(head.includes(statement), `${file} header states ${statement}`);
-    }
-  }
-  const nicknames = read('data/shambleshark-nicknames.js').slice(0, 700);
-  for (const statement of [
-    'crookedneighbor/shambleshark', 'Samuel Sim\u00f5es', 'Blade Barringer', 'MIT', 'third_party/Shambleshark-LICENSE'
-  ]) {
-    assert(nicknames.includes(statement), `data/shambleshark-nicknames.js header states ${statement}`);
-  }
-  // The derived Scryfall snapshot says what it is and when it was taken.
-  const platforms = read('data/set-platforms.js');
-  assert(/Scryfall/.test(platforms) && /2026-09-25/.test(platforms),
-    'the set-platform snapshot names its source and the date it was taken');
-  assert(!/oracle_text|printed_type|layout|watermark|image_uris/.test(platforms),
-    'the bundled set-platform snapshot carries no Wizards card content, only set codes and platform names');
-}
-
 function licenceAndPrivacyTest() {
   console.log('licensing: MPL-2.0 covers our code and nothing else');
   const licence = read('LICENSE');
@@ -269,78 +199,6 @@ function iconArtworkTest() {
 // manifest names the page, but only the html itself was packaged, so the settings
 // page arrived as bare markup with dead switches. The working tree always had the
 // files, which is why checking the tree did not catch it. This builds the archive
-// and inspects the archive.
-function packagedArchiveTest() {
-  console.log('package: the built archive is complete');
-  const out = path.join(os.tmpdir(), `stk-package-test-${process.pid}`);
-  fs.rmSync(out, { recursive: true, force: true });
-  let output = '';
-  let code = 0;
-  try {
-    output = execFileSync(process.execPath, [path.join(ROOT, 'package-extension.cjs')], {
-      cwd: ROOT,
-      encoding: 'utf8',
-      env: { ...process.env, STK_PACKAGE_OUT: out },
-      stdio: ['ignore', 'pipe', 'pipe']
-    });
-  } catch (error) {
-    code = error.status === undefined ? 1 : error.status;
-    output = String(error.stdout || '') + String(error.stderr || '');
-  }
-  for (const line of output.split('\n')) {
-    if (/MISSING|references|FAILED|LEAKED|unexpected|archive:/.test(line)) console.log('   ' + line.trim());
-  }
-  assertEqual(code, 0, 'npm run package succeeds and reports no missing file');
-
-  const manifest = JSON.parse(read('manifest.json'));
-  const zip = path.join(out, `scryfall-toolkit-${manifest.version}.zip`);
-  assert(fs.existsSync(zip), `the build produced scryfall-toolkit-${manifest.version}.zip`);
-  const listed = execFileSync('tar', ['-tf', zip], { cwd: ROOT, encoding: 'utf8' })
-    .split('\n').map(line => line.trim()).filter(Boolean);
-
-  // The exact regression: the settings page must bring its own styles and script.
-  for (const file of ['options.html', 'options.css', 'options.js', 'popup.html', 'popup.css', 'popup.js', 'i18n.js', 'format-catalog.js']) {
-    assert(listed.includes(file), `${file} is inside the archive, so no page ships bare`);
-  }
-  // And the second: the tag snapshot is named through a map in background.js
-  // rather than a literal, and a walker that only read literals let it leave the
-  // archive -- a 143 KB package with no tags in it.
-  for (const file of ['data/oracle-tags.js', 'data/illustration-tags-1.js', 'data/illustration-tags-2.js']) {
-    assert(listed.includes(file), `${file} is inside the archive, so the tag panels have data`);
-  }
-  const tagBytes = ['data/oracle-tags.js', 'data/illustration-tags-1.js', 'data/illustration-tags-2.js']
-    .reduce((sum, file) => sum + fs.statSync(path.join(ROOT, file)).size, 0);
-  assert(tagBytes > 10 * 1024 * 1024, 'the bundled tag snapshot is the size it should be');
-  // Whatever the manifest names has to be in the archive. This is what let the
-  // popup go missing: the manifest was read for content scripts and options_page
-  // but not for action.default_popup.
-  const named = [];
-  for (const entry of manifest.content_scripts || []) named.push(...(entry.js || []), ...(entry.css || []));
-  if (manifest.background && manifest.background.service_worker) named.push(manifest.background.service_worker);
-  if (manifest.options_page) named.push(manifest.options_page);
-  if (manifest.action) {
-    if (manifest.action.default_popup) named.push(manifest.action.default_popup);
-    if (manifest.action.default_icon) named.push(...Object.values(manifest.action.default_icon));
-  }
-  named.push(...Object.values(manifest.icons || {}));
-  for (const file of named) {
-    assert(listed.includes(file), `the manifest names ${file}, which is inside the archive`);
-  }
-  // Every script and stylesheet a packaged page names must travel with it.
-  for (const file of listed.filter(name => /\.html$/.test(name))) {
-    const html = read(file);
-    for (const m of html.matchAll(/<(?:script|link)[^>]+(?:src|href)\s*=\s*["']([^"']+)["']/gi)) {
-      const name = m[1].replace(/^\.\//, '');
-      if (name.startsWith('http') || name.startsWith('data:')) continue;
-      assert(listed.includes(name), `${file} references ${name}, which is inside the archive`);
-    }
-  }
-  fs.rmSync(out, { recursive: true, force: true });
-}
-
-// The toolbar popup is a compact view of the same settings the full page edits.
-// It has to reach for the same keys, or the two views will disagree and the user
-// will not know which one is true.
 function popupTest() {
   console.log('popup: compact controls, and the same settings as the full page');
   const manifest = JSON.parse(read('manifest.json'));
@@ -399,6 +257,8 @@ async function settingsLanguageChainTest() {
   // Choosing Auto again must store Auto, not what it resolves to right now.
   select.value = 'auto';
   fireEvent(select, 'change');
+  // The request resolves on the next turn even when it is granted at once.
+  await tick();
   assertEqual(page.mock.state.settingsLanguage, 'auto', 'choosing Auto stores Auto');
 
   // A pinned choice stores the choice and speaks its language.
@@ -414,6 +274,97 @@ async function settingsLanguageChainTest() {
   const pinned = await loadOptions({ settingsLanguage: 'en', siteLanguage: 'en' });
   assertEqual(pinned.document.getElementById('settingsLanguage').value, 'en',
     'a pinned choice is shown as pinned');
+}
+
+
+// Choosing CardTrader as the EUR source reaches api.cardtrader.com whether or not
+// the CardTrader switch is on. It used to save without asking for the host, so a
+// user could end up with a setting that looked on and reached nothing. This walks
+// the flow rather than checking that the domain appears in the manifest.
+
+// The old test began with every platform checked, so it never reached the case
+// that broke: one platform left, and the user takes it away.
+async function lastPlatformTest() {
+  console.log('settings: taking away the last platform stores every platform');
+  const page = await loadOptions({ setPlatforms: ['mtgo'] });
+  const { document, mock } = page;
+  const boxes = ['setPlatformsPaper', 'setPlatformsArena', 'setPlatformsMtgo']
+    .map(id => document.getElementById(id));
+
+  assertEqual(boxes.map(box => box.checked), [false, false, true],
+    'the stored platform is the only one checked');
+
+  boxes[2].checked = false;
+  fireEvent(boxes[2], 'change');
+  await tick();
+  assertEqual(mock.state.setPlatforms, ['paper', 'arena', 'mtgo'],
+    'taking away the last one stores all of them');
+  assertEqual(boxes.map(box => box.checked), [true, true, true],
+    'and the page shows all of them');
+
+  const again = await loadOptions({ setPlatforms: mock.state.setPlatforms });
+  assertEqual(boxes.map((box, index) =>
+    again.document.getElementById(['setPlatformsPaper', 'setPlatformsArena', 'setPlatformsMtgo'][index]).checked),
+    [true, true, true], 'a reload keeps every platform instead of bringing one back');
+}
+
+const tick = () => new Promise(resolve => setTimeout(resolve, 0));
+
+async function optionalHostsTest() {
+  console.log('settings: optional features ask for their host before saving');
+  const page = await loadOptions({
+    cardtraderPrices: false, euroPriceSources: 'cm',
+    edhrecUsage: false, edhrecSalt: false, edhrecLink: false
+  });
+  const { document, mock } = page;
+  const select = document.getElementById('euroPriceSources');
+
+  // Choosing Cardmarket needs no host at all.
+  select.value = 'cm';
+  fireEvent(select, 'change');
+  await tick();
+  assertEqual(mock.permissions.grantedOrigins.length, 0,
+    'the Cardmarket source asks for nothing');
+
+  // Choosing CardTrader does.
+  select.value = 'ct';
+  fireEvent(select, 'change');
+  await tick();
+  assertEqual(mock.permissions.grantedOrigins, ['https://api.cardtrader.com/*'],
+    'the CardTrader source asks for the CardTrader host');
+  assertEqual(mock.state.euroPriceSources, 'ct', 'and the choice is saved once granted');
+
+  // Both is the same case.
+  select.value = 'both';
+  fireEvent(select, 'change');
+  await tick();
+  assert(mock.permissions.grantedOrigins.includes('https://api.cardtrader.com/*'),
+    '"both" is covered too');
+
+  // And the EDHREC switches ask for EDHREC.
+  const usage = document.getElementById('edhrecUsage');
+  usage.checked = true;
+  fireEvent(usage, 'change');
+  await tick();
+  // The request resolves on the next turn even when it is granted at once.
+  await tick();
+  assert(mock.permissions.grantedOrigins.includes('https://json.edhrec.com/*'),
+    'the EDHREC switch asks for the EDHREC host');
+
+  // Refusing the permission must not leave a setting saved that cannot work.
+  const second = await loadOptions({
+    cardtraderPrices: false, euroPriceSources: 'cm', edhrecUsage: false
+  });
+  second.mock.permissions.deny = true;
+  const refused = second.document.getElementById('euroPriceSources');
+  refused.value = 'ct';
+  fireEvent(refused, 'change');
+  await tick();
+  // The request resolves on the next turn even when it is granted at once.
+  await tick();
+  assertEqual(second.mock.state.euroPriceSources, 'cm',
+    'a refused permission leaves the previous source in storage');
+  assertEqual(refused.value, 'cm', 'and the control goes back to it');
 }
 
 
@@ -738,9 +689,9 @@ async function discoveredFormatsTest() {
     htmlIdCheck();
     switchStyleTest();
     sectionOrderTest();
-    packagedNoticesTest();
-    packagedArchiveTest();
     popupTest();
+    await optionalHostsTest();
+    await lastPlatformTest();
     settingsLanguageTest();
     await settingsLanguageChainTest();
     licenceAndPrivacyTest();

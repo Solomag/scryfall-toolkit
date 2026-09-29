@@ -171,6 +171,7 @@ function createChrome(options = {}) {
 
   const chrome = {
     runtime,
+    permissions,
     storage: { local, sync: local, onChanged: { addListener: fn => changeListeners.push(fn) } },
     alarms: { create() {}, onAlarm: { addListener: fn => alarmListeners.push(fn) } },
     action: { setBadgeText() {}, setBadgeBackgroundColor() {} },
@@ -179,7 +180,8 @@ function createChrome(options = {}) {
 
   return {
     chrome, state, sentMessages, clipboardWrites, openOptionsPageCalls,
-    messageListeners, installedListeners, alarmListeners, changeListeners, fireChanges
+    messageListeners, installedListeners, alarmListeners, changeListeners, fireChanges,
+    permissions
   };
 }
 
@@ -198,6 +200,24 @@ function createPage(options) {
   const url = options.url;
   const mock = options.mock || createChrome({ state: options.state, routes: options.routes });
   const { window, document } = parseHTML(options.html);
+  // linkedom has no HTMLSelectElement.value. Every settings handler reads it, so
+  // without this a test cannot drive a select at all.
+  for (const select of document.querySelectorAll('select')) {
+    const choices = () => [...select.querySelectorAll('option')];
+    Object.defineProperty(select, 'value', {
+      configurable: true,
+      get() {
+        const chosen = choices().find(o => o.hasAttribute('selected')) || choices()[0];
+        return chosen ? chosen.getAttribute('value') : '';
+      },
+      set(next) {
+        for (const option of choices()) {
+          if (option.getAttribute('value') === String(next)) option.setAttribute('selected', '');
+          else option.removeAttribute('selected');
+        }
+      }
+    });
+  }
   // linkedom has no layout: scripts only need a stable rectangle.
   window.Element.prototype.getBoundingClientRect = () =>
     ({ top: 0, left: 0, right: 0, bottom: 0, width: 0, height: 0 });

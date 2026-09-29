@@ -30,7 +30,7 @@ To build the archive yourself: `npm run package`. It writes `dist/scryfall-toolk
 | **Card and art tags** | Tag panels on a card page, next to the printings. Click a tag to add it to the search box. Related cards from Tagger, with image previews. |
 | **Extra format legalities** | Heritage, Classic Legacy, Peak Legacy and Premodern in Scryfall's own legality block, in its own badges. Reorder or hide any row. |
 | **Dark theme** | For Scryfall and Tagger. Follows your system until you pick otherwise. |
-| **Optional extras** | EDHREC deck usage and Salt Meter, CardTrader prices for the exact printing, finish badges, card nicknames, type and mana search links, set and printing filters, a No Prices mode, a token list on deck pages. All off until you turn them on. |
+| **Optional extras** | EDHREC deck usage and Salt Meter, CardTrader prices for the exact printing, finish badges, card nicknames, type and mana search links, set and printing filters, a No Prices mode, a token list on deck pages. EDHREC and CardTrader are off until you turn them on; the rest have their own defaults and each can be switched off. |
 
 Everything each one does, in detail: **[docs/FEATURES.md](docs/FEATURES.md)**.
 

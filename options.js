@@ -33,9 +33,18 @@ const OPTIONAL_HOSTS = {
   edhrecLink: ['https://json.edhrec.com/*'],
   cardtraderPrices: ['https://api.cardtrader.com/*']
 };
-function requestHostAccess(key) {
-  const origins = OPTIONAL_HOSTS[key];
-  if (!origins || !chrome.permissions || !chrome.permissions.request) return Promise.resolve(true);
+// The hosts each optional feature needs, and what turns them on. euroPriceSources
+// is the one that is easy to miss: choosing CardTrader as the EUR source reaches
+// api.cardtrader.com whether or not the CardTrader switch is on, so it has to ask
+// for the host too.
+function optionalHostsFor(key, value) {
+  if (key === 'euroPriceSources') {
+    return value === 'ct' || value === 'both' ? ['https://api.cardtrader.com/*'] : [];
+  }
+  return OPTIONAL_HOSTS[key] || [];
+}
+function requestHostAccess(origins) {
+  if (!origins || !origins.length || !chrome.permissions || !chrome.permissions.request) return Promise.resolve(true);
   return new Promise(resolve => {
     try {
       chrome.permissions.request({ origins }, granted => resolve(Boolean(granted)));
@@ -134,10 +143,18 @@ chrome.storage.local.get(defaults, values => {
       // Turning an optional feature on is the moment the browser is asked for
       // its host. Refusing leaves the switch off rather than saving a feature
       // that cannot reach anything.
-      if (element.type === "checkbox" && wanted === true && OPTIONAL_HOSTS[key]) {
-        requestHostAccess(key).then(granted => {
-          if (!granted) { element.checked = false; return; }
-          chrome.storage.local.set({ [key]: true }, () => { status.textContent = t('Сохранено'); });
+      const needs = optionalHostsFor(key, wanted);
+      if (needs.length) {
+        requestHostAccess(needs).then(granted => {
+          if (!granted) {
+            // Without its host the feature reaches nothing, so the control goes
+            // back to what storage holds rather than saving a switch that only
+            // looks like it works.
+            if (element.type === 'checkbox') element.checked = Boolean(values[key]);
+            else if (values[key] !== undefined) element.value = values[key];
+            return;
+          }
+          chrome.storage.local.set({ [key]: wanted }, () => { status.textContent = t('Сохранено'); });
         });
         return;
       }
@@ -174,8 +191,14 @@ chrome.storage.local.get(defaults, values => {
     platformAll.checked = platformBoxes.every(box => box.element.checked);
   }
   function savePlatforms() {
-    if (!selectedPlatforms().length) { showPlatforms(platformBoxes.map(box => box.name)); return; }
-    chrome.storage.local.set({ setPlatforms: selectedPlatforms() }, () => { status.textContent = t('Сохранено'); });
+    // A list with nothing in it is not a choice this setting can hold, so it
+    // snaps back to all. It has to save that too: drawing all three while
+    // storage kept the one the user had just removed meant a reload brought it
+    // straight back.
+    const chosen = selectedPlatforms();
+    const next = chosen.length ? chosen : platformBoxes.map(box => box.name);
+    showPlatforms(next);
+    chrome.storage.local.set({ setPlatforms: next }, () => { status.textContent = t('Сохранено'); });
   }
   const storedPlatforms = Array.isArray(values.setPlatforms) ? values.setPlatforms.filter(name => platformBoxes.some(box => box.name === name)) : [];
   showPlatforms(storedPlatforms.length ? storedPlatforms : platformBoxes.map(box => box.name));

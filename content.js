@@ -459,7 +459,12 @@
           try {
             const result = await request({ type: 'cardtrader', id: print.id, set: print.set });
             const price = result.nonfoil?.currency === 'EUR' ? result.nonfoil : result.foil?.currency === 'EUR' ? result.foil : null;
-            if (!result.available && print.id === id && sources === 'ct') showEurFallback();
+            // A CardTrader account in another currency answers with a real
+            // price in that currency, and the EUR column cannot use it. For the
+            // printing being viewed that is the same as having nothing to show,
+            // so the native EUR column comes back rather than leaving an empty
+            // one where a price was expected.
+            if (print.id === id && sources === 'ct' && (!result.available || !price)) showEurFallback();
             if (price) {
               const a = document.createElement('a');
               a.href = result.url;

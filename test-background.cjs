@@ -194,7 +194,9 @@ page.script('background.js');
 const ctx = page.context;
 const listener = mock.messageListeners[0];
 
-function send(message, senderUrl = 'https://scryfall.com/card/tst/1/test-card', timeoutMs = 100) {
+// The Scryfall queue spaces requests 130 ms apart on purpose, so a test that
+// waits 100 ms for an answer gives up before the answer is allowed to start.
+function send(message, senderUrl = 'https://scryfall.com/card/tst/1/test-card', timeoutMs = 2000) {
   return new Promise(resolve => {
     let done = false;
     const respond = response => { if (!done) { done = true; resolve(response); } };

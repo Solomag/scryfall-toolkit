@@ -4,8 +4,10 @@ What each part of Scryfall Toolkit does, in detail. The [README](../README.md) i
 short version; this is the one to read when you want to know exactly what a setting
 changes.
 
-Everything here is off until you turn it on, except the clipboard, the tag panels and
-the dark theme.
+The clipboard, the tag panels and the dark theme are on. The EDHREC and CardTrader
+integrations are off until you turn them on, because both of them send something about
+what you are looking at to someone else. The other extras have their own defaults and
+each can be switched off.
 
 ---
 
