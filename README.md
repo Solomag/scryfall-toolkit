@@ -68,6 +68,8 @@ npm run package # build the release archive
 
 The last suite is a smoke test of the package: it builds the archive, unpacks it and turns it on. Two earlier releases shipped with a file missing from the zip while the working folder was fine, which is what that suite exists to stop.
 
+**Release archives are built by CI**, from the tag, on a runner anyone can name. The workflow prints the SHA-256 of the file it publishes, so the bytes on the release page can be tied to a commit and a runner. A zip built locally is for trying things out.
+
 Source code: <https://github.com/Solomag/scryfall-toolkit>
 
 ## License and third-party notices

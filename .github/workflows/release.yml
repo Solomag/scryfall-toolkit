@@ -1,0 +1,52 @@
+name: Release
+
+# The release ZIP is built here, from the tag, on a runner everyone can name.
+# Building it locally and uploading the file meant the published bytes depended
+# on whichever zlib the machine happened to have, and no one could check that
+# afterwards. Now the archive comes out of the same run that tests it.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Test
+        run: npm test
+
+      - name: Build the release archive
+        run: npm run package
+
+      # package-extension.cjs already reads the archive back and fails if any
+      # licence, notice or referenced file is missing, so this only reports the
+      # hash of the thing being published.
+      - name: Report what is being published
+        run: |
+          sha256sum dist/*.zip
+          unzip -l dist/*.zip | tail -n 5
+
+      - name: Publish the release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.zip
+          generate_release_notes: true
+          body: |
+            Built by CI from this tag. The SHA-256 is printed in the workflow run
+            that produced this file, so the bytes published here can be tied to
+            the commit and the runner that made them.
+
+            Verify against the run: **Actions → Release → ${{ github.ref_name }}**
