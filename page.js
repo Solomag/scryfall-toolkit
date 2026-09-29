@@ -11,9 +11,9 @@
 
 // The bridge between Scryfall's page world and this extension's content script.
 //
-// Deck features have to run in the page's own world, because they work through
-// window.Scryfall and window.ScryfallAPI and a content script lives in an
-// isolated world that cannot see either. The content script, in turn, is the
+// The deck features have to run in the page's own world, because they work
+// through window.Scryfall and window.ScryfallAPI and a content script lives in
+// an isolated world that cannot see either. The content script, in turn, is the
 // only side that can read chrome.storage. So the two talk across the one
 // boundary they share: the window itself.
 //
@@ -31,14 +31,41 @@
     self.postMessage({ channel: CHANNEL, version: VERSION, source: 'page', type: type, value: value }, '*');
   }
 
-  function applySettings(settings) {
+  function reportStatus(extra) {
+    const adapter = self.STK_DECK_SCRYFALL;
     const cleanup = self.STK_DECK_CLEANUP;
-    if (!cleanup) {
-      post('status', { applied: false, problems: ['the deck modules did not load'] });
+    const preview = self.STK_DECK_CARD_PREVIEW;
+    post('status', Object.assign({
+      wired: Boolean(adapter),
+      cleanUp: cleanup ? cleanup.status().applied : false,
+      cardPreview: preview ? preview.status().applied : false,
+      scryfall: adapter ? adapter.status() : null
+    }, extra || {}));
+  }
+
+  function applySettings(settings) {
+    const s = settings || {};
+    const wantCleanUp = Boolean(s.cleanUpLandsInSingleton) ||
+      Boolean(s.sortEntriesPrimary && s.sortEntriesPrimary !== 'none');
+    const wantPreview = Boolean(s.cardPreviewOnHover);
+
+    if (!wantCleanUp && !wantPreview) {
+      // Nothing is on. The hooks are deliberately not installed: a setting
+      // that is off should leave Scryfall's own objects alone.
+      reportStatus({ off: true });
       return;
     }
-    const result = cleanup.apply(settings || {});
-    post('status', result);
+
+    const adapter = self.STK_DECK_SCRYFALL;
+    if (!adapter) {
+      post('status', { wired: false, problems: ['the deck modules did not load'] });
+      return;
+    }
+
+    adapter.install();
+    if (wantCleanUp && self.STK_DECK_CLEANUP) self.STK_DECK_CLEANUP.apply(s);
+    if (wantPreview && self.STK_DECK_CARD_PREVIEW) self.STK_DECK_CARD_PREVIEW.apply(s);
+    reportStatus();
   }
 
   self.addEventListener('message', event => {
@@ -50,7 +77,7 @@
     if (!data || data.channel !== CHANNEL || data.version !== VERSION) return;
     if (data.source !== 'content') return;
     if (data.type === 'settings') applySettings(data.value);
-    if (data.type === 'ping') post('status', self.STK_DECK_CLEANUP ? self.STK_DECK_CLEANUP.status() : null);
+    if (data.type === 'ping') reportStatus();
   });
 
   // Announce that this side is listening, so the content script does not have

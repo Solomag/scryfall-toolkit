@@ -74,7 +74,9 @@
       ],
       "js": [
         "deck-tools.js",
+        "deck-scryfall.js",
         "deck-clean-up.js",
+        "deck-card-preview.js",
         "page.js"
       ],
       "world": "MAIN",

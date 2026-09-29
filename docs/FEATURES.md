@@ -158,6 +158,13 @@ that hook simply does not happen and the deck editor keeps working — the featu
 rather than breaking anything. Until it has been checked in a live deck editor it stays
 off, and turning it on is a deliberate choice.
 
+**Card preview on hover** *(off by default, same reason)*. Hovering a row in the deck
+editor shows the card's image, and both faces of a double-faced card side by side. The
+images come from the deck's own data, so nothing extra is fetched. It reuses Scryfall's
+own `#card-tooltip` element rather than building a second tooltip, which is one more
+thing tied to their markup — listed in `docs/scryfall-dom.md` — but it makes the preview
+look like part of the site instead of like an add-on.
+
 ## Hiding and filtering
 
 These affect the **Sets** index and the **Prints** table on a card page. Card searches,

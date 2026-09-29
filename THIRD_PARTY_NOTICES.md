@@ -113,15 +113,20 @@ identifiers (`CardNicknameDisplay`, `createViewMoreTagsRow`, `TaggerIcon`,
 `TaggerLookupData`, `elementReady`, …) appear in this repository, and the tag panels are
 original code.
 
-**Behaviour ported — the clean up improver.** `deck-tools.js` and `deck-clean-up.js`
-follow the logic of upstream's `scryfall-embed/modify-clean-up`, `lib/card-parser` and
-`lib/deck-parser`, and `page.js` stands in for upstream's `scryfall-embed` entry point
-and its framebus wiring. The logic is upstream's; the code is rewritten in plain
-JavaScript, with a local emitter in place of the message bus and a Scryfall adapter that
-fails soft where upstream assumes the shape of `window.Scryfall` and
-`window.ScryfallAPI` is fixed. Those two globals are Scryfall's application internals and
-are not covered by anyone's licence — see section 6. The feature is off by default
-because it has not yet been checked against a live deck editor.
+**Behaviour ported — the deck editor modules.** Two of upstream's deck-builder features
+are here: the clean up improver (`scryfall-embed/modify-clean-up`, `lib/card-parser`,
+`lib/deck-parser`) and the card preview on hover (`card-input-modifier`,
+`lib/ui-elements/card-tooltip`). `deck-scryfall.js` stands in for upstream's
+`scryfall-globals.ts`, and `page.js` for its `scryfall-embed` entry point and framebus
+wiring.
+
+The logic is upstream's; the code is rewritten in plain JavaScript, with a local emitter
+in place of the message bus and a Scryfall adapter that fails soft where upstream assumes
+the shape of `window.Scryfall` and `window.ScryfallAPI` is fixed. Those two globals are
+Scryfall's application internals and are not covered by anyone's licence — see section 6.
+The preview reuses Scryfall's own `#card-tooltip` element rather than upstream's separate
+tooltip markup. Both features are off by default because neither has yet been checked
+against a live deck editor.
 
 Upstream's TypeScript types, webpack aliases and `framebus` dependency are not used, and
 no upstream file is present verbatim.

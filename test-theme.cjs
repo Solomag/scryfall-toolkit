@@ -41,8 +41,9 @@ async function manifestIntegrity() {
   // through Scryfall's application state and a content script cannot see it.
   const pageWorld = manifest.content_scripts.filter(group => group.world === 'MAIN');
   assertEqual(pageWorld.length, 1, 'exactly one script group runs in the page world');
-  assertEqual(pageWorld[0].js, ['deck-tools.js', 'deck-clean-up.js', 'page.js'],
-    'the page world loads the deck tools, the clean up module and the bridge');
+  assertEqual(pageWorld[0].js,
+    ['deck-tools.js', 'deck-scryfall.js', 'deck-clean-up.js', 'deck-card-preview.js', 'page.js'],
+    'the page world loads the deck tools, the Scryfall adapter, the two features and the bridge');
   assertEqual(pageWorld[0].run_at, 'document_idle', 'and starts once the page is up');
   for (const group of manifest.content_scripts) {
     if (group.world === 'MAIN') continue;
@@ -348,6 +349,26 @@ function domContractTest() {
   const unused = [...documented].filter(name => !used.has(name));
   assertEqual(unused, [], 'and nothing is written down that the theme stopped using');
   assert(used.size > 200, 'the contract covers the real surface (' + used.size + ' names)');
+
+  // The scripts name Scryfall's markup too. Those selectors are written down in
+  // the same file, by name and without the leading dot or hash.
+  const ourPrefixes = ['stk-', 'cleanup-improver__', 'modify-cleanup-', 'data-heading-'];
+  const isOurs = name => ourPrefixes.some(prefix => name.replace(/^[.#[\]]+/, '').startsWith(prefix));
+  const jsUsed = new Set();
+  for (const file of ['content.js', 'deck-clean-up.js', 'deck-card-preview.js', 'theme.js']) {
+    const js = read(file).replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+    for (const m of js.matchAll(/querySelector(?:All)?\(\s*['"`]([^'"`]+)['"`]/g)) {
+      for (const c of m[1].matchAll(/\.([a-zA-Z][a-zA-Z0-9_-]*)/g)) jsUsed.add(c[1]);
+      for (const c of m[1].matchAll(/#([a-zA-Z][a-zA-Z0-9_-]*)/g)) jsUsed.add(c[1]);
+      for (const c of m[1].matchAll(/\[(data-[a-z-]+)[=~|^$*]?=/g)) jsUsed.add('[' + c[1] + ']');
+    }
+    for (const m of js.matchAll(/getElementById\(\s*['"`]([a-zA-Z][a-zA-Z0-9_-]*)['"`]/g)) jsUsed.add(m[1]);
+  }
+  const jsDocumented = new Set();
+  for (const m of contract.matchAll(/^\| `([a-zA-Z\[][^`]*)` \| (class|id|attribute) \|/gm)) jsDocumented.add(m[1]);
+  const jsMissing = [...jsUsed].filter(name => !isOurs(name) && !jsDocumented.has(name));
+  assertEqual(jsMissing, [], 'every Scryfall name the scripts reach for is written down');
+  assert(jsDocumented.size > 30, 'the script selectors are inventoried too (' + jsDocumented.size + ' names)');
 }
 
 function paletteTest() {

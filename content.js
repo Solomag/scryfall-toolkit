@@ -24,6 +24,7 @@
     formatOrder: null, formatVisibility: null,
     deckCleanUpImprover: false, cleanUpLandsInSingleton: true,
     sortEntriesPrimary: 'none', insertSortingHeadings: true,
+    cardPreviewOnHover: false,
     exportFormat: "moxfield", cards: null
   };
   const settings = await chrome.storage.local.get(defaults);
@@ -32,11 +33,18 @@
   // work through window.Scryfall and window.ScryfallAPI and this script lives
   // in an isolated world that can see neither. Only this side can read the
   // settings. So the two meet at the window itself.
-  const deckSettingsNow = () => (settings.deckCleanUpImprover ? {
-    cleanUpLandsInSingleton: settings.cleanUpLandsInSingleton,
-    sortEntriesPrimary: settings.sortEntriesPrimary,
-    insertSortingHeadings: settings.insertSortingHeadings
-  } : {});
+  const deckSettingsNow = () => {
+    const wanted = settings.deckCleanUpImprover || settings.cardPreviewOnHover;
+    if (!wanted) return {};
+    const value = {};
+    if (settings.deckCleanUpImprover) {
+      value.cleanUpLandsInSingleton = settings.cleanUpLandsInSingleton;
+      value.sortEntriesPrimary = settings.sortEntriesPrimary;
+      value.insertSortingHeadings = settings.insertSortingHeadings;
+    }
+    if (settings.cardPreviewOnHover) value.cardPreviewOnHover = true;
+    return value;
+  };
   const sendDeckSettings = () => window.postMessage({
     channel: 'scryfall-toolkit', version: 1, source: 'content',
     type: 'settings', value: deckSettingsNow()
@@ -52,7 +60,7 @@
   sendDeckSettings();
   // Turning the feature on or off should not need a page reload.
   chrome.storage.onChanged.addListener(changes => {
-    const keys = ['deckCleanUpImprover', 'cleanUpLandsInSingleton', 'sortEntriesPrimary', 'insertSortingHeadings'];
+    const keys = ['deckCleanUpImprover', 'cleanUpLandsInSingleton', 'sortEntriesPrimary', 'insertSortingHeadings', 'cardPreviewOnHover'];
     if (!keys.some(key => changes[key])) return;
     keys.forEach(key => { if (changes[key]) settings[key] = changes[key].newValue; });
     sendDeckSettings();

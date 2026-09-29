@@ -131,6 +131,31 @@ function hasDedicatedLandSection(deck) {
   return getSections(deck).includes('lands');
 }
 
+// Every entry in the sections that matter, with duplicates merged by whichever
+// id is asked for. Shambleshark uses this to look a card up by its entry id;
+// merging is what keeps a card that appears twice from being counted twice.
+function flattenEntries(deck, options) {
+  const opts = options || {};
+  const ignored = opts.ignoredSections || {};
+  const grouped = {};
+  getSections(deck)
+    .filter(section => !(section in ignored))
+    .map(section => (deck.entries || {})[section] || [])
+    .reduce((all, list) => all.concat(list), [])
+    .forEach(entry => {
+      let id = '';
+      if ((opts.idToGroupBy || 'id') === 'oracleId') {
+        id = (entry.card_digest && entry.card_digest.oracle_id) || '';
+      } else {
+        id = (entry.raw_text && entry.id) || '';
+      }
+      if (!id) return;
+      if (grouped[id]) grouped[id].count += entry.count;
+      else grouped[id] = entry;
+    });
+  return Object.keys(grouped).map(id => grouped[id]);
+}
+
 self.STK_DECK_TOOLS = {
   TYPE_ORDER,
   getPrimaryType,
@@ -141,5 +166,6 @@ self.STK_DECK_TOOLS = {
   calculateTotalsByCardType,
   isLandCard,
   getSections,
-  hasDedicatedLandSection
+  hasDedicatedLandSection,
+  flattenEntries
 };

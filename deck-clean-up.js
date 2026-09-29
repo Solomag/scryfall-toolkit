@@ -9,208 +9,23 @@
  * are described in THIRD_PARTY_NOTICES.md. The MPL does not cover them.
  */
 
-// The clean up improver, running where it has to run: in Scryfall's own page
-// world, because everything it does goes through Scryfall's application state
-// rather than through the page's markup.
+// The clean up improver.
 //
-// Behaviour follows Shambleshark's scryfall-embed (modify-clean-up,
-// add-section-heading, scryfall-globals) — MIT,
-// https://github.com/crookedneighbor/shambleshark — rewritten for this project:
-// plain JavaScript, and a local emitter in place of the message bus, since
-// everything here runs in one world.
+// Behaviour follows Shambleshark's modify-clean-up and add-section-heading
+// (MIT, https://github.com/crookedneighbor/shambleshark), rewritten for this
+// project in plain JavaScript. It moves lands out of the nonland column and
+// nonlands out of the land one when a deck is cleaned up, sorts every column,
+// and heads each group with its name and count.
 //
-// Read this before touching it. window.Scryfall and window.ScryfallAPI are
-// Scryfall's internals, not an interface anyone published. They can change
-// without warning. Everything below is therefore wrapped so that a failure
-// degrades to "the feature does nothing" rather than "the deck editor breaks".
+// It has to run in Scryfall's own page world; see deck-scryfall.js for why, and
+// for the posture towards those internals. Nothing in this file touches them
+// directly.
 
 (function () {
   'use strict';
 
   const tools = self.STK_DECK_TOOLS;
-
-  // --- a local emitter ------------------------------------------------------
-  // Upstream routes these through framebus to cross frames. Nothing here
-  // crosses a frame.
-
-  const handlers = Object.create(null);
-
-  function on(event, fn) {
-    (handlers[event] = handlers[event] || []).push(fn);
-  }
-
-  function emit(event, data) {
-    (handlers[event] || []).slice().forEach(fn => {
-      try {
-        fn(data);
-      } catch (error) {
-        report('listener for ' + event + ' threw', error);
-      }
-    });
-  }
-
-  // --- what this tells the outside world ------------------------------------
-
-  const problems = [];
-
-  function report(message, error) {
-    const detail = message + (error ? ': ' + (error && error.message ? error.message : String(error)) : '');
-    problems.push(detail);
-    if (self.STK_DECK_CLEANUP_DEBUG) {
-      console.warn('[scryfall-toolkit] ' + detail);
-    }
-  }
-
-  // --- Scryfall's own globals ----------------------------------------------
-
-  function scryfallGlobal() {
-    return self.Scryfall || null;
-  }
-
-  function scryfallApi() {
-    return self.ScryfallAPI || null;
-  }
-
-  function deckbuilder() {
-    const s = scryfallGlobal();
-    return s && s.deckbuilder ? s.deckbuilder : null;
-  }
-
-  function decksApi() {
-    const api = scryfallApi();
-    return api && api.decks ? api.decks : null;
-  }
-
-  // The deck id. Upstream waits for ScryfallAPI.grantSecret to exist first,
-  // then prefers the URL, then the deckbuilder's own id, then the active deck.
-  let activeDeckIdPromise = null;
-
-  function deckIdFromUrl() {
-    const match = /\/decks\/([a-z0-9-]+)/i.exec(self.location ? self.location.pathname : '');
-    return match ? match[1] : '';
-  }
-
-  function getActiveDeckId(waitTime) {
-    if (!scryfallApi()) {
-      return delay(waitTime || 300).then(() => getActiveDeckId((waitTime || 300) * 2));
-    }
-    const fromUrl = deckIdFromUrl();
-    if (fromUrl) return Promise.resolve(fromUrl);
-    const db = deckbuilder();
-    if (db && db.deckId) return Promise.resolve(db.deckId);
-    return new Promise(resolve => {
-      const decks = decksApi();
-      if (!decks || typeof decks.active !== 'function') return resolve('');
-      decks.active(deck => resolve(deck && deck.id ? deck.id : ''));
-    });
-  }
-
-  function activeDeckId() {
-    if (!activeDeckIdPromise) activeDeckIdPromise = getActiveDeckId();
-    return activeDeckIdPromise;
-  }
-
-  function delay(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
-
-  // Scryfall's deck API is callback-shaped. Wrap the two calls this feature
-  // needs, and fail soft if the method is not there any more.
-  function callDeck(method, buildArgs) {
-    return activeDeckId().then(id => new Promise(resolve => {
-      const decks = decksApi();
-      if (!decks || typeof decks[method] !== 'function') {
-        report('ScryfallAPI.decks.' + method + ' is not available');
-        return resolve(null);
-      }
-      let settled = false;
-      const done = value => { if (!settled) { settled = true; resolve(value); } };
-      try {
-        decks[method].apply(decks, buildArgs(id).concat(done));
-      } catch (error) {
-        report('ScryfallAPI.decks.' + method + ' threw', error);
-        done(null);
-      }
-    }));
-  }
-
-  function getDeck() {
-    return callDeck('get', id => [id]).then(deck => deck || { entries: {}, sections: { primary: [], secondary: [] } });
-  }
-
-  function updateEntry(card) {
-    return callDeck('updateEntry', id => [id, card]);
-  }
-
-  function pushNotification(header, message, color, type) {
-    const s = scryfallGlobal();
-    if (s && typeof s.pushNotification === 'function') {
-      try {
-        s.pushNotification(header, message, color, type);
-      } catch (error) {
-        report('Scryfall.pushNotification threw', error);
-      }
-    }
-  }
-
-  // The hooks that tell this feature the deck changed. Each one is optional:
-  // if Scryfall has reshaped the thing it attaches to, that hook simply does
-  // not exist and the feature stops reacting instead of breaking the editor.
-  function addHooks() {
-    const decks = decksApi();
-    if (decks) {
-      ['addCard', 'updateEntry', 'replaceEntry', 'createEntry', 'destroyEntry'].forEach(method => {
-        const original = decks[method];
-        if (typeof original !== 'function') return;
-        decks[method] = function () {
-          const args = arguments;
-          const result = original.apply(decks, args);
-          emit('deck-method-called', { method: method, deckId: args[0], payload: args[1] });
-          return result;
-        };
-      });
-    }
-
-    const db = deckbuilder();
-    if (!db) return;
-
-    // totalCount is a function on the Vue instance. Wrapping it is how upstream
-    // learns the total changed; if it is no longer a function this is skipped.
-    if (typeof db.totalCount === 'function' && !db.totalCount.__stkWrapped) {
-      const originalTotal = db.totalCount;
-      let cached = originalTotal.call(db);
-      const wrapped = function () {
-        const next = originalTotal.call(db);
-        if (next !== cached) {
-          cached = next;
-          emit('deck-total-count-updated', { totalCount: next });
-        }
-        return next;
-      };
-      wrapped.__stkWrapped = true;
-      db.totalCount = wrapped;
-    }
-
-    // Replacing the entries property is how upstream learns the deck was
-    // edited. This is the single most fragile line in the project: it assumes
-    // entries is a plain own property of the deckbuilder object.
-    try {
-      const current = db.entries;
-      if (current && !Object.getOwnPropertyDescriptor(db, 'entries').get) {
-        Object.defineProperty(db, 'entries', {
-          configurable: true,
-          get() { return this._stkEntries; },
-          set(entries) {
-            this._stkEntries = entries;
-            emit('deck-entries-updated', { entries: entries });
-          }
-        });
-        db._stkEntries = current;
-      }
-    } catch (error) {
-      report('could not hook deckbuilder.entries', error);
-    }
-  }
+  const scryfall = self.STK_DECK_SCRYFALL;
 
   // --- correcting the land and nonland columns ------------------------------
 
@@ -223,7 +38,7 @@
     landsInNonLands.forEach(c => { c.section = 'lands'; });
     nonLandsInLands.forEach(c => { c.section = 'nonlands'; });
 
-    return Promise.all(landsInNonLands.concat(nonLandsInLands).map(c => updateEntry(c)));
+    return Promise.all(landsInNonLands.concat(nonLandsInLands).map(c => scryfall.updateEntry(c)));
   }
 
   // --- the headings ---------------------------------------------------------
@@ -254,6 +69,11 @@
       { id: 'yz', label: 'y-z' }
     ]
   };
+
+  function deckbuilder() {
+    const s = self.Scryfall;
+    return s && s.deckbuilder ? s.deckbuilder : null;
+  }
 
   function headingFor(sortChoice, entry) {
     const groups = HEADINGS[sortChoice];
@@ -297,7 +117,7 @@
 
   function resetDefaultHeadings() {
     // Put Scryfall's own section titles back before adding ours, so ours can
-    // hide them without leaving them hidden when the feature is turned off.
+    // hide them without leaving them hidden once the feature is turned off.
     document.querySelectorAll('h6.deckbuilder-section-title-bar').forEach(el => el.classList.remove('is-hidden'));
   }
 
@@ -343,7 +163,7 @@
         db.$nextTick(done);
         return;
       } catch (error) {
-        report('deckbuilder.$nextTick threw', error);
+        scryfall.report('deckbuilder.$nextTick threw', error);
       }
     }
     done();
@@ -351,8 +171,8 @@
 
   function updateTotalsInHeadings(totalCount) {
     document.querySelectorAll('.cleanup-improver__deck-section-heading').forEach(el => {
-      const el2 = el.querySelector('.modify-cleanup-total-count');
-      if (el2) el2.textContent = String(totalCount);
+      const total = el.querySelector('.modify-cleanup-total-count');
+      if (total) total.textContent = String(totalCount);
     });
   }
 
@@ -365,7 +185,7 @@
   }
 
   function addDeckTotalUpdateListener(sortChoice) {
-    on('deck-total-count-updated', data => {
+    scryfall.on('deck-total-count-updated', data => {
       updateTotalsInHeadings(data.totalCount);
       const db = deckbuilder();
       if (!db) return;
@@ -386,7 +206,7 @@
   function modifyCleanUp(config) {
     const db = deckbuilder();
     if (!db || typeof db.cleanUp !== 'function') {
-      report('Scryfall.deckbuilder.cleanUp is not available');
+      scryfall.report('Scryfall.deckbuilder.cleanUp is not available');
       return false;
     }
 
@@ -397,7 +217,7 @@
       const headings = {};
       if (config.insertSortingHeadings) addDeckTotalUpdateListener(sortChoice);
 
-      on('deck-entries-updated', () => {
+      scryfall.on('deck-entries-updated', () => {
         const target = deckbuilder();
         if (!target) return;
         target.flatSections.forEach(section => {
@@ -407,7 +227,7 @@
           try {
             target.$forceUpdate();
           } catch (error) {
-            report('deckbuilder.$forceUpdate threw', error);
+            scryfall.report('deckbuilder.$forceUpdate threw', error);
           }
         }
         if (config.insertSortingHeadings) insertHeadings(sortChoice, headings);
@@ -417,12 +237,12 @@
     const original = db.cleanUp;
     db.cleanUp = function () {
       const args = arguments;
-      const self2 = this;
-      return getDeck().then(deck => {
+      const scope = this;
+      return scryfall.getDeck().then(deck => {
         if (config.cleanUpLandsInSingleton) return correctLandNonLandColumns(deck);
       }).catch(error => {
-        report('reading the deck before clean up threw', error);
-      }).then(() => original.apply(self2, args));
+        scryfall.report('reading the deck before clean up threw', error);
+      }).then(() => original.apply(scope, args));
     };
     return true;
   }
@@ -431,57 +251,33 @@
 
   let applied = false;
 
+  function wanted(config) {
+    return Boolean(config.cleanUpLandsInSingleton) ||
+      Boolean(config.sortEntriesPrimary && config.sortEntriesPrimary !== 'none');
+  }
+
   function apply(config) {
     config = config || {};
-    if (!tools) {
-      report('deck tools were not loaded before this file');
-      return { applied: false, problems: problems.slice() };
+    if (!tools || !scryfall) {
+      return { applied: false, problems: ['the deck modules did not load in order'] };
     }
-
-    // Hooks are installed once. The clean up wrapper is installed once too, so
-    // that turning the setting off and on again does not stack wrappers.
-    if (!applied) {
-      try {
-        addHooks();
-      } catch (error) {
-        report('installing the hooks failed', error);
-      }
-    }
-
-    const wanted = Boolean(config.cleanUpLandsInSingleton) ||
-      (config.sortEntriesPrimary && config.sortEntriesPrimary !== 'none');
-    if (!wanted) {
-      return { applied: applied, problems: problems.slice() };
-    }
-
-    if (!applied) {
+    // The clean up button is wrapped once, so turning the setting off and on
+    // again does not stack wrappers. The hooks are installed here rather than
+    // left to whoever calls this: a module should not depend on its caller
+    // having prepared Scryfall for it.
+    if (!applied && wanted(config)) {
+      scryfall.install();
       try {
         applied = modifyCleanUp(config) === true;
       } catch (error) {
-        report('wiring the clean up button failed', error);
+        scryfall.report('wiring the clean up button failed', error);
       }
     }
-    return { applied: applied, problems: problems.slice() };
-  }
-
-  function status() {
-    return {
-      applied: applied,
-      problems: problems.slice(),
-      hasScryfall: Boolean(scryfallGlobal()),
-      hasScryfallApi: Boolean(scryfallApi()),
-      hasDeckbuilder: Boolean(deckbuilder())
-    };
+    return { applied: applied, problems: scryfall.status().problems };
   }
 
   self.STK_DECK_CLEANUP = {
     apply: apply,
-    status: status,
-    // exposed so the port can be exercised against a stand-in Scryfall
-    _internal: {
-      getDeck: getDeck, updateEntry: updateEntry, correctLandNonLandColumns: correctLandNonLandColumns,
-      insertHeadings: insertHeadings, headingFor: headingFor, totalsFor: totalsFor,
-      addHooks: addHooks, modifyCleanUp: modifyCleanUp, deckIdFromUrl: deckIdFromUrl
-    }
+    status: () => ({ applied: applied, problems: scryfall ? scryfall.status().problems : [] })
   };
 })();

@@ -111,6 +111,8 @@ const resolveSettingsLanguage = value => {
     'По типу карты': 'By card type',
     'По названию': 'By name',
     'Заголовки групп при сортировке': 'Group headings when sorting',
+    'Показывать изображение карты при наведении на строку': 'Show the card image when hovering a row',
+    'Работает через внутренний интерфейс Scryfall, поэтому по умолчанию выключено.': 'Works through Scryfall\'s internals, so it is off by default.',
     'После изменения настроек обнови открытые страницы Scryfall и Tagger. MoxTags продолжает работать отдельно на Moxfield.': 'Reload open Scryfall and Tagger tabs after changing settings. MoxTags continues to run separately on Moxfield.',
     'Открыть настройки во вкладке': 'Open settings in a tab',
     'Сохранить': 'Save', 'Заменить': 'Replace', 'Удалить': 'Delete',

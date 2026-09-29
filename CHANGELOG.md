@@ -16,10 +16,12 @@ Nothing yet.
 
 The EUR column is now headed by Cardmarket's own logo — the black and white marks they
 publish for download, used on their terms and otherwise untouched. Before that the slot
-held a glyph lifted from Scryfall's page markup, which was nobody's to lift. And the first
-Shambleshark deck module is ported: the clean up improver, which needs Scryfall's own page
-world rather than the page markup, so the extension now has a script there and a bridge to
-it. It ships switched off, because it has not yet been checked against a live deck editor.
+held a glyph lifted from Scryfall's page markup, which was nobody's to lift. And two of
+Shambleshark's deck modules are ported: the clean up improver and the card preview on
+hover. Both need Scryfall's own page world rather than the page markup, so the extension
+now has a script there, an adapter over Scryfall's internals and a bridge to the content
+script. Both ship switched off, because neither has been checked against a live deck
+editor.
 
 ## [v0.51.0](https://github.com/Solomag/scryfall-toolkit/releases/tag/v0.51.0) — 2026-09-28
 

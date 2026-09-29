@@ -17,22 +17,27 @@ Last updated 2026-09-29.
 
 ## To do
 
-### Check the clean up improver in a live deck editor
+### Check the deck editor modules in a live deck editor
 
-The module is ported and tested against a stand-in for `window.Scryfall` and
+Two of the four Shambleshark deck modules are ported: the clean up improver and the card
+preview on hover. Both are tested against a stand-in for `window.Scryfall` and
 `window.ScryfallAPI`. What that cannot cover is whether Scryfall's internals are still
-shaped the way Shambleshark found them in 2023. Until someone opens a deck, turns the
-setting on and presses Clean Up, the feature stays switched off.
+shaped the way Shambleshark found them in 2023. Until someone opens a deck, turns a
+setting on and uses it, both stay switched off.
 
-If it holds up, the same path covers the other three Shambleshark modules — the card
-input modifier, the EDHREC suggestions and the deckbuilder search. They share the
-page-world script and the bridge, so the remaining work is the logic and not the
-plumbing. The announced sizes were wrong once already: `clean-up-improver` looked like 82
-lines and was about a thousand, so the rest should be measured from the real files before
-any estimate is trusted.
+If they hold up, the same path covers the two that are left — the EDHREC suggestions and
+the deckbuilder search. They share the page-world script, the Scryfall adapter and the
+bridge, so the remaining work is the logic and not the plumbing. The announced sizes were
+wrong once already: `clean-up-improver` looked like 82 lines and was about a thousand,
+and `edhrec-suggestions` looks like 58 but is 425 across three files. Measure from the
+real files before trusting any estimate.
 
-If it does not hold up, the answer is to say so and drop the module, not to ship
-something that half works.
+One of the two is a design question rather than a port. Shambleshark's EDHREC suggestions
+embed an iframe to edhrec.com; this project deliberately goes to EDHREC's JSON instead,
+behind a queue and their published data policy. So that module gets written, not copied.
+
+If they do not hold up, the answer is to say so and drop them, not to ship something that
+half works.
 
 ### Store screenshot of the extension on Scryfall
 

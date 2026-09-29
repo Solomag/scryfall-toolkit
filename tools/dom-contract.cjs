@@ -78,6 +78,47 @@ for (const [key, description] of FAMILIES) {
 out.push('');
 out.push('---');
 out.push('');
+out.push('## Selectors used from JavaScript');
+out.push('');
+out.push('The stylesheet is not the only thing that names Scryfall\'s markup. The scripts reach');
+out.push('for it too, and those selectors are just as easy to break. They are listed here by the');
+out.push('name itself, without the leading `.` or `#`.');
+out.push('');
+out.push('| Name | Kind | Used by |');
+out.push('| --- | --- | --- |');
+
+const SCRIPTS = ['content.js', 'deck-clean-up.js', 'deck-card-preview.js', 'deck-tools.js', 'deck-scryfall.js', 'theme.js'];
+// Names this project invents are not Scryfall's to rename.
+const OUR_PREFIXES = ['stk-', 'cleanup-improver__', 'modify-cleanup-', 'data-heading-'];
+const isOurs = name => OUR_PREFIXES.some(prefix => name.replace(/^[.#[\]]+/, '').startsWith(prefix));
+const jsNames = new Map();
+for (const file of SCRIPTS) {
+  const path = ROOT + file;
+  if (!fs.existsSync(path)) continue;
+  const js = fs.readFileSync(path, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+  const names = new Set();
+  for (const m of js.matchAll(/querySelector(?:All)?\(\s*['"`]([^'"`]+)['"`]/g)) {
+    for (const c of m[1].matchAll(/\.([a-zA-Z][a-zA-Z0-9_-]*)/g)) names.add('.' + c[1]);
+    for (const c of m[1].matchAll(/#([a-zA-Z][a-zA-Z0-9_-]*)/g)) names.add('#' + c[1]);
+    // Only data-* attributes carry meaning Scryfall chose; [class] and [href]
+    // are HTML's, and nobody renames those.
+    for (const c of m[1].matchAll(/\[(data-[a-z-]+)[=~|^$*]?=/g)) names.add('[' + c[1] + ']');
+  }
+  for (const m of js.matchAll(/getElementById\(\s*['"`]([a-zA-Z][a-zA-Z0-9_-]*)['"`]/g)) names.add('#' + m[1]);
+  for (const name of names) {
+    if (isOurs(name)) continue;
+    if (!jsNames.has(name)) jsNames.set(name, new Set());
+    jsNames.get(name).add(file);
+  }
+}
+for (const [name, files] of [...jsNames.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
+  const kind = name.startsWith('.') ? 'class' : name.startsWith('#') ? 'id' : 'attribute';
+  out.push(`| \`${name.slice(name.startsWith('[') ? 0 : 1)}\` | ${kind} | ${[...files].sort().join(', ')} |`);
+}
+
+out.push('');
+out.push('---');
+out.push('');
 out.push(`Total: **${total}** Scryfall class names.`);
 out.push('');
 

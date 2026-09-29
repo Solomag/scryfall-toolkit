@@ -414,5 +414,61 @@ Scryfall knows nothing about.
 
 ---
 
+## Selectors used from JavaScript
+
+The stylesheet is not the only thing that names Scryfall's markup. The scripts reach
+for it too, and those selectors are just as easy to break. They are listed here by the
+name itself, without the leading `.` or `#`.
+
+| Name | Kind | Used by |
+| --- | --- | --- |
+| `card-grid` | class | content.js |
+| `card-grid-item` | class | content.js |
+| `card-grid-item-card` | class | content.js |
+| `card-grid-item-invisible-label` | class | content.js |
+| `card-image` | class | content.js |
+| `card-legality` | class | content.js, theme.js |
+| `card-legality-item` | class | content.js |
+| `card-legality-row` | class | content.js |
+| `card-symbol` | class | content.js |
+| `card-text` | class | content.js |
+| `card-text-card-name` | class | content.js |
+| `card-text-mana-cost` | class | content.js |
+| `card-text-type-line` | class | content.js |
+| `color-indicator` | class | content.js |
+| `currency-eur` | class | content.js |
+| `currency-tix` | class | content.js |
+| `currency-usd` | class | content.js |
+| `currency-usd-promo` | class | content.js |
+| `current` | class | content.js |
+| `deck-list` | class | content.js, theme.js |
+| `deck-list-entry` | class | content.js, theme.js |
+| `deck-list-entry-axial-data` | class | content.js |
+| `deck-list-entry-name` | class | content.js |
+| `deckbuilder-section-title-bar` | class | deck-clean-up.js |
+| `marketing-features-item-image` | class | theme.js |
+| `prints` | class | content.js |
+| `prints-all` | class | content.js, theme.js |
+| `prints-info-section` | class | content.js |
+| `prints-table` | class | content.js, theme.js |
+| `search-controls` | class | content.js, theme.js |
+| `select2-container` | class | content.js |
+| `select2-results__option` | class | content.js |
+| `sidebar` | class | content.js |
+| `sidebar-prices` | class | content.js |
+| `sidebar-toolbox` | class | content.js |
+| `toolbox-disclaimer` | class | content.js |
+| `toolbox-links` | class | content.js |
+| `[data-entry]` | attribute | deck-clean-up.js |
+| `card-tooltip` | id | deck-card-preview.js |
+| `header` | id | theme.js |
+| `header-search-field` | id | content.js, theme.js |
+| `js-checklist` | id | content.js |
+| `main` | id | content.js, theme.js |
+| `stores` | id | content.js |
+| `with` | id | content.js |
+
+---
+
 Total: **355** Scryfall class names.
 

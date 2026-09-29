@@ -92,11 +92,17 @@ function makeWorld({ withScryfall = true, html = '', deck = null, opts = {} } = 
   }
 
   const context = vm.createContext(Object.assign(self, {
-    self, document, window: self, Promise, Object, Array, String, Boolean, Number, Math, JSON, RegExp, Error
+    self, document, window: self, Event: window.Event, CustomEvent: window.CustomEvent,
+    Promise, Object, Array, String, Boolean, Number, Math, JSON, RegExp, Error
   }));
   const run = file => vm.runInContext(
     fs.readFileSync(path.join(ROOT, file), 'utf8'), context, { filename: file }
   );
+  // The deck modules load in a fixed order: pure deck data first, then the one
+  // file that touches Scryfall, then the features on top of it, then the bridge.
+  const boot = () => {
+    for (const file of ['deck-tools.js', 'deck-scryfall.js', 'deck-clean-up.js', 'deck-card-preview.js']) run(file);
+  };
   // Dispatching to the page side means handing over the identity that side sees
   // as its own window. Across a vm boundary that is not the same object as the
   // one this file holds; in a real page both are the window.
@@ -104,7 +110,7 @@ function makeWorld({ withScryfall = true, html = '', deck = null, opts = {} } = 
     const identity = vm.runInContext('self', context);
     self.listeners.slice().forEach(fn => fn({ source: identity, data }));
   };
-  return { self, document, calls, target, run, context, fromPage };
+  return { self, document, calls, target, run, boot, context, fromPage };
 }
 
 const card = (name, typeLine, id) => ({
@@ -117,32 +123,31 @@ const card = (name, typeLine, id) => ({
     console.log('deck-clean-up: with nothing switched on it does nothing');
     {
       const w = makeWorld();
-      w.run('deck-tools.js');
-      w.run('deck-clean-up.js');
+      w.boot();
       const result = w.self.STK_DECK_CLEANUP.apply({ cleanUpLandsInSingleton: false, sortEntriesPrimary: 'none' });
       assertEqual(result.applied, false, 'nothing is wired');
       assertEqual(w.calls.cleanUp, 0, 'the clean up button is left alone');
-      assertEqual(w.self.Scryfall.deckbuilder.cleanUp.__stkWrapped, undefined,
-        'and no hooks are left behind');
+      assertEqual(w.self.Scryfall.deckbuilder.totalCount.__stkWrapped, undefined,
+        'no hook is installed on Scryfall while everything is off');
+      const descriptor = Object.getOwnPropertyDescriptor(w.self.Scryfall.deckbuilder, 'entries');
+      assert(!descriptor || !descriptor.get, 'and the entries property is not touched either');
     }
 
     console.log('deck-clean-up: without Scryfall it fails soft');
     {
       const w = makeWorld({ withScryfall: false });
-      w.run('deck-tools.js');
-      w.run('deck-clean-up.js');
+      w.boot();
       const result = w.self.STK_DECK_CLEANUP.apply({ cleanUpLandsInSingleton: true });
       assertEqual(result.applied, false, 'it reports that it did nothing');
       assert(result.problems.length > 0, 'and says why');
-      const status = w.self.STK_DECK_CLEANUP.status();
+      const status = w.self.STK_DECK_SCRYFALL.status();
       assertEqual(status.hasScryfall, false, 'the status says Scryfall is missing');
     }
 
     console.log('deck-clean-up: lands in the wrong column are put back');
     {
       const w = makeWorld();
-      w.run('deck-tools.js');
-      w.run('deck-clean-up.js');
+      w.boot();
       w.self.STK_DECK_CLEANUP.apply({ cleanUpLandsInSingleton: true, sortEntriesPrimary: 'none' });
       w.self.Scryfall.deckbuilder.cleanUp();
       await tick();
@@ -162,8 +167,7 @@ const card = (name, typeLine, id) => ({
           nonlands: [card('Forest', 'Basic Land — Forest'), card('Bolt', 'Instant')]
         }
       } });
-      w.run('deck-tools.js');
-      w.run('deck-clean-up.js');
+      w.boot();
       w.self.STK_DECK_CLEANUP.apply({ cleanUpLandsInSingleton: true, sortEntriesPrimary: 'none' });
       w.self.Scryfall.deckbuilder.cleanUp();
       await tick();
@@ -183,8 +187,7 @@ const card = (name, typeLine, id) => ({
           ]
         }
       } });
-      w.run('deck-tools.js');
-      w.run('deck-clean-up.js');
+      w.boot();
       w.self.STK_DECK_CLEANUP.apply({ cleanUpLandsInSingleton: false, sortEntriesPrimary: 'name' });
       // Sorting runs when Scryfall reports the entries changed.
       w.self.Scryfall.deckbuilder.entries = w.self.Scryfall.deckbuilder.entries;
@@ -207,8 +210,7 @@ const card = (name, typeLine, id) => ({
           ]
         }
       } });
-      w.run('deck-tools.js');
-      w.run('deck-clean-up.js');
+      w.boot();
       w.self.STK_DECK_CLEANUP.apply({ cleanUpLandsInSingleton: false, sortEntriesPrimary: 'card-type' });
       w.self.Scryfall.deckbuilder.entries = w.self.Scryfall.deckbuilder.entries;
       assertEqual(w.target.entries.nonlands.map(c => c.card_digest.name),
@@ -240,8 +242,7 @@ const card = (name, typeLine, id) => ({
             </ul>
           </div>`
       });
-      w.run('deck-tools.js');
-      w.run('deck-clean-up.js');
+      w.boot();
       w.self.STK_DECK_CLEANUP.apply({
         cleanUpLandsInSingleton: false, sortEntriesPrimary: 'card-type', insertSortingHeadings: true
       });
@@ -287,8 +288,7 @@ const card = (name, typeLine, id) => ({
             <ul><li data-entry="e1"></li></ul>
           </div>`
       });
-      w.run('deck-tools.js');
-      w.run('deck-clean-up.js');
+      w.boot();
       w.self.STK_DECK_CLEANUP.apply({
         cleanUpLandsInSingleton: false, sortEntriesPrimary: 'card-type', insertSortingHeadings: true
       });
@@ -304,8 +304,7 @@ const card = (name, typeLine, id) => ({
     console.log('deck-clean-up: the bridge passes settings across the window');
     {
       const w = makeWorld();
-      w.run('deck-tools.js');
-      w.run('deck-clean-up.js');
+      w.boot();
       w.run('page.js');
       assertEqual(w.self.posted.length, 1, 'the page side announces itself');
       assertEqual(w.self.posted[0].type, 'ready', 'with a ready message');
@@ -319,7 +318,8 @@ const card = (name, typeLine, id) => ({
       await tick();
       assertEqual(w.self.posted.length, 2, 'and answers with a status');
       assertEqual(w.self.posted[1].type, 'status', 'the answer is a status report');
-      assertEqual(w.self.posted[1].value.applied, true, 'saying the feature is wired');
+      assertEqual(w.self.posted[1].value.cleanUp, true, 'saying the clean up is wired');
+      assertEqual(w.self.posted[1].value.cardPreview, false, 'and the preview is not');
 
       // A message from anywhere else is ignored.
       const before = w.self.posted.length;
@@ -334,13 +334,77 @@ const card = (name, typeLine, id) => ({
     console.log('deck-clean-up: a future Scryfall with no entries setter does not break');
     {
       const w = makeWorld({ opts: { entriesSetter: false } });
-      w.run('deck-tools.js');
-      w.run('deck-clean-up.js');
+      w.boot();
       const result = w.self.STK_DECK_CLEANUP.apply({ cleanUpLandsInSingleton: true, sortEntriesPrimary: 'name' });
       assertEqual(result.applied, true, 'the clean up button is still wrapped');
       w.self.Scryfall.deckbuilder.cleanUp();
       await tick();
       assertEqual(w.calls.cleanUp, 1, 'and clean up still works');
+    }
+
+    console.log('deck-card-preview: hovering a row shows the card, in Scryfall\'s own tooltip');
+    {
+      const w = makeWorld({
+        deck: {
+          id: 'deck-7',
+          sections: { primary: ['nonlands'], secondary: [] },
+          entries: {
+            nonlands: [
+              { id: 'e1', count: 1, section: 'nonlands', raw_text: true,
+                card_digest: { name: 'Aetherling', type_line: 'Creature — Shapeshifter', image_uris: { front: 'https://img/front1.jpg' } } },
+              { id: 'e2', count: 1, section: 'nonlands', raw_text: true,
+                card_digest: { name: 'Delver', type_line: 'Creature — Human Wizard', image_uris: { front: 'https://img/front2.jpg', back: 'https://img/back2.jpg' } } }
+            ]
+          }
+        },
+        html: `
+          <div id="card-tooltip" style="display:none"></div>
+          <ul>
+            <li class="deckbuilder-entry" data-entry="e1"></li>
+            <li class="deckbuilder-entry" data-entry="e2"></li>
+          </ul>`
+      });
+      w.boot();
+      const result = w.self.STK_DECK_CARD_PREVIEW.apply({ cardPreviewOnHover: true });
+      assertEqual(result.applied, true, 'the preview is wired');
+      await tick();
+
+      const rows = w.document.querySelectorAll('.deckbuilder-entry');
+      const tooltip = w.document.getElementById('card-tooltip');
+      rows[0].dispatchEvent(new w.self.Event('mousemove'));
+      assertEqual(tooltip.style.display, 'flex', 'hovering shows the tooltip');
+      assertEqual(tooltip.className, '', 'a single-faced card gets the plain layout');
+      assertEqual(w.document.getElementById('card-tooltip-img-front').getAttribute('src'),
+        'https://img/front1.jpg', 'with the card\'s front image');
+
+      rows[1].dispatchEvent(new w.self.Event('mousemove'));
+      assertEqual(tooltip.className, 'two-up', 'a double-faced card gets the two-up layout');
+      assertEqual(w.document.getElementById('card-tooltip-img-front').getAttribute('src'),
+        'https://img/front2.jpg', 'and its front');
+      assertEqual(w.document.getElementById('card-tooltip-img-back').getAttribute('src'),
+        'https://img/back2.jpg', 'and its back');
+
+      rows[0].dispatchEvent(new w.self.Event('mousemove'));
+      assertEqual(w.document.getElementById('card-tooltip-img-back'), null,
+        'going back to a single-faced card drops the back face');
+
+      rows[0].dispatchEvent(new w.self.Event('mouseout'));
+      assertEqual(tooltip.style.display, 'none', 'and leaving the row hides it');
+    }
+
+    console.log('deck-card-preview: off means nothing is attached');
+    {
+      const w = makeWorld({
+        html: '<div id="card-tooltip"></div><ul><li class="deckbuilder-entry" data-entry="e1"></li></ul>'
+      });
+      w.boot();
+      const result = w.self.STK_DECK_CARD_PREVIEW.apply({ cardPreviewOnHover: false });
+      assertEqual(result.applied, false, 'nothing is wired');
+      const tooltip = w.document.getElementById('card-tooltip');
+      const before = tooltip.style.display;
+      w.document.querySelector('.deckbuilder-entry').dispatchEvent(new w.self.Event('mousemove'));
+      assertEqual(tooltip.style.display, before,
+        'and hovering leaves the tooltip exactly as it was');
     }
 
     summary('test-deck-clean-up');
