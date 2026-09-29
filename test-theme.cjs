@@ -297,6 +297,37 @@ function noDoublePaintingTest() {
 // The palette has to hold the colours it replaced. Replacing a literal with a
 // variable of a different value would change the theme while every rule still
 // looked right.
+// The theme paints over Scryfall by naming their markup. docs/scryfall-dom.md
+// writes down every name it uses and what it is, so a renamed class is one file
+// to look in instead of 358 rules. This keeps the two in step: a rule cannot
+// quietly reach for a class nobody wrote down.
+function domContractTest() {
+  console.log('static: the stylesheet stays inside the DOM contract');
+  const css = read('theme.css').replace(/\/\*[\s\S]*?\*\//g, '');
+  const contract = read('docs/scryfall-dom.md');
+
+  // Class names come out of selectors, not out of rule bodies: a data URI can
+  // hold a domain, and .org is not a class name.
+  const used = new Set();
+  for (const m of css.matchAll(/([^{}]+)\{[^{}]*\}/g)) {
+    for (const c of m[1].matchAll(/\.([a-zA-Z][a-zA-Z0-9_-]*)/g)) {
+      // The theme's own markers are set by theme.js; Scryfall knows nothing of them.
+      if (!c[1].startsWith('stk-')) used.add(c[1]);
+    }
+  }
+
+  // The contract lists its names in table rows, so that is what is read.
+  const documented = new Set();
+  for (const m of contract.matchAll(/^\| `\.([a-zA-Z][a-zA-Z0-9_-]*)` \|/gm)) documented.add(m[1]);
+
+  const missing = [...used].filter(name => !documented.has(name));
+  assertEqual(missing, [], 'every Scryfall class the theme uses is written down');
+
+  const unused = [...documented].filter(name => !used.has(name));
+  assertEqual(unused, [], 'and nothing is written down that the theme stopped using');
+  assert(used.size > 200, 'the contract covers the real surface (' + used.size + ' names)');
+}
+
 function paletteTest() {
   console.log('static: the palette holds the colours it replaced');
   const css = read('theme.css');
@@ -620,6 +651,7 @@ async function pathClasses() {
     await manifestIntegrity();
     firstPaintTest();
     noDoublePaintingTest();
+    domContractTest();
     paletteTest();
     hoverStatesTest();
     auditGapCheck();
