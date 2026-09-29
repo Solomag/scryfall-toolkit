@@ -226,15 +226,35 @@ nothing at all when a field is missing, rather than an error or a wrong number.
 | `icons/cardtrader.svg` | **Unresolved.** CardTrader's brand mark. Trademarks are not licensed as MIT. |
 | `icons/cardtrader.png` | **Unresolved.** A monochrome version of the same mark. |
 
-## 9. Cardmarket — service, icon unresolved
+## 9. Cardmarket — the mark we ship is not theirs
 
 - <https://www.cardmarket.com/>
-- Used: **service only.** A link to the card's Cardmarket listing, plus an icon. No
-  Cardmarket code or data is copied.
+- Used: **service only.** A link to the card's Cardmarket listing, plus an icon beside
+  the EUR price column. No Cardmarket code or data is copied.
+
+**Their published terms.** Cardmarket puts its brand assets up for download at
+<https://help.cardmarket.com/en/Downloads> and says this about using them:
+
+> By downloading a banner or a logo you acknowledge and agree that all rights to the
+> brands of Sammelkartenmarkt GmbH & Co. KG are our sole property and that we are the
+> exclusive beneficiaries of any goodwill resulting from their use. You shall not take
+> any steps contrary to our rights or our property to the brands.
+
+They publish horizontal and vertical wordmarks, with and without a tagline or trademark
+notice, in blue, black and white, and they give a snippet for embedding them on other
+pages. So if this project used Cardmarket's logo there would be a basis to point at —
+with conditions attached: the rights stay theirs, the goodwill is theirs, and nothing
+may be done contrary to their rights.
+
+**What is actually in this project is not their logo.** Cardmarket's marks are
+wordmarks. `icons/cardmarket.svg` is a hand-and-bag glyph in a 15×15 viewBox with
+`fill="currentColor"`, which is the shape and size of Scryfall's own small interface
+icons. The README's earlier note that it "follows Scryfall's own purchase-link SVG"
+could not be confirmed against a Scryfall asset.
 
 | File in this repo | Status |
 | --- | --- |
-| `icons/cardmarket.svg` | **Unresolved.** A hand-and-bag glyph drawn in Scryfall's own icon style (15×15 viewBox, `fill="currentColor"`). The project's README says it follows Scryfall's own purchase-link icon, but that could not be confirmed against a Scryfall asset, and it is not Cardmarket's logo. |
+| `icons/cardmarket.svg` | **Resolved as far as Cardmarket is concerned:** it is not Cardmarket's mark, so their terms do not reach it. **Still open on the other side:** whether it copies a Scryfall asset, and if so under what terms. |
 
 ## 10. Development-only dependency (not shipped)
 
@@ -275,9 +295,9 @@ decision before the archive is published widely.
 2. **`icons/cardtrader.svg` and `icons/cardtrader.png`** — CardTrader's marks. Check
    CardTrader's brand/API terms; if redistribution is not permitted, drop the images and
    use the existing text label, which already reads "CardTrader …" beside the price.
-3. **`icons/cardmarket.svg`** — either confirm it is a copy of a Scryfall asset (and get
-   permission) or state plainly that it is an original redraw in Scryfall's icon style. Do
-   not ship a Scryfall asset without permission.
+3. **`icons/cardmarket.svg`** — Cardmarket's side is settled (section 9: it is not their
+   mark, and their published terms cover only their own). The open half is whether the
+   glyph copies a Scryfall asset. Replace it with an original glyph and both halves close.
 4. **EDHREC's logo** — their data policy covers using their data and says nothing about
    the mark. Either establish that it may be redistributed or replace it with a text
    label. The policy itself is now recorded in section 7.
