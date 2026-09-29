@@ -156,6 +156,15 @@ async function edhrecRoundTrip(slug) {
   await loadEdhrecState();
   // The slot is taken before the wait, not after. Taking it afterwards is what
   // let three callers sleep into the same second and fetch together.
+  // One request a second at most. The slot is taken before the wait, not after.
+  // Taking it afterwards is what let three callers sleep into the same second
+  // and fetch together.
+  //
+  // The extra 20 ms is deliberate and is not slack for the tests. EDHREC's rule
+  // is a ceiling, so erring slow is the right side to err on: a timer that wakes
+  // a hair early or a wall clock that steps between two Date.now() calls must
+  // never turn "one a second" into "just under one a second".
+  const EDHREC_MIN_GAP_MS = 1020;
   for (;;) {
     const now = Date.now();
     const waitUntil = Math.max(edhrecState.nextRequest, edhrecState.heldUntil);
@@ -164,7 +173,7 @@ async function edhrecRoundTrip(slug) {
     // back too.
     await new Promise(resolve => setTimeout(resolve, waitUntil - now));
   }
-  edhrecState.nextRequest = Date.now() + 1000;
+  edhrecState.nextRequest = Date.now() + EDHREC_MIN_GAP_MS;
   saveEdhrecState();
 
   let response;

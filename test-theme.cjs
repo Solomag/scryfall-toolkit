@@ -95,12 +95,15 @@ function iconCheck() {
     assert(exists(`icons/${icon}.svg`), `icons/${icon}.svg bundled`);
   }
   assert(exists('icons/edhrec.png'), 'icons/edhrec.png bundled');
-  // Cardmarket's own logo, as they distribute it: black for light backgrounds,
-  // white for dark. Both are trimmed to the artwork's own bounds and otherwise
-  // untouched.
+  // Cardmarket's symbol, as they distribute it: black for light backgrounds,
+  // white for dark. Cropped from their horizontal lockup — the wordmark beside
+  // it and the empty margin are what is gone, the artwork is theirs untouched.
   for (const file of ['icons/cardmarket-black.png', 'icons/cardmarket-white.png']) {
     assert(exists(file), `${file} bundled`);
-    assert(fs.statSync(path.join(ROOT, file)).size > 2000, `${file} is the real logo, not a stub`);
+    const png = fs.readFileSync(path.join(ROOT, file));
+    assertEqual([...png.slice(0, 4)], [0x89, 0x50, 0x4e, 0x47], `${file} is a real PNG`);
+    assertEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [89, 93],
+      `${file} is Cardmarket's symbol at its own proportions, not a stub`);
   }
   assert(!exists('icons/cardmarket.svg'),
     'the placeholder glyph is gone now that Cardmarket\'s own mark is used');

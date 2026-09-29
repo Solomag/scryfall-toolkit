@@ -275,13 +275,14 @@ other pages. Downloading them for use is what that page is for, and this project
 the conditions that come with it: their rights stay theirs, the goodwill from use is
 theirs, and nothing is done contrary to their rights.
 
-**What this project does with the logo, and what it does not.** Two of their published
-files are bundled: the black horizontal mark for light backgrounds and the white
-horizontal mark, which they publish for dark ones. Neither is redrawn, recoloured,
-rearranged or given a tag line they did not publish. The only change to either file is
-that the empty margin around the artwork is trimmed off, so the wordmark can sit at the
-height of a table column header. On the dark theme the white file's black backing is
-blended away rather than the artwork being altered.
+**What this project does with the logo, and what it does not.** Cardmarket's horizontal
+lockup is their symbol beside their wordmark. The wordmark is a wide thing and cannot sit
+in a table column header, so the column carries **their symbol** — the same artwork, taken
+out of the same published file, with the wordmark and the empty margin around it dropped
+and nothing else changed. Two versions are bundled: the black one for light backgrounds
+and the white one, which they publish for dark ones. Neither is redrawn, recoloured or
+rearranged. On the dark theme the white file's black backing is blended away rather than
+the artwork being altered.
 
 Nothing here suggests Cardmarket endorses, sponsors or is affiliated with this project,
 and the opening of this document says so in as many words. The logo marks which column is
@@ -296,8 +297,8 @@ Scryfall's and because the mark over a Cardmarket column ought to be Cardmarket'
 
 | File in this repo | What it is | Status |
 | --- | --- | --- |
-| `icons/cardmarket-black.png` | Cardmarket's horizontal logo, black, from their Downloads page | **Used under their published terms**, quoted above. Margin trimmed; otherwise as distributed. |
-| `icons/cardmarket-white.png` | The same logo, white, published by them for dark backgrounds | **Used under their published terms**, quoted above. Margin trimmed; otherwise as distributed. |
+| `icons/cardmarket-black.png` | Cardmarket's symbol, black, cropped out of the horizontal logo on their Downloads page | **Used under their published terms**, quoted above. The artwork itself is unchanged; the wordmark beside it and the empty margin are what is gone. |
+| `icons/cardmarket-white.png` | The same symbol, white, from the file they publish for dark backgrounds | **Used under their published terms**, quoted above. The artwork itself is unchanged; the wordmark beside it and the empty margin are what is gone. |
 
 ## 10. Development-only dependency (not shipped)
 

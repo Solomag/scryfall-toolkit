@@ -659,3 +659,26 @@ html.stk-dark #main .dropdown-menu-item.inverted{background-color:transparent!im
 html.stk-dark #main .dropdown-menu-item.inverted:is(:hover,:active,:focus,:focus-visible){background-color:#4a2c8c!important;color:#fff!important}
 html.stk-dark #main .dropdown-menu-item.inverted svg :is(path,g,circle,rect,polygon):not([fill="none"]):not([stroke="none"]){fill:#e9e5ee!important;stroke:#e9e5ee!important}
 html.stk-dark #main .dropdown-menu-item.inverted:is(:hover,:active,:focus) svg :is(path,g,circle,rect,polygon):not([fill="none"]):not([stroke="none"]){fill:#fff!important;stroke:#fff!important}
+
+/* --- the deck editor's print chooser and its narrow columns ---------------- */
+
+/* Scryfall paints every language chip a solid violet and the selected one a
+   brighter violet. On the dark page that reads as one purple slab with no way
+   to tell which language is chosen. The chips go quiet and the selection is the
+   only one carrying colour. */
+html.stk-dark #main .print-langs-item{background-color:transparent!important;color:#b3aec0!important;border:1px solid #4b4d52!important}
+html.stk-dark #main .print-langs-item.current{background-color:#5b4380!important;color:#fff!important;border-color:#8d76ad!important}
+html.stk-dark #main .print-langs-item:is(:hover,:active,:focus):not(.current){background-color:var(--stk-hover)!important;color:#fff!important;border-color:#6d5a7d!important}
+
+/* The print names are plain text in the cell, not links, so the rule that sets
+   the table's ink never reached them and they stayed at whatever Scryfall's
+   stylesheet said -- dark grey on a dark page. */
+html.stk-dark .prints-table tbody td>span:not([class*="currency-"]):not(.pillbox){color:var(--stk-ink)!important}
+
+/* Scryfall overlays the set badge and the mana cost on the name field, which is
+   fine in a wide column and a collision in a narrow one: the name runs
+   underneath them. Making the row a real flex row lets the name give way and
+   keeps both readable. The 32px Scryfall reserves for the row menu stays
+   reserved. */
+#deckbuilder .deckbuilder-entry-input{width:auto!important;flex:1 1 auto!important;min-width:0!important}
+#deckbuilder .deckbuilder-entry-information{position:static!important;flex:0 0 auto!important;margin-left:auto!important;margin-right:32px!important;padding:0 4px}

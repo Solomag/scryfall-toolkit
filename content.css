@@ -87,10 +87,10 @@
 .stk-ct-price-header,.stk-cm-price-header{white-space:nowrap!important}
 .prints-table th .stk-price-heading{display:inline-flex;align-items:center;justify-content:flex-end;gap:4px;white-space:nowrap;vertical-align:middle;line-height:15px}
 .prints-table th .stk-price-heading img{display:block;flex:none;vertical-align:middle}
-/* A published wordmark is a wide thing; it is sized here so the column stays a
-   column. The dark variant carries its own black backing, which the theme
-   blends away instead of the artwork being recoloured. */
-.prints-table th .stk-price-heading img.stk-brand-logo{height:13px;width:auto}
+/* Cardmarket's symbol, not their horizontal lockup: a wordmark is a wide thing
+   and cannot sit in a column header. The dark variant carries its own black
+   backing, which the theme blends away instead of the artwork being recoloured. */
+.prints-table th .stk-price-heading img.stk-brand-logo{height:15px;width:auto}
 .prints-table th .stk-price-heading img.stk-on-dark{display:none}
 html.stk-dark .prints-table th .stk-price-heading img.stk-on-light{display:none}
 html.stk-dark .prints-table th .stk-price-heading img.stk-on-dark{display:block;mix-blend-mode:screen}

@@ -230,7 +230,7 @@ Scryfall knows nothing about.
 | Class | Rules reaching for it |
 | --- | --- |
 | `.button-n` | 48 |
-| `.prints-table` | 29 |
+| `.prints-table` | 30 |
 | `.select-n` | 15 |
 | `.prints` | 12 |
 | `.inverted` | 10 |
@@ -240,6 +240,8 @@ Scryfall knows nothing about.
 | `.reference-jump` | 8 |
 | `.disabled` | 7 |
 | `.left-tray` | 7 |
+| `.current` | 6 |
+| `.print-langs-item` | 6 |
 | `.deck-tray-option` | 5 |
 | `.dropdown-menu-item` | 5 |
 | `.dropdown-menu-items` | 5 |
@@ -247,7 +249,6 @@ Scryfall knows nothing about.
 | `.rulings` | 5 |
 | `.search-controls-mobile` | 5 |
 | `.card-grid-header-content` | 4 |
-| `.current` | 4 |
 | `.deck-tray-buttons` | 4 |
 | `.deckbuilder-entry` | 4 |
 | `.deckbuilder-section-title-bar` | 4 |
@@ -262,6 +263,7 @@ Scryfall knows nothing about.
 | `.card-actions` | 3 |
 | `.card-legality` | 3 |
 | `.contact-modal` | 3 |
+| `.deckbuilder-entry-input` | 3 |
 | `.deckbuilder-section` | 3 |
 | `.donation-service` | 3 |
 | `.donation-stripe-amount` | 3 |
@@ -269,7 +271,6 @@ Scryfall knows nothing about.
 | `.feedback-modal` | 3 |
 | `.pagination` | 3 |
 | `.pillbox-item` | 3 |
-| `.print-langs-item` | 3 |
 | `.profile` | 3 |
 | `.reference-block-icon` | 3 |
 | `.search-controls-pagination` | 3 |
@@ -291,7 +292,6 @@ Scryfall knows nothing about.
 | `.deck-section` | 2 |
 | `.deckbuilder-cmc-stat-meter` | 2 |
 | `.deckbuilder-column` | 2 |
-| `.deckbuilder-entry-input` | 2 |
 | `.deckbuilder-section-count` | 2 |
 | `.dropdown` | 2 |
 | `.footer` | 2 |
@@ -349,6 +349,7 @@ Scryfall knows nothing about.
 | `.deck-view` | 1 |
 | `.deckbuilder-editor-inner` | 1 |
 | `.deckbuilder-entry-collector-number` | 1 |
+| `.deckbuilder-entry-information` | 1 |
 | `.deckbuilder-entry-menu-select` | 1 |
 | `.deckbuilder-entry-menu-visual` | 1 |
 | `.deckbuilder-entry-printing` | 1 |
@@ -377,6 +378,7 @@ Scryfall knows nothing about.
 | `.notice` | 1 |
 | `.notice-n` | 1 |
 | `.notification` | 1 |
+| `.pillbox` | 1 |
 | `.popover` | 1 |
 | `.prints-current` | 1 |
 | `.prints-info-section` | 1 |
@@ -470,5 +472,5 @@ name itself, without the leading `.` or `#`.
 
 ---
 
-Total: **355** Scryfall class names.
+Total: **357** Scryfall class names.
 

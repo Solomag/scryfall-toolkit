@@ -24,7 +24,20 @@ jobs:
         run: npm ci
 
       - name: Test
-        run: npm test
+        shell: bash
+        run: |
+          set -o pipefail
+          npm test 2>&1 | tee test-output.txt
+
+      # Tests were failing occasionally with nothing to go on: the log was in the
+      # notification email and nowhere else. Now it is kept, so a failure comes
+      # with the assertion that caused it instead of a red cross and a guess.
+      - name: Keep the test output
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-output
+          path: test-output.txt
 
       - name: Build the release archive
         run: npm run package
