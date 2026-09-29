@@ -149,7 +149,7 @@ async function fetchMock(url) {
     if (!fixture) throw new Error('Unmocked bundled file: ' + name);
     return textResponse('self.__MOXTAGS_FIXTURE = ' + JSON.stringify(fixture) + ';');
   }
-  if (target.startsWith('https://json.edhrec.com/pages/cards/')) {
+  if (/^https:\/\/json\.edhrec\.com\/pages\/(cards|commanders)\//.test(target)) {
     edhrecFetches.push(Date.now());
     if (edhrecNextStatus) { const status = edhrecNextStatus; edhrecNextStatus = null; return jsonResponse({}, status); }
     const slug = target.slice(target.lastIndexOf('/') + 1).replace(/\.json$/, '');

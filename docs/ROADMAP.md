@@ -19,22 +19,21 @@ Last updated 2026-09-29.
 
 ### Check the deck editor modules in a live deck editor
 
-Two of the four Shambleshark deck modules are ported: the clean up improver and the card
-preview on hover. Both are tested against a stand-in for `window.Scryfall` and
-`window.ScryfallAPI`. What that cannot cover is whether Scryfall's internals are still
-shaped the way Shambleshark found them in 2023. Until someone opens a deck, turns a
-setting on and uses it, both stay switched off.
+Three of the four Shambleshark deck modules are ported: the clean up improver, the card
+preview on hover, and the EDHREC suggestions. All three are tested against a stand-in for
+`window.Scryfall` and `window.ScryfallAPI`. What that cannot cover is whether Scryfall's
+internals are still shaped the way Shambleshark found them in 2023. Until someone opens a
+deck, turns a setting on and uses it, all three stay switched off.
 
-If they hold up, the same path covers the two that are left — the EDHREC suggestions and
-the deckbuilder search. They share the page-world script, the Scryfall adapter and the
-bridge, so the remaining work is the logic and not the plumbing. The announced sizes were
-wrong once already: `clean-up-improver` looked like 82 lines and was about a thousand,
-and `edhrec-suggestions` looks like 58 but is 425 across three files. Measure from the
-real files before trusting any estimate.
+One of the three was written rather than copied: Shambleshark's EDHREC suggestions embed
+an iframe to edhrec.com, and this project goes to EDHREC's published JSON instead, behind
+a queue and their data policy. The commander page's own `cardlists` already carry the
+grouping and ranking, so nothing had to be invented.
 
-One of the two is a design question rather than a port. Shambleshark's EDHREC suggestions
-embed an iframe to edhrec.com; this project deliberately goes to EDHREC's JSON instead,
-behind a queue and their published data policy. So that module gets written, not copied.
+What is left of the four is the deckbuilder search, at 568 lines the biggest of them. The
+announced sizes were wrong once already: `clean-up-improver` looked like 82 lines and was
+about a thousand, and `edhrec-suggestions` looks like 58 but is 425 across three files.
+Measure from the real files before trusting any estimate.
 
 If they do not hold up, the answer is to say so and drop them, not to ship something that
 half works.

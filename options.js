@@ -20,11 +20,11 @@ const defaults = {
   setPlatforms: ['paper', 'arena', 'mtgo'],
   taggerSearchLinks: false, cardSearchLinks: true, cardNicknames: true, deckNoPrices: true, stackedDeckCards: true, deckTokens: true,
   deckCleanUpImprover: false, cleanUpLandsInSingleton: true, sortEntriesPrimary: 'none', insertSortingHeadings: true,
-  cardPreviewOnHover: false,
+  cardPreviewOnHover: false, edhrecSuggestions: false,
   legalities: true, exportFormat: "moxfield", formatOrder: null, formatVisibility: null,
   discoveredFormats: [], premodern: true, heritage: false, classic: false, peak: false
 };
-const basicFields = ["clipboard", "printAddButtons", "printPageSameTab", "hideCasterIndicator", "hideDigitalSets", "hideNonTournamentSets", "hideOversizedSets", "hideForeignBlackBorder", "hideNonEnglishPrints", "tags", "cardTags", "artTags", "relationships", "finishBadges", "onlyCardmarket", "cardtraderPrices", "euroPriceSources", "edhrecUsage", "edhrecSalt", "showSaltScale", "edhrecLink", "edhrecUsageDisplay", "usageColorMetric", "legalities", "exportFormat", "taggerSearchLinks", "cardSearchLinks", "cardNicknames", "deckNoPrices", "stackedDeckCards", "deckTokens", "deckCleanUpImprover", "cleanUpLandsInSingleton", "sortEntriesPrimary", "insertSortingHeadings", "cardPreviewOnHover", "printGrouping", "printFoldGroups", "printFullPageLink"];
+const basicFields = ["clipboard", "printAddButtons", "printPageSameTab", "hideCasterIndicator", "hideDigitalSets", "hideNonTournamentSets", "hideOversizedSets", "hideForeignBlackBorder", "hideNonEnglishPrints", "tags", "cardTags", "artTags", "relationships", "finishBadges", "onlyCardmarket", "cardtraderPrices", "euroPriceSources", "edhrecUsage", "edhrecSalt", "showSaltScale", "edhrecLink", "edhrecUsageDisplay", "usageColorMetric", "legalities", "exportFormat", "taggerSearchLinks", "cardSearchLinks", "cardNicknames", "deckNoPrices", "stackedDeckCards", "deckTokens", "deckCleanUpImprover", "cleanUpLandsInSingleton", "sortEntriesPrimary", "insertSortingHeadings", "cardPreviewOnHover", "edhrecSuggestions", "printGrouping", "printFoldGroups", "printFullPageLink"];
 // EDHREC and CardTrader are optional features, and so is the access they need.
 // Chrome has a place for exactly this: optional_host_permissions, granted only
 // when the user turns one of them on. Turning a switch off and on again is also

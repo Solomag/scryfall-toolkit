@@ -101,7 +101,7 @@ function makeWorld({ withScryfall = true, html = '', deck = null, opts = {} } = 
   // The deck modules load in a fixed order: pure deck data first, then the one
   // file that touches Scryfall, then the features on top of it, then the bridge.
   const boot = () => {
-    for (const file of ['deck-tools.js', 'deck-scryfall.js', 'deck-clean-up.js', 'deck-card-preview.js']) run(file);
+    for (const file of ['deck-tools.js', 'deck-scryfall.js', 'deck-clean-up.js', 'deck-card-preview.js', 'deck-edhrec.js']) run(file);
   };
   // Dispatching to the page side means handing over the identity that side sees
   // as its own window. Across a vm boundary that is not the same object as the
@@ -405,6 +405,85 @@ const card = (name, typeLine, id) => ({
       w.document.querySelector('.deckbuilder-entry').dispatchEvent(new w.self.Event('mousemove'));
       assertEqual(tooltip.style.display, before,
         'and hovering leaves the tooltip exactly as it was');
+    }
+
+    console.log('deck-edhrec: a commander deck gets an EDHREC button and real suggestions');
+    {
+      const w = makeWorld({
+        deck: {
+          id: 'deck-8',
+          sections: { primary: ['commanders', 'nonlands'], secondary: [] },
+          entries: {
+            commanders: [{ id: 'c1', count: 1, section: 'commanders', raw_text: true,
+              card_digest: { name: 'Atraxa, Praetors Voice', type_line: 'Legendary Creature — Phyrexian Angel' } }],
+            nonlands: []
+          }
+        },
+        html: `
+          <div class="deckbuilder-toolbar"><div class="deckbuilder-toolbar-items-right"></div></div>
+          <div class="deckbuilder-section"><h6 class="deckbuilder-section-title">Commanders</h6></div>
+          <div class="deckbuilder-section"><h6 class="deckbuilder-section-title">Column A</h6></div>
+          <div id="deckbuilder"></div>`
+      });
+      w.boot();
+      const asked = [];
+      w.self.STK_BRIDGE = {
+        request: (name, value) => {
+          asked.push({ name, value });
+          return Promise.resolve([
+            { header: 'High Synergy Cards', cards: [
+              { id: 'a1', name: 'Evolution Sage', numDecks: 900, potentialDecks: 1000 },
+              { id: 'a2', name: 'Tekuthal', numDecks: 0, potentialDecks: 1000 }
+            ] },
+            { header: 'Creatures', cards: [{ id: 'a3', name: 'Cankerbloom', numDecks: 250, potentialDecks: 1000 }] }
+          ]);
+        }
+      };
+
+      const result = w.self.STK_DECK_EDHREC.apply({ edhrecSuggestions: true });
+      assertEqual(result.applied, true, 'the feature is wired');
+      const button = w.document.getElementById('stk-edhrec-button');
+      assert(button, 'a commander deck gets the button');
+      assertEqual(button.parentNode.className, 'deckbuilder-toolbar-items-right',
+        'in the toolbar where the other deck buttons are');
+
+      button.dispatchEvent(new w.self.Event('click'));
+      await tick();
+      assertEqual(asked.length, 1, 'clicking asks for suggestions');
+      assertEqual(asked[0].name, 'edhrecCommander', 'through the background worker');
+      assertEqual(asked[0].value.name, 'Atraxa, Praetors Voice', 'for the deck\'s commander');
+
+      const titles = [...w.document.querySelectorAll('.stk-edhrec-list-title')].map(t => t.textContent);
+      assertEqual(titles, ['High Synergy Cards', 'Creatures'], 'EDHREC\'s own grouping is kept');
+      assertEqual([...w.document.querySelectorAll('.stk-edhrec-card-name')].map(n => n.textContent),
+        ['Evolution Sage', 'Tekuthal', 'Cankerbloom'], 'with its cards in its order');
+      assertEqual([...w.document.querySelectorAll('.stk-edhrec-card-rate')].map(n => n.textContent),
+        ['90%', '0%', '25%'], 'and how many of the commander\'s decks play each');
+
+      const added = [];
+      w.self.ScryfallAPI.decks.addCard = (id, cardId, cb) => { added.push(cardId); cb({ id: cardId }); };
+      const buttons = w.document.querySelectorAll('.stk-edhrec-add');
+      buttons[0].dispatchEvent(new w.self.Event('click'));
+      await tick();
+      assertEqual(added, ['a1'], 'adding a card goes through Scryfall with its own id');
+      assertEqual(buttons[0].textContent, 'Added', 'and the button says so afterwards');
+
+      w.document.querySelector('.modal-dialog-close').dispatchEvent(new w.self.Event('click'));
+      assertEqual(w.document.querySelector('.stk-edhrec-panel'), null, 'and the panel closes');
+    }
+
+    console.log('deck-edhrec: a deck with no commander gets no button');
+    {
+      const w = makeWorld({
+        html: `
+          <div class="deckbuilder-toolbar"><div class="deckbuilder-toolbar-items-right"></div></div>
+          <div class="deckbuilder-section"><h6 class="deckbuilder-section-title">Column A</h6></div>`
+      });
+      w.boot();
+      w.self.STK_BRIDGE = { request: () => Promise.resolve([]) };
+      w.self.STK_DECK_EDHREC.apply({ edhrecSuggestions: true });
+      assertEqual(w.document.getElementById('stk-edhrec-button'), null,
+        'a deck with no commanders is left alone');
     }
 
     summary('test-deck-clean-up');

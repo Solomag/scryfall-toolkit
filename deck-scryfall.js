@@ -137,6 +137,10 @@
     return callDeck('updateEntry', id => [id, card]);
   }
 
+  function addCard(cardId) {
+    return callDeck('addCard', id => [id, cardId]);
+  }
+
   function pushNotification(header, message, color, type) {
     const s = scryfallGlobal();
     if (!s || typeof s.pushNotification !== 'function') return;
@@ -225,6 +229,36 @@
     return true;
   }
 
+  // --- waiting for elements that arrive later -------------------------------
+
+  // The deck editor builds its rows, columns and toolbar as the deck loads, so
+  // almost everything has to wait for markup rather than look for it once.
+  const waiting = [];
+  let observer = null;
+
+  function checkWaiting() {
+    waiting.forEach(entry => {
+      document.querySelectorAll(entry.selector).forEach(element => {
+        if (entry.seen.indexOf(element) > -1) return;
+        entry.seen.push(element);
+        try {
+          entry.fn(element);
+        } catch (error) {
+          report('element handler for ' + entry.selector + ' threw', error);
+        }
+      });
+    });
+  }
+
+  function elementReady(selector, fn) {
+    waiting.push({ selector, fn, seen: [] });
+    if (!observer && typeof MutationObserver === 'function') {
+      observer = new MutationObserver(checkWaiting);
+      observer.observe(document.documentElement, { childList: true, subtree: true });
+    }
+    checkWaiting();
+  }
+
   // --- the outside interface ------------------------------------------------
 
   self.STK_DECK_SCRYFALL = {
@@ -232,8 +266,10 @@
     emit: emit,
     report: report,
     install: addHooks,
+    elementReady: elementReady,
     getDeck: getDeck,
     updateEntry: updateEntry,
+    addCard: addCard,
     pushNotification: pushNotification,
     activeDeckId: activeDeckId,
     deckIdFromUrl: deckIdFromUrl,

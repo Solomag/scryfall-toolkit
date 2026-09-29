@@ -142,17 +142,42 @@ function edhrecCached(slug) {
 }
 
 // Two tabs on the same card ask for the same slug; only one request goes out.
-function edhrecFetch(slug) {
-  const running = edhrecInFlight.get(slug);
+// EDHREC's commander page carries its card lists already grouped, each card with
+// the Scryfall id this extension needs to add it to a deck. Only what the feature
+// shows is taken; the rest of their page is not stored here.
+function edhrecCommanderLists(body) {
+  const lists = body && body.container && body.container.json_dict &&
+    body.container.json_dict.cardlists;
+  if (!Array.isArray(lists)) throw new Error('EDHREC returned no card lists');
+  return lists.map(list => ({
+    header: String(list && list.header || '').slice(0, 60),
+    cards: (Array.isArray(list && list.cardviews) ? list.cardviews : [])
+      .filter(card => /^[0-9a-f-]{36}$/.test(card && card.id || ''))
+      .map(card => ({
+        id: card.id,
+        name: String(card.name || '').slice(0, 120),
+        synergy: Number.isFinite(card.synergy) ? Math.round(card.synergy * 1000) / 1000 : null,
+        numDecks: Number.isFinite(card.num_decks) ? card.num_decks : null,
+        potentialDecks: Number.isFinite(card.potential_decks) ? card.potential_decks : null
+      }))
+  })).filter(list => list.cards.length > 0);
+}
+
+function edhrecFetch(path) {
+  const running = edhrecInFlight.get(path);
   if (running) return running;
-  const run = edhrecQueue.then(() => edhrecRoundTrip(slug));
+  const run = edhrecQueue.then(() => edhrecRoundTrip(path));
   edhrecQueue = run.then(() => {}, () => {});
-  edhrecInFlight.set(slug, run);
-  run.then(() => {}, () => {}).then(() => { edhrecInFlight.delete(slug); });
+  edhrecInFlight.set(path, run);
+  run.then(() => {}, () => {}).then(() => { edhrecInFlight.delete(path); });
   return run;
 }
 
-async function edhrecRoundTrip(slug) {
+// `path` is what follows /pages/ on json.edhrec.com — `cards/<slug>` for a card,
+// `commanders/<slug>` for a commander's page. Both are the same public JSON
+// family and both go through this one queue, so a card lookup and a commander
+// lookup can never outrun the rate EDHREC asks for.
+async function edhrecRoundTrip(path) {
   await loadEdhrecState();
   // The slot is taken before the wait, not after. Taking it afterwards is what
   // let three callers sleep into the same second and fetch together.
@@ -178,7 +203,7 @@ async function edhrecRoundTrip(slug) {
 
   let response;
   try {
-    response = await fetch(`https://json.edhrec.com/pages/cards/${encodeURIComponent(slug)}.json`,
+    response = await fetch(`https://json.edhrec.com/pages/${path}.json`,
       { headers: { Accept: 'application/json' }, credentials: 'omit' });
   } catch (error) {
     edhrecPenalty();
@@ -307,19 +332,22 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
           /^https:\/\/cards\.scryfall\.io\//.test(token.image || ''))
         .sort((a,b) => a.name.localeCompare(b.name));
     }
-    if (message.type === 'edhrec') {
+    if (message.type === 'edhrec' || message.type === 'edhrecCommander') {
       const name = String(message.name || '').trim();
       if (!name || name.length > 180 || /[<>\u0000-\u001f]/.test(name)) throw new Error('Invalid card name');
       const slug = name.normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase()
         .replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
       if (!slug || slug.length > 180) throw new Error('Invalid EDHREC slug');
+      const path = (message.type === 'edhrecCommander' ? 'commanders/' : 'cards/') + slug;
       await loadEdhrecState();
-      const already = edhrecCached(slug);
+      const already = edhrecCached(path);
       if (already) return already.value;
       const promise = (async () => {
-        const response = await edhrecFetch(slug);
+        const response = await edhrecFetch(path);
         if (!response.ok) throw new Error(`EDHREC HTTP ${response.status}`);
-        const card = (await response.json())?.container?.json_dict?.card;
+        const body = await response.json();
+        if (message.type === 'edhrecCommander') return edhrecCommanderLists(body);
+        const card = body?.container?.json_dict?.card;
         const canonical = value => String(value || '').toLowerCase().replace(/[^a-z0-9]/g,'');
         if (!card || (canonical(card.name) !== canonical(name) &&
           !card.names?.some(part => canonical(part) === canonical(name)))) throw new Error('EDHREC card mismatch');
@@ -333,8 +361,8 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
         // Bounded so the storage entry cannot grow with browsing: the oldest
         // entries go first, and a card is asked for again only after six hours.
         const cache = edhrecState.cache;
-        delete cache[slug];
-        cache[slug] = { value, expires: Date.now() + EDHREC_TTL };
+        delete cache[path];
+        cache[path] = { value, expires: Date.now() + EDHREC_TTL };
         const keys = Object.keys(cache);
         for (let i = 0; i < keys.length - 250; i++) delete cache[keys[i]];
         saveEdhrecState();

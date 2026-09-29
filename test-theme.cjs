@@ -42,8 +42,8 @@ async function manifestIntegrity() {
   const pageWorld = manifest.content_scripts.filter(group => group.world === 'MAIN');
   assertEqual(pageWorld.length, 1, 'exactly one script group runs in the page world');
   assertEqual(pageWorld[0].js,
-    ['deck-tools.js', 'deck-scryfall.js', 'deck-clean-up.js', 'deck-card-preview.js', 'page.js'],
-    'the page world loads the deck tools, the Scryfall adapter, the two features and the bridge');
+    ['deck-tools.js', 'deck-scryfall.js', 'deck-clean-up.js', 'deck-card-preview.js', 'deck-edhrec.js', 'page.js'],
+    'the page world loads the deck tools, the Scryfall adapter, the three features and the bridge');
   assertEqual(pageWorld[0].run_at, 'document_idle', 'and starts once the page is up');
   for (const group of manifest.content_scripts) {
     if (group.world === 'MAIN') continue;

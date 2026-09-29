@@ -209,6 +209,14 @@ rules this project's request pattern has to respect.
   the logo file listed below. The card name is sent to EDHREC only when the user has
   enabled the EDHREC feature.
 
+Two parts of that public JSON are read. `pages/cards/<slug>.json` for one card's usage and
+salt, and `pages/commanders/<slug>.json` for a commander's page, whose `cardlists` already
+hold the cards EDHREC groups and ranks for that commander. Both go through one queue, so a
+card lookup and a commander lookup can never between them outrun the rate above. Nothing
+of EDHREC's page markup is used, and no request is made through a hidden frame on their
+domain — which is how Shambleshark's feature of the same name works, and this project does
+not do that.
+
 **Their data policy.** EDHREC and Space Cow Media encourage community developers to use
 EDHREC data, and allow HTTP requests like those a browser makes, subject to a rate limit.
 The terms they set out, in their words:

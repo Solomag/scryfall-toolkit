@@ -27,36 +27,6 @@
   const tools = self.STK_DECK_TOOLS;
   const scryfall = self.STK_DECK_SCRYFALL;
 
-  // --- waiting for elements that arrive later -------------------------------
-
-  const waiting = [];
-  let observer = null;
-
-  function checkWaiting() {
-    waiting.forEach(entry => {
-      document.querySelectorAll(entry.selector).forEach(element => {
-        if (entry.seen.indexOf(element) > -1) return;
-        entry.seen.push(element);
-        try {
-          entry.fn(element);
-        } catch (error) {
-          scryfall.report('element handler for ' + entry.selector + ' threw', error);
-        }
-      });
-    });
-  }
-
-  // Fires for every element matching the selector that is in the document now
-  // or appears later. The deck editor builds its rows as cards are added.
-  function elementReady(selector, fn) {
-    waiting.push({ selector, fn, seen: [] });
-    if (!observer && typeof MutationObserver === 'function') {
-      observer = new MutationObserver(checkWaiting);
-      observer.observe(document.documentElement, { childList: true, subtree: true });
-    }
-    checkWaiting();
-  }
-
   // --- what Scryfall gives us to show the preview in ------------------------
 
   function tooltipElement() {
@@ -193,7 +163,7 @@
           }
           refreshCache();
         });
-        elementReady('.deckbuilder-entry', attachToRow);
+        scryfall.elementReady('.deckbuilder-entry', attachToRow);
       } catch (error) {
         scryfall.report('wiring the card preview failed', error);
         applied = false;

@@ -24,7 +24,7 @@
     formatOrder: null, formatVisibility: null,
     deckCleanUpImprover: false, cleanUpLandsInSingleton: true,
     sortEntriesPrimary: 'none', insertSortingHeadings: true,
-    cardPreviewOnHover: false,
+    cardPreviewOnHover: false, edhrecSuggestions: false,
     exportFormat: "moxfield", cards: null
   };
   const settings = await chrome.storage.local.get(defaults);
@@ -34,7 +34,7 @@
   // in an isolated world that can see neither. Only this side can read the
   // settings. So the two meet at the window itself.
   const deckSettingsNow = () => {
-    const wanted = settings.deckCleanUpImprover || settings.cardPreviewOnHover;
+    const wanted = settings.deckCleanUpImprover || settings.cardPreviewOnHover || settings.edhrecSuggestions;
     if (!wanted) return {};
     const value = {};
     if (settings.deckCleanUpImprover) {
@@ -43,6 +43,7 @@
       value.insertSortingHeadings = settings.insertSortingHeadings;
     }
     if (settings.cardPreviewOnHover) value.cardPreviewOnHover = true;
+    if (settings.edhrecSuggestions) value.edhrecSuggestions = true;
     return value;
   };
   const sendDeckSettings = () => window.postMessage({
@@ -56,11 +57,24 @@
     // The page side announces itself when it is listening, which may be before
     // or after this script runs.
     if (data.source === 'page' && data.type === 'ready') sendDeckSettings();
+    // The page world cannot reach the extension's background worker; this is
+    // the only bridge to it. The name is the request type the worker answers.
+    if (data.source === 'page' && data.type === 'request' && data.value && data.value.id) {
+      const { id, name, value } = data.value;
+      const reply = (ok, result) => window.postMessage({
+        channel: 'scryfall-toolkit', version: 1, source: 'content', type: 'response',
+        value: ok ? { id, value: result } : { id, error: String(result && result.message || result) }
+      }, '*');
+      if (!/^[a-zA-Z]+$/.test(String(name))) return reply(false, 'Unknown request');
+      chrome.runtime.sendMessage({ type: name, ...(value || {}) })
+        .then(result => reply(true, result))
+        .catch(error => reply(false, error));
+    }
   });
   sendDeckSettings();
   // Turning the feature on or off should not need a page reload.
   chrome.storage.onChanged.addListener(changes => {
-    const keys = ['deckCleanUpImprover', 'cleanUpLandsInSingleton', 'sortEntriesPrimary', 'insertSortingHeadings', 'cardPreviewOnHover'];
+    const keys = ['deckCleanUpImprover', 'cleanUpLandsInSingleton', 'sortEntriesPrimary', 'insertSortingHeadings', 'cardPreviewOnHover', 'edhrecSuggestions'];
     if (!keys.some(key => changes[key])) return;
     keys.forEach(key => { if (changes[key]) settings[key] = changes[key].newValue; });
     sendDeckSettings();

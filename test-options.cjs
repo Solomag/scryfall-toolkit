@@ -38,7 +38,7 @@ const REQUIRED_IDS = [
   'legalities', 'exportFormat', 'taggerSearchLinks', 'cardSearchLinks',
   'cardNicknames', 'deckNoPrices', 'stackedDeckCards', 'deckTokens',
   'deckCleanUpImprover', 'cleanUpLandsInSingleton', 'sortEntriesPrimary',
-  'insertSortingHeadings', 'cardPreviewOnHover',
+  'insertSortingHeadings', 'cardPreviewOnHover', 'edhrecSuggestions',
   'setPlatformsAll', 'setPlatformsPaper', 'setPlatformsArena', 'setPlatformsMtgo',
   'printGrouping', 'printFoldGroups', 'printFullPageLink'
 ];
@@ -112,7 +112,7 @@ function licenceAndPrivacyTest() {
   const privacy = read('PRIVACY.md');
   // The claims have to match the code, so each one is checked against the call sites.
   const background = read('background.js');
-  assert(background.includes('json.edhrec.com/pages/cards/'),
+  assert(background.includes('json.edhrec.com/pages/'),
     'the code really does call EDHREC');
   assert(/json\.edhrec\.com/.test(privacy) && /the card name, as part of the URL/i.test(privacy),
     'the policy says EDHREC receives the card name');

@@ -165,6 +165,17 @@ own `#card-tooltip` element rather than building a second tooltip, which is one 
 thing tied to their markup — listed in `docs/scryfall-dom.md` — but it makes the preview
 look like part of the site instead of like an add-on.
 
+**EDHREC suggestions** *(off by default)*. On a commander deck, an EDHREC button in the
+toolbar opens the card lists EDHREC shows for that commander — its own grouping, its own
+ranking — with the share of the commander's decks that play each card, and a button that
+adds one to the deck through Scryfall.
+
+Worth being explicit about what this does not do. Shambleshark has a feature of the same
+name that parks a hidden iframe on edhrec.com and asks it for recommendations. This reads
+EDHREC's published JSON instead — the commander page's `cardlists` already carry what the
+feature shows — through the same queue and the same rate their data policy asks for. No
+frame, no page markup, no endpoint that was not already being used.
+
 ## Hiding and filtering
 
 These affect the **Sets** index and the **Prints** table on a card page. Card searches,

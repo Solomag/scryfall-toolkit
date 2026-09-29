@@ -27,18 +27,36 @@
   const CHANNEL = 'scryfall-toolkit';
   const VERSION = 1;
 
+  // Requests that are still waiting for the content script to come back with an
+  // answer. The deck features need data from the extension's own background
+  // worker, and this is the only path to it from the page world.
+  const waiting = Object.create(null);
+  let nextId = 0;
+
   function post(type, value) {
     self.postMessage({ channel: CHANNEL, version: VERSION, source: 'page', type: type, value: value }, '*');
+  }
+
+  // Ask the background worker for something and wait for it. `name` is the
+  // message type the worker answers, `value` its payload.
+  function request(name, value) {
+    return new Promise((resolve, reject) => {
+      const id = 'r' + (++nextId);
+      waiting[id] = { resolve, reject };
+      post('request', { id: id, name: name, value: value || {} });
+    });
   }
 
   function reportStatus(extra) {
     const adapter = self.STK_DECK_SCRYFALL;
     const cleanup = self.STK_DECK_CLEANUP;
     const preview = self.STK_DECK_CARD_PREVIEW;
+    const edhrec = self.STK_DECK_EDHREC;
     post('status', Object.assign({
       wired: Boolean(adapter),
       cleanUp: cleanup ? cleanup.status().applied : false,
       cardPreview: preview ? preview.status().applied : false,
+      edhrecSuggestions: edhrec ? edhrec.status().applied : false,
       scryfall: adapter ? adapter.status() : null
     }, extra || {}));
   }
@@ -48,8 +66,9 @@
     const wantCleanUp = Boolean(s.cleanUpLandsInSingleton) ||
       Boolean(s.sortEntriesPrimary && s.sortEntriesPrimary !== 'none');
     const wantPreview = Boolean(s.cardPreviewOnHover);
+    const wantEdhrec = Boolean(s.edhrecSuggestions);
 
-    if (!wantCleanUp && !wantPreview) {
+    if (!wantCleanUp && !wantPreview && !wantEdhrec) {
       // Nothing is on. The hooks are deliberately not installed: a setting
       // that is off should leave Scryfall's own objects alone.
       reportStatus({ off: true });
@@ -65,6 +84,7 @@
     adapter.install();
     if (wantCleanUp && self.STK_DECK_CLEANUP) self.STK_DECK_CLEANUP.apply(s);
     if (wantPreview && self.STK_DECK_CARD_PREVIEW) self.STK_DECK_CARD_PREVIEW.apply(s);
+    if (wantEdhrec && self.STK_DECK_EDHREC) self.STK_DECK_EDHREC.apply(s);
     reportStatus();
   }
 
@@ -78,7 +98,16 @@
     if (data.source !== 'content') return;
     if (data.type === 'settings') applySettings(data.value);
     if (data.type === 'ping') reportStatus();
+    if (data.type === 'response') {
+      const pending = data.value && waiting[data.value.id];
+      if (!pending) return;
+      delete waiting[data.value.id];
+      if (data.value.error) pending.reject(new Error(data.value.error));
+      else pending.resolve(data.value.value);
+    }
   });
+
+  self.STK_BRIDGE = { request: request };
 
   // Announce that this side is listening, so the content script does not have
   // to guess whether it arrived before or after the page finished loading.
