@@ -85,7 +85,8 @@ Material from other projects keeps its own licence and its own notice. The MPL c
 | `data/oracle-tags.js`, `data/illustration-tags-1.js`, `data/illustration-tags-2.js` | MoxTags v1.8.3 data — MIT, © 2026 Nate Finch |
 | `data/shambleshark-nicknames.js` | Shambleshark nickname records — MIT, © 2016 Samuel Simões, © 2019 Blade Barringer |
 | `icons/clip.svg`, `icons/duplicate.svg`, `icons/trash.svg` | CardClip icons — MIT, © 2022 Jacob Hearst |
-| `icons/edhrec.png`, `icons/cardtrader.svg`, `icons/cardtrader.png`, `icons/cardmarket.svg` | Third-party brand marks. **Not covered by any licence of this project**, and not cleared: no permission was requested from those services and none was received. |
+| `icons/edhrec.png`, `icons/cardtrader.svg`, `icons/cardtrader.png` | Third-party brand marks. **Not covered by any licence of this project**, and not cleared: no permission was requested from those services and none was received. |
+| `icons/cardmarket.svg` | **This project's own artwork** — an original price-tag glyph drawn from arcs and a circle. It replaces an SVG that was lifted from Scryfall's page markup; see `THIRD_PARTY_NOTICES.md`. |
 | `manifest.json`, `package.json` and the rest of this project's own files | MPL-2.0 |
 
 Full detail, source by source: **[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)**. Licence texts are in [`third_party/`](third_party/) and ship inside the extension archive.

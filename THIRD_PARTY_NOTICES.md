@@ -28,15 +28,19 @@ document, and it grants no rights in anyone's trademarks, logos, card data or se
 
 In particular, and stated plainly because it is easy to get wrong:
 
-- The MPL-2.0 notice does **not** cover `icons/edhrec.png`, `icons/cardtrader.svg`,
-  `icons/cardtrader.png` or `icons/cardmarket.svg`. Those are third-party brand marks, or
-  in one case an icon whose origin is unconfirmed. Their rights stay with their owners.
+- The MPL-2.0 notice does **not** cover `icons/edhrec.png`, `icons/cardtrader.svg` or
+  `icons/cardtrader.png`. Those are third-party brand marks, and their rights stay with
+  their owners.
 - **Data access and logos are different questions, and only the first is settled.**
   EDHREC answered with their published data policy and it permits this use, so the data
   side is covered and recorded in section 7. Their policy says nothing about the logo,
-  and neither did their answer. CardTrader and Cardmarket have not been asked at all.
-  Nothing here claims a logo is cleared: the unresolved status in sections 7 to 9 is
-  about the marks, and that is the real status.
+  and neither did their answer. CardTrader's mark was taken from their own site and no
+  permission for it has been given. Nothing here claims a logo is cleared: the
+  unresolved status in sections 7 and 8 is about the marks, and that is the real status.
+- **Cardmarket is closed, but not for the reason it first looked.** This project never
+  used Cardmarket's logo, so their published brand terms do not reach anything here. The
+  icon that sat beside the EUR column turned out to be a Scryfall asset, not theirs, and
+  it has been replaced with an original glyph. Section 9 has the details.
 - The bundled MoxTags and Shambleshark data and the CardClip icons stay under their own
   MIT terms with their own copyright notices; re-licensing them as MPL-2.0 would be
   wrong and has not been done.
@@ -165,6 +169,12 @@ set. It contains set codes and platform names only — no card names, no card te
 artwork, and nothing from Wizards of the Coast beyond factual set identifiers. Sets missing
 from the snapshot are looked up at runtime and cached.
 
+One Scryfall asset was copied and then removed. The icon beside the EUR price column
+began as the inline SVG from Scryfall's own "Buy at Cardmarket" link, recoloured to
+`currentColor`. It was never established that Scryfall's interface assets may be
+redistributed, so it has been replaced with an original glyph and is no longer in the
+project. Nothing else from Scryfall's markup or artwork is bundled.
+
 Scryfall's Terms of Service state that "portions of Scryfall are unofficial Fan Content
 permitted under the Wizards of the Coast Fan Content Policy", that "the literal and
 graphical information presented on this site about Magic: The Gathering, including card
@@ -246,15 +256,21 @@ pages. So if this project used Cardmarket's logo there would be a basis to point
 with conditions attached: the rights stay theirs, the goodwill is theirs, and nothing
 may be done contrary to their rights.
 
-**What is actually in this project is not their logo.** Cardmarket's marks are
-wordmarks. `icons/cardmarket.svg` is a hand-and-bag glyph in a 15×15 viewBox with
-`fill="currentColor"`, which is the shape and size of Scryfall's own small interface
-icons. The README's earlier note that it "follows Scryfall's own purchase-link SVG"
-could not be confirmed against a Scryfall asset.
+**What actually used to be in this project was not their logo.** Cardmarket's marks are
+wordmarks. The icon beside the EUR price column was a small hand-and-bag glyph in a
+15×15 viewBox with `fill="#303030"`, lifted out of the markup of a Scryfall card page —
+it is the SVG Scryfall puts inside its own "Buy at Cardmarket" link. Two things were
+changed when it was taken: `fill="#303030"` became `fill="currentColor"`, and the
+`width`/`height` went from 15 to 16.
+
+So the question was never Cardmarket's at all. It was a Scryfall interface asset with
+an unestablished licence, and it has been **removed**. The icon is now an original
+price-tag glyph drawn from an arc, a rounded rectangle and a circle — no logo, no
+wordmark, no brand shape. See section 12.
 
 | File in this repo | Status |
 | --- | --- |
-| `icons/cardmarket.svg` | **Resolved as far as Cardmarket is concerned:** it is not Cardmarket's mark, so their terms do not reach it. **Still open on the other side:** whether it copies a Scryfall asset, and if so under what terms. |
+| `icons/cardmarket.svg` | **Resolved.** Now an original glyph; the Scryfall SVG it used to contain is not shipped. Nothing of Cardmarket's is shipped, so their terms are not relied on. |
 
 ## 10. Development-only dependency (not shipped)
 
@@ -295,9 +311,12 @@ decision before the archive is published widely.
 2. **`icons/cardtrader.svg` and `icons/cardtrader.png`** — CardTrader's marks. Check
    CardTrader's brand/API terms; if redistribution is not permitted, drop the images and
    use the existing text label, which already reads "CardTrader …" beside the price.
-3. **`icons/cardmarket.svg`** — Cardmarket's side is settled (section 9: it is not their
-   mark, and their published terms cover only their own). The open half is whether the
-   glyph copies a Scryfall asset. Replace it with an original glyph and both halves close.
+3. **`icons/cardmarket.svg`** — **closed.** Two questions were tangled here and both are
+   now answered. It was never Cardmarket's mark (theirs are wordmarks), so their
+   published terms reach nothing in this project; and it *was* a Scryfall asset, taken
+   from the markup of Scryfall's own "Buy at Cardmarket" link and recoloured. Since
+   Scryfall's licence for their interface assets was never established, the file now
+   holds an original glyph and no third-party artwork remains in it.
 4. **EDHREC's logo** — their data policy covers using their data and says nothing about
    the mark. Either establish that it may be redistributed or replace it with a text
    label. The policy itself is now recorded in section 7.
