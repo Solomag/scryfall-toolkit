@@ -49,6 +49,9 @@ requests, and so does each service named below.
   queries such as `oracleid:…`, `illustrationid:…` and `e:<set>`.
 - A POST to `/cards/collection` carrying Scryfall card UUIDs, in batches of up to 75.
 - The tag bulk files (`oracle_tags`, `art_tags`) are downloaded and cached locally.
+- If you turn on the deck editor's search and type a query there, that query is sent to
+  `/cards/search`. It is your own text — Scryfall sees what you searched for, as it would
+  if you had typed it into their search box.
 - Sent: Scryfall card and set identifiers, and search queries. Not your account, not your
   clipboard content, not your token.
 - Requests to the API use `credentials: 'omit'`, so your Scryfall login cookies are not
@@ -64,9 +67,16 @@ requests, and so does each service named below.
 
 - When you turn on the EDHREC feature, the extension requests
   `json.edhrec.com/pages/cards/<card-name>.json` for the card on the page you are viewing.
-- Sent: the card name, as part of the URL. This reveals which card you are looking at, and
-  EDHREC can see your IP address like any website can. Nothing else about you or your
-  collection is sent.
+- When you turn on EDHREC suggestions and click the button in the deck editor, it requests
+  `json.edhrec.com/pages/commanders/<commander-name>.json` for the commander of the deck
+  you are editing. **This is the one place the extension tells a third party something
+  about your deck.** It is the commander's name and nothing else — not the deck list, not
+  the cards in it.
+- Sent: the card name or the commander name, as part of the URL. This reveals which card
+  you are looking at, or whose deck you are editing, and EDHREC can see your IP address
+  like any website can. Nothing else about you or your collection is sent.
+- Both requests go through one queue, at most one a second, and are cached. The feature is
+  off unless you turn it on.
 - The clickable "EDHREC" link on the page is a normal link to `edhrec.com/cards/<card-name>`.
   It is only followed if you click it.
 

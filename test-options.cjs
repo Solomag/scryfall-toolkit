@@ -114,8 +114,13 @@ function licenceAndPrivacyTest() {
   const background = read('background.js');
   assert(background.includes('json.edhrec.com/pages/'),
     'the code really does call EDHREC');
-  assert(/json\.edhrec\.com/.test(privacy) && /the card name, as part of the URL/i.test(privacy),
+  assert(/json\.edhrec\.com/.test(privacy) &&
+    /card name or the commander name, as part of the URL/i.test(privacy),
     'the policy says EDHREC receives the card name');
+  // Suggestions are the one feature that tells a third party something about a
+  // deck, so it is named as such rather than buried in a general statement.
+  assert(/commander's name and nothing else/i.test(privacy),
+    'and that EDHREC suggestions send the commander name, and only that');
   assert(background.includes('api.cardtrader.com'),
     'the code really does call CardTrader');
   assert(/Authorization/.test(background) && /Bearer/.test(background),
