@@ -12,6 +12,15 @@ All releases: <https://github.com/Solomag/scryfall-toolkit/releases>
 
 Nothing yet.
 
+## [v0.52.0](https://github.com/Solomag/scryfall-toolkit/releases/tag/v0.52.0) — 2026-09-29
+
+Two things. The EUR column's icon turned out to be a Scryfall interface asset lifted from
+a card page's markup, and is now an original price-tag glyph — which closes the Cardmarket
+question from both directions at once. And the first Shambleshark deck module is ported:
+the clean up improver, which needs Scryfall's own page world rather than the page markup,
+so the extension now has a script there and a bridge to it. It ships switched off, because
+it has not yet been checked against a live deck editor.
+
 ## [v0.51.0](https://github.com/Solomag/scryfall-toolkit/releases/tag/v0.51.0) — 2026-09-28
 
 What an outside review found: the EDHREC rate limit was not actually enforced, its cache

@@ -29,13 +29,26 @@ async function manifestIntegrity() {
   const referenced = new Set();
   referenced.add(manifest.background.service_worker);
   for (const group of manifest.content_scripts) {
-    for (const file of group.js) referenced.add(file);
-    for (const file of group.css) referenced.add(file);
+    for (const file of group.js || []) referenced.add(file);
+    for (const file of group.css || []) referenced.add(file);
   }
   referenced.add(manifest.options_page);
   referenced.add(manifest.action.default_popup);
   for (const value of Object.values(manifest.icons || {})) referenced.add(value);
   for (const file of referenced) assert(exists(file), `manifest references existing file: ${file}`);
+
+  // The deck features run in Scryfall's own page world, because they work
+  // through Scryfall's application state and a content script cannot see it.
+  const pageWorld = manifest.content_scripts.filter(group => group.world === 'MAIN');
+  assertEqual(pageWorld.length, 1, 'exactly one script group runs in the page world');
+  assertEqual(pageWorld[0].js, ['deck-tools.js', 'deck-clean-up.js', 'page.js'],
+    'the page world loads the deck tools, the clean up module and the bridge');
+  assertEqual(pageWorld[0].run_at, 'document_idle', 'and starts once the page is up');
+  for (const group of manifest.content_scripts) {
+    if (group.world === 'MAIN') continue;
+    assert(!group.world || group.world === 'ISOLATED',
+      `content script ${group.js[0]} stays in the isolated world`);
+  }
 
   const readmeFirstLine = read('README.md').split('\n')[0];
   assertEqual(readmeFirstLine, `# Scryfall Toolkit ${manifest.version}`,

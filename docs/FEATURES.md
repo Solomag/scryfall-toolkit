@@ -142,6 +142,22 @@ Scryfall previewed under another name (for example Lavabrink Venturer (IKO #19) 
 up deck cards and their tokens through Scryfall (at most 150 unique deck cards). These do
 not install Shambleshark itself.
 
+**Clean up improver** *(off by default)*. The first Shambleshark deck module to be
+ported. When a deck is cleaned up it moves lands out of the nonland column and nonlands
+out of the land one, and it can sort every column by card type or by name and head each
+group with its name and count.
+
+It is worth being clear about why this one is off by default. Everything else in the
+extension works through the page's markup or Scryfall's documented API. This works
+through `window.Scryfall` and `window.ScryfallAPI`, which are Scryfall's application
+internals and were never published as an interface. So a script now runs in the page's
+own world to reach them, with a bridge back to the content script for settings.
+
+The module is written to fail soft: if Scryfall reshapes any of the things it touches,
+that hook simply does not happen and the deck editor keeps working — the feature stops
+rather than breaking anything. Until it has been checked in a live deck editor it stays
+off, and turning it on is a deliberate choice.
+
 ## Hiding and filtering
 
 These affect the **Sets** index and the **Prints** table on a card page. Card searches,

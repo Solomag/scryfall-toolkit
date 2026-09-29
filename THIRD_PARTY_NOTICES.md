@@ -95,7 +95,7 @@ interface with an existing installation, not copied code.
   last pushed 2023-10-07)
 - Authors: Samuel Simões (2016), Blade Barringer (2019)
 - Licence: MIT — full text in [`third_party/Shambleshark-LICENSE`](third_party/Shambleshark-LICENSE)
-- Used: **data copied** (1 file).
+- Used: **data copied** (1 file) and **behaviour ported** (the clean up improver).
 
 | File in this repo | What it is |
 | --- | --- |
@@ -112,6 +112,19 @@ The inline card/art tag presentation was **not** copied: none of Shambleshark's
 identifiers (`CardNicknameDisplay`, `createViewMoreTagsRow`, `TaggerIcon`,
 `TaggerLookupData`, `elementReady`, …) appear in this repository, and the tag panels are
 original code.
+
+**Behaviour ported — the clean up improver.** `deck-tools.js` and `deck-clean-up.js`
+follow the logic of upstream's `scryfall-embed/modify-clean-up`, `lib/card-parser` and
+`lib/deck-parser`, and `page.js` stands in for upstream's `scryfall-embed` entry point
+and its framebus wiring. The logic is upstream's; the code is rewritten in plain
+JavaScript, with a local emitter in place of the message bus and a Scryfall adapter that
+fails soft where upstream assumes the shape of `window.Scryfall` and
+`window.ScryfallAPI` is fixed. Those two globals are Scryfall's application internals and
+are not covered by anyone's licence — see section 6. The feature is off by default
+because it has not yet been checked against a live deck editor.
+
+Upstream's TypeScript types, webpack aliases and `framebus` dependency are not used, and
+no upstream file is present verbatim.
 
 ## 4. MoxTags — data copied verbatim
 

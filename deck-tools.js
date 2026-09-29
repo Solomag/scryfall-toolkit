@@ -10,26 +10,45 @@
  */
 
 // The deck tools Shambleshark's cleanup module is built from: sorting a deck's
-// entries and counting them. These are the parts that touch nothing but the deck
-// data, so they are here rather than in the page-context script that has to talk
-// to Scryfall's internals.
+// entries, counting them, and deciding which side of a land section a card
+// belongs on. These are the parts that touch nothing but the deck data, so they
+// are here rather than in the page-context script that has to talk to
+// Scryfall's internals.
 //
-// Logic follows Shambleshark's modify-clean-up (MIT,
+// Logic follows Shambleshark's modify-clean-up and lib/card-parser (MIT,
 // https://github.com/crookedneighbor/shambleshark). Rewritten for this project:
 // plain JavaScript instead of TypeScript, and no message bus around pure
-// functions.
+// functions. The behaviour is kept as upstream has it, including where upstream
+// is quirky — the notes below say so where it matters.
 
 // The order a deck reads in when it is sorted by card type. Anything not listed
 // sorts last.
-const TYPE_ORDER = ['creature', 'planeswalker', 'artifact', 'enchantment', 'instant', 'sorcery', 'land'];
+const TYPE_ORDER = [
+  'creature', 'planeswalker', 'artifact', 'enchantment', 'instant', 'sorcery', 'land'
+];
 
-// The primary type of a card, taken from its type line. "Legendary Creature —
-// Human Avatar Ally" is a creature.
+// Which type of a mixed type line counts as the card's main one. This is a
+// different order from TYPE_ORDER on purpose: TYPE_ORDER is how a sorted deck
+// reads, this is which type wins when a card is several. A Dryad Arbor is a
+// creature that happens to be a land, not the other way round.
+const PRIMARY_TYPE_PREFERENCE = [
+  'creature', 'land', 'artifact', 'enchantment', 'planeswalker', 'instant', 'sorcery'
+];
+
+// The primary type of a card. Upstream takes the part of the type line before
+// the first "//" (a split card's front face) and before the first " - ", then
+// looks for each preferred type in it as a substring. Scryfall writes its
+// type lines with an em dash, so that second split usually does nothing; the
+// substring search is what does the work, and "Basic Land — Island" lands on
+// "land" through it. Anything matching no known type is returned as it stands.
 function getPrimaryType(entry) {
-  const line = entry && entry.card_digest && entry.card_digest.type_line;
-  if (!line) return '';
-  const found = TYPE_ORDER.find(type => new RegExp('\\b' + type + '\\b', 'i').test(line));
-  return found || '';
+  if (!entry || !entry.card_digest) return '';
+  const line = String(entry.card_digest.type_line || '')
+    .toLowerCase()
+    .split(' // ')[0]
+    .split(' - ')[0]
+    .trim();
+  return PRIMARY_TYPE_PREFERENCE.find(type => line.indexOf(type) > -1) || line;
 }
 
 function sortByCardDigest(compare) {
@@ -90,14 +109,26 @@ function calculateTotalsByCardType(entries) {
   }, {});
 }
 
-// A deck keeps lands apart when it has a section for them. These two decide
-// which side a card belongs on, which is what the cleanup has to correct.
+// Whether the cleanup should treat this card as a land. Upstream decides on the
+// front face's type line alone: it has to say Land and must not say Creature.
+// So an Artifact Land is a land, and a Land Creature is not.
 function isLandCard(entry) {
-  return getPrimaryType(entry) === 'land';
+  const front = entry && entry.card_digest && entry.card_digest.type_line
+    ? entry.card_digest.type_line.split('//')[0].trim()
+    : '';
+  return Boolean(front && front.includes('Land') && !front.includes('Creature'));
 }
 
+// A deck's sections come in two groups; upstream flattens both. The shape of
+// deck.sections is Scryfall's, not this project's.
+function getSections(deck) {
+  const sections = (deck && deck.sections) || {};
+  return [...(sections.primary || []), ...(sections.secondary || [])];
+}
+
+// A deck keeps lands apart when it has a section for them.
 function hasDedicatedLandSection(deck) {
-  return Boolean(deck && deck.sections && deck.sections.some(section => section === 'lands'));
+  return getSections(deck).includes('lands');
 }
 
 self.STK_DECK_TOOLS = {
@@ -109,5 +140,6 @@ self.STK_DECK_TOOLS = {
   calculateTotalsByName,
   calculateTotalsByCardType,
   isLandCard,
+  getSections,
   hasDedicatedLandSection
 };

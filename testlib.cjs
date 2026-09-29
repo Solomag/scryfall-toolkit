@@ -283,6 +283,13 @@ function createPage(options) {
     removeEventListener: (type, listener) => {
       windowListeners[type] = (windowListeners[type] || []).filter(entry => entry !== listener);
     },
+    // linkedom has no window-level message port either. The deck features talk
+    // to the page world through postMessage, so a stand-in delivers to the
+    // registered listeners from this window. A real window queues these as
+    // tasks; delivering straight away is close enough for what is checked.
+    postMessage: data => {
+      for (const listener of windowListeners.message || []) listener({ source: context, data });
+    },
     HTMLElement: window.HTMLElement,
     Element: window.Element,
     Node: window.Node,

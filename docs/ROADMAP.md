@@ -17,6 +17,23 @@ Last updated 2026-09-29.
 
 ## To do
 
+### Check the clean up improver in a live deck editor
+
+The module is ported and tested against a stand-in for `window.Scryfall` and
+`window.ScryfallAPI`. What that cannot cover is whether Scryfall's internals are still
+shaped the way Shambleshark found them in 2023. Until someone opens a deck, turns the
+setting on and presses Clean Up, the feature stays switched off.
+
+If it holds up, the same path covers the other three Shambleshark modules — the card
+input modifier, the EDHREC suggestions and the deckbuilder search. They share the
+page-world script and the bridge, so the remaining work is the logic and not the
+plumbing. The announced sizes were wrong once already: `clean-up-improver` looked like 82
+lines and was about a thousand, so the rest should be measured from the real files before
+any estimate is trusted.
+
+If it does not hold up, the answer is to say so and drop the module, not to ship
+something that half works.
+
 ### Store screenshot of the extension on Scryfall
 
 The five screenshots show the settings page. Nothing shows what the extension does to

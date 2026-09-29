@@ -30,7 +30,7 @@ const card = (name, typeLine) => ({ card_digest: { name, type_line: typeLine } }
     console.log('deck-tools: the module exposes what the cleanup needs');
     for (const name of ['sortByName', 'sortByPrimaryCardType', 'calculateTotalsByName',
       'calculateTotalsByCardType', 'getPrimaryType', 'getNameSection', 'isLandCard',
-      'hasDedicatedLandSection']) {
+      'getSections', 'hasDedicatedLandSection']) {
       assert(typeof tools[name] === 'function', `${name} is exported`);
     }
 
@@ -53,8 +53,17 @@ const card = (name, typeLine) => ({ card_digest: { name, type_line: typeLine } }
     assertEqual(byType.map(c => tools.getPrimaryType(c)),
       ['creature', 'planeswalker', 'artifact', 'enchantment', 'instant', 'sorcery', 'land'],
       'the order a deck reads in');
+    console.log('deck-tools: which type counts as the main one');
     assertEqual(tools.getPrimaryType(card('X', 'Legendary Creature — Human Avatar Ally')), 'creature',
       'the primary type comes from the type line');
+    assertEqual(tools.getPrimaryType(card('Dryad Arbor', 'Land Creature — Dryad')), 'creature',
+      'a Land Creature is a creature first');
+    assertEqual(tools.getPrimaryType(card('Darksteel Citadel', 'Artifact Land')), 'land',
+      'but an Artifact Land is a land');
+    assertEqual(tools.getPrimaryType(card('Kithkin', 'Kindred — Kithkin')), 'kindred — kithkin',
+      'a type outside the known list is handed back as it stands');
+    assertEqual(tools.getPrimaryType({ count: 1 }), '',
+      'and a row with no digest has no primary type');
 
     console.log('deck-tools: the alphabet blocks a name falls into');
     assertEqual(tools.getNameSection('Aether'), 'abcd', 'a-d is one block');
@@ -74,10 +83,17 @@ const card = (name, typeLine) => ({ card_digest: { name, type_line: typeLine } }
 
     console.log('deck-tools: land sections');
     assert(tools.isLandCard(card('Forest', 'Basic Land — Forest')), 'a land is a land');
+    assert(tools.isLandCard(card('Darksteel Citadel', 'Artifact Land')), 'an Artifact Land is a land');
     assert(!tools.isLandCard(card('Bolt', 'Instant')), 'and an instant is not');
-    assertEqual(tools.hasDedicatedLandSection({ sections: ['nonlands', 'lands'] }), true,
+    assert(!tools.isLandCard(card('Dryad Arbor', 'Land Creature — Dryad')),
+      'a Land Creature is not — upstream puts it in the nonland column');
+    assertEqual(tools.isLandCard(card('Fire // Ice', 'Instant // Instant')), false,
+      'only the front face of a split card is looked at');
+    assertEqual(tools.getSections({ sections: { primary: ['commanders', 'nonlands'], secondary: ['lands', 'maybeboard'] } }),
+      ['commanders', 'nonlands', 'lands', 'maybeboard'], 'both groups of sections are flattened');
+    assertEqual(tools.hasDedicatedLandSection({ sections: { primary: ['nonlands'], secondary: ['lands'] } }), true,
       'a deck with a lands section keeps them apart');
-    assertEqual(tools.hasDedicatedLandSection({ sections: ['nonlands'] }), false,
+    assertEqual(tools.hasDedicatedLandSection({ sections: { primary: ['nonlands'], secondary: [] } }), false,
       'and one without does not');
 
     summary('test-deck-tools');

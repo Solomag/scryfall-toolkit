@@ -22,9 +22,41 @@
     taggerSearchLinks: false, cardSearchLinks: true, cardNicknames: true, deckNoPrices: true, stackedDeckCards: true, deckTokens: true,
     premodern: true, heritage: false, classic: false, peak: false,
     formatOrder: null, formatVisibility: null,
+    deckCleanUpImprover: false, cleanUpLandsInSingleton: true,
+    sortEntriesPrimary: 'none', insertSortingHeadings: true,
     exportFormat: "moxfield", cards: null
   };
   const settings = await chrome.storage.local.get(defaults);
+  // --- the page-world bridge -------------------------------------------------
+  // The deck features have to run in Scryfall's own page world, because they
+  // work through window.Scryfall and window.ScryfallAPI and this script lives
+  // in an isolated world that can see neither. Only this side can read the
+  // settings. So the two meet at the window itself.
+  const deckSettingsNow = () => (settings.deckCleanUpImprover ? {
+    cleanUpLandsInSingleton: settings.cleanUpLandsInSingleton,
+    sortEntriesPrimary: settings.sortEntriesPrimary,
+    insertSortingHeadings: settings.insertSortingHeadings
+  } : {});
+  const sendDeckSettings = () => window.postMessage({
+    channel: 'scryfall-toolkit', version: 1, source: 'content',
+    type: 'settings', value: deckSettingsNow()
+  }, '*');
+  window.addEventListener('message', event => {
+    if (event.source !== window && event.source !== self) return;
+    const data = event.data;
+    if (!data || data.channel !== 'scryfall-toolkit' || data.version !== 1) return;
+    // The page side announces itself when it is listening, which may be before
+    // or after this script runs.
+    if (data.source === 'page' && data.type === 'ready') sendDeckSettings();
+  });
+  sendDeckSettings();
+  // Turning the feature on or off should not need a page reload.
+  chrome.storage.onChanged.addListener(changes => {
+    const keys = ['deckCleanUpImprover', 'cleanUpLandsInSingleton', 'sortEntriesPrimary', 'insertSortingHeadings'];
+    if (!keys.some(key => changes[key])) return;
+    keys.forEach(key => { if (changes[key]) settings[key] = changes[key].newValue; });
+    sendDeckSettings();
+  });
   const language = settings.siteLanguage === 'ru' ? 'ru' : 'en';
   const t = text => window.STK_I18N.t(text, language);
   const cardPath = location.pathname.match(/^\/card\/([^/]+)\/([^/]+)/);

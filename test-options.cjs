@@ -37,6 +37,8 @@ const REQUIRED_IDS = [
   'edhrecSalt', 'showSaltScale', 'edhrecLink', 'edhrecUsageDisplay',
   'legalities', 'exportFormat', 'taggerSearchLinks', 'cardSearchLinks',
   'cardNicknames', 'deckNoPrices', 'stackedDeckCards', 'deckTokens',
+  'deckCleanUpImprover', 'cleanUpLandsInSingleton', 'sortEntriesPrimary',
+  'insertSortingHeadings',
   'setPlatformsAll', 'setPlatformsPaper', 'setPlatformsArena', 'setPlatformsMtgo',
   'printGrouping', 'printFoldGroups', 'printFullPageLink'
 ];
@@ -462,6 +464,10 @@ function sectionOrderTest() {
   assertEqual(sectionOf('edhrecUsage'), 'Дополнительная информация', 'EDHREC is a sub-category of Additional info');
   assertEqual(sectionOf('cardtraderPrices'), 'Дополнительная информация', 'CardTrader is a sub-category of Additional info');
   assertEqual(sectionOf('deckTokens'), 'Scryfall Deckbuilder', 'deck options share one category');
+  assertEqual(sectionOf('deckCleanUpImprover'), 'Scryfall Deckbuilder',
+    'the clean up improver is a deck option');
+  assertEqual(sectionOf('sortEntriesPrimary'), 'Scryfall Deckbuilder',
+    'and so are the settings that only matter while it is on');
   assertEqual(sectionOf('printPageSameTab'), 'Экспериментальное', 'the same-tab printings switch stays in Experimental');
   assertEqual(sectionOf('siteLanguage'), 'Экспериментальное', 'the site language selector moved to the bottom');
   assert(html.indexOf('id="siteLanguage"') > html.indexOf('id="deckTokens"'),
