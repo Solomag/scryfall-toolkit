@@ -1,4 +1,4 @@
-# Chrome Web Store listing — Scryfall Toolkit 0.50.0
+# Chrome Web Store listing — Scryfall Toolkit 0.51.0
 
 Everything here is written from the shipped code, so that the answers given in the store
 console match what the extension actually does. Where a field needs a decision from the
@@ -53,6 +53,9 @@ developer account, it says so.
 > The release ZIP is built from a tagged commit of that repository with `npm run package`,
 > so the code in the store is the code you can read. Third-party data, images and code keep
 > their own licences; see THIRD_PARTY_NOTICES.md in the extension and in the repository.
+> It paints over Scryfall's own styles rather than replacing them, so it depends on
+> Scryfall's markup: a page that changes can come out partly unthemed until this
+> extension is updated.
 
 **Category:** Tools
 

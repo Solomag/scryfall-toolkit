@@ -1,6 +1,8 @@
-# Scryfall Toolkit 0.50.0
+# Scryfall Toolkit 0.51.0
 
 An independent browser extension for **Scryfall** and **Scryfall Tagger**: a shared card clipboard, tag panels on card pages, extra format legalities, a dark theme, and optional EDHREC and CardTrader data.
+
+> **About the dark theme.** It paints over Scryfall's own styles rather than replacing them, so it depends on Scryfall's markup. A page that changes its markup can come out partly unthemed until this extension is updated. Everything else works the same either way.
 
 [Chrome Web Store](https://chromewebstore.google.com/detail/scryfall-toolkit-preview/ofpociogpmmgfjgjnfppnllabhjjnclf) · [Source](https://github.com/Solomag/scryfall-toolkit) · [Releases](https://github.com/Solomag/scryfall-toolkit/releases) · [Changelog](CHANGELOG.md) · [Privacy](PRIVACY.md) · [Third-party notices](THIRD_PARTY_NOTICES.md)
 

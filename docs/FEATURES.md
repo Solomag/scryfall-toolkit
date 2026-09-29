@@ -77,6 +77,10 @@ block, in Scryfall's own rows, labels and badges.
 
 ## Dark theme
 
+It paints over Scryfall's own styles rather than replacing them, so it depends on
+Scryfall's markup. A page that changes can come out partly unthemed until this
+extension is updated; everything else works the same either way.
+
 A theme for card pages, set listings, advanced search, search notices, account and deck
 panels, and Tagger.
 

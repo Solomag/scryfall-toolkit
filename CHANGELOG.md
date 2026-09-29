@@ -12,7 +12,7 @@ All releases: <https://github.com/Solomag/scryfall-toolkit/releases>
 
 Nothing yet.
 
-## [v0.50.0](https://github.com/Solomag/scryfall-toolkit/releases/tag/v0.50.0) — 2026-09-28
+## [v0.51.0](https://github.com/Solomag/scryfall-toolkit/releases/tag/v0.51.0) — 2026-09-28
 
 What an outside review found: the EDHREC rate limit was not actually enforced, its cache
 and backoff did not survive a service worker restart, the language setting destroyed
