@@ -105,15 +105,19 @@ Coast, EDHREC, CardTrader or Cardmarket.
 No. This extension never runs on Moxfield. Keep MoxTags there.
 
 **Does this replace CardClip, Shambleshark or MTG Enhancements?**
-It overlaps them on Scryfall. Disable those on Scryfall if you want to compare; nothing
-in them is installed here. See [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) for
-what came from where.
+It overlaps them on Scryfall. Disable those on Scryfall if you want to compare; none of
+their code is installed here. What is here from Shambleshark is behaviour, rewritten, and
+a data file of card nicknames; from MTG Enhancements, behaviour and three format names.
+Nothing from them runs as theirs. See
+[THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) for what came from where.
 
 **Do you get permission for the logos?**
-Not settled. The CardTrader and Cardmarket icons are third-party brand marks and the
-EDHREC icon appears to be one. No permission was requested from those services and none
-was received. `THIRD_PARTY_NOTICES.md` records the status honestly rather than claiming
-it is cleared.
+Mixed, and the differences matter. **Cardmarket** publishes its brand assets for download
+with terms attached, and this extension uses their symbol on exactly those terms — the
+rights stay theirs, the goodwill from use is theirs, and nothing here implies they endorse
+this project. **CardTrader** and **EDHREC** are different: their marks are in the package
+and no permission has been received for them. `THIRD_PARTY_NOTICES.md` records each one's
+real status rather than claiming they are all cleared.
 
 **What licence is the code under?**
 MPL-2.0 for this project's own files. Third-party data and images keep their own licences
