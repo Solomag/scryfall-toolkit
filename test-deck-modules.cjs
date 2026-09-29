@@ -567,7 +567,7 @@ const card = (name, typeLine, id) => ({
         'the checkbox hides rather than silently doing nothing');
     }
 
-    summary('test-deck-clean-up');
+    summary('test-deck-modules');
     process.exit(0);
   } catch (error) {
     console.error(error);

@@ -1,8 +1,14 @@
-# Chrome Web Store listing — Scryfall Toolkit 0.51.0
+# Chrome Web Store listing — Scryfall Toolkit 0.52.0
 
 Everything here is written from the shipped code, so that the answers given in the store
 console match what the extension actually does. Where a field needs a decision from the
 developer account, it says so.
+
+**Before submitting.** The four deck editor tools described below have not yet been checked
+in a live deck editor — they run through Scryfall's application internals rather than the
+page markup, and a stand-in cannot prove those internals are still as expected. If they do
+not hold up when tried, cut the "In the deck editor" paragraph and the last row of the data
+table along with the switches; the rest of this document stands either way.
 
 ---
 
@@ -42,6 +48,11 @@ developer account, it says so.
 > inside the legality block. CardTrader prices for the exact printing, using your own
 > personal access token. Finish badges, card nicknames, type and mana search links, set and
 > printing filters, a No Prices mode and a token list on deck pages.
+>
+> **In the deck editor.** Four more optional tools, all off by default: a Clean Up button
+> that sorts the deck and puts lands back in their column, a card image that follows your
+> pointer along a row, EDHREC's own card lists for your commander, and a Scryfall search
+> that adds cards without leaving the editor.
 >
 > **Your data stays yours.** Settings and the clipboard live in your browser. There is no
 > account, no analytics and no server of ours. The extension asks Scryfall, Scryfall
@@ -135,8 +146,8 @@ here.
 
 | Category | What the extension actually sends | To whom |
 | --- | --- | --- |
-| **Website content** | the card name of the page being viewed, as part of a request URL | `json.edhrec.com`, when the EDHREC feature is enabled |
-| **Website content** | Scryfall card UUIDs, Oracle and illustration IDs, set codes, collector numbers, and search queries such as `oracleid:…` | `api.scryfall.com`, `tagger.scryfall.com` |
+| **Website content** | the card name of the page being viewed, and — only for the EDHREC suggestions feature in the deck editor — the name of the deck's commander, each as part of a request URL. The deck list itself is never sent | `json.edhrec.com`, when the EDHREC feature is enabled |
+| **Website content** | Scryfall card UUIDs, Oracle and illustration IDs, set codes, collector numbers, and search queries — both the extension's own, such as `oracleid:…`, and whatever the user types into the deck editor's search box | `api.scryfall.com`, `tagger.scryfall.com` |
 | **Authentication info** | the user's CardTrader personal access token, in an `Authorization: Bearer` header | `api.cardtrader.com` only, when the user enables CardTrader and stores a token |
 | **User activity** | which cards the user is viewing, as expressed by the identifiers and queries above | the four services named here |
 
