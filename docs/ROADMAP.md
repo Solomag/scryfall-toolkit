@@ -25,22 +25,6 @@ listing whose images only show a settings form does not tell a user what they ar
 installing. At least one shot of a card page in the dark theme, with the tag tables and
 the clipboard visible.
 
-### Shambleshark's deck editor modules
-
-`FEATURES.md` lists them as "not integrated" without answering whether they will be.
-Four modules are still out:
-
-- deckbuilder search
-- EDHREC suggestions
-- cleanup
-- card input editing
-
-Two more are empty placeholders upstream (Card Notes and Legality Check), so there is
-nothing there to port.
-
-Decision still open: port them, or state that they are out of scope. Either is a fine
-answer for a 1.0; leaving it open is not.
-
 ### Split `content.js` and `theme.css`
 
 From an outside review, and the right call: `content.js` is 1814 lines holding clipboard,
@@ -78,4 +62,5 @@ user-visible benefit.
 |---|---|---|
 | | Detect light surfaces at runtime instead of naming Scryfall's classes | Tried. It mistook wrappers for surfaces and once flattened a logo held as a background image. Colour tells you what something looks like, not what it is for. |
 | | A full `CHANGELOG.md` duplicating the release notes | The notes already exist per release. A copy drifts — the README already carried a stale assertion count for exactly this reason. The changelog is an index instead. |
+| | Tag panels on search results | Not wanted. Tags belong on the card that has them; a search grid would need a top-N rule and one request per card to show something most users would not look at. |
 | | Rewrite in TypeScript / React / a bundler | The extension is 3000 lines of plain JS doing DOM work. The tooling cost would exceed the code it organises. |

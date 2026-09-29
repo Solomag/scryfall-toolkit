@@ -10,12 +10,12 @@
  */
 /* Scryfall's purple headers remain untouched; the content uses a muted charcoal palette. */
 html.stk-dark{color-scheme:dark}
-html.stk-dark body,html.stk-dark #main,html.stk-dark .main,html.stk-dark .card-profile,html.stk-dark .toolbox,html.stk-dark .rulings{background-color:#1d2021!important;color:#e6e3df!important}
+html.stk-dark body,html.stk-dark #main,html.stk-dark .main,html.stk-dark .card-profile,html.stk-dark .toolbox,html.stk-dark .rulings{background-color:var(--stk-page)!important;color:var(--stk-ink)!important}
 /* Scryfall's "Nothing Here" page paints its heading outside #main, where the
    body colour never reaches it. */
-html.stk-dark body > h1{color:#e6e3df!important}
-html.stk-dark .card-text,html.stk-dark .card-legality,html.stk-dark .prints-table,html.stk-dark .card-grid-item{background-color:#191b1c!important;color:#e6e3df!important;border-color:#444240!important}
-html.stk-dark .card-text-box,html.stk-dark .card-text-title,html.stk-dark .card-text-type-line,html.stk-dark .card-text-oracle,html.stk-dark .card-text-flavor,html.stk-dark .card-legality dt,html.stk-dark .prints-table tbody td,html.stk-dark .prints-table tbody td a,html.stk-dark .rulings h6,html.stk-dark .rulings-item{color:#e6e3df!important}
+html.stk-dark body > h1{color:var(--stk-ink)!important}
+html.stk-dark .card-text,html.stk-dark .card-legality,html.stk-dark .prints-table,html.stk-dark .card-grid-item{background-color:#191b1c!important;color:var(--stk-ink)!important;border-color:#444240!important}
+html.stk-dark .card-text-box,html.stk-dark .card-text-title,html.stk-dark .card-text-type-line,html.stk-dark .card-text-oracle,html.stk-dark .card-text-flavor,html.stk-dark .card-legality dt,html.stk-dark .prints-table tbody td,html.stk-dark .prints-table tbody td a,html.stk-dark .rulings h6,html.stk-dark .rulings-item{color:var(--stk-ink)!important}
 /* The legality pills keep Scryfall's light status fills (green, grey, yellow),
    so their labels take dark ink instead of the inherited light one. The #main
    keeps this ahead of the general text colour for #main. */
@@ -23,7 +23,7 @@ html.stk-dark #main .card-legality dd{color:#16161d!important}
 html.stk-dark .card-text-box,html.stk-dark .card-text-stats,html.stk-dark .card-text-artist,html.stk-dark .card-legality-row,html.stk-dark .prints-table tbody tr,html.stk-dark .rulings,html.stk-dark .rulings-item{border-color:#3a3b3b!important}
 html.stk-dark .prints-table thead,html.stk-dark .prints-current,html.stk-dark .print-langs-item.current{background-color:#2a2835!important;color:#e9e4ee!important}
 html.stk-dark .prints-table thead th,html.stk-dark .prints-table thead a{color:#e9e4ee!important}
-html.stk-dark .prints-table tbody tr:hover{background-color:#292b2c!important}
+html.stk-dark .prints-table tbody tr:hover{background-color:var(--stk-panel-2)!important}
 html.stk-dark .prints-table tbody tr.current{background-color:#323039!important}
 html.stk-dark .prints-table tbody tr.current:hover{background-color:#3d3945!important}
 html.stk-dark .prints > .prints-table svg[class*="rarity-"]{background:#202324!important;border-color:#43474a!important}
@@ -35,12 +35,12 @@ html.stk-dark .prints > .prints-table svg.rarity-mythic path{fill:#e98255!import
 html.stk-dark .prints-table .stk-finish-badge{color:#ada7b1}
 html.stk-dark .prints-table .stk-finish-special{color:#db9ddd}
 html.stk-dark .prints-table .stk-finish-etched{color:#bdb0dd}
-html.stk-dark .card-text a:not(.button-n),html.stk-dark .rulings a{color:#c79ce3!important}
+html.stk-dark .card-text a:not(.button-n),html.stk-dark .rulings a{color:var(--stk-link)!important}
 html.stk-dark .prints-table :is(a,span).currency-usd,html.stk-dark .prints-table :is(a,span).currency-usd-promo{color:#6ba9ff!important}
 html.stk-dark .prints-table :is(a,span).currency-eur{color:#cf91d0!important}
 html.stk-dark .prints-table :is(a,span).currency-tix{color:#f58353!important}
 html.stk-dark #stk-tags .stk-tags-table svg{background:#292b2f!important;fill:#dddfe2!important;border-color:#686b73!important}
-html.stk-dark .toolbox h6{color:#e6e3df!important}
+html.stk-dark .toolbox h6{color:var(--stk-ink)!important}
 html.stk-dark .toolbox .button-n{background:#292521!important;border-color:#564150!important;color:#c9a2df!important}
 html.stk-dark .toolbox .button-n.tcgplayer-promo,html.stk-dark .toolbox .button-n.tcgplayer{color:#79b4ff!important;border-color:#385482!important}
 html.stk-dark .toolbox .button-n.cardhoarder{color:#f1875d!important;border-color:#805132!important}
@@ -49,31 +49,31 @@ html.stk-dark .toolbox .button-n .currency-usd,html.stk-dark .toolbox .button-n 
 html.stk-dark .toolbox .button-n .currency-tix{color:#f1875d!important}
 html.stk-dark .rulings-item-date,html.stk-dark .footer .footer-small-print,html.stk-dark .footer .footer-legal,html.stk-dark .footer .footer-legal p{color:#aaa8a6!important}
 html.stk-dark .footer{color:#d3d0ce!important}
-html.stk-dark .card-grid-header-content{background:transparent!important;color:#e6e3df!important}
-html.stk-dark .card-grid-header-content a{color:#c79ce3!important}
+html.stk-dark .card-grid-header-content{background:transparent!important;color:var(--stk-ink)!important}
+html.stk-dark .card-grid-header-content a{color:var(--stk-link)!important}
 html.stk-dark .set-header-controls select.select-n.inverted{appearance:none!important;background-color:rgba(255,255,255,.09)!important;background-image:linear-gradient(45deg,transparent 50%,#ece6ef 50%),linear-gradient(135deg,#ece6ef 50%,transparent 50%)!important;background-repeat:no-repeat!important;background-size:5px 5px,5px 5px!important;background-position:calc(100% - 14px) 50%,calc(100% - 9px) 50%!important;color:#fff!important;border-color:rgba(255,255,255,.5)!important;padding-right:24px!important}
-html.stk-dark input:not([type=checkbox]):not([type=radio]),html.stk-dark textarea,html.stk-dark select{background:#292b2c!important;color:#e6e3df!important;border-color:#5a5d61!important}
+html.stk-dark input:not([type=checkbox]):not([type=radio]),html.stk-dark textarea,html.stk-dark select{background:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:#5a5d61!important}
 html.stk-dark #header-search-field{background-color:transparent!important;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Ccircle cx='8.5' cy='8.5' r='6' fill='none' stroke='%23bdb7c4' stroke-width='2'/%3E%3Cpath d='m13 13 5 5' fill='none' stroke='%23bdb7c4' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E")!important;background-repeat:no-repeat!important;background-size:18px!important;background-position:6px center!important;color:#e9e4ee!important;border-color:transparent!important}
-html.stk-dark #scryfall-toolkit-clipboard .stk-toolbar,html.stk-dark #scryfall-toolkit-clipboard .stk-list{background:#292c2e!important;color:#e6e3df!important;border-color:#4d5255!important}
+html.stk-dark #scryfall-toolkit-clipboard .stk-toolbar,html.stk-dark #scryfall-toolkit-clipboard .stk-list{background:#292c2e!important;color:var(--stk-ink)!important;border-color:#4d5255!important}
 html.stk-dark #scryfall-toolkit-clipboard .stk-icon-button:hover,html.stk-dark #scryfall-toolkit-clipboard .stk-icon-button:focus-visible{background:#3a3d40!important}
 html.stk-dark #scryfall-toolkit-clipboard .stk-icon-button img{filter:invert(.85)}
 html.stk-dark #scryfall-toolkit-clipboard .stk-list-row button{color:#c69de1}
 html.stk-dark #scryfall-toolkit-clipboard .stk-copied{background:#2f9e44!important}
 html.stk-dark #scryfall-toolkit-clipboard .stk-list-set{color:#9aa3ab}
-html.stk-dark #scryfall-toolkit-clipboard .stk-copy-menu{background:#292c2e!important;color:#e6e3df!important;border-color:#4d5255!important;box-shadow:0 6px 16px #0007}
-html.stk-dark #scryfall-toolkit-clipboard .stk-copy-plain{background:#33373b!important;border-color:#565c61!important;color:#e6e3df!important}
+html.stk-dark #scryfall-toolkit-clipboard .stk-copy-menu{background:#292c2e!important;color:var(--stk-ink)!important;border-color:#4d5255!important;box-shadow:0 6px 16px #0007}
+html.stk-dark #scryfall-toolkit-clipboard .stk-copy-plain{background:#33373b!important;border-color:#565c61!important;color:var(--stk-ink)!important}
 html.stk-dark #scryfall-toolkit-clipboard .stk-copy-plain::before{color:#9aa3ab}
 html.stk-dark #scryfall-toolkit-clipboard .stk-copy-plain:hover,html.stk-dark #scryfall-toolkit-clipboard .stk-copy-plain:focus-visible{background:#3f4b58!important;border-color:#6f9fd6!important}
 /* Native gold info boxes keep their background, but the text must stay dark. */
 html.stk-dark .prints-info-section,html.stk-dark .prints-info-section h2{color:#29252c!important}
 /* The DFC flip button is white on card images; repaint it for the dark theme
    and keep it dark in both of its states. */
-html.stk-dark .card-grid-item-transform-button{background:#292b2c;border-color:#7f7a8a}
-html.stk-dark .card-grid-item-transform-button path{fill:#e6e3df}
+html.stk-dark .card-grid-item-transform-button{background:var(--stk-panel-2);border-color:#7f7a8a}
+html.stk-dark .card-grid-item-transform-button path{fill:var(--stk-ink)}
 /* Card-page action buttons (Add to Deck, Transform) keep Scryfall's light
    surface natively, so they need the same repaint. */
-html.stk-dark .card-actions .button-n{background:#292b2c!important;border-color:#595c60!important;color:#e6e3df!important}
-html.stk-dark .card-actions .button-n:is(:hover,:active,:focus-visible){background:#413949!important;border-color:#6d5a7d!important;color:#fff!important}
+html.stk-dark .card-actions .button-n{background:var(--stk-panel-2)!important;border-color:var(--stk-border)!important;color:var(--stk-ink)!important}
+html.stk-dark .card-actions .button-n:is(:hover,:active,:focus-visible){background:var(--stk-hover)!important;border-color:#6d5a7d!important;color:#fff!important}
 html.stk-dark .card-actions .button-n path{fill:#c9a2df}
 html.stk-dark .prints-table .stk-print-group-row td{background:#2a2835!important;color:#e9e4ee!important}
 html.stk-dark .prints-table .stk-print-group-row td>span{color:#e9e4ee!important}
@@ -93,42 +93,42 @@ html.stk-dark #main,html.stk-dark #main .card-profile .inner-flex,html.stk-dark 
 html.stk-dark #main .reference-jump,html.stk-dark #main .reference-block,
 html.stk-dark #main .reference-block-doc,html.stk-dark #main .reference-block-examples,
 html.stk-dark #main .form-layout,html.stk-dark #main .form-row-content,
-html.stk-dark #main .form-row-content-band{background-color:#1d2021!important;color:#e6e3df!important}
-html.stk-dark #main :is(h1,h2,h3,h4,h5,h6,p,li,dt,dd,label,small,th,td,.set-name-text,.form-row-label,.form-row-tip,.reference-example-text){color:#e6e3df!important}
-html.stk-dark #main :is(.checklist,.checklist td,.checklist th,.form-row,.reference-block,.reference-example){border-color:#414345!important}
-html.stk-dark #main :is(.checklist td,.checklist th,.reference-example,.reference-jump-links .button-n){background-color:#1d2021!important;color:#e6e3df!important}
+html.stk-dark #main .form-row-content-band{background-color:var(--stk-page)!important;color:var(--stk-ink)!important}
+html.stk-dark #main :is(h1,h2,h3,h4,h5,h6,p,li,dt,dd,label,small,th,td,.set-name-text,.form-row-label,.form-row-tip,.reference-example-text){color:var(--stk-ink)!important}
+html.stk-dark #main :is(.checklist,.checklist td,.checklist th,.form-row,.reference-block,.reference-example){border-color:var(--stk-border-2)!important}
+html.stk-dark #main :is(.checklist td,.checklist th,.reference-example,.reference-jump-links .button-n){background-color:var(--stk-page)!important;color:var(--stk-ink)!important}
 /* The jump bar's own button keeps Scryfall's light pill while the theme paints
    the bar around it, so the pill is repainted with it. */
-html.stk-dark #main .reference-jump a.button-n,html.stk-dark #main .reference-jump .button-n{background-color:#292b2c!important;color:#c79ce3!important;border-color:#595c60!important}
-html.stk-dark #main .checklist tr:hover td{background:#292b2c!important}
-html.stk-dark #main :is(.checklist td a,.reference-block a,.reference-jump a,.form-row a,.set-name-text a){color:#c79ce3!important}
-html.stk-dark #main .checklist td a{color:#e6e3df!important}
+html.stk-dark #main .reference-jump a.button-n,html.stk-dark #main .reference-jump .button-n{background-color:var(--stk-panel-2)!important;color:var(--stk-link)!important;border-color:var(--stk-border)!important}
+html.stk-dark #main .checklist tr:hover td{background:var(--stk-panel-2)!important}
+html.stk-dark #main :is(.checklist td a,.reference-block a,.reference-jump a,.form-row a,.set-name-text a){color:var(--stk-link)!important}
+html.stk-dark #main .checklist td a{color:var(--stk-ink)!important}
 html.stk-dark #main .checklist td a svg{fill:#bfb4c8!important}
 html.stk-dark #main .checklist td:first-child svg,html.stk-dark #main .checklist td:first-child svg path{fill:#d3ced7!important}
 html.stk-dark #main .reference-block-icon svg{fill:#bfb4c8!important}
 html.stk-dark #main .reference-block-icon svg [fill="#000"]{fill:#bfb4c8!important}
 html.stk-dark #main .form-input,html.stk-dark #main .select2-selection,
 html.stk-dark #main .select2-search__field,html.stk-dark #main pre,
-html.stk-dark #main code{background-color:#292b2c!important;color:#e6e3df!important;border-color:#57595b!important}
+html.stk-dark #main code{background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:#57595b!important}
 html.stk-dark #main .search-controls label{color:#ded8e3!important}
 html.stk-dark #main .pillbox-item{background-color:#2a2835!important;color:#e9e4ee!important}
 html.stk-dark #main .pillbox-item.disabled{opacity:.45}
 html.stk-dark #main .form-row-label svg:not(.sprite-set){fill:#bcb8c3!important}
 html.stk-dark .toolbox .stk-cardtrader-link{color:#c9a2df!important;border-color:#564150!important}
 html.stk-dark #stores .stk-cardtrader-link img,html.stk-dark #main .stk-ct-price-header img,html.stk-dark #main .stk-cm-price-header img{filter:invert(.73)}
-html.stk-dark #main :is(.deck-list,.deck-list-entry,.deck-view,.deck-builder,.deck-section,.profile,.account,.sidebar,.reference-example-text){background-color:#1d2021!important;color:#e6e3df!important;border-color:#414345!important}
-html.stk-dark #main :is(.deck-list-entry,.deck-section,.profile,.account) a{color:#c79ce3!important}
-html.stk-dark .select2-dropdown,html.stk-dark .select2-results__option{background:#292b2c!important;color:#e6e3df!important;border-color:#57595b!important}
+html.stk-dark #main :is(.deck-list,.deck-list-entry,.deck-view,.deck-builder,.deck-section,.profile,.account,.sidebar,.reference-example-text){background-color:var(--stk-page)!important;color:var(--stk-ink)!important;border-color:var(--stk-border-2)!important}
+html.stk-dark #main :is(.deck-list-entry,.deck-section,.profile,.account) a{color:var(--stk-link)!important}
+html.stk-dark .select2-dropdown,html.stk-dark .select2-results__option{background:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:#57595b!important}
 html.stk-dark .select2-results__option--highlighted{background:#493e53!important}
 /* Authenticated pages use separate white panels from the public pages. */
-html.stk-dark.stk-account-page #main :is(.inner-flex,.inner-flex>*,.account-content,.account-main,.account-panel,.settings-content,.settings-panel,.profile-content,.profile-main,.deck-list,.deck-list-wrapper,.deck-list-main,.deckbuilder,.deckbuilder-main,.deck-view,.deck-view-main,.sidebar,.form-layout,.form-row-content,.box,.panel,.well,form,fieldset){background-color:#1d2021!important;color:#e6e3df!important;border-color:#424447!important}
-html.stk-dark.stk-account-page #main :is(input,select,textarea,.form-input,.button-n){background-color:#292b2c!important;color:#e6e3df!important;border-color:#595c60!important}
+html.stk-dark.stk-account-page #main :is(.inner-flex,.inner-flex>*,.account-content,.account-main,.account-panel,.settings-content,.settings-panel,.profile-content,.profile-main,.deck-list,.deck-list-wrapper,.deck-list-main,.deckbuilder,.deckbuilder-main,.deck-view,.deck-view-main,.sidebar,.form-layout,.form-row-content,.box,.panel,.well,form,fieldset){background-color:var(--stk-page)!important;color:var(--stk-ink)!important;border-color:#424447!important}
+html.stk-dark.stk-account-page #main :is(input,select,textarea,.form-input,.button-n){background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:var(--stk-border)!important}
 html.stk-dark.stk-account-page #main :is(a:not(.button-n),.form-row-label,.form-row-tip){color:#cba4e1!important}
-html.stk-dark.stk-account-page #main :is(.box,.panel,.well,.sidebar,.deck-list,.form-layout,.form-row-content){background-color:#1d2021!important}
-html.stk-dark.stk-account-page #main :is(div,section,article)[class*="header"],html.stk-dark.stk-account-page #main :is(.panel-heading,.box-heading,.form-section-heading){background-color:#292b2c!important;color:#e6e3df!important}
-html.stk-dark.stk-account-page #main :is(div,section,article)[class*="header"] :is(h1,h2,h3,h4,p,span){color:#e6e3df!important}
-html.stk-dark.stk-account-page #main :is(.panel-heading,.box-heading,.form-section-heading){background-color:#292b2c!important;color:#e6e3df!important;border-color:#424447!important}
-html.stk-dark.stk-account-page #main :is(input[type="file"],[class*="file-upload"]){background-color:#292b2c!important;color:#e6e3df!important;border-color:#595c60!important}
+html.stk-dark.stk-account-page #main :is(.box,.panel,.well,.sidebar,.deck-list,.form-layout,.form-row-content){background-color:var(--stk-page)!important}
+html.stk-dark.stk-account-page #main :is(div,section,article)[class*="header"],html.stk-dark.stk-account-page #main :is(.panel-heading,.box-heading,.form-section-heading){background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important}
+html.stk-dark.stk-account-page #main :is(div,section,article)[class*="header"] :is(h1,h2,h3,h4,p,span){color:var(--stk-ink)!important}
+html.stk-dark.stk-account-page #main :is(.panel-heading,.box-heading,.form-section-heading){background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:#424447!important}
+html.stk-dark.stk-account-page #main :is(input[type="file"],[class*="file-upload"]){background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:var(--stk-border)!important}
 /* Scryfall's file-input wrapper is a box the control sits in, not a surface: it
    paints nothing of its own and no border. The broad [class*="file-input"] match
    caught it anyway, so the theme filled a box Scryfall left empty, and the fill
@@ -136,41 +136,41 @@ html.stk-dark.stk-account-page #main :is(input[type="file"],[class*="file-upload
    the button. The wrapper is named here and left alone, and the control inside it
    is given a surface of its own so it still reads on a dark page. */
 html.stk-dark.stk-account-page #main .form-n-file-input{background-color:transparent!important;border-color:transparent!important}
-html.stk-dark.stk-account-page #main :is(.form-n-file-input-control,.stk-account-upload-button){background-color:#292b2c!important;color:#e6e3df!important;border-color:#595c60!important}
-html.stk-dark.stk-account-page #main :is(label[for*="avatar"],label[for*="image"]):not(.stk-account-upload-button){background:transparent!important;color:#e6e3df!important}
-html.stk-dark.stk-account-page #main input[type="file"]::file-selector-button{padding:7px;border:1px solid #595c60;border-radius:3px;cursor:pointer}
-html.stk-dark.stk-account-page #main .stk-account-light-bar{background-color:#292b2c!important;color:#e6e3df!important}
-html.stk-dark.stk-account-page #main .stk-account-light-bar :is(h1,h2,h3,h4,span,p){color:#e6e3df!important}
-html.stk-dark.stk-account-page #main .stk-account-light-bar::before,html.stk-dark.stk-account-page #main .stk-account-light-bar::after{background-color:#292b2c!important}
-html.stk-dark.stk-account-page #main .stk-account-upload-button,html.stk-dark.stk-account-page #main .stk-account-upload-button :is(span,svg){color:#e6e3df!important;fill:#cba4e1!important}
-html.stk-dark #main :is(.notice,.notice-n,.alert,.alert-n,.message,.flash,.search-notice){background-color:#292b2c!important;color:#e6e3df!important;border-color:#56515d!important}
-html.stk-dark #main :is(.select2-selection,.select2-selection__rendered,.select2-selection__choice,.select2-container--default .select2-selection--multiple){background:#292b2c!important;color:#e6e3df!important;border-color:#595c60!important}
-html.stk-dark #main :is(.card-grid-header-content,.set-header-controls){background-color:transparent!important;color:#e6e3df!important}
-html.stk-dark #main .search-info,html.stk-dark #main .form-row,html.stk-dark #main .advanced-search-submit-bottom{background-color:#1d2021!important;color:#e6e3df!important;border-color:#424447!important}
+html.stk-dark.stk-account-page #main :is(.form-n-file-input-control,.stk-account-upload-button){background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:var(--stk-border)!important}
+html.stk-dark.stk-account-page #main :is(label[for*="avatar"],label[for*="image"]):not(.stk-account-upload-button){background:transparent!important;color:var(--stk-ink)!important}
+html.stk-dark.stk-account-page #main input[type="file"]::file-selector-button{padding:7px;border:1px solid var(--stk-border);border-radius:3px;cursor:pointer}
+html.stk-dark.stk-account-page #main .stk-account-light-bar{background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important}
+html.stk-dark.stk-account-page #main .stk-account-light-bar :is(h1,h2,h3,h4,span,p){color:var(--stk-ink)!important}
+html.stk-dark.stk-account-page #main .stk-account-light-bar::before,html.stk-dark.stk-account-page #main .stk-account-light-bar::after{background-color:var(--stk-panel-2)!important}
+html.stk-dark.stk-account-page #main .stk-account-upload-button,html.stk-dark.stk-account-page #main .stk-account-upload-button :is(span,svg){color:var(--stk-ink)!important;fill:#cba4e1!important}
+html.stk-dark #main :is(.notice,.notice-n,.alert,.alert-n,.message,.flash,.search-notice){background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:#56515d!important}
+html.stk-dark #main :is(.select2-selection,.select2-selection__rendered,.select2-selection__choice,.select2-container--default .select2-selection--multiple){background:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:var(--stk-border)!important}
+html.stk-dark #main :is(.card-grid-header-content,.set-header-controls){background-color:transparent!important;color:var(--stk-ink)!important}
+html.stk-dark #main .search-info,html.stk-dark #main .form-row,html.stk-dark #main .advanced-search-submit-bottom{background-color:var(--stk-page)!important;color:var(--stk-ink)!important;border-color:#424447!important}
 html.stk-dark #main .search-info a{color:#cba4e1!important}
-html.stk-dark select option{background-color:#292b2c!important;color:#e6e3df!important}
-html.stk-dark #main input[type="checkbox"]{appearance:none;background:#292b2c!important;border:1px solid #85818a!important;border-radius:3px;vertical-align:middle}
+html.stk-dark select option{background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important}
+html.stk-dark #main input[type="checkbox"]{appearance:none;background:var(--stk-panel-2)!important;border:1px solid #85818a!important;border-radius:3px;vertical-align:middle}
 html.stk-dark #main input[type="checkbox"]:checked{background:#756287 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18'%3E%3Cpath d='m3 9 4 4 8-9' fill='none' stroke='white' stroke-width='2'/%3E%3C/svg%3E") center/80% no-repeat!important}
 html.stk-dark #main input[type="checkbox"]:focus-visible{outline:2px solid #ad92bb;outline-offset:2px}
-html.stk-dark #main .select2-container,html.stk-dark #main .select2-container .selection{background:#292b2c!important;color:#e6e3df!important;border-color:#57595b!important}
+html.stk-dark #main .select2-container,html.stk-dark #main .select2-container .selection{background:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:#57595b!important}
 html.stk-dark #main .advanced-search-submit-bottom button.submit-n{background:#493a57!important;border-color:#826e90!important;color:#f3eefa!important}
 html.stk-dark #main .stk-ct-price-cell a{color:#c6a9d2!important}
 /* Deck editor rows are Vue components with their own background and contrast rules. */
-html.stk-dark #main #deckbuilder :is(.deckbuilder-section,.deckbuilder-entry,.deckbuilder-column){background-color:#252829!important;color:#e6e3df!important;border-color:#505254!important}
-html.stk-dark #main #deckbuilder :is(.deckbuilder-section-title-bar,.deckbuilder-toolbar,.deckbuilder-editor-inner){background-color:#292b2c!important;color:#e6e3df!important;border-color:#505254!important}
+html.stk-dark #main #deckbuilder :is(.deckbuilder-section,.deckbuilder-entry,.deckbuilder-column){background-color:var(--stk-panel)!important;color:var(--stk-ink)!important;border-color:#505254!important}
+html.stk-dark #main #deckbuilder :is(.deckbuilder-section-title-bar,.deckbuilder-toolbar,.deckbuilder-editor-inner){background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:#505254!important}
 html.stk-dark #main #deckbuilder :is(.deckbuilder-section-count,[class*="deckbuilder-entry-"][class*="set"],[class*="deckbuilder-entry-"][class*="collector"],[class*="deckbuilder-entry-"][class*="number"]){color:#bcbac3!important}
-html.stk-dark #main #deckbuilder .deckbuilder-entry :is(.deckbuilder-entry-set,.deckbuilder-entry-set-code,.deckbuilder-entry-collector-number,.deckbuilder-entry-printing){color:#e6e3df!important;background-color:#383a3c!important}
-html.stk-dark #main #deckbuilder :is(.deckbuilder-entry-input,.deckbuilder-entry-menu-select){background-color:#292b2c!important;color:#e6e3df!important;border-color:#5a5d61!important}
+html.stk-dark #main #deckbuilder .deckbuilder-entry :is(.deckbuilder-entry-set,.deckbuilder-entry-set-code,.deckbuilder-entry-collector-number,.deckbuilder-entry-printing){color:var(--stk-ink)!important;background-color:#383a3c!important}
+html.stk-dark #main #deckbuilder :is(.deckbuilder-entry-input,.deckbuilder-entry-menu-select){background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:#5a5d61!important}
 /* Let the deck actions menu extend below the list instead of clipping into a scrolling row. */
 html.stk-dark #main :is(.deck-list,.deck-list-wrapper,.deck-list-main,.deck-list-entry){overflow:visible!important;max-height:none!important}
-html.stk-dark #main .deck-list-entry :is(.dropdown,.dropdown-menu,.menu,.popover){overflow:visible!important;max-height:none!important;background-color:#292b2c!important;color:#e6e3df!important}
+html.stk-dark #main .deck-list-entry :is(.dropdown,.dropdown-menu,.menu,.popover){overflow:visible!important;max-height:none!important;background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important}
 /* A "Make a copy" item in the deck menu is a form of its own, and the broad
    account rule above paints every form, which left a stray band behind that one
    row. Inside a menu the wrapper stays out of the way. */
 html.stk-dark.stk-account-page #main .dropdown-menu-items form{background-color:transparent!important;border-color:transparent!important;padding:0!important}
 /* The deck editor draws its curve counts in black, which vanished on the dark
    surface; the labels next to them are Scryfall's own muted grey. */
-html.stk-dark.stk-account-page #deckbuilder :is(.deckbuilder-cmc-stat,.deckbuilder-cmc-stat-number) :is(strong,b){color:#e6e3df!important}
+html.stk-dark.stk-account-page #deckbuilder :is(.deckbuilder-cmc-stat,.deckbuilder-cmc-stat-number) :is(strong,b){color:var(--stk-ink)!important}
 html.stk-dark.stk-account-page #deckbuilder :is(.deckbuilder-cmc-stat,.deckbuilder-cmc-stat-number) :is(li,span):not(.card-symbol):not(.mana-symbol){color:#bcbac3!important}
 /* A column header sits on its own lighter band, which reads as a second surface
    in the middle of the column. The band takes the column's own colour. */
@@ -178,8 +178,8 @@ html.stk-dark.stk-account-page #deckbuilder :is(.deckbuilder-cmc-stat,.deckbuild
    read as a lighter box inside a dark page. The column and its header take the
    page's own colour; the card rows keep their own step, so the list still reads
    as rows. */
-html.stk-dark #main #deckbuilder :is(.deckbuilder-section,.deckbuilder-column){background-color:#1d2021!important}
-html.stk-dark #main #deckbuilder :is(.deckbuilder-section-title-bar,.deckbuilder-entry){background-color:#252829!important;border-color:#414345!important}
+html.stk-dark #main #deckbuilder :is(.deckbuilder-section,.deckbuilder-column){background-color:var(--stk-page)!important}
+html.stk-dark #main #deckbuilder :is(.deckbuilder-section-title-bar,.deckbuilder-entry){background-color:var(--stk-panel)!important;border-color:var(--stk-border-2)!important}
 /* The set code and the collector number are Scryfall's own grey badge, which is
    black ink at a quarter opacity and disappears on the dark row. */
 html.stk-dark.stk-account-page #deckbuilder :is(.deckbuilder-entry-badge,.stk-deck-set-badge){color:#dcd8e2!important;background-color:#383a3c!important;border-color:#4b4d52!important}
@@ -187,77 +187,91 @@ html.stk-dark.stk-account-page #deckbuilder .deckbuilder-entry-badge.red{color:#
 /* The form title of an account page is a light title bar of its own. On a dark
    page it is only a band, so it takes the panel's colour; the text stays light. */
 html.stk-dark.stk-account-page #main .stk-account-light-bar.form-n-title,
-html.stk-dark.stk-account-page #main .form-n-title{background-color:#1d2021!important;border-color:transparent!important;color:#e6e3df!important;text-shadow:none!important}
+html.stk-dark.stk-account-page #main .form-n-title{background-color:var(--stk-page)!important;border-color:transparent!important;color:var(--stk-ink)!important;text-shadow:none!important}
 /* Set and collector badges in the deck editor inherit near-black ink from Scryfall. */
-html.stk-dark #main #deckbuilder :is(.deckbuilder-entry,.deckbuilder-section) :is([class*="set-code"],[class*="set-name"],[class*="set-number"],[class*="collector"],[class*="printing"]){color:#e6e3df!important;background-color:#383a3c!important}
+html.stk-dark #main #deckbuilder :is(.deckbuilder-entry,.deckbuilder-section) :is([class*="set-code"],[class*="set-name"],[class*="set-number"],[class*="collector"],[class*="printing"]){color:var(--stk-ink)!important;background-color:#383a3c!important}
 html.stk-dark #main #deckbuilder :is(.deckbuilder-section-title-bar,.deckbuilder-section-count,.deckbuilder-section-name,.deckbuilder-entry-menu-visual){color:#d5d1d8!important}
 /* Scryfall renders the backpack tray outside #main, and pagination has its own white buttons. */
 html.stk-dark .left-tray .deck-tray{background:transparent!important;border-color:transparent!important}
-html.stk-dark .left-tray .deck-tray-options{background:#222426!important;color:#e6e3df!important;border-color:#55515a!important}
-html.stk-dark .left-tray :is(.deck-tray-option,.deck-tray-option .button-n){background:#292b2c!important;color:#e6e3df!important;border-color:#59535e!important}
+html.stk-dark .left-tray .deck-tray-options{background:#222426!important;color:var(--stk-ink)!important;border-color:#55515a!important}
+html.stk-dark .left-tray :is(.deck-tray-option,.deck-tray-option .button-n){background:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:#59535e!important}
 html.stk-dark .left-tray .deck-tray-option .button-n.primary{background:#554267!important;color:#f4eff7!important}
 html.stk-dark .left-tray .deck-tray-option .button-n.danger{color:#ee9d9d!important;border-color:#915c65!important}
 html.stk-dark .left-tray .deck-tray-option svg,html.stk-dark .left-tray .deck-tray-option svg :is(path,g){fill:currentColor!important}
-html.stk-dark :is(.search-controls-pagination,.pagination) .button-n{background:#292b2c!important;color:#e6e3df!important;border-color:#595c60!important}
+html.stk-dark :is(.search-controls-pagination,.pagination) .button-n{background:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:var(--stk-border)!important}
 html.stk-dark :is(.search-controls-pagination,.pagination) .button-n.disabled{color:#99979f!important;background:#252729!important}
 html.stk-dark :is(.search-controls-pagination,.pagination) .button-n svg{fill:currentColor!important}
 /* Contact and suggestion forms have separate white surfaces from card pages. */
-html.stk-dark.stk-account-page #main :is(.contact-form,.contact-panel,.contact-content,.contact-box,.contact-page,.feedback-form,.suggestion-form){background-color:#1d2021!important;color:#e6e3df!important;border-color:#424447!important}
-html.stk-dark :is(.feedback-modal,.suggestion-modal,.contact-modal,.feedback-dialog){background-color:#252829!important;color:#e6e3df!important;border-color:#53525b!important}
-html.stk-dark :is(.feedback-modal,.suggestion-modal,.contact-modal,.feedback-dialog) :is(header,footer,fieldset,form,section){background-color:#252829!important;color:#e6e3df!important;border-color:#53525b!important}
-html.stk-dark :is(.feedback-modal,.suggestion-modal,.contact-modal,.feedback-dialog) :is(input,textarea,select){background-color:#292b2c!important;color:#e6e3df!important;border-color:#595c60!important}
-html.stk-dark.stk-account-page #main .stk-account-light-bar :is(button,a){color:#e6e3df!important}
+html.stk-dark.stk-account-page #main :is(.contact-form,.contact-panel,.contact-content,.contact-box,.contact-page,.feedback-form,.suggestion-form){background-color:var(--stk-page)!important;color:var(--stk-ink)!important;border-color:#424447!important}
+html.stk-dark :is(.feedback-modal,.suggestion-modal,.contact-modal,.feedback-dialog){background-color:var(--stk-panel)!important;color:var(--stk-ink)!important;border-color:#53525b!important}
+html.stk-dark :is(.feedback-modal,.suggestion-modal,.contact-modal,.feedback-dialog) :is(header,footer,fieldset,form,section){background-color:var(--stk-panel)!important;color:var(--stk-ink)!important;border-color:#53525b!important}
+html.stk-dark :is(.feedback-modal,.suggestion-modal,.contact-modal,.feedback-dialog) :is(input,textarea,select){background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:var(--stk-border)!important}
+html.stk-dark.stk-account-page #main .stk-account-light-bar :is(button,a){color:var(--stk-ink)!important}
 
 /* Keep deck actions outside Scryfall's short, scrolling deck-list viewport. */
 #main.stk-deck-list-expanded,#main .stk-deck-list-expanded{height:auto!important;max-height:none!important;overflow:visible!important;contain:none!important;clip-path:none!important}
 .stk-deck-actions-menu{position:fixed!important;inset:auto!important;top:var(--stk-deck-menu-top)!important;left:var(--stk-deck-menu-left)!important;right:auto!important;bottom:auto!important;min-width:230px!important;width:max-content!important;max-width:min(320px,calc(100vw - 16px))!important;max-height:min(70vh,calc(100vh - var(--stk-deck-menu-top) - 12px))!important;overflow-x:hidden!important;overflow-y:auto!important;z-index:2147483640!important;box-sizing:border-box!important}
-html.stk-dark.stk-account-page #main .stk-deck-more-button{background:#292b2c!important;color:#e6e3df!important;border:1px solid #57595c!important;opacity:1!important}
-html.stk-dark.stk-account-page .stk-deck-actions-menu,html.stk-dark.stk-account-page .stk-deck-actions-menu :is(a,button){background:#292b2c!important;color:#e6e3df!important;border-color:#55575d!important}
-html.stk-dark #main .stk-deck-actions-menu :is(a,button):hover{background:#413949!important;color:#fff!important}
+html.stk-dark.stk-account-page #main .stk-deck-more-button{background:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border:1px solid #57595c!important;opacity:1!important}
+html.stk-dark.stk-account-page .stk-deck-actions-menu,html.stk-dark.stk-account-page .stk-deck-actions-menu :is(a,button){background:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:#55575d!important}
+html.stk-dark #main .stk-deck-actions-menu :is(a,button):hover{background:var(--stk-hover)!important;color:#fff!important}
 
 /* Consistent link purple across Scryfall and Tagger, without changing prices. */
 /* One link purple for the whole site. Scryfall's own #634496 is unreadable on a
    dark surface, and the first replacement was still too close to it, so the
    pages that carry many links (the search reference, the account pages) read
    almost black. This is the brighter step, applied everywhere. */
-html.stk-dark{--stk-link-purple:#c4a7ea}
+/* The palette. Every colour here plays one role, and a rule names the role
+   rather than the value: two surfaces meant to look alike can be seen to look
+   alike, and a colour outside this list stands out. Each variable holds the
+   exact colour it replaced, so nothing on screen changed here. */
+html.stk-dark{
+  --stk-page:#1d2021;
+  --stk-panel:#252829;
+  --stk-panel-2:#292b2c;
+  --stk-ink:#e6e3df;
+  --stk-link:#c79ce3;
+  --stk-border:#595c60;
+  --stk-border-2:#414345;
+  --stk-hover:#413949;
+  --stk-link-purple:#c4a7ea
+}
 html.stk-dark #main :is(.reference-block,.reference-jump,.form-row,.search-info,.profile,.account,.deck-list-entry) a:not(.button-n):not([class*="currency-"]),html.stk-dark #main a[href^="/tags/"],html.stk-dark #main a[href^="https://tagger.scryfall.com/"]{color:var(--stk-link-purple)!important}
 html.stk-dark #main #stk-tags a{color:var(--stk-link-purple)!important}
 html.stk-dark #main :is(.reference-block,.reference-block-doc,.reference-block-examples,.reference-jump,h1,h2,h3,h4,h5,h6){text-shadow:none!important;-webkit-text-stroke:0!important}
 html.stk-dark #main ::selection{background:#705488!important;color:#fff!important;text-shadow:none!important}
 html.stk-dark #main :is(mark,.highlight,.search-highlight){background:#59476a!important;color:#fff!important;text-shadow:none!important}
-html.stk-dark.stk-docs-page #main :is(.box,.panel,.well,.bot,.bot-card,.bots-list,.faq,.faq-answer,.faq-question,.reference-example,.reference-block){background:#1d2021!important;color:#e6e3df!important;border-color:#414345!important}
-html.stk-dark.stk-docs-page #main :is(.box-header,.panel-heading,.reference-title,.faq-heading){background:#292b2c!important;color:#e6e3df!important;text-shadow:none!important}
+html.stk-dark.stk-docs-page #main :is(.box,.panel,.well,.bot,.bot-card,.bots-list,.faq,.faq-answer,.faq-question,.reference-example,.reference-block){background:var(--stk-page)!important;color:var(--stk-ink)!important;border-color:var(--stk-border-2)!important}
+html.stk-dark.stk-docs-page #main :is(.box-header,.panel-heading,.reference-title,.faq-heading){background:var(--stk-panel-2)!important;color:var(--stk-ink)!important;text-shadow:none!important}
 /* The background is set on its own, never through the shorthand: a light bar is
    sometimes a brand band that carries a logo as its background image (the Slack
    band on the bots page is one), and the shorthand would take the logo with it. */
-html.stk-dark.stk-info-page #main .stk-account-light-bar,html.stk-dark.stk-info-page #main .stk-info-light-surface{background-color:#252829!important;color:#e6e3df!important;border-color:#414345!important;box-shadow:none!important}
-html.stk-dark.stk-info-page #main :is(.stk-account-light-bar,.stk-info-light-surface) :is(h1,h2,h3,h4,p,span,li){color:#e6e3df!important;text-shadow:none!important}
+html.stk-dark.stk-info-page #main .stk-account-light-bar,html.stk-dark.stk-info-page #main .stk-info-light-surface{background-color:var(--stk-panel)!important;color:var(--stk-ink)!important;border-color:var(--stk-border-2)!important;box-shadow:none!important}
+html.stk-dark.stk-info-page #main :is(.stk-account-light-bar,.stk-info-light-surface) :is(h1,h2,h3,h4,p,span,li){color:var(--stk-ink)!important;text-shadow:none!important}
 html.stk-dark #main :is(.search-results,.search-controls,.set-header-content,.set-header-title,.card-grid-header-content){background:transparent!important}
-html.stk-dark.stk-blog-page #main :is(.blog-content,.blog-index,.blog-category,.blog-articles,.posts){background:#1d2021!important;color:#e6e3df!important}
+html.stk-dark.stk-blog-page #main :is(.blog-content,.blog-index,.blog-category,.blog-articles,.posts){background:var(--stk-page)!important;color:var(--stk-ink)!important}
 html.stk-dark.stk-blog-page #main :is(img,video,picture){filter:none!important;mix-blend-mode:normal!important}
 html.stk-site-ru #caster-tray a.button-n.primary-n::after{content:"Кастер включён"}
 
 /* Deck editor controls and metadata use the same contrast as the card detail. */
 html.stk-dark #main #deckbuilder :is(.deckbuilder-section-title-bar,.deckbuilder-section-title-bar *,[class*="section-name"],[class*="section-count"],[class*="curve"]){color:#dcd8e2!important;text-shadow:none!important}
-html.stk-dark #main #deckbuilder :is(.deckbuilder-entry-set,.deckbuilder-entry-set-code,.deckbuilder-entry-printing,.deckbuilder-entry-collector-number,.stk-deck-set-badge){color:#e6e3df!important;background:#38393e!important;border-color:#505157!important}
-html.stk-dark #main :is(#deckbuilder,.deck-list-entry) :is(.dropdown,.dropdown-menu,[class*="-menu"],[class*="actions"],.button-n){background-color:#292b2c!important;color:#e6e3df!important;border-color:#5b5a62!important}
-html.stk-dark #main :is(#deckbuilder,.deck-list-entry) :is(.dropdown-menu,[class*="-menu"]) :is(a,button,li){color:#e6e3df!important;background-color:#292b2c!important}
-html.stk-dark #main :is(#deckbuilder,.deck-list-entry) :is(.dropdown-menu,[class*="-menu"]) :is(a,button,li):hover{background-color:#413949!important;color:#fff!important}
+html.stk-dark #main #deckbuilder :is(.deckbuilder-entry-set,.deckbuilder-entry-set-code,.deckbuilder-entry-printing,.deckbuilder-entry-collector-number,.stk-deck-set-badge){color:var(--stk-ink)!important;background:#38393e!important;border-color:#505157!important}
+html.stk-dark #main :is(#deckbuilder,.deck-list-entry) :is(.dropdown,.dropdown-menu,[class*="-menu"],[class*="actions"],.button-n){background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:#5b5a62!important}
+html.stk-dark #main :is(#deckbuilder,.deck-list-entry) :is(.dropdown-menu,[class*="-menu"]) :is(a,button,li){color:var(--stk-ink)!important;background-color:var(--stk-panel-2)!important}
+html.stk-dark #main :is(#deckbuilder,.deck-list-entry) :is(.dropdown-menu,[class*="-menu"]) :is(a,button,li):hover{background-color:var(--stk-hover)!important;color:#fff!important}
 html.stk-dark.stk-account-page #main .stk-deck-editor-label{color:#dedbe3!important;text-shadow:none!important}
 html.stk-dark.stk-account-page #main .stk-deck-set-badge{background-color:#3b3c42!important;color:#e2dfe9!important;border:1px solid #57575f!important}
-html.stk-dark.stk-account-page #main :is(.deckbuilder,[class*="deckbuilder"]) :is(.dropdown,.dropdown-menu,[class*="-dropdown"],[class*="-menu"],.button-n){background-color:#292b2c!important;color:#e6e3df!important;border-color:#5b5a62!important}
-html.stk-dark.stk-account-page #main :is(.deckbuilder,[class*="deckbuilder"]) :is(.dropdown-menu,[class*="-dropdown"],[class*="-menu"]) :is(a,button,li){background-color:#292b2c!important;color:#e6e3df!important}
+html.stk-dark.stk-account-page #main :is(.deckbuilder,[class*="deckbuilder"]) :is(.dropdown,.dropdown-menu,[class*="-dropdown"],[class*="-menu"],.button-n){background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:#5b5a62!important}
+html.stk-dark.stk-account-page #main :is(.deckbuilder,[class*="deckbuilder"]) :is(.dropdown-menu,[class*="-dropdown"],[class*="-menu"]) :is(a,button,li){background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important}
 
 /* Some account routes render their two-column shell outside #main. Keep its
    backdrop dark without applying the same rule to search or set pages. */
-html.stk-dark.stk-account-page #main :is(.inner-flex,.inner-flex>*,.account-layout,.account-layout>*,.settings-layout,.settings-layout>*,.account-content,.account-main,.settings-content,.profile-content,.deck-list-wrapper,.deck-list-main,.stk-account-light-surface){background-color:#1d2021!important;color:#e6e3df!important}
-html.stk-dark.stk-account-page :is(main,#main){background-color:#1d2021!important;color:#e6e3df!important}
-html.stk-dark.stk-account-page :is(main,#main) :is(.deckbuilder-entry,.deckbuilder-section) :is([class*="set-code"],[class*="set-name"],[class*="collector"],[class*="printing"]){color:#e6e3df!important;background-color:#393a3f!important}
-html.stk-dark.stk-account-page :is(main,#main) :is(.deckbuilder-section-title-bar,.deckbuilder-section-title-bar *,[class*="mana-curve"],[class*="curve-label"]){color:#e6e3df!important}
-html.stk-dark.stk-account-page :is(.deckbuilder-entry,.deckbuilder-section) :is([class*="set-code"],[class*="collector"],[class*="printing"],.stk-deck-set-badge){color:#e6e3df!important;background-color:#393a3f!important}
-html.stk-dark.stk-account-page :is(.deckbuilder-section-title-bar,.deckbuilder-section-title-bar *,[class*="mana-curve"],[class*="curve-label"]){color:#e6e3df!important}
-html.stk-dark #main #stk-tags .stk-tags-table td a{color:#e6e3df!important}
+html.stk-dark.stk-account-page #main :is(.inner-flex,.inner-flex>*,.account-layout,.account-layout>*,.settings-layout,.settings-layout>*,.account-content,.account-main,.settings-content,.profile-content,.deck-list-wrapper,.deck-list-main,.stk-account-light-surface){background-color:var(--stk-page)!important;color:var(--stk-ink)!important}
+html.stk-dark.stk-account-page :is(main,#main){background-color:var(--stk-page)!important;color:var(--stk-ink)!important}
+html.stk-dark.stk-account-page :is(main,#main) :is(.deckbuilder-entry,.deckbuilder-section) :is([class*="set-code"],[class*="set-name"],[class*="collector"],[class*="printing"]){color:var(--stk-ink)!important;background-color:#393a3f!important}
+html.stk-dark.stk-account-page :is(main,#main) :is(.deckbuilder-section-title-bar,.deckbuilder-section-title-bar *,[class*="mana-curve"],[class*="curve-label"]){color:var(--stk-ink)!important}
+html.stk-dark.stk-account-page :is(.deckbuilder-entry,.deckbuilder-section) :is([class*="set-code"],[class*="collector"],[class*="printing"],.stk-deck-set-badge){color:var(--stk-ink)!important;background-color:#393a3f!important}
+html.stk-dark.stk-account-page :is(.deckbuilder-section-title-bar,.deckbuilder-section-title-bar *,[class*="mana-curve"],[class*="curve-label"]){color:var(--stk-ink)!important}
+html.stk-dark #main #stk-tags .stk-tags-table td a{color:var(--stk-ink)!important}
 html.stk-dark #main #stk-tags .stk-tags-toggle{color:#cba4e1!important}
 
 /* Keep the original layout and artwork while correcting the actual page surfaces. */
@@ -265,8 +279,8 @@ html.stk-dark #main .stk-brighter-purple{color:var(--stk-link-purple)!important}
 /* The advanced-search checkbox already draws its own checkmark as a "✓"
    ::before glyph, so the theme only darkens the box and lightens that glyph
    instead of stacking a second checkmark on top. */
-html.stk-dark #main .advanced-search-checkbox input[type="checkbox"]{background-color:#292b2c!important;border-color:#79757f!important;box-shadow:none!important;color:#e6e3df!important}
-html.stk-dark #main .advanced-search-checkbox input[type="checkbox"]:checked{background-color:#756287!important;background-image:none!important;color:#e6e3df!important}
+html.stk-dark #main .advanced-search-checkbox input[type="checkbox"]{background-color:var(--stk-panel-2)!important;border-color:#79757f!important;box-shadow:none!important;color:var(--stk-ink)!important}
+html.stk-dark #main .advanced-search-checkbox input[type="checkbox"]:checked{background-color:#756287!important;background-image:none!important;color:var(--stk-ink)!important}
 /* The label icons and the set symbols Scryfall draws black or in its dark
    purple are brightened so they stay visible on the dark surface. */
 html.stk-dark #main .form-row-label svg :is(path,g,circle,rect,polygon){fill:#bda1df!important}
@@ -279,30 +293,30 @@ html.stk-dark #main .form-row-label svg :is(path,g,circle,rect,polygon){fill:#bd
 html.stk-dark #main :is(.select2-selection__choice,.select2-results__option) svg{filter:invert(1) brightness(.92) saturate(.9)}
 html.stk-dark #main .select2-polarity{background-color:#75986e!important;color:#fff!important}
 html.stk-dark #main .select2-polarity.negative{background-color:#a71f2a!important;color:#fff!important}
-html.stk-dark .select2-container :is(.select2-selection__rendered,.select2-results__options,.select2-results__option,.select2-search,.select2-search__field){background-color:#292b2c!important;color:#e6e3df!important;border-color:#55575d!important;box-shadow:none!important}
+html.stk-dark .select2-container :is(.select2-selection__rendered,.select2-results__options,.select2-results__option,.select2-search,.select2-search__field){background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:#55575d!important;box-shadow:none!important}
 html.stk-dark .select2-container :is(.select2-results__option--highlighted,.select2-results__option[aria-selected="true"]){background-color:#493e53!important;color:#fff!important}
 html.stk-dark #main :is(.form-row-label :is(svg,svg path),.reference-block-icon :is(svg,svg path)){fill:var(--stk-link-purple)!important;color:var(--stk-link-purple)!important}
 /* The docs left column is Scryfall's own purple field, and its expander bar is
    the same colour. Repainting them flattened the page's purple into grey, so the
    menu is left exactly as Scryfall paints it — the same call already made on the
    team page. */
-html.stk-dark.stk-docs-page #main :is(.reference-doc,.reference-doc-content,.prose){background:#1d2021!important;color:#e6e3df!important}
+html.stk-dark.stk-docs-page #main :is(.reference-doc,.reference-doc-content,.prose){background:var(--stk-page)!important;color:var(--stk-ink)!important}
 html.stk-dark.stk-docs-page #main :is(.reference-doc-menu,.reference-doc-menu-expander){background-color:#4f4255!important}
 /* Scryfall highlights a hovered row with a white wash at 8%. On a dark page that
    wash is the wrong direction, and painting the hover the same as the resting
    row removed the highlight altogether. Hover is one clear step lighter. */
-html.stk-dark.stk-docs-page #main .faq-link{background:#292b2c!important;color:#e6e3df!important;box-shadow:none!important}
+html.stk-dark.stk-docs-page #main .faq-link{background:var(--stk-panel-2)!important;color:var(--stk-ink)!important;box-shadow:none!important}
 html.stk-dark.stk-docs-page #main .faq-link:is(:hover,:active,:focus){background:#3a3e40!important}
-html.stk-dark.stk-docs-page #main .faq-link :is(.faq-link-title,.faq-link-subtitle){color:#e6e3df!important;text-shadow:none!important}
-html.stk-dark.stk-bots-page #main :is(.reference-jump,.bot-marketing,.bot-marketing-panel,.bot-marketing-panel-shadow,.marketing-features,.marketing-features-item,.marketing-features-item-content){background-color:#1d2021!important;color:#e6e3df!important;border-color:#45464a!important}
-html.stk-dark.stk-bots-page #main :is(.bot-marketing-panel,.marketing-features-item){background-color:#252829!important}
+html.stk-dark.stk-docs-page #main .faq-link :is(.faq-link-title,.faq-link-subtitle){color:var(--stk-ink)!important;text-shadow:none!important}
+html.stk-dark.stk-bots-page #main :is(.reference-jump,.bot-marketing,.bot-marketing-panel,.bot-marketing-panel-shadow,.marketing-features,.marketing-features-item,.marketing-features-item-content){background-color:var(--stk-page)!important;color:var(--stk-ink)!important;border-color:#45464a!important}
+html.stk-dark.stk-bots-page #main :is(.bot-marketing-panel,.marketing-features-item){background-color:var(--stk-panel)!important}
 html.stk-dark.stk-bots-page #main .bot-marketing{background-image:none!important}
-html.stk-dark.stk-bots-page #main :is(.bot-marketing-panel-desc,.marketing-features-item-content,.marketing-features-item-content p){color:#e6e3df!important}
+html.stk-dark.stk-bots-page #main :is(.bot-marketing-panel-desc,.marketing-features-item-content,.marketing-features-item-content p){color:var(--stk-ink)!important}
 /* The text blocks inside a bot panel carry their own light surface, which the
    panel repaint above does not reach. */
 html.stk-dark.stk-bots-page #main :is(.bot-marketing-panel,.bot-marketing-panel-shadow) :is(p,span,div){background-color:transparent!important}
-html.stk-dark.stk-bots-page #main :is(.bot-marketing-panel,.bot-marketing-panel-shadow) .bot-marketing-panel-footer{background:#2a2c2d!important;color:#e6e3df!important}
-html.stk-dark.stk-bots-page #main :is(.bot-marketing-panel,.bot-marketing-panel-shadow) .bot-marketing-panel-footer .button-n{background:#3a3d40!important;color:#c79ce3!important;border-color:#595c60!important}
+html.stk-dark.stk-bots-page #main :is(.bot-marketing-panel,.bot-marketing-panel-shadow) .bot-marketing-panel-footer{background:#2a2c2d!important;color:var(--stk-ink)!important}
+html.stk-dark.stk-bots-page #main :is(.bot-marketing-panel,.bot-marketing-panel-shadow) .bot-marketing-panel-footer .button-n{background:#3a3d40!important;color:var(--stk-link)!important;border-color:var(--stk-border)!important}
 /* The team page is a purple marketing page with a white band laid over its
    purple field. One earlier rule painted that band a dark grey while a later one
    dimmed the same band to a translucent white with dark ink on it; the later
@@ -310,21 +324,21 @@ html.stk-dark.stk-bots-page #main :is(.bot-marketing-panel,.bot-marketing-panel-
    grey on dark grey. The dimmed band is the intent, so the earlier rule is gone
    and only the inner layout of the band is left transparent. */
 html.stk-dark.stk-team-page #main .team-header .inner-flex{background-color:transparent!important;color:inherit}
-html.stk-dark.stk-blog-page #main :is(.blog-post-large,.blog-post-large>.inner-flex,.blog-post-large-header,.blog-post-large-content,.blog-post-content,.blog-post-large-body,.blog-post,.blog-index,.blog-category,.blog-pagination){background-image:none!important;background-color:#1d2021!important;color:#e6e3df!important}
+html.stk-dark.stk-blog-page #main :is(.blog-post-large,.blog-post-large>.inner-flex,.blog-post-large-header,.blog-post-large-content,.blog-post-content,.blog-post-large-body,.blog-post,.blog-index,.blog-category,.blog-pagination){background-image:none!important;background-color:var(--stk-page)!important;color:var(--stk-ink)!important}
 html.stk-dark.stk-blog-page #main .blog-orbit{background:transparent!important}
 html.stk-dark.stk-blog-page #main .blog-orbit img{filter:none!important}
-html.stk-dark.stk-blog-page #main :is(.blog-post-large,.blog-post) :is(p,li,span,h1,h2,h3,h4){color:#e6e3df!important}
+html.stk-dark.stk-blog-page #main :is(.blog-post-large,.blog-post) :is(p,li,span,h1,h2,h3,h4){color:var(--stk-ink)!important}
 html.stk-dark.stk-blog-page #main :is(.blog-post-large,.blog-post) a:not(.button-n){color:#bda1df!important}
-html.stk-dark.stk-account-page .stk-deck-actions-menu,html.stk-dark.stk-account-page .stk-deck-actions-menu :is(a,button,li,div){background-color:#292b2c!important;color:#e6e3df!important;border-color:#55575d!important}
-html.stk-dark.stk-account-page .stk-deck-actions-menu :is(a,button,li):hover{background-color:#413949!important;color:#fff!important}
+html.stk-dark.stk-account-page .stk-deck-actions-menu,html.stk-dark.stk-account-page .stk-deck-actions-menu :is(a,button,li,div){background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:#55575d!important}
+html.stk-dark.stk-account-page .stk-deck-actions-menu :is(a,button,li):hover{background-color:var(--stk-hover)!important;color:#fff!important}
 html.stk-dark.stk-account-page #main :is(.profile,.account) [class*="avatar"]:not(img)::before{background-color:transparent!important}
-html.stk-dark.stk-account-page #main :is(.deck-details,.deck-details-title,.deck-details-subtitle,.deck-details-subtitle abbr){color:#e6e3df!important;text-shadow:none!important}
-html.stk-dark.stk-account-page #main .sidebar :is(.sidebar-toolbox,.sidebar-prices){background-color:#1d2021!important;color:#e6e3df!important}
+html.stk-dark.stk-account-page #main :is(.deck-details,.deck-details-title,.deck-details-subtitle,.deck-details-subtitle abbr){color:var(--stk-ink)!important;text-shadow:none!important}
+html.stk-dark.stk-account-page #main .sidebar :is(.sidebar-toolbox,.sidebar-prices){background-color:var(--stk-page)!important;color:var(--stk-ink)!important}
 /* The native action list has an inner scrolling wrapper which otherwise
    clips the last actions inside a short, bright rectangle. */
 #main .deck-list-entry :is(.dropdown-menu-items,.dropdown-menu-items ul,.dropdown-menu-items li){height:auto!important;max-height:none!important;overflow:visible!important}
-html.stk-dark.stk-account-page #main .deck-list-entry :is(.dropdown-menu-items,.dropdown-menu-items ul,.dropdown-menu-items li,.dropdown-menu-items a,.dropdown-menu-items button){background-color:#292b2c!important;color:#e6e3df!important;border-color:#55575d!important}
-html.stk-dark.stk-account-page #main .deck-list-entry .dropdown-menu-items :is(a,button):hover{background-color:#413949!important;color:#fff!important}
+html.stk-dark.stk-account-page #main .deck-list-entry :is(.dropdown-menu-items,.dropdown-menu-items ul,.dropdown-menu-items li,.dropdown-menu-items a,.dropdown-menu-items button){background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:#55575d!important}
+html.stk-dark.stk-account-page #main .deck-list-entry .dropdown-menu-items :is(a,button):hover{background-color:var(--stk-hover)!important;color:#fff!important}
 
 /* Sets keeps Scryfall's own column width; the wrapper only stops asking for a
    scroll box until the columns really need one. */
@@ -334,18 +348,18 @@ html.stk-dark.stk-account-page #main .deck-list-entry .dropdown-menu-items :is(a
 #main .stk-deck-list-expanded :is(.dropdown-menu-items,[class*="dropdown-menu"]){max-height:none!important;overflow:visible!important}
 #main .stk-deck-actions-menu{display:block!important;width:min(320px,calc(100vw - 16px))!important;height:auto!important;max-height:calc(100vh - 24px)!important;overflow-y:auto!important;overflow-x:hidden!important;white-space:normal!important}
 #main .stk-deck-actions-menu :is(ul,li,.dropdown-menu-items){position:static!important;max-height:none!important;overflow:visible!important;white-space:normal!important}
-html.stk-dark.stk-account-page #main .stk-deck-actions-menu,html.stk-dark.stk-account-page #main .stk-deck-actions-menu :is(ul,li,.dropdown-menu-items){background:#292b2c!important;color:#e6e3df!important}
+html.stk-dark.stk-account-page #main .stk-deck-actions-menu,html.stk-dark.stk-account-page #main .stk-deck-actions-menu :is(ul,li,.dropdown-menu-items){background:var(--stk-panel-2)!important;color:var(--stk-ink)!important}
 
 /* Editor contents are sometimes mounted outside #main and use bare nested
    spans for set codes and the mana curve. */
-html.stk-dark.stk-account-page #deckbuilder :is(.deckbuilder-section-title-bar,.deckbuilder-section-title,.deckbuilder-section-count,.deckbuilder-section-curve,.deckbuilder-curve,.deckbuilder-entry-axial-data,.deckbuilder-entry-menu-visual,.deckbuilder-entry-menu-select){color:#e6e3df!important;text-shadow:none!important}
-html.stk-dark.stk-account-page #deckbuilder .deckbuilder-entry :is(.deckbuilder-entry-set,.deckbuilder-entry-set-code,.deckbuilder-entry-collector-number,.deckbuilder-entry-printing,[class*="set-code"],[class*="collector"]){color:#e6e3df!important;background:#383a3c!important;border-color:#55585c!important;opacity:1!important}
-html.stk-dark.stk-account-page #deckbuilder .deckbuilder-entry :is(.deckbuilder-entry-set,.deckbuilder-entry-set-code,.deckbuilder-entry-collector-number,.deckbuilder-entry-printing,[class*="set-code"],[class*="collector"]) :is(span,small){color:#e6e3df!important}
-html.stk-dark.stk-account-page #deckbuilder .stk-deck-editor-label{color:#e6e3df!important;opacity:1!important}
-html.stk-dark.stk-account-page #deckbuilder .deckbuilder-entry-axial-data{color:#e6e3df!important;opacity:1!important}
-html.stk-dark.stk-account-page #deckbuilder :is(.deckbuilder-curve,.deckbuilder-section-curve,[class*="mana-curve"]) :is(li,[class*="curve-label"],[class*="cmc"]):not(.card-symbol):not(.mana-symbol){color:#e6e3df!important;opacity:1!important}
-html.stk-dark.stk-account-page #deckbuilder :is(.deckbuilder-entry-menu,.deckbuilder-entry-menu-select,.deckbuilder-toolbar .dropdown,.deckbuilder-toolbar .dropdown-menu){background:#292b2c!important;color:#e6e3df!important;border-color:#595c60!important}
-html.stk-dark.stk-account-page #deckbuilder :is(.deckbuilder-toolbar .dropdown-menu,.deckbuilder-entry-menu) :is(a,button,option,li){color:#e6e3df!important;background:#292b2c!important}
+html.stk-dark.stk-account-page #deckbuilder :is(.deckbuilder-section-title-bar,.deckbuilder-section-title,.deckbuilder-section-count,.deckbuilder-section-curve,.deckbuilder-curve,.deckbuilder-entry-axial-data,.deckbuilder-entry-menu-visual,.deckbuilder-entry-menu-select){color:var(--stk-ink)!important;text-shadow:none!important}
+html.stk-dark.stk-account-page #deckbuilder .deckbuilder-entry :is(.deckbuilder-entry-set,.deckbuilder-entry-set-code,.deckbuilder-entry-collector-number,.deckbuilder-entry-printing,[class*="set-code"],[class*="collector"]){color:var(--stk-ink)!important;background:#383a3c!important;border-color:#55585c!important;opacity:1!important}
+html.stk-dark.stk-account-page #deckbuilder .deckbuilder-entry :is(.deckbuilder-entry-set,.deckbuilder-entry-set-code,.deckbuilder-entry-collector-number,.deckbuilder-entry-printing,[class*="set-code"],[class*="collector"]) :is(span,small){color:var(--stk-ink)!important}
+html.stk-dark.stk-account-page #deckbuilder .stk-deck-editor-label{color:var(--stk-ink)!important;opacity:1!important}
+html.stk-dark.stk-account-page #deckbuilder .deckbuilder-entry-axial-data{color:var(--stk-ink)!important;opacity:1!important}
+html.stk-dark.stk-account-page #deckbuilder :is(.deckbuilder-curve,.deckbuilder-section-curve,[class*="mana-curve"]) :is(li,[class*="curve-label"],[class*="cmc"]):not(.card-symbol):not(.mana-symbol){color:var(--stk-ink)!important;opacity:1!important}
+html.stk-dark.stk-account-page #deckbuilder :is(.deckbuilder-entry-menu,.deckbuilder-entry-menu-select,.deckbuilder-toolbar .dropdown,.deckbuilder-toolbar .dropdown-menu){background:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:var(--stk-border)!important}
+html.stk-dark.stk-account-page #deckbuilder :is(.deckbuilder-toolbar .dropdown-menu,.deckbuilder-entry-menu) :is(a,button,option,li){color:var(--stk-ink)!important;background:var(--stk-panel-2)!important}
 
 /* Keep the footer visually part of the page, including the account layout's
    broad .inner-flex rule above. Never paint a footer band. */
@@ -354,18 +368,18 @@ html.stk-dark.stk-account-page #deckbuilder :is(.deckbuilder-toolbar .dropdown-m
 /* The native deck popup sometimes paints its inner action surface white. */
 html.stk-dark.stk-account-page :is(.deck-list-entry,.deck-list,.checklist-wrapper) :is(.dropdown-menu,.dropdown-menu-items,[role="menu"]),
 html.stk-dark.stk-account-page .stk-deck-actions-menu,
-html.stk-dark.stk-account-page .stk-deck-actions-menu :is(div,ul,li,section,a,button,span){background-color:#292b2c!important;color:#e6e3df!important;border-color:#55575d!important}
-html.stk-dark.stk-account-page .stk-deck-actions-menu::before,html.stk-dark.stk-account-page .stk-deck-actions-menu::after{background-color:#292b2c!important;border-color:#55575d!important}
-html.stk-dark.stk-account-page .stk-deck-actions-menu :is(a,button):hover{background-color:#413949!important;color:#fff!important}
+html.stk-dark.stk-account-page .stk-deck-actions-menu :is(div,ul,li,section,a,button,span){background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:#55575d!important}
+html.stk-dark.stk-account-page .stk-deck-actions-menu::before,html.stk-dark.stk-account-page .stk-deck-actions-menu::after{background-color:var(--stk-panel-2)!important;border-color:#55575d!important}
+html.stk-dark.stk-account-page .stk-deck-actions-menu :is(a,button):hover{background-color:var(--stk-hover)!important;color:#fff!important}
 html.stk-dark.stk-account-page #main .stk-deck-actions-menu,html.stk-dark.stk-account-page #main .stk-deck-actions-menu :is(div,ul,li,section,a,button){background-image:none!important}
-html.stk-dark.stk-account-page .stk-deck-menu-shell,html.stk-dark.stk-account-page .stk-deck-menu-shell::before,html.stk-dark.stk-account-page .stk-deck-menu-shell::after{background:#292b2c!important;color:#e6e3df!important}
-html.stk-dark.stk-account-page #main :is(.dropdown-menu,.dropdown-menu-items,[role="menu"]):has(a[href*="/decks/"]){background:#292b2c!important;color:#e6e3df!important}
+html.stk-dark.stk-account-page .stk-deck-menu-shell,html.stk-dark.stk-account-page .stk-deck-menu-shell::before,html.stk-dark.stk-account-page .stk-deck-menu-shell::after{background:var(--stk-panel-2)!important;color:var(--stk-ink)!important}
+html.stk-dark.stk-account-page #main :is(.dropdown-menu,.dropdown-menu-items,[role="menu"]):has(a[href*="/decks/"]){background:var(--stk-panel-2)!important;color:var(--stk-ink)!important}
 html.stk-dark.stk-account-page :is(#deckbuilder,[class*="deckbuilder"]) .stk-deck-set-badge,
-html.stk-dark.stk-account-page :is(#deckbuilder,[class*="deckbuilder"]) .stk-deck-set-badge *{color:#e6e3df!important;background:#3b3c42!important;opacity:1!important}
+html.stk-dark.stk-account-page :is(#deckbuilder,[class*="deckbuilder"]) .stk-deck-set-badge *{color:var(--stk-ink)!important;background:#3b3c42!important;opacity:1!important}
 html.stk-dark.stk-account-page :is(#deckbuilder,[class*="deckbuilder"]) .stk-deck-editor-label,
-html.stk-dark.stk-account-page :is(#deckbuilder,[class*="deckbuilder"]) .stk-deck-editor-label *{color:#e6e3df!important;opacity:1!important}
-html.stk-dark .left-tray :is(.deck-tray-option,.deck-tray-option .button-n,[class*="add-to-deck"]){background-color:#292b2c!important;color:#e6e3df!important;border-color:#59535e!important}
-html.stk-dark #main :is(.add-to-deck,.add-to-deck-button,[class*="add-to-deck"]):is(a,button){background-color:#413949!important;color:#f7f2fb!important;border-color:#756782!important}
+html.stk-dark.stk-account-page :is(#deckbuilder,[class*="deckbuilder"]) .stk-deck-editor-label *{color:var(--stk-ink)!important;opacity:1!important}
+html.stk-dark .left-tray :is(.deck-tray-option,.deck-tray-option .button-n,[class*="add-to-deck"]){background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:#59535e!important}
+html.stk-dark #main :is(.add-to-deck,.add-to-deck-button,[class*="add-to-deck"]):is(a,button){background-color:var(--stk-hover)!important;color:#f7f2fb!important;border-color:#756782!important}
 
 /* Gaps the dark audit of 0.31 found. Each one is a surface Scryfall paints with
    its own class that no earlier rule reached, on a page that was otherwise
@@ -378,9 +392,9 @@ html.stk-dark #main :is(.add-to-deck,.add-to-deck-button,[class*="add-to-deck"])
    block in the middle of Scryfall's own row. */
 /* The #main prefix keeps these ahead of the runtime purple repair, which marks
    the same links and would otherwise leave Scryfall's own dark purple on them. */
-html.stk-dark #main :is(.dropdown-menu-items,.dropdown-menu-items ul,.dropdown-menu-items li){background-color:#292b2c!important;color:#e6e3df!important;border-color:#595c60!important}
-html.stk-dark #main .dropdown-menu-items :is(a,button){background-color:transparent!important;color:#c79ce3!important;border-color:transparent!important}
-html.stk-dark #main .dropdown-menu-items :is(a,button):hover,html.stk-dark #main .dropdown-menu-items :is(a,button):focus-visible{background-color:#413949!important;color:#fff!important}
+html.stk-dark #main :is(.dropdown-menu-items,.dropdown-menu-items ul,.dropdown-menu-items li){background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:var(--stk-border)!important}
+html.stk-dark #main .dropdown-menu-items :is(a,button){background-color:transparent!important;color:var(--stk-link)!important;border-color:transparent!important}
+html.stk-dark #main .dropdown-menu-items :is(a,button):hover,html.stk-dark #main .dropdown-menu-items :is(a,button):focus-visible{background-color:var(--stk-hover)!important;color:#fff!important}
 
 /* The search reference paints its examples in the site link purple, which the
    variable now carries for every page. */
@@ -394,15 +408,15 @@ html.stk-dark #main .reference-jump svg [fill="#000"]{fill:#bfb4c8!important}
 
 /* The blog index keeps its post cards, its embedded deck lists and the pills
    above them in Scryfall's white. */
-html.stk-dark.stk-blog-page #main :is(.blog-post-small,.blog-post-small-header,.blog-post-small-content,.blog-post-small>.inner-flex){background-image:none!important;background-color:#1d2021!important;color:#e6e3df!important;border-color:#414345!important}
-html.stk-dark.stk-blog-page #main :is(.blog-post-metadata,.blog-index,.blog-category) :is(.button-n.tiny-n,.tiny-n){background-color:#252829!important;color:#c79ce3!important;border-color:#414345!important}
+html.stk-dark.stk-blog-page #main :is(.blog-post-small,.blog-post-small-header,.blog-post-small-content,.blog-post-small>.inner-flex){background-image:none!important;background-color:var(--stk-page)!important;color:var(--stk-ink)!important;border-color:var(--stk-border-2)!important}
+html.stk-dark.stk-blog-page #main :is(.blog-post-metadata,.blog-index,.blog-category) :is(.button-n.tiny-n,.tiny-n){background-color:var(--stk-panel)!important;color:var(--stk-link)!important;border-color:var(--stk-border-2)!important}
 html.stk-dark.stk-blog-page #main :is(.blog-post-metadata,.blog-index,.blog-category) :is(.muted-n,.tiny-n.muted-n){color:#a8a2af!important}
-html.stk-dark.stk-blog-page #main :is(.blog-post-small,.blog-post-large) :is(p,strong,span,h1,h2,h3,h4){color:#e6e3df!important}
+html.stk-dark.stk-blog-page #main :is(.blog-post-small,.blog-post-large) :is(p,strong,span,h1,h2,h3,h4){color:var(--stk-ink)!important}
 /* A post can embed a deck list, which brings its own white panel and its own
    grey ink with it. */
-html.stk-dark.stk-blog-page #main :is(.scryfall-decklist-embed,.scryfall-decklist-embed-title,.deck-list-section,.deck-list-section-title,.deck-list-entry){background-color:#1d2021!important;color:#e6e3df!important;border-color:#414345!important}
-html.stk-dark.stk-blog-page #main :is(.scryfall-decklist-embed,.scryfall-decklist-embed-title,.deck-list-section,.deck-list-section-title,.deck-list-entry) :is(h1,h2,h3,h4,h5,h6,p,strong,span){color:#e6e3df!important}
-html.stk-dark.stk-blog-page #main :is(.scryfall-decklist-embed a,.scryfall-decklist-embed-card){color:#c79ce3!important}
+html.stk-dark.stk-blog-page #main :is(.scryfall-decklist-embed,.scryfall-decklist-embed-title,.deck-list-section,.deck-list-section-title,.deck-list-entry){background-color:var(--stk-page)!important;color:var(--stk-ink)!important;border-color:var(--stk-border-2)!important}
+html.stk-dark.stk-blog-page #main :is(.scryfall-decklist-embed,.scryfall-decklist-embed-title,.deck-list-section,.deck-list-section-title,.deck-list-entry) :is(h1,h2,h3,h4,h5,h6,p,strong,span){color:var(--stk-ink)!important}
+html.stk-dark.stk-blog-page #main :is(.scryfall-decklist-embed a,.scryfall-decklist-embed-card){color:var(--stk-link)!important}
 
 /* The team page is a purple marketing page: Scryfall lays a white band over a
    purple field of its own. Flattening the page took that field with it, so the
@@ -412,21 +426,21 @@ html.stk-dark.stk-team-page #main .team-header{background-color:rgba(255,255,255
 html.stk-dark.stk-team-page #main .team-header :is(h1,h2,h3,p,span,strong,em,b){color:#16161d!important;text-shadow:none!important}
 html.stk-dark.stk-team-page #main .team-header a{color:#4a2c8c!important}
 html.stk-dark.stk-team-page #main .team-header a:is(:hover,:active,:focus){color:#634496!important}
-html.stk-dark.stk-team-page #main .team-wrapper{color:#e6e3df!important}
-html.stk-dark.stk-team-page #main .team-wrapper :is(.team-member-name,.team-member-role,.team-member-links){color:#e6e3df!important}
+html.stk-dark.stk-team-page #main .team-wrapper{color:var(--stk-ink)!important}
+html.stk-dark.stk-team-page #main .team-wrapper :is(.team-member-name,.team-member-role,.team-member-links){color:var(--stk-ink)!important}
 
 /* The bot documentation buttons sit in their own marketing cards. */
-html.stk-dark.stk-bots-page #main :is(.marketing-features-item,.marketing-features-item-content,.bot-marketing-panel) :is(a.button-n,button.button-n){background-color:#292b2c!important;color:#c79ce3!important;border-color:#595c60!important}
+html.stk-dark.stk-bots-page #main :is(.marketing-features-item,.marketing-features-item-content,.bot-marketing-panel) :is(a.button-n,button.button-n){background-color:var(--stk-panel-2)!important;color:var(--stk-link)!important;border-color:var(--stk-border)!important}
 html.stk-dark.stk-bots-page #main :is(.marketing-features-item,.bot-marketing-panel) :is(a.button-n,button.button-n) svg{fill:currentColor!important}
 /* Scryfall fakes the drop shadow of a panel with a second copy of it, laid over
    the real panel and offset by a few pixels. The copy is what carries the Slack
    and Discord band, so it cannot be removed; it only has to be painted like the
    panel it lies on top of, so that it keeps hiding the text underneath instead
    of doubling it. The brand band stays Scryfall's own colour. */
-html.stk-dark.stk-bots-page #main :is(.bot-marketing-panel,.bot-marketing-panel-shadow){background-color:#252829!important;color:#e6e3df!important;border-color:#414345!important}
-html.stk-dark.stk-bots-page #main .bot-marketing-panel-shadow :is(.bot-marketing-panel-desc,.bot-marketing-panel-footer){background-color:#252829!important;color:#e6e3df!important}
+html.stk-dark.stk-bots-page #main :is(.bot-marketing-panel,.bot-marketing-panel-shadow){background-color:var(--stk-panel)!important;color:var(--stk-ink)!important;border-color:var(--stk-border-2)!important}
+html.stk-dark.stk-bots-page #main .bot-marketing-panel-shadow :is(.bot-marketing-panel-desc,.bot-marketing-panel-footer){background-color:var(--stk-panel)!important;color:var(--stk-ink)!important}
 html.stk-dark.stk-bots-page #main .bot-marketing-panel-shadow .bot-marketing-panel-footer{background-color:#2a2c2d!important}
-html.stk-dark.stk-bots-page #main .bot-marketing-panel-footer .button-n{background:#3a3d40!important;color:#c79ce3!important;border-color:#595c60!important}
+html.stk-dark.stk-bots-page #main .bot-marketing-panel-footer .button-n{background:#3a3d40!important;color:var(--stk-link)!important;border-color:var(--stk-border)!important}
 /* Scryfall lifts the text on this page with a white one-pixel shadow, which on a
    dark page reads as a second, offset copy of every line. */
 html.stk-dark.stk-bots-page #main :is(p,h1,h2,h3,h4,h5,h6,a,span,b,li,div){text-shadow:none!important;-webkit-text-stroke:0!important}
@@ -447,20 +461,20 @@ html.stk-dark.stk-bots-page #main img.stk-light-screenshot{filter:invert(1) hue-
    The states matter as much as the button: Scryfall paints the hover and the
    press white with a purple border, and a disabled one black, so the pointer
    brought a flash of light and a line of ink that could not be read. */
-html.stk-dark .button-n:not(.inverted),html.stk-dark .select-n:not(.inverted){background-color:#292b2c!important;color:#c79ce3!important;border-color:#595c60!important}
+html.stk-dark .button-n:not(.inverted),html.stk-dark .select-n:not(.inverted){background-color:var(--stk-panel-2)!important;color:var(--stk-link)!important;border-color:var(--stk-border)!important}
 html.stk-dark .button-n svg,html.stk-dark .select-n svg{fill:currentColor!important}
-html.stk-dark .button-n.primary-n,html.stk-dark .select-n.primary-n{background-color:#413949!important;color:#f3ecfb!important;border-color:#6d5a7d!important}
-html.stk-dark .button-n.muted-n,html.stk-dark .select-n.muted-n{background-color:#252829!important;color:#a8a2af!important;border-color:#414345!important}
+html.stk-dark .button-n.primary-n,html.stk-dark .select-n.primary-n{background-color:var(--stk-hover)!important;color:#f3ecfb!important;border-color:#6d5a7d!important}
+html.stk-dark .button-n.muted-n,html.stk-dark .select-n.muted-n{background-color:var(--stk-panel)!important;color:#a8a2af!important;border-color:var(--stk-border-2)!important}
 html.stk-dark .button-n:is(.danger-n,.primary-danger-n),html.stk-dark .select-n:is(.danger-n,.primary-danger-n){color:#ee9d9d!important;border-color:#915c65!important}
 html.stk-dark .button-n:is(.positive-n,.primary-positive-n),html.stk-dark .select-n:is(.positive-n,.primary-positive-n){color:#b6e0b6!important;border-color:#3d6b45!important}
-html.stk-dark .button-n:is(.disabled,:disabled),html.stk-dark .select-n:is(.disabled,:disabled){background-color:#252829!important;color:#6f6b74!important;border-color:#3c3e42!important}
-html.stk-dark .button-n:is(:hover,:active,:focus,:focus-visible),html.stk-dark .select-n:is(:hover,:active,:focus,:focus-visible){background-color:#413949!important;color:#fff!important;border-color:#6d5a7d!important;box-shadow:none!important}
+html.stk-dark .button-n:is(.disabled,:disabled),html.stk-dark .select-n:is(.disabled,:disabled){background-color:var(--stk-panel)!important;color:#6f6b74!important;border-color:#3c3e42!important}
+html.stk-dark .button-n:is(:hover,:active,:focus,:focus-visible),html.stk-dark .select-n:is(:hover,:active,:focus,:focus-visible){background-color:var(--stk-hover)!important;color:#fff!important;border-color:#6d5a7d!important;box-shadow:none!important}
 html.stk-dark .button-n.primary-n:is(:hover,:active,:focus,:focus-visible){background-color:#554267!important;color:#fff!important}
 html.stk-dark .button-n.muted-n:is(:hover,:active,:focus,:focus-visible){background-color:#2f3133!important;color:#a8a2af!important;border-color:#4b4d52!important}
 html.stk-dark .button-n:is(.danger-n,.primary-danger-n):is(:hover,:active,:focus,:focus-visible){background-color:#4a2b2f!important;color:#f0b4b4!important;border-color:#915c65!important}
 html.stk-dark .button-n:is(.positive-n,.primary-positive-n):is(:hover,:active,:focus,:focus-visible){background-color:#1f3a26!important;color:#d3f0d3!important;border-color:#3d6b45!important}
-html.stk-dark .button-n:is(.disabled,:disabled):is(:hover,:active,:focus,:focus-visible){background-color:#252829!important;color:#6f6b74!important;border-color:#3c3e42!important}
-html.stk-dark :is(a,button).button-n:is(.disabled,:disabled):is(:hover,:active,:focus,:focus-visible){background-color:#252829!important;color:#6f6b74!important;border-color:#3c3e42!important}
+html.stk-dark .button-n:is(.disabled,:disabled):is(:hover,:active,:focus,:focus-visible){background-color:var(--stk-panel)!important;color:#6f6b74!important;border-color:#3c3e42!important}
+html.stk-dark :is(a,button).button-n:is(.disabled,:disabled):is(:hover,:active,:focus,:focus-visible){background-color:var(--stk-panel)!important;color:#6f6b74!important;border-color:#3c3e42!important}
 /* A link the repair had to lift keeps the lifted purple under the pointer too,
    so the pointer never drops a line back onto Scryfall's own colour. */
 html.stk-dark #main a.stk-brighter-purple:is(:hover,:active,:focus){color:#d6c2f2!important}
@@ -473,7 +487,7 @@ html.stk-dark #main a.stk-brighter-purple:is(:hover,:active,:focus){color:#d6c2f
 html.stk-dark #main :is(.prose-complex-h1,.blog-post-small-content,.form-n-file-input-control,.modal-dialog-grid-choice-title,.button-n,.select-n) :is(svg,g,path,circle,rect,polygon):not([fill="none"]):not([stroke="none"]){fill:var(--stk-link-purple)!important;stroke:var(--stk-link-purple)!important}
 /* The same purple as a field of its own: a notice, a warning bar, the current
    language of a print, the meter of a deck curve, a member's frame. */
-html.stk-dark #main :is(.notification.purple,.read-only-warning,.print-langs-item.current){background-color:#413949!important;color:#f3ecfb!important;border-color:#6d5a7d!important}
+html.stk-dark #main :is(.notification.purple,.read-only-warning,.print-langs-item.current){background-color:var(--stk-hover)!important;color:#f3ecfb!important;border-color:#6d5a7d!important}
 html.stk-dark #main .deckbuilder-cmc-stat-meter::-webkit-progress-value{background-color:var(--stk-link-purple)!important}
 html.stk-dark #main .deckbuilder-cmc-stat-meter::-moz-progress-bar{background-color:var(--stk-link-purple)!important}
 html.stk-dark #main .team-member-avatar{border-color:var(--stk-link-purple)!important}
@@ -484,25 +498,25 @@ html.stk-dark #main .team-member-avatar{border-color:var(--stk-link-purple)!impo
    after the rule it answers, so the pair can be read together. */
 html.stk-dark #main :is(.prose,.checklist,.form-n-description,.control-panel-prose,.rulings,.search-info) a:is(:hover,:active,:focus):not(.button-n):not(.select-n){color:var(--stk-link-purple)!important;outline-color:transparent!important}
 html.stk-dark #main :is(.checklist th a:hover .arrow,.checklist th a:active .arrow,.checklist th a:focus .arrow){color:var(--stk-link-purple)!important}
-html.stk-dark #main :is(.form-input,.form-n-input,.form-n-file-input-control,.advanced-search-subjoiner,.modal-dialog-grid-choice):is(:hover,:active,:focus,:focus-visible){background-color:#292b2c!important;color:#e6e3df!important;border-color:#6d5a7d!important;box-shadow:none!important}
-html.stk-dark #main :is(.advanced-search-checkbox input[type="checkbox"]):is(:hover,:active,:focus){background-color:#292b2c!important;border-color:#6d5a7d!important}
-html.stk-dark #main .deckbuilder-entry-input:focus{background-color:#292b2c!important;color:#e6e3df!important}
-html.stk-dark #main :is(.session-form .button,.button):is(:hover,:focus):not(.button-n){background-color:#413949!important;color:#fff!important}
-html.stk-dark #main :is(.pillbox-item,.print-langs-item):is(:hover,:active,:focus):not(.disabled){background-color:#413949!important;color:#fff!important}
-html.stk-dark #main .control-panel-table tbody tr:hover{background-color:#2a2c2d!important;color:#e6e3df!important}
-html.stk-dark #main .modal-dialog-close:is(:hover,:active,:focus) :is(svg,g,path,circle):not([fill="none"]){fill:#e6e3df!important}
+html.stk-dark #main :is(.form-input,.form-n-input,.form-n-file-input-control,.advanced-search-subjoiner,.modal-dialog-grid-choice):is(:hover,:active,:focus,:focus-visible){background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:#6d5a7d!important;box-shadow:none!important}
+html.stk-dark #main :is(.advanced-search-checkbox input[type="checkbox"]):is(:hover,:active,:focus){background-color:var(--stk-panel-2)!important;border-color:#6d5a7d!important}
+html.stk-dark #main .deckbuilder-entry-input:focus{background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important}
+html.stk-dark #main :is(.session-form .button,.button):is(:hover,:focus):not(.button-n){background-color:var(--stk-hover)!important;color:#fff!important}
+html.stk-dark #main :is(.pillbox-item,.print-langs-item):is(:hover,:active,:focus):not(.disabled){background-color:var(--stk-hover)!important;color:#fff!important}
+html.stk-dark #main .control-panel-table tbody tr:hover{background-color:#2a2c2d!important;color:var(--stk-ink)!important}
+html.stk-dark #main .modal-dialog-close:is(:hover,:active,:focus) :is(svg,g,path,circle):not([fill="none"]){fill:var(--stk-ink)!important}
 html.stk-dark #main .homepage-promo:is(:hover,:active){background-color:rgba(255,255,255,0.2)!important}
-html.stk-dark #main select.form-n-input:is(:focus,:hover),html.stk-dark #main select.form-n-input option:focus{color:#e6e3df!important}
+html.stk-dark #main select.form-n-input:is(:focus,:hover),html.stk-dark #main select.form-n-input option:focus{color:var(--stk-ink)!important}
 
 /* The donation tiles and the payment service tiles. */
-html.stk-dark.stk-info-page #main :is(.donation-stripe-amount,.donation-service){background-color:#252829!important;color:#e6e3df!important;border-color:#414345!important}
-html.stk-dark.stk-info-page #main :is(.donation-stripe-amount,.donation-service) :is(b,span,svg){color:#e6e3df!important}
+html.stk-dark.stk-info-page #main :is(.donation-stripe-amount,.donation-service){background-color:var(--stk-panel)!important;color:var(--stk-ink)!important;border-color:var(--stk-border-2)!important}
+html.stk-dark.stk-info-page #main :is(.donation-stripe-amount,.donation-service) :is(b,span,svg){color:var(--stk-ink)!important}
 html.stk-dark.stk-info-page #main :is(.donation-stripe-amount,.donation-service):hover{background-color:#2f3133!important}
 
 /* The button on Scryfall's own error pages, which it renders straight into the
    body, and the buttons a post carries in its own prose. */
-html.stk-dark :is(a.button,button.button){background-color:#292b2c!important;color:#c79ce3!important;border-color:#595c60!important}
-html.stk-dark.stk-blog-page #main .blog-post-large-content a.button-n{background-color:#292b2c!important;color:#c79ce3!important;border-color:#595c60!important}
+html.stk-dark :is(a.button,button.button){background-color:var(--stk-panel-2)!important;color:var(--stk-link)!important;border-color:var(--stk-border)!important}
+html.stk-dark.stk-blog-page #main .blog-post-large-content a.button-n{background-color:var(--stk-panel-2)!important;color:var(--stk-link)!important;border-color:var(--stk-border)!important}
 
 /* Pasting a word the browser remembers paints the field with its own autofill
    yellow, which is unreadable on a dark page. The suggestion list below the field
@@ -514,15 +528,15 @@ html.stk-dark #header-search-field:-webkit-autofill:active{
   -webkit-text-fill-color:#e9e4ee!important;
   -webkit-text-fill-color:#e9e4ee;
   caret-color:#e9e4ee;
-  -webkit-box-shadow:0 0 0 1000px #292b2c inset!important;
-  box-shadow:0 0 0 1000px #292b2c inset!important;
+  -webkit-box-shadow:0 0 0 1000px var(--stk-panel-2) inset!important;
+  box-shadow:0 0 0 1000px var(--stk-panel-2) inset!important;
   transition:background-color 600000s 0s,color 600000s 0s;
 }
 html.stk-dark #header-search-field::placeholder{color:#8d8894!important;-webkit-text-fill-color:#8d8894!important}
 /* The skip links stay out of sight until the keyboard reaches them, and then a
    cream band flashed across the top of a dark page. Scryfall writes them as
    absolute links on some pages and as bare fragments on others. */
-html.stk-dark a:is([href$="#main"],[href$="#footer"]){background-color:#292b2c!important;color:#c79ce3!important;outline-color:#595c60!important}
+html.stk-dark a:is([href$="#main"],[href$="#footer"]){background-color:var(--stk-panel-2)!important;color:var(--stk-link)!important;outline-color:var(--stk-border)!important}
 
 /* Scryfall's "Nothing Here" page is built straight into the body, with no #main
    at all, so every rule above missed it: its body carried Scryfall's light
@@ -545,24 +559,24 @@ html.stk-dark #main .card-grid-header-dot{color:#8f8a96!important}
    theme.js only adds stk-tagger on the Tagger host, so nothing here can reach
    Scryfall's own components that happen to share a class name. */
 /* Tagger's own surfaces, by Tagger's own values. The page field is Tagger's
-   #191820, not the site's #1d2021, and #app has to stay transparent: the app
+   #191820, not the site's var(--stk-page), and #app has to stay transparent: the app
    keeps its soft glow in a child that sits behind it with a negative z-index, and
    an opaque #app paints straight over the glow. */
-html.stk-dark.stk-tagger body{background-color:#191820!important;color:#e6e3df!important}
-html.stk-dark.stk-tagger #app{background-color:transparent!important;color:#e6e3df!important}
+html.stk-dark.stk-tagger body{background-color:#191820!important;color:var(--stk-ink)!important}
+html.stk-dark.stk-tagger #app{background-color:transparent!important;color:var(--stk-ink)!important}
 html.stk-dark.stk-tagger .app-header{background-color:#2b253a!important;color:#fff!important;border-color:#3a3b3b!important}
 html.stk-dark.stk-tagger .app-footer{background-color:#191820!important;color:#c2c2c2!important;border-color:#3a3b3b!important}
 html.stk-dark.stk-tagger .app-footer :is(a,.footer-link){color:#c2c2c2!important}
 /* Tagger's own glow behind its header. Only the ink is stated here: the field is
    a pale lilac blur of Tagger's own, and painting over it took the one soft
    gradient the app had. */
-html.stk-dark.stk-tagger .blurry-background-art{color:#e6e3df!important}
-html.stk-dark.stk-tagger .tag-input-field{background-color:#292b2c!important;color:#e6e3df!important;border-color:#5a5d61!important}
-html.stk-dark.stk-tagger :is(.app-status,.app-viewport,.utilities) :is(a,button){color:#c79ce3!important}
-html.stk-dark.stk-tagger .dialog{color:#e6e3df!important}
-html.stk-dark.stk-tagger .dialog :is(h1,p){color:#e6e3df!important}
-html.stk-dark.stk-tagger .suggestion-input-utils{background-color:#252829!important;color:#e6e3df!important;border-color:#414345!important}
-html.stk-dark.stk-tagger .suggestion-input-utils :is(a,li,span){color:#c79ce3!important}
+html.stk-dark.stk-tagger .blurry-background-art{color:var(--stk-ink)!important}
+html.stk-dark.stk-tagger .tag-input-field{background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:#5a5d61!important}
+html.stk-dark.stk-tagger :is(.app-status,.app-viewport,.utilities) :is(a,button){color:var(--stk-link)!important}
+html.stk-dark.stk-tagger .dialog{color:var(--stk-ink)!important}
+html.stk-dark.stk-tagger .dialog :is(h1,p){color:var(--stk-ink)!important}
+html.stk-dark.stk-tagger .suggestion-input-utils{background-color:var(--stk-panel)!important;color:var(--stk-ink)!important;border-color:var(--stk-border-2)!important}
+html.stk-dark.stk-tagger .suggestion-input-utils :is(a,li,span){color:var(--stk-link)!important}
 /* Tagger's own light areas: the sample tag list on the front page, the access
    banner and the tagging layout on a card page. The panel and every ink inside
    it are repainted together, because Tagger's own grey would otherwise stay on
@@ -574,20 +588,20 @@ html.stk-dark.stk-tagger .suggestion-input-utils :is(a,li,span){color:#c79ce3!im
    Filling either one replaced Tagger's own wash with a flat field, which took the
    blurred card art away and flooded the page whenever the guide or the tag list
    was opened. So the two keep their own, and only the panels are repainted. */
-html.stk-dark.stk-tagger :is(.light-mode:not(.card-layout):not(.sidebar),.sample-tags,.card-layout--tagging){background-color:#252829!important;color:#e6e3df!important;border-color:#414345!important}
-html.stk-dark.stk-tagger :is(.light-mode,.sample-tags,.card-layout--tagging) :is(a,span,label,li,strong,em,b,i,p,div,section,article,h1,h2,h3,h4,h5,h6,dt,dd,td,th){color:#e6e3df!important}
-html.stk-dark.stk-tagger :is(.light-mode,.sample-tags,.card-layout--tagging) :is(a,.tag-row a,.access-banner a){color:#c79ce3!important}
+html.stk-dark.stk-tagger :is(.light-mode:not(.card-layout):not(.sidebar),.sample-tags,.card-layout--tagging){background-color:var(--stk-panel)!important;color:var(--stk-ink)!important;border-color:var(--stk-border-2)!important}
+html.stk-dark.stk-tagger :is(.light-mode,.sample-tags,.card-layout--tagging) :is(a,span,label,li,strong,em,b,i,p,div,section,article,h1,h2,h3,h4,h5,h6,dt,dd,td,th){color:var(--stk-ink)!important}
+html.stk-dark.stk-tagger :is(.light-mode,.sample-tags,.card-layout--tagging) :is(a,.tag-row a,.access-banner a){color:var(--stk-link)!important}
 html.stk-dark.stk-tagger :is(.light-mode,.sample-tags,.card-layout--tagging) :is(.tag-row,.access-banner){background-color:transparent!important}
 /* Tagger marks a panel light and paints the light field itself, but two of the
    panels it marks carry their own white on top: the tag sidebar and the tab it
    hangs from. Both are named here together with the list inside them, so a panel
    Tagger calls light is dark all the way down. */
-html.stk-dark.stk-tagger :is(.sidebar-panel,.tags-menu,.navigation.active){background-color:#252829!important;color:#e6e3df!important}
-html.stk-dark.stk-tagger :is(.sidebar-panel,.tags-menu) :is(a,span,strong,li,div,p,label,input,button,td,th){color:#e6e3df!important}
-html.stk-dark.stk-tagger :is(.sidebar-panel,.tags-menu) :is(a,.tag-row a,.tag-admin){color:#c79ce3!important}
-html.stk-dark.stk-tagger :is(.sidebar-panel,.tags-menu) :is(.tag-row,.scrollbar,.tag-name-filter,input,button){background-color:transparent!important;border-color:#414345!important}
+html.stk-dark.stk-tagger :is(.sidebar-panel,.tags-menu,.navigation.active){background-color:var(--stk-panel)!important;color:var(--stk-ink)!important}
+html.stk-dark.stk-tagger :is(.sidebar-panel,.tags-menu) :is(a,span,strong,li,div,p,label,input,button,td,th){color:var(--stk-ink)!important}
+html.stk-dark.stk-tagger :is(.sidebar-panel,.tags-menu) :is(a,.tag-row a,.tag-admin){color:var(--stk-link)!important}
+html.stk-dark.stk-tagger :is(.sidebar-panel,.tags-menu) :is(.tag-row,.scrollbar,.tag-name-filter,input,button){background-color:transparent!important;border-color:var(--stk-border-2)!important}
 html.stk-dark.stk-tagger :is(.sidebar-panel,.tags-menu) .tag-row:is(:hover,:focus-within){background-color:#2f3133!important}
-html.stk-dark.stk-tagger .navigation.active{color:#e6e3df!important}
+html.stk-dark.stk-tagger .navigation.active{color:var(--stk-ink)!important}
 
 /* Three mana symbols are bare glyphs with nothing behind them: {H} is filled
    #111212, {L} and {D} are #000. Every other symbol carries its own light coin
@@ -599,18 +613,18 @@ html.stk-dark :is(.card-symbol-H,.card-symbol-L,.card-symbol-D){background-color
    theme was leaving it: a white slab with dark buttons in the middle of a dark
    page. Its controls are the same ones the set header shows as Images /
    Set-Number / Auto, so they are given that look. */
-html.stk-dark .search-controls-mobile{background:#252829!important;color:#e6e3df!important;border-color:#55515a!important}
+html.stk-dark .search-controls-mobile{background:var(--stk-panel)!important;color:var(--stk-ink)!important;border-color:#55515a!important}
 html.stk-dark .search-controls-mobile-options{background:transparent!important;border-color:#55515a!important}
 html.stk-dark .search-controls-mobile :is(label,.search-controls-mobile-option){color:#ded8e3!important}
 html.stk-dark .search-controls-mobile :is(.button-n,.select-n){background-color:rgba(255,255,255,.09)!important;color:#fff!important;border-color:rgba(255,255,255,.6)!important;border-radius:3px!important}
-html.stk-dark .search-controls-mobile .button-n.primary-n{background-color:#413949!important;color:#f3ecfb!important;border-color:#6d5a7d!important}
+html.stk-dark .search-controls-mobile .button-n.primary-n{background-color:var(--stk-hover)!important;color:#f3ecfb!important;border-color:#6d5a7d!important}
 html.stk-dark .search-controls-mobile .button-n.disabled{background-color:rgba(255,255,255,.05)!important;color:#8d8992!important}
 
 /* .deck-tray-buttons holds the tray's buttons and nothing else. Painting the
    wrapper too left a grey slab sticking out beside the backpack button; the
    buttons inside carry their own surfaces. */
 html.stk-dark .deck-tray-buttons{background-color:transparent!important;border-color:transparent!important}
-html.stk-dark .deck-tray-buttons .button-n{background:#292b2c!important;color:#e6e3df!important;border-color:#59535e!important}
+html.stk-dark .deck-tray-buttons .button-n{background:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:#59535e!important}
 html.stk-dark .deck-tray-buttons .button-n.primary{background:#554267!important;color:#f4eff7!important}
 html.stk-dark .deck-tray-buttons .button-n svg :is(path,g){fill:currentColor!important}
 
@@ -623,13 +637,13 @@ html.stk-dark select option:checked,html.stk-dark select option:hover{background
 
 /* Scryfall draws the blocks of its account forms as white panels carrying a
    faint black border, on a light grey page. The theme repainted both the panel
-   and the page the same #1d2021, which took the edge away, and left the border
+   and the page the same var(--stk-page), which took the edge away, and left the border
    at rgba(0,0,0,0.15) -- a black hairline on a dark ground, invisible. Three of
    the four blocks on the safety and security pages lost their rectangle that
    way; the fourth kept one only because a different rule reached it. The panel
    is one step lighter than the page again, and its border is set as a shorthand
    because a colour alone draws nothing when a width is left at zero. */
-html.stk-dark.stk-account-page #main .form-n{background-color:#252829!important;border:1px solid rgba(255,255,255,0.22)!important}
+html.stk-dark.stk-account-page #main .form-n{background-color:var(--stk-panel)!important;border:1px solid rgba(255,255,255,0.22)!important}
 html.stk-dark.stk-account-page #main .form-n .form-n-title{background-color:transparent!important}
 html.stk-dark :is(.button-n,.select-n).inverted{background-color:rgba(255,255,255,.09)!important;color:#fff!important;border-color:rgba(255,255,255,.6)!important}
 html.stk-dark :is(.button-n,.select-n).inverted:is(:hover,:active,:focus){background-color:rgba(255,255,255,.18)!important;color:#fff!important}

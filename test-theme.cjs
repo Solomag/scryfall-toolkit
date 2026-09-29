@@ -162,7 +162,7 @@ function cssCheck() {
     'WORSE_THAN flips the relation icon');
 
   const theme = read('theme.css');
-  assert(theme.includes('html.stk-dark{--stk-link-purple:#c4a7ea}'),
+  assert(/html\.stk-dark\{[^}]*--stk-link-purple:#c4a7ea/.test(theme),
     'dark theme link purple variable');
   assert(theme.includes('html.stk-dark #main .stk-brighter-purple{color:var(--stk-link-purple)!important}'),
     'brighter purple rule for dark theme');
@@ -193,7 +193,7 @@ function cssCheck() {
     'dark theme recolors generated price spans too');
   assert(theme.includes('html.stk-dark .footer .footer-legal,html.stk-dark .footer .footer-legal p{color:#aaa8a6!important}'),
     "the footer's legal paragraphs are readable in the dark theme");
-  assert(theme.includes('html.stk-dark body > h1{color:#e6e3df!important}'),
+  assert(theme.includes('html.stk-dark body > h1{color:var(--stk-ink)!important}'),
     'the "Nothing Here" heading of a dead link is not left black');
   assert(theme.includes('html.stk-dark #main .card-legality dd{color:#16161d!important}'),
     'the legality pills keep dark ink on Scryfall light status fills');
@@ -203,7 +203,7 @@ function cssCheck() {
     'the bot panels lose their own light text surfaces');
   assert(theme.includes('html.stk-dark.stk-bots-page #main :is(.bot-marketing-panel,.bot-marketing-panel-shadow) .bot-marketing-panel-footer .button-n{'),
     'and the button inside a panel footer is repainted too, ahead of the transparent rule');
-  assert(theme.includes('html.stk-dark #main .advanced-search-checkbox input[type="checkbox"]:checked{background-color:#756287!important;background-image:none!important;color:#e6e3df!important}'),
+  assert(theme.includes('html.stk-dark #main .advanced-search-checkbox input[type="checkbox"]:checked{background-color:#756287!important;background-image:none!important;color:var(--stk-ink)!important}'),
     'the advanced-search checkbox reuses its own checkmark instead of stacking a second one');
   assert(!/advanced-search-checkbox input\[type="checkbox"\]:checked\{[^}]*background-image:url/.test(theme),
     'no duplicate checkmark image is layered over the native glyph');
@@ -222,8 +222,8 @@ function cssCheck() {
     'html.stk-dark.stk-tagger #app{background-color:transparent',
     'html.stk-dark.stk-tagger .app-header{background-color:#2b253a',
     'html.stk-dark.stk-tagger .app-footer{background-color:#191820',
-    'html.stk-dark.stk-tagger .tag-input-field{background-color:#292b2c!important',
-    'html.stk-dark.stk-tagger .dialog :is(h1,p){color:#e6e3df!important'
+    'html.stk-dark.stk-tagger .tag-input-field{background-color:var\(--stk-panel-2\)!important',
+    'html.stk-dark.stk-tagger .dialog :is(h1,p){color:var\(--stk-ink\)!important'
   ]) assert(theme.includes(rule), `Tagger rule present: ${rule.slice(0, 52)}`);
   const js = read('theme.js');
   assert(js.includes("tagger\\.scryfall\\.com"), 'theme.js marks the Tagger host');
@@ -294,11 +294,39 @@ function noDoublePaintingTest() {
     'and it is the dimmed white band the purple field is meant to keep');
 }
 
+// The palette has to hold the colours it replaced. Replacing a literal with a
+// variable of a different value would change the theme while every rule still
+// looked right.
+function paletteTest() {
+  console.log('static: the palette holds the colours it replaced');
+  const css = read('theme.css');
+  for (const [name, value] of [
+    ['--stk-page', '#1d2021'],
+    ['--stk-panel', '#252829'],
+    ['--stk-panel-2', '#292b2c'],
+    ['--stk-ink', '#e6e3df'],
+    ['--stk-link', '#c79ce3'],
+    ['--stk-border', '#595c60'],
+    ['--stk-border-2', '#414345'],
+    ['--stk-hover', '#413949']
+  ]) {
+    assert(new RegExp(name + '\\s*:\\s*' + value.replace('#', '#') + '(?![0-9a-fA-F])').test(css),
+      `${name} is ${value}`);
+  }
+  // And the roles are used, not just declared.
+  for (const name of ['--stk-page', '--stk-panel-2', '--stk-ink']) {
+    assert((css.match(new RegExp('var\\(' + name + '\\)', 'g')) || []).length > 3,
+      `${name} is what the rules ask for`);
+  }
+}
+
+
 function hoverStatesTest() {
   console.log('static: hover states differ from the resting state');
   const css = read('theme.css').replace(/\/\*[\s\S]*?\*\//g, '');
-  const resting = css.match(/\.faq-link\{background:(#[0-9a-f]{6})/i);
-  const hovered = css.match(/\.faq-link:is\(:hover,:active,:focus\)\{background:(#[0-9a-f]{6})/i);
+  const paint = '(#[0-9a-f]{3,8}|var\\(--stk-[a-z0-9-]+\\))';
+  const resting = css.match(new RegExp('\\.faq-link\\{background:' + paint));
+  const hovered = css.match(new RegExp('\\.faq-link:is\\(:hover,:active,:focus\\)\\{background:' + paint));
   assert(resting, 'the FAQ row has a resting colour');
   assert(hovered, 'the FAQ row has a hover colour');
   assert(resting[1] !== hovered[1],
@@ -314,9 +342,9 @@ function auditGapCheck() {
     ['the "Jump to" menu of a set page', /html\.stk-dark #main :is\(\.dropdown-menu-items,\.dropdown-menu-items ul/],
     ['the drop-down items themselves', /\.dropdown-menu-items :is\(a,button\)\{background-color:transparent/],
     ['the jump bar icons of the search reference', /\.reference-jump :is\(svg,g,path,circle,rect\):not\(\[fill="none"\]\)/],
-    ['the blog index post cards', /\.blog-post-small[^{]*\{[^}]*background-color:#1d2021/],
+    ['the blog index post cards', /\.blog-post-small[^{]*\{[^}]*background-color:var\(--stk-page\)/],
     ['the blog post pills', /\.blog-post-metadata[^{]*\.button-n\.tiny-n/],
-    ['the deck list a post can embed', /\.scryfall-decklist-embed[^{]*\{background-color:#1d2021/],
+    ['the deck list a post can embed', /\.scryfall-decklist-embed[^{]*\{background-color:var\(--stk-page\)/],
     // Three mana symbols are bare black glyphs with no coin behind them in the
     // artwork, so on a dark page they disappeared. They get the coin the other
     // symbols already carry inside their own image.
@@ -326,7 +354,7 @@ function auditGapCheck() {
     ['the docs left menu keeps Scryfall purple', /html\.stk-dark\.stk-docs-page #main :is\(\.reference-doc-menu,\.reference-doc-menu-expander\)\{background-color:#4f4255/],
     // The narrow-viewport search block kept Scryfall's own light field: a white
     // slab with dark buttons. Its controls are the set header's controls.
-    ['the narrow search controls keep no light field', /html\.stk-dark \.search-controls-mobile\{background:#252829/],
+    ['the narrow search controls keep no light field', /html\.stk-dark \.search-controls-mobile\{background:var\(--stk-panel\)/],
     ['the narrow search controls match the header controls', /html\.stk-dark \.search-controls-mobile :is\(\.button-n,\.select-n\)\{background-color:rgba\(255,255,255,\.09\)/],
     // The deck tray wrapper held only buttons, and painting it as well left a
     // grey slab beside the backpack button.
@@ -345,7 +373,7 @@ function auditGapCheck() {
     // The account forms are panels with a faint black border. On a dark page the
     // panel took the colour of the page and the border stayed a black hairline,
     // so the rectangle vanished on three of the four blocks.
-    ['the account panels keep a visible edge', /html\.stk-dark\.stk-account-page #main \.form-n\{background-color:#252829!important;border:1px solid rgba\(255,255,255,0\.22\)/],
+    ['the account panels keep a visible edge', /html\.stk-dark\.stk-account-page #main \.form-n\{background-color:var\(--stk-panel\)!important;border:1px solid rgba\(255,255,255,0\.22\)/],
     // The header's inverted controls carry Scryfall's own translucent look, and
     // the broad button repaint was darkening one of them while the selects beside
     // it stayed translucent.
@@ -354,14 +382,14 @@ function auditGapCheck() {
     // button shows, so painting it put a grey slab beside the button.
     ['the deck tray is not a surface', /html\.stk-dark \.left-tray \.deck-tray\{background:transparent/],
     ['the bot documentation buttons', /\.marketing-features-item[^{]*:is\(a\.button-n/],
-    ['the donation tiles', /\.donation-stripe-amount,\.donation-service\)\{background-color:#252829/],
-    ['the button on Scryfall error pages', /html\.stk-dark :is\(a\.button,button\.button\)\{background-color:#292b2c/],
-    ['the keyboard skip links', /a:is\(\[href\$="#main"\],\[href\$="#footer"\]\)\{background-color:#292b2c/],
+    ['the donation tiles', /\.donation-stripe-amount,\.donation-service\)\{background-color:var\(--stk-panel\)/],
+    ['the button on Scryfall error pages', /html\.stk-dark :is\(a\.button,button\.button\)\{background-color:var\(--stk-panel-2\)/],
+    ['the keyboard skip links', /a:is\(\[href\$="#main"\],\[href\$="#footer"\]\)\{background-color:var\(--stk-panel-2\)/],
     ['the faint dot in a set card grid header', /\.card-grid-header-dot\{color:#8f8a96/],
     ['the white form wrapper inside a deck menu', /\.dropdown-menu-items form\{background-color:transparent/],
-    ['the black curve counts of the deck editor', /deckbuilder-cmc-stat[^{]*:is\(strong,b\)\{color:#e6e3df/],
+    ['the black curve counts of the deck editor', /deckbuilder-cmc-stat[^{]*:is\(strong,b\)\{color:var\(--stk-ink\)/],
     ['the set code badge of a deck row', /\.deckbuilder-entry-badge,\.stk-deck-set-badge\)\{color:#dcd8e2/],
-    ['the lighter band behind a deck column title', /#deckbuilder :is\(\.deckbuilder-section-title-bar,\.deckbuilder-entry\)\{background-color:#252829/],
+    ['the lighter band behind a deck column title', /#deckbuilder :is\(\.deckbuilder-section-title-bar,\.deckbuilder-entry\)\{background-color:var\(--stk-panel\)/],
     ['the duplicated panel copy on the bots page', /\.bot-marketing-panel-shadow :is\(\.bot-marketing-panel-desc/],
     ['the white text shadow on the bots page', /stk-bots-page #main :is\(p,h1,h2,h3,h4,h5,h6,a,span,b,li,div\)\{text-shadow:none/],
     ['the account form title band', /\.stk-account-light-bar\.form-n-title/],
@@ -369,23 +397,23 @@ function auditGapCheck() {
     ['the light screenshot of a Slack window', /img\.stk-light-screenshot\{filter:invert\(1\) hue-rotate\(180deg\)/],
     ['the light gradient on the page Scryfall builds without a main', /html\.stk-dark body\{background-image:none!important\}/],
     ['the purple drawing on that page', /body>svg :is\(path,g,circle,rect,polygon,ellipse\):not\(\[fill="none"\]\)\{fill:var\(--stk-link-purple\)/],
-    ['the lighter box the deck columns made inside the page', /#deckbuilder :is\(\.deckbuilder-section,\.deckbuilder-column\)\{background-color:#1d2021/],
-    ['the white link button of a page that writes one into its prose', /html\.stk-dark \.button-n:not\(\.inverted\),html\.stk-dark \.select-n:not\(\.inverted\)\{background-color:#292b2c!important;color:#c79ce3/],
-    ['the white hover Scryfall paints on every button', /\.button-n:is\(:hover,:active,:focus,:focus-visible\)[^{]*\{background-color:#413949!important;color:#fff/],
-    ['the black ink a disabled button shows under the pointer', /\.button-n:is\(\.disabled,:disabled\)[^{]*\{background-color:#252829!important;color:#6f6b74/],
+    ['the lighter box the deck columns made inside the page', /#deckbuilder :is\(\.deckbuilder-section,\.deckbuilder-column\)\{background-color:var\(--stk-page\)/],
+    ['the white link button of a page that writes one into its prose', /html\.stk-dark \.button-n:not\(\.inverted\),html\.stk-dark \.select-n:not\(\.inverted\)\{background-color:var\(--stk-panel-2\)!important;color:var\(--stk-link\)/],
+    ['the white hover Scryfall paints on every button', /\.button-n:is\(:hover,:active,:focus,:focus-visible\)[^{]*\{background-color:var\(--stk-hover\)!important;color:#fff/],
+    ['the black ink a disabled button shows under the pointer', /\.button-n:is\(\.disabled,:disabled\)[^{]*\{background-color:var\(--stk-panel\)!important;color:#6f6b74/],
     ['the lifted purple under the pointer', /a\.stk-brighter-purple:is\(:hover,:active,:focus\)\{color:#d6c2f2/],
     // Scryfall hands the pointer a near-black ink in its prose, its account
     // forms and its checklists, which is where "the text turns black on hover"
     // came from.
     ['the near-black ink Scryfall gives a hovered prose link', /\.prose[^{]*a:is\(:hover,:active,:focus\):not\(\.button-n\)[^{]*\{color:var\(--stk-link-purple\)/],
-    ['the white field a focused form input turns', /\.form-input,\.form-n-input,\.form-n-file-input-control[^{]*\{background-color:#292b2c/],
+    ['the white field a focused form input turns', /\.form-input,\.form-n-input,\.form-n-file-input-control[^{]*\{background-color:var\(--stk-panel-2\)/],
     ['the purple Scryfall fills a shape with', /\.prose-complex-h1[^{]*:not\(\[fill="none"\]\)[^{]*\{fill:var\(--stk-link-purple\)/],
-    ['the purple notice and warning bar', /\.notification\.purple,\.read-only-warning,\.print-langs-item\.current\)\{background-color:#413949/],
+    ['the purple notice and warning bar', /\.notification\.purple,\.read-only-warning,\.print-langs-item\.current\)\{background-color:var\(--stk-hover\)/],
     ['the purple curve meter of the deck editor', /cmc-stat-meter::\-webkit-progress-value\{background-color:var\(--stk-link-purple\)/],
     // Tagger marks a panel light and then paints a white of its own on top of
     // two of them: the tag sidebar and the tab it hangs from.
-    ['the tag sidebar Tagger paints white inside a panel it calls light', /stk-tagger :is\(\.sidebar-panel,\.tags-menu,\.navigation\.active\)\{background-color:#252829/],
-    ['the ink of the tag list', /stk-tagger :is\(\.sidebar-panel,\.tags-menu\) :is\(a,span,strong,li,div,p,label,input,button,td,th\)\{color:#e6e3df/],
+    ['the tag sidebar Tagger paints white inside a panel it calls light', /stk-tagger :is\(\.sidebar-panel,\.tags-menu,\.navigation\.active\)\{background-color:var\(--stk-panel\)/],
+    ['the ink of the tag list', /stk-tagger :is\(\.sidebar-panel,\.tags-menu\) :is\(a,span,strong,li,div,p,label,input,button,td,th\)\{color:var\(--stk-ink\)/],
     // The team page is a purple marketing page: the white band is dimmed rather
     // than removed, so Scryfall's purple field behind it survives.
     ['the white band of the team page, dimmed', /stk-team-page #main \.team-header\{background-color:rgba\(255,255,255,0\.82\)/],
@@ -411,7 +439,7 @@ function auditGapCheck() {
   assert(taggerRules.length >= 10, 'Tagger has its own block of rules');
   assert(taggerRules.every(line => line.trim().startsWith('html.stk-dark.stk-tagger')),
     'no Tagger rule can reach a Scryfall page');
-  assert(/:is\(\.light-mode:not\(\.card-layout\):not\(\.sidebar\),\.sample-tags,\.card-layout--tagging\)\{background-color:#252829/.test(theme),
+  assert(/:is\(\.light-mode:not\(\.card-layout\):not\(\.sidebar\),\.sample-tags,\.card-layout--tagging\)\{background-color:var\(--stk-panel\)/.test(theme),
     'Tagger keeps its own dark design and only its light panels are repainted');
   assert(/stk-tagger body\{background-color:#191820/.test(theme) && /stk-tagger #app\{background-color:transparent/.test(theme),
     "Tagger keeps its own page field and a transparent #app, so its soft glow is not painted over");
@@ -425,16 +453,16 @@ function auditGapCheck() {
     'no rule catches every class that merely contains "file-input"');
   assert(/stk-account-page #main \.form-n-file-input\{background-color:transparent!important/.test(theme),
     "Scryfall's file-input wrapper is left unpainted, so nothing sticks out from under the button");
-  assert(/stk-account-page #main :is\(\.form-n-file-input-control,\.stk-account-upload-button\)\{background-color:#292b2c!important/.test(theme),
+  assert(/stk-account-page #main :is\(\.form-n-file-input-control,\.stk-account-upload-button\)\{background-color:var\(--stk-panel-2\)!important/.test(theme),
     'the file control itself still has a surface of its own on the dark page');
-  assert(/stk-tagger :is\(\.sidebar-panel,\.tags-menu,\.navigation\.active\)\{background-color:#252829/.test(theme),
+  assert(/stk-tagger :is\(\.sidebar-panel,\.tags-menu,\.navigation\.active\)\{background-color:var\(--stk-panel\)/.test(theme),
     'the tag sidebar and its tab are repainted, not only the panel Tagger marks light');
   // On a card page Tagger puts the light mark on .card-layout, which is the whole
   // layout: the panel, the card and the empty space under both. Filling that took
   // away the blurred card art Tagger shows there.
-  assert(/stk-tagger :is\(\.light-mode:not\(\.card-layout\):not\(\.sidebar\),\.sample-tags,\.card-layout--tagging\)\{background-color:#252829/.test(theme),
+  assert(/stk-tagger :is\(\.light-mode:not\(\.card-layout\):not\(\.sidebar\),\.sample-tags,\.card-layout--tagging\)\{background-color:var\(--stk-panel\)/.test(theme),
     'the card layout and the sidebar scrim both keep the field Tagger lays over the page');
-  assert(/:is\(\.light-mode,\.sample-tags,\.card-layout--tagging\) :is\(a,span,label,li,strong,em,b,i,p,div,section,article,h1,h2,h3,h4,h5,h6,dt,dd,td,th\)\{color:#e6e3df/.test(theme),
+  assert(/:is\(\.light-mode,\.sample-tags,\.card-layout--tagging\) :is\(a,span,label,li,strong,em,b,i,p,div,section,article,h1,h2,h3,h4,h5,h6,dt,dd,td,th\)\{color:var\(--stk-ink\)/.test(theme),
     'the ink inside a repainted Tagger panel is repainted with it, not left grey');
   assert(/\/\* Tagger is a separate Vue app/.test(theme), 'the Tagger block explains why it stands alone');
 }
@@ -592,6 +620,7 @@ async function pathClasses() {
     await manifestIntegrity();
     firstPaintTest();
     noDoublePaintingTest();
+    paletteTest();
     hoverStatesTest();
     auditGapCheck();
     syntaxCheck();

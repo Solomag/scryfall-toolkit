@@ -177,8 +177,9 @@ time.
 
 ## What is not done yet
 
-- Tag panels appear on single card pages. Panels in search results are planned for a
-  later version.
+- Tag panels appear on single card pages. Panels in search results are **not planned**:
+  a search grid would need a rule for which of a card's thousands of tags to show, and a
+  request per card to fetch them. Tags belong on the card that has them.
 - Shambleshark's deckbuilder search, EDHREC suggestions, cleanup and card input editing
   are not integrated. Its Card Notes and Legality Check modules are empty placeholders
   upstream.
