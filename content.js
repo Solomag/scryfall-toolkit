@@ -59,6 +59,14 @@
     // The page side announces itself when it is listening, which may be before
     // or after this script runs.
     if (data.source === 'page' && data.type === 'ready') sendDeckSettings();
+    // What the page world reports back about the deck modules: whether the hooks
+    // into Scryfall took, and what did not. It is kept so that "the feature does
+    // not work" can be answered with a reason instead of a guess.
+    if (data.source === 'page' && data.type === 'status') {
+      chrome.storage.local.set({
+        deckModuleStatus: Object.assign({ at: Date.now(), page: location.pathname }, data.value || {})
+      }).catch(() => {});
+    }
     // The page world cannot reach the extension's background worker; this is
     // the only bridge to it. The name is the request type the worker answers.
     if (data.source === 'page' && data.type === 'request' && data.value && data.value.id) {

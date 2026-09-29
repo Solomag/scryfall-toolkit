@@ -39,6 +39,7 @@ const REQUIRED_IDS = [
   'cardNicknames', 'deckNoPrices', 'stackedDeckCards', 'deckTokens',
   'deckCleanUpImprover', 'cleanUpLandsInSingleton', 'sortEntriesPrimary',
   'insertSortingHeadings', 'cardPreviewOnHover', 'edhrecSuggestions', 'deckSearch',
+  'deckModuleStatus',
   'setPlatformsAll', 'setPlatformsPaper', 'setPlatformsArena', 'setPlatformsMtgo',
   'printGrouping', 'printFoldGroups', 'printFullPageLink'
 ];
@@ -473,6 +474,8 @@ function sectionOrderTest() {
     'the clean up improver is a deck option');
   assertEqual(sectionOf('sortEntriesPrimary'), 'Scryfall Deckbuilder',
     'and so are the settings that only matter while it is on');
+  assertEqual(sectionOf('deckModuleStatus'), 'Scryfall Deckbuilder',
+    'and the report the modules give about themselves');
   assertEqual(sectionOf('printPageSameTab'), 'Экспериментальное', 'the same-tab printings switch stays in Experimental');
   assertEqual(sectionOf('siteLanguage'), 'Экспериментальное', 'the site language selector moved to the bottom');
   assert(html.indexOf('id="siteLanguage"') > html.indexOf('id="deckTokens"'),
@@ -503,6 +506,47 @@ function loadOptions(state) {
   page.script('format-catalog.js');
   page.script('options.js');
   return page;
+}
+
+const settle = () => new Promise(resolve => setTimeout(resolve, 0));
+
+// The deck modules work through Scryfall's internals and every hook they need is
+// optional, so "the feature does not work" has two very different causes: it is
+// off, or it could not attach. The page world reports which, and settings is
+// where that report has to be readable.
+async function deckModuleStatusTest() {
+  console.log('options.js: the deck modules report what they found');
+  const none = loadOptions({});
+  await settle();
+  const idle = none.document.getElementById('deckModuleStatus').textContent;
+  assert(idle.length > 0, 'with nothing reported yet it says what to do');
+  assert(!/decks\//.test(idle), 'and does not invent a page');
+
+  const page = loadOptions({
+    settingsLanguage: 'en',
+    deckModuleStatus: {
+      at: Date.now(),
+      page: '/decks/abc123/build',
+      cleanUp: true,
+      cardPreview: false,
+      edhrecSuggestions: true,
+      deckSearch: false,
+      scryfall: {
+        hasScryfall: true,
+        hasScryfallApi: true,
+        hooksInstalled: true,
+        problems: ['deckbuilder.entries is a computed property; the deck edits hook is not installed']
+      }
+    }
+  });
+  await settle();
+  const text = page.document.getElementById('deckModuleStatus').textContent;
+  assert(text.includes('/decks/abc123/build'), 'it names the page the report came from');
+  assert(text.includes('hooks'), 'whether the hooks into Scryfall took');
+  assert(text.includes('deckbuilder.entries is a computed property'),
+    'and what went wrong, in the adapter\'s own words');
+  assert(text.indexOf('/decks/abc123/build') < text.indexOf('deckbuilder.entries'),
+    'with the page first and the problem after it');
 }
 
 async function formatListTest() {
@@ -714,6 +758,7 @@ async function discoveredFormatsTest() {
     await lockedDependentsTest();
     await languageTest();
     await discoveredFormatsTest();
+    await deckModuleStatusTest();
     summary('test-options');
     process.exit(0);
   } catch (error) {

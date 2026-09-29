@@ -181,6 +181,40 @@ chrome.storage.local.get(defaults, values => {
     master.addEventListener('change', apply);
     apply();
   }
+  // The deck modules run against Scryfall's application internals, and every
+  // hook they need is optional. When one does not take, the module says so —
+  // and that report is the only way to tell "the feature is off" from "the
+  // feature could not attach", so it is shown here rather than left in storage.
+  const deckStatus = document.getElementById('deckModuleStatus');
+  if (deckStatus) {
+    chrome.storage.local.get({ deckModuleStatus: null }).then(({ deckModuleStatus }) => {
+      const s = deckModuleStatus;
+      if (!s) {
+        deckStatus.textContent = t('Открой редактор колоды с включённым модулем, и здесь появится его отчёт.');
+        return;
+      }
+      const lines = [t('Страница') + ': ' + (s.page || '—')];
+      const flags = [
+        ['cleanUp', t('Очистка колоды')],
+        ['cardPreview', t('Предпросмотр карты')],
+        ['edhrecSuggestions', t('Подсказки EDHREC')],
+        ['deckSearch', t('Поиск Scryfall')]
+      ];
+      lines.push(t('Подключено') + ': ' + flags.filter(([key]) => s[key]).map(([, label]) => label).join(', '));
+      const inner = s.scryfall || {};
+      lines.push(t('Внутренности Scryfall') + ': ' + [
+        inner.hasScryfall ? 'window.Scryfall ✓' : 'window.Scryfall ✗',
+        inner.hasScryfallApi ? 'ScryfallAPI ✓' : 'ScryfallAPI ✗',
+        inner.hooksInstalled ? 'hooks ✓' : 'hooks ✗'
+      ].join(' · '));
+      if (inner.problems && inner.problems.length) {
+        lines.push(t('Что не так') + ':');
+        for (const problem of inner.problems) lines.push('— ' + problem);
+      }
+      deckStatus.textContent = lines.join('\n');
+      deckStatus.style.whiteSpace = 'pre-wrap';
+    }).catch(() => {});
+  }
   // Platform checkboxes behave as one control: "All" mirrors the three
   // platforms, and unchecking the last one falls back to All so the set lists
   // never end up empty.
