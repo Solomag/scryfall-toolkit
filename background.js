@@ -370,6 +370,35 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
       });
       return promise;
     }
+    if (message.type === "cardIdentity") {
+      // A search can be narrowed to the commander's colours, which needs to know
+      // what those are. One lookup, through the same Scryfall queue.
+      const name = String(message.name || "").trim();
+      if (!name || name.length > 120 || /[<>\u0000-\u001f]/.test(name)) throw new Error("Invalid card name");
+      const card = await getJSON(`https://api.scryfall.com/cards/named?exact=${encodeURIComponent(name)}`);
+      const identity = Array.isArray(card.color_identity) ? card.color_identity : [];
+      return { colorIdentity: identity.filter(c => /^[wubrg]$/.test(c)).join("") };
+    }
+    if (message.type === "scryfallSearch") {
+      // A search typed into the deck editor. The query is the user's own, but it
+      // is still going into a URL and out of this worker, so it is bounded here
+      // rather than trusted.
+      const query = String(message.query || "").trim();
+      const page = Math.min(200, Math.max(1, Number(message.page) || 1));
+      if (!query || query.length > 300 || /[<>\u0000-\u001f]/.test(query)) throw new Error("Invalid search query");
+      const result = await getJSON(
+        `https://api.scryfall.com/cards/search?q=${encodeURIComponent(query)}&unique=cards&page=${page}`
+      );
+      const cards = (result.data || []).slice(0, 60).map(card => ({
+        id: /^[0-9a-f-]{36}$/.test(card.id || "") ? card.id : "",
+        name: String(card.name || "").slice(0, 120),
+        typeLine: String(card.type_line || "").slice(0, 120),
+        manaCost: String(card.mana_cost || "").slice(0, 60),
+        image: /^https:\/\/cards\.scryfall\.io\//.test(card.image_uris?.small || card.card_faces?.[0]?.image_uris?.small || "")
+          ? (card.image_uris?.small || card.card_faces?.[0]?.image_uris?.small) : ""
+      })).filter(card => card.id);
+      return { cards, hasMore: Boolean(result.has_more), page };
+    }
     if (message.type === 'cardtrader') {
       const id = String(message.id), set = String(message.set);
       if (!/^[0-9a-f-]{36}$/.test(id) || !/^[a-z0-9_-]{1,16}$/i.test(set)) throw new Error('Invalid card');

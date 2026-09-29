@@ -115,6 +115,8 @@ const resolveSettingsLanguage = value => {
     'Работает через внутренний интерфейс Scryfall, поэтому по умолчанию выключено.': 'Works through Scryfall\'s internals, so it is off by default.',
     'Подсказки EDHREC в редакторе командных колод': 'EDHREC suggestions in the commander deck editor',
     'Кнопка EDHREC в панели инструментов открывает списки карт, которые EDHREC показывает для твоего командира, с процентом колод, где они встречаются. Данные берутся из открытого JSON EDHREC по их опубликованной политике — не чаще запроса в секунду и с кешем.': 'An EDHREC button in the toolbar opens the card lists EDHREC shows for your commander, with the share of decks that play each one. The data comes from EDHREC\'s published JSON under their published data policy — at most one request a second, and cached.',
+    'Поиск Scryfall прямо в редакторе колоды': 'Scryfall search inside the deck editor',
+    'Кнопка Search в панели инструментов: запрос по языку Scryfall, выдача и добавление карты в колоду. Можно ограничить поиск цветами командира и убрать шуточные карты. Запросы идут через очередь Scryfall расширения.': 'A Search button in the toolbar: a query in Scryfall\'s own syntax, results, and a button that adds a card to the deck. Searches can be narrowed to the commander\'s colours and can keep funny cards out. Requests go through the extension\'s Scryfall queue.',
     'После изменения настроек обнови открытые страницы Scryfall и Tagger. MoxTags продолжает работать отдельно на Moxfield.': 'Reload open Scryfall and Tagger tabs after changing settings. MoxTags continues to run separately on Moxfield.',
     'Открыть настройки во вкладке': 'Open settings in a tab',
     'Сохранить': 'Save', 'Заменить': 'Replace', 'Удалить': 'Delete',

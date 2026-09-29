@@ -101,7 +101,7 @@ function makeWorld({ withScryfall = true, html = '', deck = null, opts = {} } = 
   // The deck modules load in a fixed order: pure deck data first, then the one
   // file that touches Scryfall, then the features on top of it, then the bridge.
   const boot = () => {
-    for (const file of ['deck-tools.js', 'deck-scryfall.js', 'deck-clean-up.js', 'deck-card-preview.js', 'deck-edhrec.js']) run(file);
+    for (const file of ['deck-tools.js', 'deck-scryfall.js', 'deck-clean-up.js', 'deck-card-preview.js', 'deck-edhrec.js', 'deck-search.js']) run(file);
   };
   // Dispatching to the page side means handing over the identity that side sees
   // as its own window. Across a vm boundary that is not the same object as the
@@ -484,6 +484,87 @@ const card = (name, typeLine, id) => ({
       w.self.STK_DECK_EDHREC.apply({ edhrecSuggestions: true });
       assertEqual(w.document.getElementById('stk-edhrec-button'), null,
         'a deck with no commanders is left alone');
+    }
+
+    console.log('deck-search: the deck editor can search Scryfall and add what it finds');
+    {
+      const w = makeWorld({
+        deck: {
+          id: 'deck-8b',
+          sections: { primary: ['commanders', 'nonlands'], secondary: [] },
+          entries: {
+            commanders: [{ id: 'c1', count: 1, section: 'commanders', raw_text: true,
+              card_digest: { name: 'Atraxa, Praetors Voice', type_line: 'Legendary Creature — Phyrexian Angel' } }],
+            nonlands: []
+          }
+        },
+        html: `
+          <div class="deckbuilder-toolbar"><div class="deckbuilder-toolbar-items-right"></div></div>
+          <div id="deckbuilder"></div>`
+      });
+      w.boot();
+      const asked = [];
+      w.self.STK_BRIDGE = {
+        request: (name, value) => {
+          asked.push({ name, value });
+          if (name === 'cardIdentity') return Promise.resolve({ colorIdentity: 'wub' });
+          return Promise.resolve({
+            cards: [
+              { id: 's1', name: 'Sol Ring', typeLine: 'Artifact', manaCost: '{1}' },
+              { id: 's2', name: 'Swords to Plowshares', typeLine: 'Instant', manaCost: '{W}' }
+            ],
+            hasMore: true
+          });
+        }
+      };
+      w.self.STK_DECK_SEARCH.apply({ deckSearch: true });
+      const button = w.document.getElementById('stk-search-button');
+      assert(button, 'the deck editor gets the button');
+
+      button.dispatchEvent(new w.self.Event('click'));
+      await tick();
+      assertEqual(w.document.querySelector('.stk-search-input') !== null, true,
+        'and it opens a search panel');
+
+      w.document.querySelector('.stk-search-input').value = 't:creature';
+      w.document.querySelector('.stk-search-identity').checked = true;
+      w.document.querySelector('.stk-search-no-funny').checked = true;
+      w.document.querySelector('.stk-search-form').dispatchEvent(new w.self.Event('submit'));
+      await tick();
+
+      const searches = asked.filter(a => a.name === 'scryfallSearch');
+      assertEqual(searches.length, 1, 'the query goes to the background worker');
+      assertEqual(searches[0].value.query, 't:creature id<=wub not:funny',
+        'with the two checkboxes turned into Scryfall qualifiers');
+
+      assertEqual([...w.document.querySelectorAll('.stk-search-card-name')].map(n => n.textContent),
+        ['Sol Ring', 'Swords to Plowshares'], 'results come back as a list');
+      assertEqual(w.document.querySelector('.stk-search-more') !== null, true,
+        'and Scryfall saying there is more gives a way to ask for it');
+
+      const added = [];
+      w.self.ScryfallAPI.decks.addCard = (id, cardId, cb) => { added.push(cardId); cb({ id: cardId }); };
+      w.document.querySelector('.stk-search-add').dispatchEvent(new w.self.Event('click'));
+      await tick();
+      assertEqual(added, ['s1'], 'adding a result goes through Scryfall with its own id');
+
+      w.document.querySelector('.modal-dialog-close').dispatchEvent(new w.self.Event('click'));
+      assertEqual(w.document.querySelector('.stk-search-panel'), null, 'and the panel closes');
+    }
+
+    console.log('deck-search: with no commander known, the colour filter steps aside');
+    {
+      const w = makeWorld({
+        deck: { id: 'deck-9', sections: { primary: ['nonlands'], secondary: [] }, entries: { nonlands: [] } },
+        html: '<div class="deckbuilder-toolbar"></div><div id="deckbuilder"></div>'
+      });
+      w.boot();
+      w.self.STK_BRIDGE = { request: () => Promise.resolve({ cards: [], hasMore: false }) };
+      w.self.STK_DECK_SEARCH.apply({ deckSearch: true });
+      w.document.getElementById('stk-search-button').dispatchEvent(new w.self.Event('click'));
+      await tick();
+      assertEqual(w.document.querySelector('.stk-search-identity').closest('label').style.display, 'none',
+        'the checkbox hides rather than silently doing nothing');
     }
 
     summary('test-deck-clean-up');

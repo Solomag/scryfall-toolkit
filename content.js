@@ -24,7 +24,7 @@
     formatOrder: null, formatVisibility: null,
     deckCleanUpImprover: false, cleanUpLandsInSingleton: true,
     sortEntriesPrimary: 'none', insertSortingHeadings: true,
-    cardPreviewOnHover: false, edhrecSuggestions: false,
+    cardPreviewOnHover: false, edhrecSuggestions: false, deckSearch: false,
     exportFormat: "moxfield", cards: null
   };
   const settings = await chrome.storage.local.get(defaults);
@@ -34,7 +34,8 @@
   // in an isolated world that can see neither. Only this side can read the
   // settings. So the two meet at the window itself.
   const deckSettingsNow = () => {
-    const wanted = settings.deckCleanUpImprover || settings.cardPreviewOnHover || settings.edhrecSuggestions;
+    const wanted = settings.deckCleanUpImprover || settings.cardPreviewOnHover ||
+      settings.edhrecSuggestions || settings.deckSearch;
     if (!wanted) return {};
     const value = {};
     if (settings.deckCleanUpImprover) {
@@ -44,6 +45,7 @@
     }
     if (settings.cardPreviewOnHover) value.cardPreviewOnHover = true;
     if (settings.edhrecSuggestions) value.edhrecSuggestions = true;
+    if (settings.deckSearch) value.deckSearch = true;
     return value;
   };
   const sendDeckSettings = () => window.postMessage({
@@ -74,7 +76,7 @@
   sendDeckSettings();
   // Turning the feature on or off should not need a page reload.
   chrome.storage.onChanged.addListener(changes => {
-    const keys = ['deckCleanUpImprover', 'cleanUpLandsInSingleton', 'sortEntriesPrimary', 'insertSortingHeadings', 'cardPreviewOnHover', 'edhrecSuggestions'];
+    const keys = ['deckCleanUpImprover', 'cleanUpLandsInSingleton', 'sortEntriesPrimary', 'insertSortingHeadings', 'cardPreviewOnHover', 'edhrecSuggestions', 'deckSearch'];
     if (!keys.some(key => changes[key])) return;
     keys.forEach(key => { if (changes[key]) settings[key] = changes[key].newValue; });
     sendDeckSettings();

@@ -19,21 +19,20 @@ Last updated 2026-09-29.
 
 ### Check the deck editor modules in a live deck editor
 
-Three of the four Shambleshark deck modules are ported: the clean up improver, the card
-preview on hover, and the EDHREC suggestions. All three are tested against a stand-in for
+All four Shambleshark deck modules are now ported. They are tested against a stand-in for
 `window.Scryfall` and `window.ScryfallAPI`. What that cannot cover is whether Scryfall's
 internals are still shaped the way Shambleshark found them in 2023. Until someone opens a
-deck, turns a setting on and uses it, all three stay switched off.
+deck, turns a setting on and uses them, all four stay switched off.
 
-One of the three was written rather than copied: Shambleshark's EDHREC suggestions embed
+Two of the four were written rather than copied. Shambleshark's EDHREC suggestions embed
 an iframe to edhrec.com, and this project goes to EDHREC's published JSON instead, behind
-a queue and their data policy. The commander page's own `cardlists` already carry the
-grouping and ranking, so nothing had to be invented.
+a queue and their data policy. Its Scryfall search keeps saved searches and calls the API
+straight from the page; this leaves saved searches out and goes through the extension's
+queue.
 
-What is left of the four is the deckbuilder search, at 568 lines the biggest of them. The
-announced sizes were wrong once already: `clean-up-improver` looked like 82 lines and was
-about a thousand, and `edhrec-suggestions` looks like 58 but is 425 across three files.
-Measure from the real files before trusting any estimate.
+The announced sizes were wrong more than once: `clean-up-improver` looked like 82 lines
+and was about a thousand, and `edhrec-suggestions` looks like 58 but is 425 across three
+files. Measure from the real files before trusting any estimate.
 
 If they do not hold up, the answer is to say so and drop them, not to ship something that
 half works.

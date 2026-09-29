@@ -176,6 +176,19 @@ EDHREC's published JSON instead — the commander page's `cardlists` already car
 feature shows — through the same queue and the same rate their data policy asks for. No
 frame, no page markup, no endpoint that was not already being used.
 
+**Scryfall search** *(off by default)*. A Search button in the deck editor's toolbar opens
+a query box in Scryfall's own syntax, lists what comes back, and puts a card in the deck.
+Two checkboxes narrow it: only the commander's colours, and no funny cards. Requests go
+through the extension's Scryfall queue rather than firing out of the page.
+
+Upstream's version also keeps saved searches; theirs describes that as not finished, and
+this leaves it out rather than shipping something half done.
+
+All four Shambleshark deck modules are now ported. Three of them run through Scryfall's
+application internals rather than the page markup, which is why the extension has a script
+in the page's own world, one adapter over those internals, and a bridge back to the
+content script for settings and for the two data requests.
+
 ## Hiding and filtering
 
 These affect the **Sets** index and the **Prints** table on a card page. Card searches,

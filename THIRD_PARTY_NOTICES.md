@@ -113,12 +113,19 @@ identifiers (`CardNicknameDisplay`, `createViewMoreTagsRow`, `TaggerIcon`,
 `TaggerLookupData`, `elementReady`, …) appear in this repository, and the tag panels are
 original code.
 
-**Behaviour ported — the deck editor modules.** Two of upstream's deck-builder features
-are here: the clean up improver (`scryfall-embed/modify-clean-up`, `lib/card-parser`,
-`lib/deck-parser`) and the card preview on hover (`card-input-modifier`,
-`lib/ui-elements/card-tooltip`). `deck-scryfall.js` stands in for upstream's
-`scryfall-globals.ts`, and `page.js` for its `scryfall-embed` entry point and framebus
-wiring.
+**Behaviour ported — the deck editor modules.** All four of upstream's deck-builder
+features are here: the clean up improver (`scryfall-embed/modify-clean-up`,
+`lib/card-parser`, `lib/deck-parser`), the card preview on hover (`card-input-modifier`,
+`lib/ui-elements/card-tooltip`), the EDHREC suggestions and the Scryfall search.
+`deck-scryfall.js` stands in for upstream's `scryfall-globals.ts`, and `page.js` for its
+`scryfall-embed` entry point and framebus wiring.
+
+Two of the four were written rather than copied, because what upstream does is not
+something this project will do. Its EDHREC suggestions reach EDHREC by parking a hidden
+iframe on their domain and asking it for recommendations; this reads EDHREC's published
+JSON instead, through the queue and the rate in section 7. Its Scryfall search calls the
+API straight from the page; this goes through the extension's own worker. Its saved
+searches are left out — upstream describes them as unfinished.
 
 The logic is upstream's; the code is rewritten in plain JavaScript, with a local emitter
 in place of the message bus and a Scryfall adapter that fails soft where upstream assumes
