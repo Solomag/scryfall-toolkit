@@ -86,7 +86,7 @@ Material from other projects keeps its own licence and its own notice. The MPL c
 | `data/shambleshark-nicknames.js` | Shambleshark nickname records — MIT, © 2016 Samuel Simões, © 2019 Blade Barringer |
 | `icons/clip.svg`, `icons/duplicate.svg`, `icons/trash.svg` | CardClip icons — MIT, © 2022 Jacob Hearst |
 | `icons/edhrec.png`, `icons/cardtrader.svg`, `icons/cardtrader.png` | Third-party brand marks. **Not covered by any licence of this project**, and not cleared: no permission was requested from those services and none was received. |
-| `icons/cardmarket.svg` | **This project's own artwork** — an original price-tag glyph drawn from arcs and a circle. It replaces an SVG that was lifted from Scryfall's page markup; see `THIRD_PARTY_NOTICES.md`. |
+| `icons/cardmarket-black.png`, `icons/cardmarket-white.png` | **Cardmarket's own logo**, from the files they publish for download, used on their terms. Their rights stay theirs and the goodwill from use is theirs; `THIRD_PARTY_NOTICES.md` quotes the terms and says what is done to stay inside them. |
 | `manifest.json`, `package.json` and the rest of this project's own files | MPL-2.0 |
 
 Full detail, source by source: **[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)**. Licence texts are in [`third_party/`](third_party/) and ship inside the extension archive.

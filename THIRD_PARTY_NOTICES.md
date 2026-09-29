@@ -37,10 +37,10 @@ In particular, and stated plainly because it is easy to get wrong:
   and neither did their answer. CardTrader's mark was taken from their own site and no
   permission for it has been given. Nothing here claims a logo is cleared: the
   unresolved status in sections 7 and 8 is about the marks, and that is the real status.
-- **Cardmarket is closed, but not for the reason it first looked.** This project never
-  used Cardmarket's logo, so their published brand terms do not reach anything here. The
-  icon that sat beside the EUR column turned out to be a Scryfall asset, not theirs, and
-  it has been replaced with an original glyph. Section 9 has the details.
+- **Cardmarket's logo is theirs and is used on their terms.** Two of their published
+  files head the EUR price column. Their rights stay theirs, the goodwill from use is
+  theirs, and nothing here implies they endorse this project. Section 9 has the terms
+  and what is done to stay inside them.
 - The bundled MoxTags and Shambleshark data and the CardClip icons stay under their own
   MIT terms with their own copyright notices; re-licensing them as MPL-2.0 would be
   wrong and has not been done.
@@ -249,11 +249,12 @@ nothing at all when a field is missing, rather than an error or a wrong number.
 | `icons/cardtrader.svg` | **Unresolved.** CardTrader's brand mark. Trademarks are not licensed as MIT. |
 | `icons/cardtrader.png` | **Unresolved.** A monochrome version of the same mark. |
 
-## 9. Cardmarket — the mark we ship is not theirs
+## 9. Cardmarket — their published logo, used as they distribute it
 
-- <https://www.cardmarket.com/>
-- Used: **service only.** A link to the card's Cardmarket listing, plus an icon beside
-  the EUR price column. No Cardmarket code or data is copied.
+- <https://www.cardmarket.com/> (Sammelkartenmarkt GmbH & Co. KG)
+- Used: **service, plus two of their published logo files.** The EUR price column is
+  headed with their logo, and the values in it link to the card's Cardmarket listing. No
+  Cardmarket code or data is copied.
 
 **Their published terms.** Cardmarket puts its brand assets up for download at
 <https://help.cardmarket.com/en/Downloads> and says this about using them:
@@ -264,26 +265,34 @@ nothing at all when a field is missing, rather than an error or a wrong number.
 > any steps contrary to our rights or our property to the brands.
 
 They publish horizontal and vertical wordmarks, with and without a tagline or trademark
-notice, in blue, black and white, and they give a snippet for embedding them on other
-pages. So if this project used Cardmarket's logo there would be a basis to point at —
-with conditions attached: the rights stay theirs, the goodwill is theirs, and nothing
-may be done contrary to their rights.
+notice, in blue, black and white, along with banners and a snippet for embedding them on
+other pages. Downloading them for use is what that page is for, and this project takes
+the conditions that come with it: their rights stay theirs, the goodwill from use is
+theirs, and nothing is done contrary to their rights.
 
-**What actually used to be in this project was not their logo.** Cardmarket's marks are
-wordmarks. The icon beside the EUR price column was a small hand-and-bag glyph in a
-15×15 viewBox with `fill="#303030"`, lifted out of the markup of a Scryfall card page —
-it is the SVG Scryfall puts inside its own "Buy at Cardmarket" link. Two things were
-changed when it was taken: `fill="#303030"` became `fill="currentColor"`, and the
-`width`/`height` went from 15 to 16.
+**What this project does with the logo, and what it does not.** Two of their published
+files are bundled: the black horizontal mark for light backgrounds and the white
+horizontal mark, which they publish for dark ones. Neither is redrawn, recoloured,
+rearranged or given a tag line they did not publish. The only change to either file is
+that the empty margin around the artwork is trimmed off, so the wordmark can sit at the
+height of a table column header. On the dark theme the white file's black backing is
+blended away rather than the artwork being altered.
 
-So the question was never Cardmarket's at all. It was a Scryfall interface asset with
-an unestablished licence, and it has been **removed**. The icon is now an original
-price-tag glyph drawn from an arc, a rounded rectangle and a circle — no logo, no
-wordmark, no brand shape. See section 12.
+Nothing here suggests Cardmarket endorses, sponsors or is affiliated with this project,
+and the opening of this document says so in as many words. The logo marks which column is
+Cardmarket's; the numbers in it link to their site, which is what their embedding snippet
+is for.
 
-| File in this repo | Status |
-| --- | --- |
-| `icons/cardmarket.svg` | **Resolved.** Now an original glyph; the Scryfall SVG it used to contain is not shipped. Nothing of Cardmarket's is shipped, so their terms are not relied on. |
+**What used to sit in that slot.** Before this the column was headed by a small
+hand-and-bag glyph in a 15×15 viewBox, lifted out of the markup of a Scryfall card page:
+the SVG Scryfall puts inside its own "Buy at Cardmarket" link. It was never Cardmarket's
+logo at all — their marks are wordmarks. It is gone, both because its real origin was
+Scryfall's and because the mark over a Cardmarket column ought to be Cardmarket's.
+
+| File in this repo | What it is | Status |
+| --- | --- | --- |
+| `icons/cardmarket-black.png` | Cardmarket's horizontal logo, black, from their Downloads page | **Used under their published terms**, quoted above. Margin trimmed; otherwise as distributed. |
+| `icons/cardmarket-white.png` | The same logo, white, published by them for dark backgrounds | **Used under their published terms**, quoted above. Margin trimmed; otherwise as distributed. |
 
 ## 10. Development-only dependency (not shipped)
 
@@ -324,12 +333,10 @@ decision before the archive is published widely.
 2. **`icons/cardtrader.svg` and `icons/cardtrader.png`** — CardTrader's marks. Check
    CardTrader's brand/API terms; if redistribution is not permitted, drop the images and
    use the existing text label, which already reads "CardTrader …" beside the price.
-3. **`icons/cardmarket.svg`** — **closed.** Two questions were tangled here and both are
-   now answered. It was never Cardmarket's mark (theirs are wordmarks), so their
-   published terms reach nothing in this project; and it *was* a Scryfall asset, taken
-   from the markup of Scryfall's own "Buy at Cardmarket" link and recoloured. Since
-   Scryfall's licence for their interface assets was never established, the file now
-   holds an original glyph and no third-party artwork remains in it.
+3. **Cardmarket's logo** — **closed.** They publish their brand assets for download with
+   terms attached, and this project uses two of them on those terms: unmodified apart
+   from trimming the empty margin, no claim of endorsement, and the values in the column
+   linking to their site. The Scryfall asset that used to head that column is gone.
 4. **EDHREC's logo** — their data policy covers using their data and says nothing about
    the mark. Either establish that it may be redistributed or replace it with a text
    label. The policy itself is now recorded in section 7.

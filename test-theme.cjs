@@ -90,10 +90,19 @@ function importScriptsCheck() {
 
 function iconCheck() {
   console.log('static: bundled icons');
-  for (const icon of ['clip', 'duplicate', 'trash', 'cardmarket', 'cardtrader']) {
+  for (const icon of ['clip', 'duplicate', 'trash', 'cardtrader']) {
     assert(exists(`icons/${icon}.svg`), `icons/${icon}.svg bundled`);
   }
   assert(exists('icons/edhrec.png'), 'icons/edhrec.png bundled');
+  // Cardmarket's own logo, as they distribute it: black for light backgrounds,
+  // white for dark. Both are trimmed to the artwork's own bounds and otherwise
+  // untouched.
+  for (const file of ['icons/cardmarket-black.png', 'icons/cardmarket-white.png']) {
+    assert(exists(file), `${file} bundled`);
+    assert(fs.statSync(path.join(ROOT, file)).size > 2000, `${file} is the real logo, not a stub`);
+  }
+  assert(!exists('icons/cardmarket.svg'),
+    'the placeholder glyph is gone now that Cardmarket\'s own mark is used');
 }
 
 function cssCheck() {

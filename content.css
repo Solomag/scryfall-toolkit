@@ -87,6 +87,13 @@
 .stk-ct-price-header,.stk-cm-price-header{white-space:nowrap!important}
 .prints-table th .stk-price-heading{display:inline-flex;align-items:center;justify-content:flex-end;gap:4px;white-space:nowrap;vertical-align:middle;line-height:15px}
 .prints-table th .stk-price-heading img{display:block;flex:none;vertical-align:middle}
+/* A published wordmark is a wide thing; it is sized here so the column stays a
+   column. The dark variant carries its own black backing, which the theme
+   blends away instead of the artwork being recoloured. */
+.prints-table th .stk-price-heading img.stk-brand-logo{height:13px;width:auto}
+.prints-table th .stk-price-heading img.stk-on-dark{display:none}
+html.stk-dark .prints-table th .stk-price-heading img.stk-on-light{display:none}
+html.stk-dark .prints-table th .stk-price-heading img.stk-on-dark{display:block;mix-blend-mode:screen}
 /* The three visible gaps around the panel are 22px on the user's 125% zoom,
    which is 17.6 CSS px: 12px above the panel, 15px under its top border and
    16.5px of panel padding below the last line. The native card-text padding is

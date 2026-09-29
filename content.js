@@ -565,13 +565,36 @@
     });
   }
 
+  // Providers whose own published logo is used as it stands. Cardmarket puts its
+  // marks up for download, black for light backgrounds and white for dark, and
+  // this is that white one — so the dark theme blends its black backing away
+  // rather than recolouring anyone's artwork.
+  function brandLogoFiles(provider) {
+    if (provider === 'cardmarket') {
+      return { light: 'icons/cardmarket-black.png', dark: 'icons/cardmarket-white.png' };
+    }
+    return null;
+  }
+
   function priceHeading(provider) {
     const wrapper = document.createElement('span');
     wrapper.className = 'stk-price-heading';
-    const icon = document.createElement('img');
-    icon.src = chrome.runtime.getURL(`icons/${provider}.svg`);
-    icon.alt = '';
-    wrapper.append(icon, document.createTextNode('EUR'));
+    const logo = brandLogoFiles(provider);
+    if (logo) {
+      for (const mode of ['light', 'dark']) {
+        const icon = document.createElement('img');
+        icon.src = chrome.runtime.getURL(logo[mode]);
+        icon.alt = '';
+        icon.className = `stk-brand-logo stk-on-${mode}`;
+        wrapper.append(icon);
+      }
+    } else {
+      const icon = document.createElement('img');
+      icon.src = chrome.runtime.getURL(`icons/${provider}.svg`);
+      icon.alt = '';
+      wrapper.append(icon);
+    }
+    wrapper.append(document.createTextNode('EUR'));
     return wrapper;
   }
 
