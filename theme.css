@@ -691,7 +691,7 @@ html.stk-dark .prints-table tbody td>span:not([class*="currency-"]):not(.pillbox
    always. A panel showing card art needs room and should scroll when it
    overflows, not on principle. */
 .modal-dialog.stk-edhrec-panel,.modal-dialog.stk-search-panel{max-width:860px}
-.modal-dialog-content.stk-edhrec-panel,.modal-dialog-content.stk-search-panel{max-height:none;overflow-y:visible;padding:0}
+.modal-dialog-content.stk-edhrec-panel,.modal-dialog-content.stk-search-panel{max-height:none;overflow-y:visible;padding:0;position:relative}
 
 .stk-results-bar{display:flex;align-items:center;gap:12px;padding:10px 14px 2px}
 .stk-results-toggle{display:flex;gap:0}
@@ -717,6 +717,16 @@ html.stk-dark .prints-table tbody td>span:not([class*="currency-"]):not(.pillbox
   padding:8px;text-align:center;font-size:11px;color:#8f8a99}
 .stk-results-name{font-size:12px;line-height:1.3;color:#e6e3df;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stk-results-line{display:flex;align-items:baseline;gap:6px}
+.stk-results-meta{flex:0 0 auto;color:#8fd0a8;font-size:11px;font-variant-numeric:tabular-nums}
+.stk-results-add.is-added{background:#3c2f52;color:#d9c9f2;border-color:#7a63a0}
+
+/* The card that follows the pointer over a list. It is this panel's own element,
+   kept inside its own box — Scryfall's tooltip is the one that covers the deck
+   editor, which is why nothing here borrows it. */
+.stk-results-preview{position:absolute;display:none;z-index:20;pointer-events:none;
+  width:210px;border-radius:6px;overflow:hidden;box-shadow:0 6px 22px rgba(0,0,0,.55)}
+.stk-results-preview img{width:100%;display:block}
 
 .stk-results-list{list-style:none;margin:0;padding:0}
 .stk-results-row{display:flex;align-items:center;gap:10px;padding:3px 2px;font-size:13px}

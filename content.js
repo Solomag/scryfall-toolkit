@@ -24,7 +24,7 @@
     formatOrder: null, formatVisibility: null,
     deckCleanUpImprover: false, cleanUpLandsInSingleton: true,
     sortEntriesPrimary: 'none', insertSortingHeadings: true,
-    edhrecSuggestions: false, deckSearch: false,
+    edhrecSuggestions: false, deckSearch: false, deckResultsView: 'images',
     exportFormat: "moxfield", cards: null
   };
   const settings = await chrome.storage.local.get(defaults);
@@ -44,6 +44,8 @@
     }
     if (settings.edhrecSuggestions) value.edhrecSuggestions = true;
     if (settings.deckSearch) value.deckSearch = true;
+    // Whichever way the reader last looked at results, in either panel.
+    if (settings.deckResultsView) value.deckResultsView = settings.deckResultsView;
     return value;
   };
   const sendDeckSettings = () => window.postMessage({
@@ -74,6 +76,14 @@
         value: ok ? { id, value: result } : { id, error: String(result && result.message || result) }
       }, '*');
       if (!/^[a-zA-Z]+$/.test(String(name))) return reply(false, 'Unknown request');
+      // Which way results are shown is the page's business and this script's to
+      // store; it is not a question for the background worker.
+      if (name === 'setDeckResultsView') {
+        const view = value && value.view === 'list' ? 'list' : 'images';
+        settings.deckResultsView = view;
+        chrome.storage.local.set({ deckResultsView: view }).catch(() => {});
+        return reply(true, view);
+      }
       chrome.runtime.sendMessage({ type: name, ...(value || {}) })
         .then(result => {
           // The worker answers in an envelope: {ok, data} or {ok, error}. The
@@ -88,7 +98,7 @@
   sendDeckSettings();
   // Turning the feature on or off should not need a page reload.
   chrome.storage.onChanged.addListener(changes => {
-    const keys = ['deckCleanUpImprover', 'cleanUpLandsInSingleton', 'sortEntriesPrimary', 'insertSortingHeadings', 'edhrecSuggestions', 'deckSearch'];
+    const keys = ['deckCleanUpImprover', 'cleanUpLandsInSingleton', 'sortEntriesPrimary', 'insertSortingHeadings', 'edhrecSuggestions', 'deckSearch', 'deckResultsView'];
     if (!keys.some(key => changes[key])) return;
     keys.forEach(key => { if (changes[key]) settings[key] = changes[key].newValue; });
     sendDeckSettings();
@@ -602,14 +612,33 @@
   }
 
   // Providers whose own published logo is used as it stands. Cardmarket puts its
-  // marks up for download, black for light backgrounds and white for dark, and
-  // this is that white one — so the dark theme blends its black backing away
-  // rather than recolouring anyone's artwork.
+  // marks up for download, black for light backgrounds and white for dark.
+  //
+  // Which of the two goes in is decided here rather than by CSS. Styling two
+  // images and hiding one per theme looked right and rendered the black mark on
+  // the dark page, where it is nearly invisible; setting the source directly
+  // cannot get that wrong. Everything here is a function declaration on purpose:
+  // priceHeading runs while this file is still being read.
   function brandLogoFiles(provider) {
     if (provider === 'cardmarket') {
-      return { light: 'icons/cardmarket-black.png', dark: 'icons/cardmarket-white.png' };
+      return {
+        light: 'icons/cardmarket-black.png',
+        dark: 'icons/cardmarket-white.png',
+        title: 'Cardmarket'
+      };
     }
     return null;
+  }
+
+  function logoSrc(logo) {
+    return chrome.runtime.getURL(document.documentElement.classList.contains('stk-dark') ? logo.dark : logo.light);
+  }
+
+  // Every branded mark on the page, so a theme change can be pushed to all of
+  // them at once.
+  function brandLogoImages() {
+    if (!brandLogoImages.list) brandLogoImages.list = [];
+    return brandLogoImages.list;
   }
 
   function priceHeading(provider) {
@@ -617,13 +646,16 @@
     wrapper.className = 'stk-price-heading';
     const logo = brandLogoFiles(provider);
     if (logo) {
-      for (const mode of ['light', 'dark']) {
-        const icon = document.createElement('img');
-        icon.src = chrome.runtime.getURL(logo[mode]);
-        icon.alt = '';
-        icon.className = `stk-brand-logo stk-on-${mode}`;
-        wrapper.append(icon);
-      }
+      const icon = document.createElement('img');
+      icon.src = logoSrc(logo);
+      icon.alt = logo.title;
+      icon.title = logo.title;
+      icon.className = 'stk-brand-logo';
+      // The theme can change while the page is open; the mark follows it.
+      icon.dataset.logoLight = logo.light;
+      icon.dataset.logoDark = logo.dark;
+      brandLogoImages().push(icon);
+      wrapper.append(icon);
     } else {
       const icon = document.createElement('img');
       icon.src = chrome.runtime.getURL(`icons/${provider}.svg`);
@@ -633,6 +665,14 @@
     wrapper.append(document.createTextNode('EUR'));
     return wrapper;
   }
+
+  new MutationObserver(() => {
+    const dark = document.documentElement.classList.contains('stk-dark');
+    for (const icon of brandLogoImages()) {
+      const want = chrome.runtime.getURL(dark ? icon.dataset.logoDark : icon.dataset.logoLight);
+      if (icon.getAttribute('src') !== want) icon.setAttribute('src', want);
+    }
+  }).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
 
   function initPriceFilter() {
     for (const table of document.querySelectorAll('#main .prints-table')) {

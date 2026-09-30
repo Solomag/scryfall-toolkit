@@ -100,8 +100,15 @@
     return query.trim();
   }
 
+  // Answers with a way to take the addition back, or with nothing if Scryfall
+  // did not take the card.
   function addCard(card) {
-    return scryfall.addCard(card.id).then(result => Boolean(result));
+    return scryfall.addCard(card.id).then(entry => {
+      if (!entry) return null;
+      const entryId = typeof entry === 'string' ? entry : entry.id;
+      if (!entryId) return null;
+      return () => scryfall.removeEntry(entryId).then(() => undefined);
+    });
   }
 
   // --- searching ------------------------------------------------------------

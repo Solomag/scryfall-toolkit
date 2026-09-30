@@ -14,13 +14,18 @@
 // Both EDHREC suggestions and the Scryfall search show the same thing: a list of
 // cards that can go into the deck. A row of names is quick to scan and tells you
 // nothing about what a card is; a wall of art tells you what it is and hides the
-// names. So the reader picks: images or list. This is that control and both
-// views, and it is the same one in both panels.
+// names. So the reader picks: images or list. Whichever they picked last is the
+// one that comes up, in either panel.
+//
+// Adding a card is undoable. A click in a list of fifty cards is where mistakes
+// happen, and an "Add" that cannot be taken back leaves the reader hunting for
+// the card in the deck behind the window.
 
 (function () {
   'use strict';
 
   const VIEWS = ['images', 'list'];
+  const bridge = () => self.STK_BRIDGE;
 
   function el(tag, className, text) {
     const node = document.createElement(tag);
@@ -59,7 +64,33 @@
       .then(done);
   }
 
-  function tile(card, onAdd) {
+  // --- adding, and taking it back -------------------------------------------
+
+  // Answers with nothing, and hands back a function that undoes the addition.
+  function makeAdd(handlers, card, button) {
+    return () => {
+      button.disabled = true;
+      handlers.add(card).then(undo => {
+        button.disabled = false;
+        if (!undo) return;
+        button.textContent = 'Remove';
+        button.classList.add('is-added');
+        button.onclick = () => {
+          button.disabled = true;
+          undo().then(() => {
+            button.textContent = 'Add';
+            button.classList.remove('is-added');
+            button.disabled = false;
+            button.onclick = null;
+          }).catch(() => { button.disabled = false; });
+        };
+      }).catch(() => { button.disabled = false; });
+    };
+  }
+
+  // --- the two views --------------------------------------------------------
+
+  function tile(card, handlers) {
     const wrap = el('li', 'stk-results-tile');
 
     const art = el('div', 'stk-results-art');
@@ -76,59 +107,78 @@
     const name = el('div', 'stk-results-name', card.name || '');
     name.title = [card.name, card.typeLine].filter(Boolean).join('\n');
 
+    // EDHREC's number sits with the name, where it is looked for.
+    const line = el('div', 'stk-results-line');
+    line.append(name);
+    if (card.meta) line.appendChild(el('span', 'stk-results-meta', card.meta));
+
     const add = el('button', 'button-n tiny-n stk-results-add', 'Add');
     add.type = 'button';
-    add.addEventListener('click', () => {
-      add.disabled = true;
-      onAdd(card).then(ok => {
-        if (ok) {
-          add.textContent = 'Added';
-          return;
-        }
-        add.disabled = false;
-      }).catch(() => { add.disabled = false; });
-    });
+    add.onclick = makeAdd(handlers, card, add);
 
-    wrap.append(art, name, add);
+    wrap.append(art, line, add);
+    if (card.image) handlers.preview(wrap, card);
     return wrap;
   }
 
-  function row(card, onAdd) {
+  function row(card, handlers) {
     const li = el('li', 'stk-results-row');
 
     const name = el('span', 'stk-results-row-name', card.name || '');
-    name.title = card.typeLine || '';
     const type = el('span', 'stk-results-row-type', card.typeLine || '');
     const cost = el('span', 'stk-results-row-cost', card.manaCost || '');
-    const meta = card.meta ? el('span', 'stk-results-row-meta', card.meta) : el('span', 'stk-results-row-meta');
+    const meta = el('span', 'stk-results-row-meta', card.meta || '');
 
     const add = el('button', 'button-n tiny-n stk-results-add', 'Add');
     add.type = 'button';
-    add.addEventListener('click', () => {
-      add.disabled = true;
-      onAdd(card).then(ok => {
-        if (ok) {
-          add.textContent = 'Added';
-          return;
-        }
-        add.disabled = false;
-      }).catch(() => { add.disabled = false; });
-    });
+    add.onclick = makeAdd(handlers, card, add);
 
     li.append(name, type, cost, meta, add);
+    // The row is names only, so the card itself is one hover away.
+    handlers.preview(li, card);
     return li;
   }
 
-  // `host` is where the whole thing goes. `onAdd` answers with true when the
-  // card was taken.
-  function create(host, onAdd) {
+  // --- a card that follows the pointer --------------------------------------
+
+  // Inside the panel rather than Scryfall's own tooltip: their tooltip is what
+  // covers the deck editor, and this only ever appears over its own list.
+  function createPreview(host) {
+    const box = el('div', 'stk-results-preview');
+    const img = document.createElement('img');
+    img.alt = '';
+    box.appendChild(img);
+    host.appendChild(box);
+
+    return function attach(node, card) {
+      node.addEventListener('mouseenter', () => {
+        if (!card.image) return;
+        img.src = card.image;
+        box.style.display = 'block';
+      });
+      node.addEventListener('mousemove', event => {
+        // Kept inside the panel's own box so a card at the edge cannot be
+        // half off the window.
+        const bounds = host.getBoundingClientRect();
+        const x = event.clientX - bounds.left + 18;
+        const y = event.clientY - bounds.top - 120;
+        box.style.left = Math.max(0, Math.min(x, bounds.width - 220)) + 'px';
+        box.style.top = Math.max(0, y) + 'px';
+      });
+      node.addEventListener('mouseleave', () => { box.style.display = 'none'; });
+    };
+  }
+
+  // --- the area -------------------------------------------------------------
+
+  function create(host, addFn) {
     const bar = el('div', 'stk-results-bar');
     const toggle = el('div', 'stk-results-toggle');
     const buttons = {};
     for (const view of VIEWS) {
       const button = el('button', 'stk-results-view', view === 'images' ? 'Images' : 'List');
       button.type = 'button';
-      button.addEventListener('click', () => setView(view));
+      button.addEventListener('click', () => setView(view, true));
       buttons[view] = button;
       toggle.appendChild(button);
     }
@@ -137,13 +187,21 @@
     const body = el('div', 'stk-results-body');
     host.append(bar, body);
 
-    let view = 'images';
+    // The last view the reader chose is the one that comes up next, in either
+    // panel. page.js hands it over with the rest of the settings.
+    let view = VIEWS.includes(self.STK_DECK_VIEW) ? self.STK_DECK_VIEW : 'images';
     let cards = [];
     let moreFn = null;
+    const preview = createPreview(host);
+    const withPreview = {
+      add: addFn,
+      preview
+    };
 
-    function setView(next) {
+    function setView(next, remember) {
       view = next;
       for (const key of VIEWS) buttons[key].classList.toggle('active', key === view);
+      if (remember && bridge()) bridge().request('setDeckResultsView', { view: view });
       render();
     }
 
@@ -165,7 +223,7 @@
       for (const key of groups) {
         const list = el('ul', view === 'images' ? 'stk-results-grid' : 'stk-results-list');
         for (const card of byGroup.get(key)) {
-          list.appendChild(view === 'images' ? tile(card, onAdd) : row(card, onAdd));
+          list.appendChild(view === 'images' ? tile(card, withPreview) : row(card, withPreview));
         }
         if (key) {
           const wrap = el('div', 'stk-results-group');
@@ -191,7 +249,7 @@
       body.replaceChildren(frag);
     }
 
-    setView('images');
+    for (const key of VIEWS) buttons[key].classList.toggle('active', key === view);
 
     return {
       setCards(next, then) {

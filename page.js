@@ -63,6 +63,9 @@
 
   function applySettings(settings) {
     const s = settings || {};
+    // The results area is shared and its view is the reader's choice, remembered
+    // across both panels.
+    if (s.deckResultsView === 'list' || s.deckResultsView === 'images') self.STK_DECK_VIEW = s.deckResultsView;
     const wantCleanUp = Boolean(s.cleanUpLandsInSingleton) ||
       Boolean(s.sortEntriesPrimary && s.sortEntriesPrimary !== 'none');
     const wantEdhrec = Boolean(s.edhrecSuggestions);

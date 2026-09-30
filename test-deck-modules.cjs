@@ -406,12 +406,19 @@ const card = (name, typeLine, id) => ({
         ['90%', '0%', '25%'], 'and how many of the commander\'s decks play each');
 
       const added = [];
-      w.self.ScryfallAPI.decks.addCard = (id, cardId, cb) => { added.push(cardId); cb({ id: cardId }); };
+      const removed = [];
+      w.self.ScryfallAPI.decks.addCard = (id, cardId, cb) => { added.push(cardId); cb({ id: 'entry-' + cardId }); };
+      w.self.ScryfallAPI.decks.destroyEntry = (id, entryId, cb) => { removed.push(entryId); cb({ id: entryId }); };
       const buttons = w.document.querySelectorAll('.stk-results-add');
       buttons[0].dispatchEvent(new w.self.Event('click'));
       await tick();
       assertEqual(added, ['a1'], 'adding a card goes through Scryfall with its own id');
-      assertEqual(buttons[0].textContent, 'Added', 'and the button says so afterwards');
+      assertEqual(buttons[0].textContent, 'Remove',
+        'and the button turns into the way to take it back');
+      buttons[0].dispatchEvent(new w.self.Event('click'));
+      await tick();
+      assertEqual(removed, ['entry-a1'], 'so a card added by mistake goes again');
+      assertEqual(buttons[0].textContent, 'Add', 'and the button returns to Add');
 
       w.document.querySelector('.modal-dialog-close').dispatchEvent(new w.self.Event('click'));
       assertEqual(w.document.querySelector('.stk-edhrec-panel'), null, 'and the panel closes');

@@ -369,6 +369,7 @@ Scryfall knows nothing about.
 | `.highlight` | 1 |
 | `.homepage-promo` | 1 |
 | `.inner-flex` | 1 |
+| `.is-added` | 1 |
 | `.main` | 1 |
 | `.menu` | 1 |
 | `.message` | 1 |
@@ -480,5 +481,5 @@ name itself, without the leading `.` or `#`.
 
 ---
 
-Total: **360** Scryfall class names.
+Total: **361** Scryfall class names.
 

@@ -141,6 +141,10 @@
     return callDeck('addCard', id => [id, cardId]);
   }
 
+  function removeEntry(entryId) {
+    return callDeck('destroyEntry', id => [id, entryId]);
+  }
+
   function pushNotification(header, message, color, type) {
     const s = scryfallGlobal();
     if (!s || typeof s.pushNotification !== 'function') return;
@@ -274,6 +278,7 @@
     getDeck: getDeck,
     updateEntry: updateEntry,
     addCard: addCard,
+    removeEntry: removeEntry,
     pushNotification: pushNotification,
     activeDeckId: activeDeckId,
     deckIdFromUrl: deckIdFromUrl,
