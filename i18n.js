@@ -125,6 +125,7 @@ const resolveSettingsLanguage = value => {
     'Поиск Scryfall': 'Scryfall search',
     'Внутренности Scryfall': 'Scryfall internals',
     'Что не так': 'What is wrong',
+    'Доступ к хосту выдан — перезагрузи открытые страницы.': 'Host access granted — reload any open Scryfall pages.',
     'После изменения настроек обнови открытые страницы Scryfall и Tagger. MoxTags продолжает работать отдельно на Moxfield.': 'Reload open Scryfall and Tagger tabs after changing settings. MoxTags continues to run separately on Moxfield.',
     'Открыть настройки во вкладке': 'Open settings in a tab',
     'Сохранить': 'Save', 'Заменить': 'Replace', 'Удалить': 'Delete',

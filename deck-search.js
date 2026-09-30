@@ -163,7 +163,8 @@
         area.message(page > 1 ? 'That is everything Scryfall has.' : 'Nothing found.');
         return;
       }
-      // EDHREC's share of the commander's decks, where EDHREC has one.
+      // The query as it was actually run, so what the checkboxes did is on the
+      // screen rather than assumed.
       return commanderRates().then(rates => {
         for (const card of cards) {
           const pct = rates.get(canonical(card.name));
@@ -173,6 +174,7 @@
           }
         }
         area.setCards(cards, bridge().request);
+        area.note('ran: ' + query);
         if (result.hasMore) {
           area.showMore(() => runSearch(panel, area, page + 1));
         }

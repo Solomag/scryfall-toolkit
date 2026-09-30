@@ -208,17 +208,26 @@
           const result = unwrap(reply) || {};
           const cards = fromRecs(result.inRecs);
           if (!cards.length) throw new Error('no suggestions');
-          return cards;
+          return { cards, deck: true };
         })
         .catch(() => bridge().request('edhrecCommander', { name: name }).then(reply => {
           const lists = unwrap(reply);
-          return Array.isArray(lists) ? flatten(lists) : [];
+          return {
+            cards: Array.isArray(lists) ? flatten(lists) : [],
+            deck: false
+          };
         }))
-        .then(cards => deckCardNames().then(owned => {
-          const fresh = cards.filter(card => !owned.has(canonical(card.name)));
-          area.setCards(fresh, bridge().request);
-          const hidden = cards.length - fresh.length;
-          if (hidden > 0) area.note(hidden + ' already in this deck');
+        .then(found => deckCardNames().then(owned => {
+          const cards = found.cards.filter(card => !owned.has(canonical(card.name)));
+          area.setCards(cards, bridge().request);
+          const hidden = found.cards.length - cards.length;
+          // Which of the two is showing has to be visible. One answers to this
+          // deck, the other is EDHREC's page for the commander and is the same
+          // for everyone playing it — and falling back to it is what happens
+          // when the deck request cannot run at all.
+          area.note(found.deck
+            ? 'for this deck' + (hidden ? ' · ' + hidden + ' already in it' : '')
+            : 'EDHREC\'s commander page — not deck specific' + (hidden ? ' · ' + hidden + ' already in it' : ''));
         }))
         .then(() => {
           if (!area.hasCards()) area.message('EDHREC has nothing to suggest for ' + name + '.');

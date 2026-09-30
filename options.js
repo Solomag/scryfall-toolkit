@@ -43,6 +43,23 @@ const OPTIONAL_HOSTS = {
 // is the one that is easy to miss: choosing CardTrader as the EUR source reaches
 // api.cardtrader.com whether or not the CardTrader switch is on, so it has to ask
 // for the host too.
+// A feature that is already on can still be missing a host it needs: hosts get
+// added over time and the grant the user gave covers only what existed then. A
+// missing host does not fail loudly — the feature quietly falls back to
+// something blander and nobody knows why. So the settings page checks what an
+// enabled feature has and asks for what is missing.
+function reconcileHostAccess(values) {
+  if (!chrome.permissions || !chrome.permissions.contains) return;
+  for (const [key, hosts] of Object.entries(OPTIONAL_HOSTS)) {
+    if (!values[key] || !hosts.length) continue;
+    chrome.permissions.contains({ origins: hosts }, has => {
+      if (has) return;
+      requestHostAccess(hosts).then(granted => {
+        if (granted) status.textContent = t('Доступ к хосту выдан — перезагрузи открытые страницы.');
+      });
+    });
+  }
+}
 function optionalHostsFor(key, value) {
   if (key === 'euroPriceSources') {
     return value === 'ct' || value === 'both' ? ['https://api.cardtrader.com/*'] : [];
@@ -140,6 +157,9 @@ chrome.storage.local.get(defaults, values => {
   darkTheme.addEventListener('change', () => {
     chrome.storage.local.set({ darkTheme: darkTheme.value }, () => { status.textContent = t('Сохранено'); });
   });
+  // An enabled feature may be missing a host it needs, if the host was added
+  // after the user granted access. Ask rather than let it fall back silently.
+  reconcileHostAccess(values);
   for (const key of basicFields) {
     const element = document.getElementById(key);
     if (element.type === "checkbox") element.checked = Boolean(values[key]);

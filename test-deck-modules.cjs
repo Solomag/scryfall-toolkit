@@ -425,6 +425,9 @@ const card = (name, typeLine, id) => ({
       assertEqual(removed, ['entry-scry-one-123'], 'so a card added by mistake goes again');
       assertEqual(buttons[0].textContent, 'Add', 'and the button returns to Add');
 
+      assertEqual(w.document.querySelector('.stk-results-aside').textContent, 'for this deck',
+        'and says the suggestions answer to this deck, not only to the commander');
+
       w.document.querySelector('.modal-dialog-close').dispatchEvent(new w.self.Event('click'));
       assertEqual(w.document.querySelector('.stk-edhrec-panel'), null, 'and the panel closes');
     }
@@ -550,8 +553,9 @@ const card = (name, typeLine, id) => ({
 
       assertEqual([...w.document.querySelectorAll('.stk-results-name')].map(n => n.textContent),
         ['Sol Ring', 'Swords to Plowshares'], 'results come back as a grid of cards');
-      assertEqual(w.document.querySelector('.stk-results-filter'), null,
-        'the search panel has a query box and does not need a second one');
+      assertEqual(w.document.querySelector('.stk-results-aside').textContent,
+        'ran: t:creature id<=wub not:funny',
+        'and shows the query it actually ran, so the checkboxes are on the screen');
       assertEqual([...w.document.querySelectorAll('.stk-results-meta')].map(n => n.textContent),
         ['90%', '25%'], 'each carrying what EDHREC knows about it for this commander');
       assertEqual(w.document.querySelector('.stk-results-more') !== null, true,
@@ -676,8 +680,9 @@ const card = (name, typeLine, id) => ({
       await tick();
       assertEqual([...w.document.querySelectorAll('.stk-results-name')].map(n => n.textContent),
         ['Cankerbloom'], 'the deck\'s own cards are not offered back to it');
-      assertEqual(w.document.querySelector('.stk-results-aside').textContent, '1 already in this deck',
-        'and the reader is told how much was left out');
+      assertEqual(w.document.querySelector('.stk-results-aside').textContent,
+        'EDHREC\'s commander page — not deck specific · 1 already in it',
+        'and the reader is told how much was left out, and which of the two is showing');
     }
 
     console.log('deck-results: the filter speaks Scryfall\'s words');
