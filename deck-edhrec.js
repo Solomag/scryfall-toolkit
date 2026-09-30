@@ -120,6 +120,23 @@
     return cards;
   }
 
+  // The same card EDHREC already saw in this deck is not a suggestion. Their
+  // lists are about a commander, not about this deck, so the deck's own contents
+  // are what is left to check here.
+  const canonical = name => String(name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+  function deckCardNames() {
+    return scryfall.getDeck().then(deck => {
+      const names = new Set();
+      for (const list of Object.values(deck.entries || {})) {
+        for (const entry of (Array.isArray(list) ? list : [])) {
+          if (entry.card_digest && entry.card_digest.name) names.add(canonical(entry.card_digest.name));
+        }
+      }
+      return names;
+    }).catch(() => new Set());
+  }
+
   function openPanel() {
     const panel = buildPanel();
     (document.getElementById('deckbuilder') || document.body).appendChild(panel.overlay);
@@ -137,7 +154,15 @@
           area.message('EDHREC has nothing to suggest for ' + name + '.');
           return;
         }
-        area.setCards(flatten(lists), bridge().request);
+        return deckCardNames().then(owned => {
+          const all = flatten(lists);
+          const fresh = all.filter(card => !owned.has(canonical(card.name)));
+          area.setCards(fresh, bridge().request);
+          const hidden = all.length - fresh.length;
+          if (hidden > 0) {
+            area.note(hidden + ' already in this deck');
+          }
+        });
       });
     }).catch(error => {
       area.message('EDHREC could not be reached. ' + (error && error.message ? error.message : ''));

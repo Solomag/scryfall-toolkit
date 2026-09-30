@@ -179,17 +179,21 @@
 
   // --- the area -------------------------------------------------------------
 
-  function create(host, addFn) {
+  function create(host, addFn, options) {
+    const opts = options || {};
     const bar = el('div', 'stk-results-bar');
 
-    // EDHREC hands over hundreds of cards. Without a way to narrow them the
-    // reader scrolls and hopes; this filters what is already on screen.
+    // Only where there is more on screen than a search already narrowed. The
+    // Scryfall panel has a query box; filtering its results again is a second
+    // box doing the first box's job.
     const filter = document.createElement('input');
-    filter.type = 'text';
-    filter.className = 'stk-results-filter';
-    filter.placeholder = 'Filter these cards…';
-    filter.setAttribute('aria-label', 'Filter these cards');
-    bar.appendChild(filter);
+    if (opts.filter !== false) {
+      filter.type = 'text';
+      filter.className = 'stk-results-filter';
+      filter.placeholder = 'Filter these cards…';
+      filter.setAttribute('aria-label', 'Filter these cards');
+      bar.appendChild(filter);
+    }
 
     const toggle = el('div', 'stk-results-toggle');
     const buttons = {};
@@ -295,6 +299,13 @@
       setView,
       message(text) {
         body.replaceChildren(el('p', 'stk-results-note', text));
+      },
+      // A small line beside the results rather than instead of them: how much
+      // was left out, not a replacement for the list.
+      note(text) {
+        const old = host.querySelector('.stk-results-aside');
+        if (old) old.remove();
+        bar.appendChild(el('span', 'stk-results-aside', text));
       },
       // Scryfall pages its searches. This is the way to ask for the next one.
       showMore(next) {

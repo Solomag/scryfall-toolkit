@@ -545,6 +545,8 @@ const card = (name, typeLine, id) => ({
 
       assertEqual([...w.document.querySelectorAll('.stk-results-name')].map(n => n.textContent),
         ['Sol Ring', 'Swords to Plowshares'], 'results come back as a grid of cards');
+      assertEqual(w.document.querySelector('.stk-results-filter'), null,
+        'the search panel has a query box and does not need a second one');
       assertEqual([...w.document.querySelectorAll('.stk-results-meta')].map(n => n.textContent),
         ['90%', '25%'], 'each carrying what EDHREC knows about it for this commander');
       assertEqual(w.document.querySelector('.stk-results-more') !== null, true,
@@ -635,6 +637,42 @@ const card = (name, typeLine, id) => ({
         'the privacy policy says names go to EDHREC only when that feature is on');
       assertEqual([...w.document.querySelectorAll('.stk-results-meta')].length, 0,
         'and a card without that data simply has no number');
+    }
+
+    console.log('deck-edhrec: a card already in the deck is not a suggestion');
+    {
+      const w = makeWorld({
+        deck: {
+          id: 'deck-8e',
+          sections: { primary: ['commanders', 'nonlands'], secondary: [] },
+          entries: {
+            commanders: [{ id: 'c1', count: 1, section: 'commanders', raw_text: true,
+              card_digest: { name: 'Atraxa, Praetors Voice', type_line: 'Legendary Creature — Phyrexian Angel' } }],
+            nonlands: [{ id: 'n1', count: 1, section: 'nonlands', raw_text: true,
+              card_digest: { name: 'Evolution Sage', type_line: 'Creature — Human Druid' } }]
+          }
+        },
+        html: `
+          <div class="deckbuilder-toolbar"><div class="deckbuilder-toolbar-items-right"></div></div>
+          <div class="deckbuilder-section"><h6 class="deckbuilder-section-title">Commanders</h6></div>
+          <div id="deckbuilder"></div>`
+      });
+      w.boot();
+      w.self.STK_BRIDGE = {
+        request: name => name === 'edhrecCommander'
+          ? Promise.resolve([{ header: 'Creatures', cards: [
+              { id: 'a1', name: 'Evolution Sage', numDecks: 9, potentialDecks: 10 },
+              { id: 'a2', name: 'Cankerbloom', numDecks: 5, potentialDecks: 10 }
+            ] }])
+          : Promise.resolve([])
+      };
+      w.self.STK_DECK_EDHREC.apply({ edhrecSuggestions: true });
+      w.document.getElementById('stk-edhrec-button').dispatchEvent(new w.self.Event('click'));
+      await tick();
+      assertEqual([...w.document.querySelectorAll('.stk-results-name')].map(n => n.textContent),
+        ['Cankerbloom'], 'the deck\'s own cards are not offered back to it');
+      assertEqual(w.document.querySelector('.stk-results-aside').textContent, '1 already in this deck',
+        'and the reader is told how much was left out');
     }
 
     summary('test-deck-modules');

@@ -694,6 +694,7 @@ html.stk-dark .prints-table tbody td>span:not([class*="currency-"]):not(.pillbox
 .modal-dialog-content.stk-edhrec-panel,.modal-dialog-content.stk-search-panel{max-height:none;overflow-y:visible;padding:0;position:relative}
 
 .stk-results-bar{display:flex;align-items:center;gap:12px;padding:10px 14px 2px}
+.stk-results-aside{flex:0 0 auto;color:#8f8a99;font-size:11px}
 .stk-results-filter{flex:1 1 auto;min-width:0;max-width:280px;font-size:13px;padding:4px 8px;
   background-color:var(--stk-panel-2);color:var(--stk-ink);border:1px solid #4b4d52;border-radius:3px}
 .stk-results-toggle{display:flex;gap:0}

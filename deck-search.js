@@ -187,7 +187,7 @@
   function openPanel() {
     const panel = buildPanel();
     (document.getElementById('deckbuilder') || document.body).appendChild(panel.overlay);
-    const area = results.create(panel.body, addCard);
+    const area = results.create(panel.body, addCard, { filter: false });
 
     // The colour restriction needs to know what the commander's colours are,
     // which is a lookup of its own. Without it the checkbox quietly does
