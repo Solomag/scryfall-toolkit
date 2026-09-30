@@ -296,8 +296,12 @@ in a table column header, so the column carries **their symbol** — the same ar
 out of the same published file, with the wordmark and the empty margin around it dropped
 and nothing else changed. Two versions are bundled: the black one for light backgrounds
 and the white one, which they publish for dark ones. Neither is redrawn, recoloured or
-rearranged. On the dark theme the white file's black backing is blended away rather than
-the artwork being altered.
+rearranged.
+
+Both are stored here as PNG with an alpha channel. The black one already was; the white
+one they distribute as a palette PNG whose 256 entries carry their own alpha, and it is
+re-encoded here to plain RGBA with the same pixels in the same places. That is a change
+of container, not of artwork.
 
 Nothing here suggests Cardmarket endorses, sponsors or is affiliated with this project,
 and the opening of this document says so in as many words. The logo marks which column is

@@ -88,12 +88,14 @@
 .prints-table th .stk-price-heading{display:inline-flex;align-items:center;justify-content:flex-end;gap:4px;white-space:nowrap;vertical-align:middle;line-height:15px}
 .prints-table th .stk-price-heading img{display:block;flex:none;vertical-align:middle}
 /* Cardmarket's symbol, not their horizontal lockup: a wordmark is a wide thing
-   and cannot sit in a column header. The dark variant carries its own black
-   backing, which the theme blends away instead of the artwork being recoloured. */
-.prints-table th .stk-price-heading img.stk-brand-logo{height:15px;width:auto}
+   and cannot sit in a column header. Both variants are their own published
+   artwork on its own transparency — the white one is a palette PNG with a tRNS
+   chunk, so it composites onto the dark page as it stands and needs no blending
+   trick. Sized up because the mark carries fine detail. */
+.prints-table th .stk-price-heading img.stk-brand-logo{height:17px;width:auto}
 .prints-table th .stk-price-heading img.stk-on-dark{display:none}
 html.stk-dark .prints-table th .stk-price-heading img.stk-on-light{display:none}
-html.stk-dark .prints-table th .stk-price-heading img.stk-on-dark{display:block;mix-blend-mode:screen}
+html.stk-dark .prints-table th .stk-price-heading img.stk-on-dark{display:block}
 /* The three visible gaps around the panel are 22px on the user's 125% zoom,
    which is 17.6 CSS px: 12px above the panel, 15px under its top border and
    16.5px of panel padding below the last line. The native card-text padding is

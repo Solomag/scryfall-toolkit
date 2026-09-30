@@ -191,11 +191,15 @@
     }
     if (!wired && config.edhrecSuggestions) {
       wired = true;
-      // The toolbar is only a commander deck's toolbar once a commander section
-      // is in the page, so that is what this waits for.
-      scryfall.elementReady('.deckbuilder-section-title', () => {
-        if (isCommanderDeck()) addButton();
-      });
+      // Two things have to be true before the button can go anywhere: the deck
+      // has a commander section, and the toolbar is on the page. They arrive in
+      // either order, so both are waited for and the attempt is idempotent —
+      // otherwise the first one to show up finds the other missing and the
+      // button is never placed.
+      const tryAdd = () => { if (isCommanderDeck()) addButton(); };
+      scryfall.elementReady('.deckbuilder-section-title', tryAdd);
+      scryfall.elementReady('.deckbuilder-toolbar', tryAdd);
+      scryfall.elementReady('.deckbuilder-toolbar-items-right', tryAdd);
     }
     return { applied: wired, problems: scryfall.status().problems };
   }

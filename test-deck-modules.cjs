@@ -567,6 +567,43 @@ const card = (name, typeLine, id) => ({
         'the checkbox hides rather than silently doing nothing');
     }
 
+    console.log('deck-edhrec: the button waits for the toolbar instead of giving up on it');
+    {
+      // A commander section and a toolbar do not arrive together. Whichever
+      // comes first has to leave the button for the other to place.
+      const w = makeWorld({
+        deck: {
+          id: 'deck-8c',
+          sections: { primary: ['commanders', 'nonlands'], secondary: [] },
+          entries: {
+            commanders: [{ id: 'c1', count: 1, section: 'commanders', raw_text: true,
+              card_digest: { name: 'Atraxa, Praetors Voice', type_line: 'Legendary Creature — Phyrexian Angel' } }],
+            nonlands: []
+          }
+        },
+        html: '<div class="deckbuilder-section"><h6 class="deckbuilder-section-title">Commanders</h6></div>'
+      });
+      w.boot();
+      w.self.STK_BRIDGE = { request: () => Promise.resolve([]) };
+      w.self.STK_DECK_EDHREC.apply({ edhrecSuggestions: true });
+      assertEqual(w.document.getElementById('stk-edhrec-button'), null,
+        'with no toolbar yet there is nowhere to put it');
+
+      const host = w.document.createElement('div');
+      host.className = 'deckbuilder-toolbar-items-right';
+      const toolbar = w.document.createElement('div');
+      toolbar.className = 'deckbuilder-toolbar';
+      toolbar.appendChild(host);
+      w.document.body.appendChild(toolbar);
+      w.self.STK_DECK_SCRYFALL.rescanElements();
+      assert(w.document.getElementById('stk-edhrec-button'),
+        'and the button lands once the toolbar shows up');
+
+      w.self.STK_DECK_SCRYFALL.rescanElements();
+      assertEqual(w.document.querySelectorAll('#stk-edhrec-button').length, 1,
+        'without a second button appearing on the next sweep');
+    }
+
     summary('test-deck-modules');
     process.exit(0);
   } catch (error) {

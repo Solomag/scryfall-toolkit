@@ -267,6 +267,10 @@
     report: report,
     install: addHooks,
     elementReady: elementReady,
+    // The deck editor builds itself progressively. A MutationObserver is the
+    // normal trigger for that; this is the same sweep by hand, which is what the
+    // tests use to stand in for markup that arrives later.
+    rescanElements: checkWaiting,
     getDeck: getDeck,
     updateEntry: updateEntry,
     addCard: addCard,

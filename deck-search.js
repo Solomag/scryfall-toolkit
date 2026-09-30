@@ -234,7 +234,10 @@
     }
     if (!wired && config.deckSearch) {
       wired = true;
+      // Either of these can land first; adding the button is idempotent, so
+      // both are waited for rather than guessing which comes first.
       scryfall.elementReady('.deckbuilder-toolbar', addButton);
+      scryfall.elementReady('.deckbuilder-toolbar-items-right', addButton);
     }
     return { applied: wired, problems: scryfall.status().problems };
   }
