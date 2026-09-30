@@ -134,6 +134,14 @@
     return query.trim();
   }
 
+  // The background worker answers in an envelope — {ok, data} or {ok, error} —
+  // and the bridge unwraps it. Taking either shape here means the two cannot get
+  // out of step and quietly show "nothing found" again.
+  function unwrap(result) {
+    return result && typeof result === 'object' && !Array.isArray(result) && 'data' in result
+      ? result.data : result;
+  }
+
   function runSearch(panel, page) {
     const query = buildQuery(panel);
     if (!query) {
@@ -142,8 +150,9 @@
     }
     note(panel.results, page > 1 ? 'Loading more…' : 'Searching…');
 
-    bridge().request('scryfallSearch', { query: query, page: page }).then(result => {
-      const cards = (result && result.cards) || [];
+    bridge().request('scryfallSearch', { query: query, page: page }).then(reply => {
+      const result = unwrap(reply) || {};
+      const cards = result.cards || [];
       if (!cards.length) {
         note(panel.results, page > 1 ? 'That is everything Scryfall has.' : 'Nothing found.');
         return;

@@ -19,8 +19,11 @@ Last updated 2026-09-29.
 
 ### Check the deck editor modules in a live deck editor
 
-All four Shambleshark deck modules are now ported. They are tested against a stand-in for
-`window.Scryfall` and `window.ScryfallAPI`. What that cannot cover is whether Scryfall's
+Three of the four Shambleshark deck modules are shipped. The fourth, the card preview on
+hover, was ported and then removed: it covered the deck with Scryfall's tooltip and the
+site already shows a card preview on hover, so it made things worse and added nothing.
+The three that remain are tested against a stand-in for `window.Scryfall` and
+`window.ScryfallAPI`. What that cannot cover is whether Scryfall's
 internals are still shaped the way Shambleshark found them in 2023. Until someone opens a
 deck, turns a setting on and uses them, all four stay switched off.
 

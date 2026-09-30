@@ -50,13 +50,11 @@
   function reportStatus(extra) {
     const adapter = self.STK_DECK_SCRYFALL;
     const cleanup = self.STK_DECK_CLEANUP;
-    const preview = self.STK_DECK_CARD_PREVIEW;
     const edhrec = self.STK_DECK_EDHREC;
     const search = self.STK_DECK_SEARCH;
     post('status', Object.assign({
       wired: Boolean(adapter),
       cleanUp: cleanup ? cleanup.status().applied : false,
-      cardPreview: preview ? preview.status().applied : false,
       edhrecSuggestions: edhrec ? edhrec.status().applied : false,
       deckSearch: search ? search.status().applied : false,
       scryfall: adapter ? adapter.status() : null
@@ -67,11 +65,10 @@
     const s = settings || {};
     const wantCleanUp = Boolean(s.cleanUpLandsInSingleton) ||
       Boolean(s.sortEntriesPrimary && s.sortEntriesPrimary !== 'none');
-    const wantPreview = Boolean(s.cardPreviewOnHover);
     const wantEdhrec = Boolean(s.edhrecSuggestions);
     const wantSearch = Boolean(s.deckSearch);
 
-    if (!wantCleanUp && !wantPreview && !wantEdhrec && !wantSearch) {
+    if (!wantCleanUp && !wantEdhrec && !wantSearch) {
       // Nothing is on. The hooks are deliberately not installed: a setting
       // that is off should leave Scryfall's own objects alone.
       reportStatus({ off: true });
@@ -86,7 +83,6 @@
 
     adapter.install();
     if (wantCleanUp && self.STK_DECK_CLEANUP) self.STK_DECK_CLEANUP.apply(s);
-    if (wantPreview && self.STK_DECK_CARD_PREVIEW) self.STK_DECK_CARD_PREVIEW.apply(s);
     if (wantEdhrec && self.STK_DECK_EDHREC) self.STK_DECK_EDHREC.apply(s);
     if (wantSearch && self.STK_DECK_SEARCH) self.STK_DECK_SEARCH.apply(s);
     reportStatus();

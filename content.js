@@ -24,7 +24,7 @@
     formatOrder: null, formatVisibility: null,
     deckCleanUpImprover: false, cleanUpLandsInSingleton: true,
     sortEntriesPrimary: 'none', insertSortingHeadings: true,
-    cardPreviewOnHover: false, edhrecSuggestions: false, deckSearch: false,
+    edhrecSuggestions: false, deckSearch: false,
     exportFormat: "moxfield", cards: null
   };
   const settings = await chrome.storage.local.get(defaults);
@@ -34,8 +34,7 @@
   // in an isolated world that can see neither. Only this side can read the
   // settings. So the two meet at the window itself.
   const deckSettingsNow = () => {
-    const wanted = settings.deckCleanUpImprover || settings.cardPreviewOnHover ||
-      settings.edhrecSuggestions || settings.deckSearch;
+    const wanted = settings.deckCleanUpImprover || settings.edhrecSuggestions || settings.deckSearch;
     if (!wanted) return {};
     const value = {};
     if (settings.deckCleanUpImprover) {
@@ -43,7 +42,6 @@
       value.sortEntriesPrimary = settings.sortEntriesPrimary;
       value.insertSortingHeadings = settings.insertSortingHeadings;
     }
-    if (settings.cardPreviewOnHover) value.cardPreviewOnHover = true;
     if (settings.edhrecSuggestions) value.edhrecSuggestions = true;
     if (settings.deckSearch) value.deckSearch = true;
     return value;
@@ -77,14 +75,20 @@
       }, '*');
       if (!/^[a-zA-Z]+$/.test(String(name))) return reply(false, 'Unknown request');
       chrome.runtime.sendMessage({ type: name, ...(value || {}) })
-        .then(result => reply(true, result))
+        .then(result => {
+          // The worker answers in an envelope: {ok, data} or {ok, error}. The
+          // page modules want the data or the reason, not the wrapper — leaving
+          // it on made every one of them read an object where it expected a list.
+          if (result && result.ok === false) return reply(false, result.error);
+          reply(true, result && typeof result === 'object' && 'data' in result ? result.data : result);
+        })
         .catch(error => reply(false, error));
     }
   });
   sendDeckSettings();
   // Turning the feature on or off should not need a page reload.
   chrome.storage.onChanged.addListener(changes => {
-    const keys = ['deckCleanUpImprover', 'cleanUpLandsInSingleton', 'sortEntriesPrimary', 'insertSortingHeadings', 'cardPreviewOnHover', 'edhrecSuggestions', 'deckSearch'];
+    const keys = ['deckCleanUpImprover', 'cleanUpLandsInSingleton', 'sortEntriesPrimary', 'insertSortingHeadings', 'edhrecSuggestions', 'deckSearch'];
     if (!keys.some(key => changes[key])) return;
     keys.forEach(key => { if (changes[key]) settings[key] = changes[key].newValue; });
     sendDeckSettings();

@@ -16,13 +16,12 @@ Nothing yet.
 
 The EUR column is now headed by Cardmarket's own symbol, cropped from the logo files they
 publish for download and used on their terms. Before that the slot held a glyph lifted
-from Scryfall's page markup, which was nobody's to lift. And all four of Shambleshark's
-deck modules are ported — the clean up improver, the card preview on hover, EDHREC
-suggestions and Scryfall search. Two were written rather than copied: the EDHREC one goes
+from Scryfall's page markup, which was nobody's to lift. And three of Shambleshark's deck
+modules are shipped — the clean up improver, EDHREC suggestions and Scryfall search. Two were written rather than copied: the EDHREC one goes
 to their published JSON instead of Shambleshark's hidden iframe, and the search goes
-through this extension's queue instead of out of the page. All four need Scryfall's own
+through this extension's queue instead of out of the page. All three need Scryfall's own
 page world rather than the page markup, so the extension has a script there, an adapter
-over Scryfall's internals and a bridge back to the content script. All four ship switched
+over Scryfall's internals and a bridge back to the content script. All three ship switched
 off, because none has been checked against a live deck editor.
 
 ## [v0.51.0](https://github.com/Solomag/scryfall-toolkit/releases/tag/v0.51.0) — 2026-09-28

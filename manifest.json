@@ -76,7 +76,6 @@
         "deck-tools.js",
         "deck-scryfall.js",
         "deck-clean-up.js",
-        "deck-card-preview.js",
         "deck-edhrec.js",
         "deck-search.js",
         "page.js"

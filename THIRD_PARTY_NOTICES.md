@@ -113,14 +113,15 @@ identifiers (`CardNicknameDisplay`, `createViewMoreTagsRow`, `TaggerIcon`,
 `TaggerLookupData`, `elementReady`, …) appear in this repository, and the tag panels are
 original code.
 
-**Behaviour ported — the deck editor modules.** All four of upstream's deck-builder
-features are here: the clean up improver (`scryfall-embed/modify-clean-up`,
-`lib/card-parser`, `lib/deck-parser`), the card preview on hover (`card-input-modifier`,
-`lib/ui-elements/card-tooltip`), the EDHREC suggestions and the Scryfall search.
+**Behaviour ported — the deck editor modules.** Three of upstream's deck-builder features
+are here: the clean up improver (`scryfall-embed/modify-clean-up`, `lib/card-parser`,
+`lib/deck-parser`), the EDHREC suggestions and the Scryfall search. A fourth,
+`card-input-modifier` with `lib/ui-elements/card-tooltip`, was ported and then removed
+before release — see the note below.
 `deck-scryfall.js` stands in for upstream's `scryfall-globals.ts`, and `page.js` for its
 `scryfall-embed` entry point and framebus wiring.
 
-Two of the four were written rather than copied, because what upstream does is not
+Two of the three were written rather than copied, because what upstream does is not
 something this project will do. Its EDHREC suggestions reach EDHREC by parking a hidden
 iframe on their domain and asking it for recommendations; this reads EDHREC's published
 JSON instead, through the queue and the rate in section 7. Its Scryfall search calls the
@@ -137,6 +138,14 @@ against a live deck editor.
 
 Upstream's TypeScript types, webpack aliases and `framebus` dependency are not used, and
 no upstream file is present verbatim.
+
+**A fourth module was ported and then removed.** `card-input-modifier`, with
+`lib/ui-elements/card-tooltip`, showed the card's image when hovering a row of the deck
+editor. It was written, tested and turned on, and it did not survive that: Scryfall's own
+tooltip came up over the deck and hid it, and the site already shows a card on hover
+elsewhere, so the feature made the editor worse and added nothing the page did not do. It
+was removed before release rather than shipped switched off. No code from it is in the
+package.
 
 ## 4. MoxTags — data copied verbatim
 

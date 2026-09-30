@@ -372,6 +372,7 @@ Scryfall knows nothing about.
 | `.menu` | 1 |
 | `.message` | 1 |
 | `.modal-dialog-close` | 1 |
+| `.modal-dialog-content` | 1 |
 | `.modal-dialog-grid-choice` | 1 |
 | `.modal-dialog-grid-choice-title` | 1 |
 | `.negative` | 1 |
@@ -447,8 +448,12 @@ name itself, without the leading `.` or `#`.
 | `deck-list-entry` | class | content.js, theme.js |
 | `deck-list-entry-axial-data` | class | content.js |
 | `deck-list-entry-name` | class | content.js |
+| `deckbuilder-section-title` | class | deck-edhrec.js |
 | `deckbuilder-section-title-bar` | class | deck-clean-up.js |
+| `deckbuilder-toolbar` | class | deck-edhrec.js, deck-search.js |
+| `deckbuilder-toolbar-items-right` | class | deck-edhrec.js, deck-search.js |
 | `marketing-features-item-image` | class | theme.js |
+| `modal-dialog-close` | class | deck-edhrec.js, deck-search.js |
 | `prints` | class | content.js |
 | `prints-all` | class | content.js, theme.js |
 | `prints-info-section` | class | content.js |
@@ -462,7 +467,7 @@ name itself, without the leading `.` or `#`.
 | `toolbox-disclaimer` | class | content.js |
 | `toolbox-links` | class | content.js |
 | `[data-entry]` | attribute | deck-clean-up.js |
-| `card-tooltip` | id | deck-card-preview.js |
+| `deckbuilder` | id | deck-edhrec.js, deck-search.js |
 | `header` | id | theme.js |
 | `header-search-field` | id | content.js, theme.js |
 | `js-checklist` | id | content.js |
@@ -472,5 +477,5 @@ name itself, without the leading `.` or `#`.
 
 ---
 
-Total: **357** Scryfall class names.
+Total: **358** Scryfall class names.
 

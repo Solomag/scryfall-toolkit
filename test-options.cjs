@@ -38,7 +38,7 @@ const REQUIRED_IDS = [
   'legalities', 'exportFormat', 'taggerSearchLinks', 'cardSearchLinks',
   'cardNicknames', 'deckNoPrices', 'stackedDeckCards', 'deckTokens',
   'deckCleanUpImprover', 'cleanUpLandsInSingleton', 'sortEntriesPrimary',
-  'insertSortingHeadings', 'cardPreviewOnHover', 'edhrecSuggestions', 'deckSearch',
+  'insertSortingHeadings', 'edhrecSuggestions', 'deckSearch',
   'deckModuleStatus',
   'setPlatformsAll', 'setPlatformsPaper', 'setPlatformsArena', 'setPlatformsMtgo',
   'printGrouping', 'printFoldGroups', 'printFullPageLink'

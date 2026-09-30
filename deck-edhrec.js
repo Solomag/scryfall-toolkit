@@ -141,6 +141,14 @@
 
   // --- wiring ---------------------------------------------------------------
 
+  // The background worker answers in an envelope — {ok, data} or {ok, error} —
+  // and the bridge unwraps it. Taking either shape here means the two cannot get
+  // out of step and quietly show "nothing found" again.
+  function unwrap(result) {
+    return result && typeof result === 'object' && !Array.isArray(result) && 'data' in result
+      ? result.data : result;
+  }
+
   function openPanel() {
     const panel = buildPanel();
     (document.getElementById('deckbuilder') || document.body).appendChild(panel.overlay);
@@ -151,7 +159,8 @@
         note(panel.body, 'This deck has no commander to ask about.');
         return;
       }
-      return bridge().request('edhrecCommander', { name: name }).then(lists => {
+      return bridge().request('edhrecCommander', { name: name }).then(reply => {
+        const lists = unwrap(reply);
         if (!Array.isArray(lists) || !lists.length) {
           note(panel.body, 'EDHREC has nothing to suggest for ' + name + '.');
           return;

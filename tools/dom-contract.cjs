@@ -87,7 +87,7 @@ out.push('');
 out.push('| Name | Kind | Used by |');
 out.push('| --- | --- | --- |');
 
-const SCRIPTS = ['content.js', 'deck-clean-up.js', 'deck-card-preview.js', 'deck-tools.js', 'deck-scryfall.js', 'theme.js'];
+const SCRIPTS = ['content.js', 'deck-clean-up.js', 'deck-edhrec.js', 'deck-search.js', 'deck-tools.js', 'deck-scryfall.js', 'theme.js'];
 // Names this project invents are not Scryfall's to rename.
 const OUR_PREFIXES = ['stk-', 'cleanup-improver__', 'modify-cleanup-', 'data-heading-'];
 const isOurs = name => OUR_PREFIXES.some(prefix => name.replace(/^[.#[\]]+/, '').startsWith(prefix));

@@ -4,7 +4,7 @@ Everything here is written from the shipped code, so that the answers given in t
 console match what the extension actually does. Where a field needs a decision from the
 developer account, it says so.
 
-**Before submitting.** The four deck editor tools described below have not yet been checked
+**Before submitting.** The deck editor tools described below have not yet been checked
 in a live deck editor — they run through Scryfall's application internals rather than the
 page markup, and a stand-in cannot prove those internals are still as expected. If they do
 not hold up when tried, cut the "In the deck editor" paragraph and the last row of the data
@@ -49,10 +49,9 @@ table along with the switches; the rest of this document stands either way.
 > personal access token. Finish badges, card nicknames, type and mana search links, set and
 > printing filters, a No Prices mode and a token list on deck pages.
 >
-> **In the deck editor.** Four more optional tools, all off by default: a Clean Up button
-> that sorts the deck and puts lands back in their column, a card image that follows your
-> pointer along a row, EDHREC's own card lists for your commander, and a Scryfall search
-> that adds cards without leaving the editor.
+> **In the deck editor.** Three more optional tools, all off by default: a Clean Up button
+> that sorts the deck and puts lands back in their column, EDHREC's own card lists for your
+> commander, and a Scryfall search that adds cards without leaving the editor.
 >
 > **Your data stays yours.** Settings and the clipboard live in your browser. There is no
 > account, no analytics and no server of ours. The extension asks Scryfall, Scryfall

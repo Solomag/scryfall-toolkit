@@ -686,7 +686,10 @@ html.stk-dark .prints-table tbody td>span:not([class*="currency-"]):not(.pillbox
 /* --- the EDHREC suggestions panel ----------------------------------------- */
 
 /* The panel is Scryfall's own modal markup, so it opens and closes the way
-   their dialogs do. Only the contents are ours. */
+   their dialogs do. Only the contents are ours. Scryfall's .modal-dialog-content
+   is `overflow-y: scroll`, which puts a scrollbar on a panel whether it needs
+   one or not; these scroll where they actually overflow. */
+.modal-dialog-content.stk-edhrec-panel,.modal-dialog-content.stk-search-panel{max-height:none;overflow-y:visible;padding:0}
 .stk-edhrec-body{max-height:65vh;overflow-y:auto;padding:10px 14px}
 .stk-edhrec-note{color:#8f8a99;font-size:13px;margin:6px 0}
 .stk-edhrec-list{margin:0 0 14px}
