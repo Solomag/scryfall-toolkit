@@ -67,14 +67,21 @@ requests, and so does each service named below.
 
 - When you turn on the EDHREC feature, the extension requests
   `json.edhrec.com/pages/cards/<card-name>.json` for the card on the page you are viewing.
-- When you turn on EDHREC suggestions and click the button in the deck editor, it requests
-  `json.edhrec.com/pages/commanders/<commander-name>.json` for the commander of the deck
-  you are editing. **This is the one place the extension tells a third party something
-  about your deck.** It is the commander's name and nothing else — not the deck list, not
-  the cards in it.
-- Sent: the card name or the commander name, as part of the URL. This reveals which card
-  you are looking at, or whose deck you are editing, and EDHREC can see your IP address
-  like any website can. Nothing else about you or your collection is sent.
+- When you turn on EDHREC suggestions and click the button in the deck editor, it makes
+  one request of two kinds:
+  - `json.edhrec.com/pages/commanders/<commander-name>.json`, the commander's page;
+  - `edhrec.com/api/recs/`, which is the endpoint EDHREC's own site posts to when it
+    suggests cards for a deck. **This one sends the whole deck list** — every card in it
+    with its count, and the commanders that lead it. Not your account, not your other
+    decks, not your collection: this deck, by name and count, and nothing more.
+- That second request is what makes the suggestions answer to your deck rather than to
+  your commander alone. It is also the largest thing this extension ever sends anywhere.
+  It is off unless you turn the feature on, and turning it off stops it.
+- **EDHREC does not publish that endpoint.** It is the one their own site uses, it has no
+  documented contract, and it may change or disappear without notice. If it does, the
+  panel falls back to their published commander page rather than failing.
+- Sent: the card name or the commander name, as part of the URL, and — for suggestions —
+  the deck list as described above. EDHREC can see your IP address like any website can.
 - Both requests go through one queue, at most one a second, and are cached. The feature is
   off unless you turn it on.
 - The clickable "EDHREC" link on the page is a normal link to `edhrec.com/cards/<card-name>`.

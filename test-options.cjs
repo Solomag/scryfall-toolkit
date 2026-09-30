@@ -118,10 +118,11 @@ function licenceAndPrivacyTest() {
   assert(/json\.edhrec\.com/.test(privacy) &&
     /card name or the commander name, as part of the URL/i.test(privacy),
     'the policy says EDHREC receives the card name');
-  // Suggestions are the one feature that tells a third party something about a
-  // deck, so it is named as such rather than buried in a general statement.
-  assert(/commander's name and nothing else/i.test(privacy),
-    'and that EDHREC suggestions send the commander name, and only that');
+  // Suggestions are the one feature that sends a deck rather than one card, so
+  // the policy names the request and what it carries instead of a general
+  // statement that would understate it.
+  assert(/edhrec\.com\/api\/recs\//.test(privacy) && /the whole deck list/i.test(privacy),
+    'and that EDHREC suggestions send the deck list, and say which request carries it');
   assert(background.includes('api.cardtrader.com'),
     'the code really does call CardTrader');
   assert(/Authorization/.test(background) && /Bearer/.test(background),

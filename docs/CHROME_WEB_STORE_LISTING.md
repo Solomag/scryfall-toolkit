@@ -145,7 +145,7 @@ here.
 
 | Category | What the extension actually sends | To whom |
 | --- | --- | --- |
-| **Website content** | the card name of the page being viewed, and — only for the EDHREC suggestions feature in the deck editor — the name of the deck's commander, each as part of a request URL. The deck list itself is never sent | `json.edhrec.com`, when the EDHREC feature is enabled |
+| **Website content** | the card name of the page being viewed, and — for the EDHREC suggestions feature in the deck editor — the **whole deck list**, every card with its count plus the commanders that lead it, posted to the endpoint EDHREC's own site uses to suggest cards for a deck. Not the account, not other decks, not the collection | `edhrec.com/api/recs/` and `json.edhrec.com`, when the EDHREC feature is enabled |
 | **Website content** | Scryfall card UUIDs, Oracle and illustration IDs, set codes, collector numbers, and search queries — both the extension's own, such as `oracleid:…`, and whatever the user types into the deck editor's search box | `api.scryfall.com`, `tagger.scryfall.com` |
 | **Authentication info** | the user's CardTrader personal access token, in an `Authorization: Bearer` header | `api.cardtrader.com` only, when the user enables CardTrader and stores a token |
 | **User activity** | which cards the user is viewing, as expressed by the identifiers and queries above | the four services named here |

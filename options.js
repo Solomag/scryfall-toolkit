@@ -33,6 +33,10 @@ const OPTIONAL_HOSTS = {
   edhrecUsage: ['https://json.edhrec.com/*'],
   edhrecSalt: ['https://json.edhrec.com/*'],
   edhrecLink: ['https://json.edhrec.com/*'],
+  // Suggestions need both: the commander page comes from their public JSON, and
+  // the recommendations for a deck come from the endpoint their own site posts
+  // to. The deck list is what that request carries.
+  edhrecSuggestions: ['https://json.edhrec.com/*', 'https://edhrec.com/*'],
   cardtraderPrices: ['https://api.cardtrader.com/*']
 };
 // The hosts each optional feature needs, and what turns them on. euroPriceSources

@@ -163,33 +163,46 @@ function edhrecCommanderLists(body) {
   })).filter(list => list.cards.length > 0);
 }
 
-function edhrecFetch(path) {
-  const running = edhrecInFlight.get(path);
+// Everything that goes to EDHREC goes through this one queue, whatever shape it
+// takes: a card's page, a commander's page, or a deck posted for
+// recommendations. Between them they cannot outrun the rate their policy asks
+// for, and one in flight is not asked for twice.
+function edhrecRun(key, task) {
+  const running = edhrecInFlight.get(key);
   if (running) return running;
-  const run = edhrecQueue.then(() => edhrecRoundTrip(path));
+  const run = edhrecQueue.then(() => edhrecWaitTurn()).then(task);
   edhrecQueue = run.then(() => {}, () => {});
-  edhrecInFlight.set(path, run);
-  run.then(() => {}, () => {}).then(() => { edhrecInFlight.delete(path); });
+  edhrecInFlight.set(key, run);
+  run.then(() => {}, () => {}).then(() => { edhrecInFlight.delete(key); });
   return run;
 }
 
-// `path` is what follows /pages/ on json.edhrec.com — `cards/<slug>` for a card,
-// `commanders/<slug>` for a commander's page. Both are the same public JSON
-// family and both go through this one queue, so a card lookup and a commander
-// lookup can never outrun the rate EDHREC asks for.
-async function edhrecRoundTrip(path) {
+function edhrecFetch(path) {
+  return edhrecRun('GET:' + path, () => edhrecRoundTrip(path));
+}
+
+// What EDHREC themselves make of a deck. This is the endpoint their own site
+// posts to, and the request carries the deck list: which cards are in it, and
+// which commanders lead it. It is not an interface they publish, so it is named
+// as such wherever this project talks about it and it is allowed to stop
+// working without notice.
+function edhrecRecs(commanders, cards) {
+  const key = 'RECS:' + commanders.join('|') + '#' + cards.length;
+  return edhrecRun(key, () => edhrecRecsRoundTrip(commanders, cards));
+}
+
+// One request a second at most. The slot is taken before the wait, not after.
+// Taking it afterwards is what let three callers sleep into the same second and
+// fetch together.
+//
+// The extra 20 ms is deliberate and is not slack for the tests. EDHREC's rule
+// is a ceiling, so erring slow is the right side to err on: a timer that wakes a
+// hair early or a wall clock that steps between two Date.now() calls must never
+// turn "one a second" into "just under one a second".
+const EDHREC_MIN_GAP_MS = 1020;
+
+async function edhrecWaitTurn() {
   await loadEdhrecState();
-  // The slot is taken before the wait, not after. Taking it afterwards is what
-  // let three callers sleep into the same second and fetch together.
-  // One request a second at most. The slot is taken before the wait, not after.
-  // Taking it afterwards is what let three callers sleep into the same second
-  // and fetch together.
-  //
-  // The extra 20 ms is deliberate and is not slack for the tests. EDHREC's rule
-  // is a ceiling, so erring slow is the right side to err on: a timer that wakes
-  // a hair early or a wall clock that steps between two Date.now() calls must
-  // never turn "one a second" into "just under one a second".
-  const EDHREC_MIN_GAP_MS = 1020;
   for (;;) {
     const now = Date.now();
     const waitUntil = Math.max(edhrecState.nextRequest, edhrecState.heldUntil);
@@ -200,7 +213,47 @@ async function edhrecRoundTrip(path) {
   }
   edhrecState.nextRequest = Date.now() + EDHREC_MIN_GAP_MS;
   saveEdhrecState();
+}
 
+// What EDHREC makes of a deck. Their own site posts here, and the answer is
+// what their suggestions panel shows. The response is passed through as it
+// stands apart from the errors, which become a message rather than a stack.
+async function edhrecRecsRoundTrip(commanders, cards) {
+  let response;
+  try {
+    response = await fetch('https://edhrec.com/api/recs/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      credentials: 'omit',
+      body: JSON.stringify({ commanders: commanders, cards: cards, name: '' })
+    });
+  } catch (error) {
+    edhrecPenalty();
+    throw error;
+  }
+  if (response.status === 429) {
+    edhrecPenalty();
+    throw new Error('EDHREC HTTP 429');
+  }
+  if (!response.ok) {
+    edhrecPenalty();
+    throw new Error('EDHREC HTTP ' + response.status);
+  }
+  edhrecState.failures = 0;
+  const body = await response.json();
+  const errors = Array.isArray(body && body.errors) ? body.errors : [];
+  if (errors.length) throw new Error(String(errors[0] || 'EDHREC could not suggest'));
+  return {
+    inRecs: Array.isArray(body && body.inRecs) ? body.inRecs : [],
+    outRecs: Array.isArray(body && body.outRecs) ? body.outRecs : []
+  };
+}
+
+// `path` is what follows /pages/ on json.edhrec.com — `cards/<slug>` for a card,
+// `commanders/<slug>` for a commander's page. Both are the same public JSON
+// family and both go through this one queue, so a card lookup and a commander
+// lookup can never outrun the rate EDHREC asks for.
+async function edhrecRoundTrip(path) {
   let response;
   try {
     response = await fetch(`https://json.edhrec.com/pages/${path}.json`,
@@ -305,6 +358,16 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
         finishes: card.finishes || [], promoTypes: card.promo_types || []
       }]));
     }
+    if (message.type === "cardBySet") {
+      // EDHREC's suggestions name a printing rather than a Scryfall id; this is
+      // the turn of the handle that finds it. Asked once per card the reader
+      // actually adds, not for the whole list.
+      const set = String(message.set || "").toLowerCase();
+      const number = String(message.number || "").trim();
+      if (!/^[a-z0-9_-]{1,16}$/.test(set) || !/^[a-z0-9★-]{1,24}$/.test(number)) throw new Error("Invalid printing");
+      const card = await getJSON(`https://api.scryfall.com/cards/${encodeURIComponent(set)}/${encodeURIComponent(number)}`);
+      return { id: /^[0-9a-f-]{36}$/.test(card.id || "") ? card.id : "" };
+    }
     if (message.type === "cardImages") {
       // Card art and the type line for a set of cards, so the deck editor's
       // panels can show what a card is rather than only what it is called. Same
@@ -353,6 +416,21 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
         .filter(token => /^https:\/\/scryfall\.com\//.test(token.uri || '') &&
           /^https:\/\/cards\.scryfall\.io\//.test(token.image || ''))
         .sort((a,b) => a.name.localeCompare(b.name));
+    }
+    if (message.type === 'edhrecRecs') {
+      // The whole deck list, as the names EDHREC's own site would send. This is
+      // the one request in the extension that carries a deck rather than one
+      // card, and the privacy policy says so in as many words.
+      const commanders = Array.isArray(message.commanders) ? message.commanders : [];
+      const cards = Array.isArray(message.cards) ? message.cards : [];
+      if (commanders.length > 4 || cards.length > 400) throw new Error('Deck too large');
+      const name = value => {
+        const text = String(value || '').trim();
+        if (!text || text.length > 120 || /[<>\u0000-\u001f]/.test(text)) throw new Error('Invalid card name');
+        return text;
+      };
+      await loadEdhrecState();
+      return edhrecRecs(commanders.map(name), cards.map(name));
     }
     if (message.type === 'edhrec' || message.type === 'edhrecCommander') {
       const name = String(message.name || '').trim();

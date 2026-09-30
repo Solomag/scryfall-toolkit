@@ -88,14 +88,65 @@
   // --- wiring ---------------------------------------------------------------
 
   // Answers with a way to take the addition back, or with nothing if Scryfall
-  // did not take the card.
+  // did not take the card. A suggestion names a printing rather than a Scryfall
+  // id, so that is turned into one here, once, when the reader asks for it.
   function addCard(card) {
-    return scryfall.addCard(card.id).then(entry => {
-      if (!entry) return null;
-      const entryId = typeof entry === 'string' ? entry : entry.id;
-      if (!entryId) return null;
-      return () => scryfall.removeEntry(entryId).then(() => undefined);
+    const known = card.id
+      ? Promise.resolve(card.id)
+      : bridge().request('cardBySet', { set: card.printing && card.printing.set, number: card.printing && card.printing.number })
+          .then(reply => (unwrap(reply) || {}).id || '');
+    return known.then(id => {
+      if (!id) return null;
+      return scryfall.addCard(id).then(entry => {
+        if (!entry) return null;
+        const entryId = typeof entry === 'string' ? entry : entry.id;
+        if (!entryId) return null;
+        return () => scryfall.removeEntry(entryId).then(() => undefined);
+      });
     });
+  }
+
+  // --- what EDHREC makes of this deck ---------------------------------------
+
+  // Their suggestions are about a commander plus a deck list, not about a
+  // commander alone. The list is what makes them answer to this deck.
+  function deckList() {
+    return scryfall.getDeck().then(deck => {
+      const commanders = [];
+      const cards = [];
+      for (const [section, list] of Object.entries(deck.entries || {})) {
+        for (const entry of (Array.isArray(list) ? list : [])) {
+          const digest = entry.card_digest;
+          if (!digest || !digest.name) continue;
+          const line = (entry.count || 1) + ' ' + digest.name;
+          if (section === 'commanders') commanders.push(digest.name);
+          else if (section !== 'maybeboard') cards.push(line);
+        }
+      }
+      return { commanders, cards };
+    });
+  }
+
+  // Their own answer: a card name, the type it is, the art, and how much of the
+  // recommendation it is. The set and number come out of their Scryfall link,
+  // which is what a printing is named by.
+  function fromRecs(list) {
+    return (list || []).map(rec => {
+      // Their link is scryfall.com/card/<set>/<number>/<slug>, so the printing
+      // is the two segments before the slug.
+      const parts = String(rec.scryfall_uri || '').split('/');
+      const set = parts[parts.length - 3] || '';
+      const number = parts[parts.length - 2] || '';
+      return {
+        name: (rec.names && rec.names.length ? rec.names.join(' // ') : '').slice(0, 120),
+        typeLine: String(rec.primary_type || '').slice(0, 120),
+        image: /^https:\/\/cards\.scryfall\.io\//.test(rec.image || '') ? rec.image : '',
+        group: String(rec.primary_type || '') ? String(rec.primary_type) + 's' : '',
+        meta: Number.isFinite(rec.score) ? Math.round(rec.score * 100) + '%' : '',
+        metaTitle: Number.isFinite(rec.score) ? 'EDHREC synergy score for this deck' : '',
+        printing: { set: set, number: number }
+      };
+    }).filter(card => card.name);
   }
 
   // EDHREC's grouping is the point of the page, so it survives into the panel:
@@ -148,22 +199,30 @@
         area.message('This deck has no commander to ask about.');
         return;
       }
-      return bridge().request('edhrecCommander', { name: name }).then(reply => {
-        const lists = unwrap(reply);
-        if (!Array.isArray(lists) || !lists.length) {
-          area.message('EDHREC has nothing to suggest for ' + name + '.');
-          return;
-        }
-        return deckCardNames().then(owned => {
-          const all = flatten(lists);
-          const fresh = all.filter(card => !owned.has(canonical(card.name)));
+      // What EDHREC makes of this deck. It is the endpoint their own site posts
+      // to, it is not published, and it is allowed to stop working — so if it
+      // does, the panel falls back to their published commander page rather
+      // than showing an error and nothing else.
+      return deckList().then(list => bridge().request('edhrecRecs', list))
+        .then(reply => {
+          const result = unwrap(reply) || {};
+          const cards = fromRecs(result.inRecs);
+          if (!cards.length) throw new Error('no suggestions');
+          return cards;
+        })
+        .catch(() => bridge().request('edhrecCommander', { name: name }).then(reply => {
+          const lists = unwrap(reply);
+          return Array.isArray(lists) ? flatten(lists) : [];
+        }))
+        .then(cards => deckCardNames().then(owned => {
+          const fresh = cards.filter(card => !owned.has(canonical(card.name)));
           area.setCards(fresh, bridge().request);
-          const hidden = all.length - fresh.length;
-          if (hidden > 0) {
-            area.note(hidden + ' already in this deck');
-          }
+          const hidden = cards.length - fresh.length;
+          if (hidden > 0) area.note(hidden + ' already in this deck');
+        }))
+        .then(() => {
+          if (!area.hasCards()) area.message('EDHREC has nothing to suggest for ' + name + '.');
         });
-      });
     }).catch(error => {
       area.message('EDHREC could not be reached. ' + (error && error.message ? error.message : ''));
     });

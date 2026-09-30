@@ -365,17 +365,22 @@ const card = (name, typeLine, id) => ({
         request: (name, value) => {
           asked.push({ name, value });
           if (name === 'cardImages') return Promise.resolve({ ok: true, data: [] });
-          // Shaped as the background worker's envelope. The bridge normally
-          // unwraps it; a module that only accepts one of the two shapes is how
-          // this feature once showed "nothing to suggest" for a commander with
-          // thirteen lists behind it.
-          return Promise.resolve({ ok: true, data: [
-            { header: 'High Synergy Cards', cards: [
-              { id: 'a1', name: 'Evolution Sage', numDecks: 900, potentialDecks: 1000 },
-              { id: 'a2', name: 'Tekuthal', numDecks: 0, potentialDecks: 1000 }
-            ] },
-            { header: 'Creatures', cards: [{ id: 'a3', name: 'Cankerbloom', numDecks: 250, potentialDecks: 1000 }] }
-          ] });
+          if (name === 'cardBySet') return Promise.resolve({ id: 'scry-' + value.set + '-' + value.number });
+          // What EDHREC makes of this deck: a name, a type, art, and how much
+          // of the recommendation it is.
+          return Promise.resolve({ ok: true, data: {
+            inRecs: [
+              { primary_type: 'Creature', names: ['Evolution Sage'], score: 0.9,
+                scryfall_uri: 'https://scryfall.com/card/one/123/evolution-sage',
+                image: 'https://cards.scryfall.io/normal/front/1/1/aaa.jpg' },
+              { primary_type: 'Creature', names: ['Tekuthal'], score: 0,
+                scryfall_uri: 'https://scryfall.com/card/two/45/tekuthal',
+                image: 'https://cards.scryfall.io/normal/front/2/2/bbb.jpg' },
+              { primary_type: 'Instant', names: ['Cankerbloom'], score: 0.25,
+                scryfall_uri: 'https://scryfall.com/card/three/6/cankerbloom',
+                image: 'https://cards.scryfall.io/normal/front/3/3/ccc.jpg' }
+            ]
+          } });
         }
       };
 
@@ -388,22 +393,22 @@ const card = (name, typeLine, id) => ({
 
       button.dispatchEvent(new w.self.Event('click'));
       await tick();
-      const commanderAsks = asked.filter(a => a.name === 'edhrecCommander');
-      assertEqual(commanderAsks.length, 1, 'clicking asks for suggestions');
-      assertEqual(commanderAsks[0].name, 'edhrecCommander', 'through the background worker');
-      assertEqual(commanderAsks[0].value.name, 'Atraxa, Praetors Voice', 'for the deck\'s commander');
+      const commanderAsks = asked.filter(a => a.name === 'edhrecRecs');
+      assertEqual(commanderAsks.length, 1, 'clicking asks EDHREC what it makes of this deck');
+      assertEqual(commanderAsks[0].value.commanders, ['Atraxa, Praetors Voice'], 'naming the commander');
+      assertEqual(commanderAsks[0].value.cards.length, 0, 'and the cards in it');
 
-      // Images is the default; the names and rates are on the list side.
+      // Images is the default; the names and scores are on the list side.
       const views = [...w.document.querySelectorAll('.stk-results-view')];
       assertEqual(views.map(v => v.textContent), ['Images', 'List'], 'the reader picks how results are shown');
       views[1].dispatchEvent(new w.self.Event('click'));
 
       const titles = [...w.document.querySelectorAll('.stk-results-group-title')].map(t => t.textContent);
-      assertEqual(titles, ['High Synergy Cards', 'Creatures'], 'EDHREC\'s own grouping is kept');
+      assertEqual(titles, ['Creatures', 'Instants'], 'EDHREC\'s own grouping is kept');
       assertEqual([...w.document.querySelectorAll('.stk-results-row-name')].map(n => n.textContent),
         ['Evolution Sage', 'Tekuthal', 'Cankerbloom'], 'with its cards in its order');
       assertEqual([...w.document.querySelectorAll('.stk-results-row-meta')].map(n => n.textContent),
-        ['90%', '0%', '25%'], 'and how many of the commander\'s decks play each');
+        ['90%', '0%', '25%'], 'and how strongly EDHREC recommends each for this deck');
 
       const added = [];
       const removed = [];
@@ -412,12 +417,12 @@ const card = (name, typeLine, id) => ({
       const buttons = w.document.querySelectorAll('.stk-results-add');
       buttons[0].dispatchEvent(new w.self.Event('click'));
       await tick();
-      assertEqual(added, ['a1'], 'adding a card goes through Scryfall with its own id');
+      assertEqual(added, ['scry-one-123'], 'a suggestion names a printing, which is resolved before it is added');
       assertEqual(buttons[0].textContent, 'Remove',
         'and the button turns into the way to take it back');
       buttons[0].dispatchEvent(new w.self.Event('click'));
       await tick();
-      assertEqual(removed, ['entry-a1'], 'so a card added by mistake goes again');
+      assertEqual(removed, ['entry-scry-one-123'], 'so a card added by mistake goes again');
       assertEqual(buttons[0].textContent, 'Add', 'and the button returns to Add');
 
       w.document.querySelector('.modal-dialog-close').dispatchEvent(new w.self.Event('click'));

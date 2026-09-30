@@ -122,6 +122,7 @@
   "options_page": "options.html",
   "optional_host_permissions": [
     "https://api.cardtrader.com/*",
-    "https://json.edhrec.com/*"
+    "https://json.edhrec.com/*",
+    "https://edhrec.com/*"
   ]
 }

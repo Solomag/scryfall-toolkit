@@ -289,6 +289,7 @@
     for (const key of VIEWS) buttons[key].classList.toggle('active', key === view);
 
     return {
+      hasCards() { return cards.length > 0; },
       setCards(next, then) {
         cards = next || [];
         moreFn = null;

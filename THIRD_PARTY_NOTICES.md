@@ -228,10 +228,18 @@ rules this project's request pattern has to respect.
 Two parts of that public JSON are read. `pages/cards/<slug>.json` for one card's usage and
 salt, and `pages/commanders/<slug>.json` for a commander's page, whose `cardlists` already
 hold the cards EDHREC groups and ranks for that commander. Both go through one queue, so a
-card lookup and a commander lookup can never between them outrun the rate above. Nothing
-of EDHREC's page markup is used, and no request is made through a hidden frame on their
-domain — which is how Shambleshark's feature of the same name works, and this project does
-not do that.
+card lookup and a commander lookup can never between them outrun the rate above.
+
+**One request is not to that public JSON.** `POST https://edhrec.com/api/recs/` is the
+endpoint EDHREC's own site posts to when it suggests cards for a deck, and it carries the
+deck list. It is not an interface they publish: there is no documentation and no
+contract, and it may change or break without notice. It is called from this extension's
+own worker with the host permission the user grants when they turn the feature on — not
+through a hidden frame on their domain, which is how Shambleshark reaches it and which
+this project does not do. Because it may stop working at any time, the suggestions panel
+falls back to their published commander page when it does.
+
+Nothing of EDHREC's page markup is used.
 
 **Their data policy.** EDHREC and Space Cow Media encourage community developers to use
 EDHREC data, and allow HTTP requests like those a browser makes, subject to a rate limit.
