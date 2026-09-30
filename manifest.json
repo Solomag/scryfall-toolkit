@@ -75,6 +75,7 @@
       "js": [
         "deck-tools.js",
         "deck-scryfall.js",
+        "deck-results.js",
         "deck-clean-up.js",
         "deck-edhrec.js",
         "deck-search.js",

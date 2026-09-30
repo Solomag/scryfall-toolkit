@@ -42,8 +42,8 @@ async function manifestIntegrity() {
   const pageWorld = manifest.content_scripts.filter(group => group.world === 'MAIN');
   assertEqual(pageWorld.length, 1, 'exactly one script group runs in the page world');
   assertEqual(pageWorld[0].js,
-    ['deck-tools.js', 'deck-scryfall.js', 'deck-clean-up.js', 'deck-edhrec.js', 'deck-search.js', 'page.js'],
-    'the page world loads the deck tools, the Scryfall adapter, the four features and the bridge');
+    ['deck-tools.js', 'deck-scryfall.js', 'deck-results.js', 'deck-clean-up.js', 'deck-edhrec.js', 'deck-search.js', 'page.js'],
+    'the page world loads the deck tools, the Scryfall adapter, the shared results area, the features and the bridge');
   assertEqual(pageWorld[0].run_at, 'document_idle', 'and starts once the page is up');
   for (const group of manifest.content_scripts) {
     if (group.world === 'MAIN') continue;
@@ -358,7 +358,7 @@ function domContractTest() {
   const ourPrefixes = ['stk-', 'cleanup-improver__', 'modify-cleanup-', 'data-heading-'];
   const isOurs = name => ourPrefixes.some(prefix => name.replace(/^[.#[\]]+/, '').startsWith(prefix));
   const jsUsed = new Set();
-  for (const file of ['content.js', 'deck-clean-up.js', 'deck-edhrec.js', 'deck-search.js', 'theme.js']) {
+  for (const file of ['content.js', 'deck-clean-up.js', 'deck-edhrec.js', 'deck-results.js', 'deck-search.js', 'theme.js']) {
     const js = read(file).replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
     for (const m of js.matchAll(/querySelector(?:All)?\(\s*['"`]([^'"`]+)['"`]/g)) {
       for (const c of m[1].matchAll(/\.([a-zA-Z][a-zA-Z0-9_-]*)/g)) jsUsed.add(c[1]);

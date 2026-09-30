@@ -26,7 +26,16 @@
   'use strict';
 
   const scryfall = self.STK_DECK_SCRYFALL;
+  const results = self.STK_DECK_RESULTS;
   const bridge = () => self.STK_BRIDGE;
+
+  // The background worker answers in an envelope — {ok, data} or {ok, error} —
+  // and the bridge unwraps it. Taking either shape here means the two cannot get
+  // out of step and quietly show "nothing found" again.
+  function unwrap(result) {
+    return result && typeof result === 'object' && !Array.isArray(result) && 'data' in result
+      ? result.data : result;
+  }
 
   // --- the deck this is searching for --------------------------------------
 
@@ -75,52 +84,9 @@
       input: overlay.querySelector('.stk-search-input'),
       identity: overlay.querySelector('.stk-search-identity'),
       noFunny: overlay.querySelector('.stk-search-no-funny'),
-      results: overlay.querySelector('.stk-search-results'),
+      body: overlay.querySelector('.stk-search-results'),
       close
     };
-  }
-
-  function note(container, text) {
-    const p = document.createElement('p');
-    p.className = 'stk-search-note';
-    p.textContent = text;
-    container.replaceChildren(p);
-  }
-
-  function resultRow(card) {
-    const li = document.createElement('li');
-    li.className = 'stk-search-card';
-
-    const name = document.createElement('span');
-    name.className = 'stk-search-card-name';
-    name.textContent = card.name;
-
-    const type = document.createElement('span');
-    type.className = 'stk-search-card-type';
-    type.textContent = card.typeLine;
-    type.title = card.typeLine;
-
-    const cost = document.createElement('span');
-    cost.className = 'stk-search-card-cost';
-    cost.textContent = card.manaCost;
-
-    const add = document.createElement('button');
-    add.type = 'button';
-    add.className = 'button-n tiny-n stk-search-add';
-    add.textContent = 'Add';
-    add.addEventListener('click', () => {
-      add.disabled = true;
-      scryfall.addCard(card.id).then(result => {
-        if (result) {
-          add.textContent = 'Added';
-          return;
-        }
-        add.disabled = false;
-      }).catch(() => { add.disabled = false; });
-    });
-
-    li.append(name, type, cost, add);
-    return li;
   }
 
   // Scryfall's query language is the user's own; this only adds the two
@@ -134,54 +100,33 @@
     return query.trim();
   }
 
-  // The background worker answers in an envelope — {ok, data} or {ok, error} —
-  // and the bridge unwraps it. Taking either shape here means the two cannot get
-  // out of step and quietly show "nothing found" again.
-  function unwrap(result) {
-    return result && typeof result === 'object' && !Array.isArray(result) && 'data' in result
-      ? result.data : result;
+  function addCard(card) {
+    return scryfall.addCard(card.id).then(result => Boolean(result));
   }
 
-  function runSearch(panel, page) {
+  // --- searching ------------------------------------------------------------
+
+  function runSearch(panel, area, page) {
     const query = buildQuery(panel);
     if (!query) {
-      note(panel.results, 'Type something to search for.');
+      area.message('Type something to search for.');
       return;
     }
-    note(panel.results, page > 1 ? 'Loading more…' : 'Searching…');
+    area.message(page > 1 ? 'Loading more…' : 'Searching…');
 
     bridge().request('scryfallSearch', { query: query, page: page }).then(reply => {
       const result = unwrap(reply) || {};
       const cards = result.cards || [];
       if (!cards.length) {
-        note(panel.results, page > 1 ? 'That is everything Scryfall has.' : 'Nothing found.');
+        area.message(page > 1 ? 'That is everything Scryfall has.' : 'Nothing found.');
         return;
       }
-      const ul = document.createElement('ul');
-      ul.className = 'stk-search-list';
-      cards.forEach(card => ul.appendChild(resultRow(card)));
-
-      const frag = document.createDocumentFragment();
-      frag.appendChild(ul);
+      area.setCards(cards, bridge().request);
       if (result.hasMore) {
-        const more = document.createElement('button');
-        more.type = 'button';
-        more.className = 'button-n stk-search-more';
-        more.textContent = 'More results';
-        more.addEventListener('click', () => runSearch(panel, page + 1));
-        frag.appendChild(more);
-      }
-      if (page === 1) panel.results.replaceChildren(frag);
-      else {
-        // Paging appends rather than replacing, so what is already on screen
-        // stays where the reader had it.
-        panel.results.querySelector('.stk-search-list').append(...ul.childNodes);
-        const old = panel.results.querySelector('.stk-search-more');
-        if (old) old.remove();
-        if (result.hasMore) panel.results.appendChild(frag.querySelector('.stk-search-more'));
+        area.showMore(() => runSearch(panel, area, page + 1));
       }
     }).catch(error => {
-      note(panel.results, 'Search failed. ' + (error && error.message ? error.message : ''));
+      area.message('Search failed. ' + (error && error.message ? error.message : ''));
     });
   }
 
@@ -190,6 +135,7 @@
   function openPanel() {
     const panel = buildPanel();
     (document.getElementById('deckbuilder') || document.body).appendChild(panel.overlay);
+    const area = results.create(panel.body, addCard);
 
     // The colour restriction needs to know what the commander's colours are,
     // which is a lookup of its own. Without it the checkbox quietly does
@@ -199,8 +145,8 @@
         panel.identity.closest('label').style.display = 'none';
         return;
       }
-      return bridge().request('cardIdentity', { name: names[0] }).then(result => {
-        const identity = result && result.colorIdentity;
+      return bridge().request('cardIdentity', { name: names[0] }).then(reply => {
+        const identity = unwrap(reply) && unwrap(reply).colorIdentity;
         if (identity) panel.identity.dataset.identity = identity;
         else panel.identity.closest('label').style.display = 'none';
       }).catch(() => {
@@ -210,7 +156,7 @@
 
     panel.form.addEventListener('submit', event => {
       event.preventDefault();
-      runSearch(panel, 1);
+      runSearch(panel, area, 1);
     });
     panel.input.focus();
   }
@@ -238,7 +184,7 @@
 
   function apply(config) {
     config = config || {};
-    if (!scryfall || !bridge()) {
+    if (!scryfall || !bridge() || !results) {
       return { applied: false, problems: ['the deck modules did not load in order'] };
     }
     if (!wired && config.deckSearch) {

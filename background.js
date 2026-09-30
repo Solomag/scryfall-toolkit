@@ -305,6 +305,28 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
         finishes: card.finishes || [], promoTypes: card.promo_types || []
       }]));
     }
+    if (message.type === "cardImages") {
+      // Card art and the type line for a set of cards, so the deck editor's
+      // panels can show what a card is rather than only what it is called. Same
+      // batched collection call the finish column uses, at Scryfall's limit.
+      const ids = message.ids;
+      if (!Array.isArray(ids) || ids.length > 75 || ids.some(id => !/^[0-9a-f-]{36}$/.test(String(id)))) {
+        throw new Error("Invalid card IDs");
+      }
+      const result = await scryfallJSON("https://api.scryfall.com/cards/collection", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ identifiers: ids.map(id => ({ id })) })
+      });
+      return (result.data || []).map(card => {
+        const image = card.image_uris?.normal || card.card_faces?.[0]?.image_uris?.normal || "";
+        return {
+          id: /^[0-9a-f-]{36}$/.test(card.id || "") ? card.id : "",
+          image: /^https:\/\/cards\.scryfall\.io\//.test(image) ? image : "",
+          typeLine: String(card.type_line || "").slice(0, 120),
+          manaCost: String(card.mana_cost || "").slice(0, 60)
+        };
+      }).filter(card => card.id);
+    }
     if (message.type === 'deckTokens') {
       const entries = message.entries;
       if (!Array.isArray(entries) || entries.length > 150 || entries.some(item =>

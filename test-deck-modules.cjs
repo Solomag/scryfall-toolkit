@@ -101,7 +101,7 @@ function makeWorld({ withScryfall = true, html = '', deck = null, opts = {} } = 
   // The deck modules load in a fixed order: pure deck data first, then the one
   // file that touches Scryfall, then the features on top of it, then the bridge.
   const boot = () => {
-    for (const file of ['deck-tools.js', 'deck-scryfall.js', 'deck-clean-up.js', 'deck-edhrec.js', 'deck-search.js']) run(file);
+    for (const file of ['deck-tools.js', 'deck-scryfall.js', 'deck-results.js', 'deck-clean-up.js', 'deck-edhrec.js', 'deck-search.js']) run(file);
   };
   // Dispatching to the page side means handing over the identity that side sees
   // as its own window. Across a vm boundary that is not the same object as the
@@ -364,6 +364,7 @@ const card = (name, typeLine, id) => ({
       w.self.STK_BRIDGE = {
         request: (name, value) => {
           asked.push({ name, value });
+          if (name === 'cardImages') return Promise.resolve({ ok: true, data: [] });
           // Shaped as the background worker's envelope. The bridge normally
           // unwraps it; a module that only accepts one of the two shapes is how
           // this feature once showed "nothing to suggest" for a commander with
@@ -387,20 +388,26 @@ const card = (name, typeLine, id) => ({
 
       button.dispatchEvent(new w.self.Event('click'));
       await tick();
-      assertEqual(asked.length, 1, 'clicking asks for suggestions');
-      assertEqual(asked[0].name, 'edhrecCommander', 'through the background worker');
-      assertEqual(asked[0].value.name, 'Atraxa, Praetors Voice', 'for the deck\'s commander');
+      const commanderAsks = asked.filter(a => a.name === 'edhrecCommander');
+      assertEqual(commanderAsks.length, 1, 'clicking asks for suggestions');
+      assertEqual(commanderAsks[0].name, 'edhrecCommander', 'through the background worker');
+      assertEqual(commanderAsks[0].value.name, 'Atraxa, Praetors Voice', 'for the deck\'s commander');
 
-      const titles = [...w.document.querySelectorAll('.stk-edhrec-list-title')].map(t => t.textContent);
+      // Images is the default; the names and rates are on the list side.
+      const views = [...w.document.querySelectorAll('.stk-results-view')];
+      assertEqual(views.map(v => v.textContent), ['Images', 'List'], 'the reader picks how results are shown');
+      views[1].dispatchEvent(new w.self.Event('click'));
+
+      const titles = [...w.document.querySelectorAll('.stk-results-group-title')].map(t => t.textContent);
       assertEqual(titles, ['High Synergy Cards', 'Creatures'], 'EDHREC\'s own grouping is kept');
-      assertEqual([...w.document.querySelectorAll('.stk-edhrec-card-name')].map(n => n.textContent),
+      assertEqual([...w.document.querySelectorAll('.stk-results-row-name')].map(n => n.textContent),
         ['Evolution Sage', 'Tekuthal', 'Cankerbloom'], 'with its cards in its order');
-      assertEqual([...w.document.querySelectorAll('.stk-edhrec-card-rate')].map(n => n.textContent),
+      assertEqual([...w.document.querySelectorAll('.stk-results-row-meta')].map(n => n.textContent),
         ['90%', '0%', '25%'], 'and how many of the commander\'s decks play each');
 
       const added = [];
       w.self.ScryfallAPI.decks.addCard = (id, cardId, cb) => { added.push(cardId); cb({ id: cardId }); };
-      const buttons = w.document.querySelectorAll('.stk-edhrec-add');
+      const buttons = w.document.querySelectorAll('.stk-results-add');
       buttons[0].dispatchEvent(new w.self.Event('click'));
       await tick();
       assertEqual(added, ['a1'], 'adding a card goes through Scryfall with its own id');
@@ -475,14 +482,14 @@ const card = (name, typeLine, id) => ({
       assertEqual(searches[0].value.query, 't:creature id<=wub not:funny',
         'with the two checkboxes turned into Scryfall qualifiers');
 
-      assertEqual([...w.document.querySelectorAll('.stk-search-card-name')].map(n => n.textContent),
-        ['Sol Ring', 'Swords to Plowshares'], 'results come back as a list');
-      assertEqual(w.document.querySelector('.stk-search-more') !== null, true,
+      assertEqual([...w.document.querySelectorAll('.stk-results-name')].map(n => n.textContent),
+        ['Sol Ring', 'Swords to Plowshares'], 'results come back as a grid of cards');
+      assertEqual(w.document.querySelector('.stk-results-more') !== null, true,
         'and Scryfall saying there is more gives a way to ask for it');
 
       const added = [];
       w.self.ScryfallAPI.decks.addCard = (id, cardId, cb) => { added.push(cardId); cb({ id: cardId }); };
-      w.document.querySelector('.stk-search-add').dispatchEvent(new w.self.Event('click'));
+      w.document.querySelector('.stk-results-add').dispatchEvent(new w.self.Event('click'));
       await tick();
       assertEqual(added, ['s1'], 'adding a result goes through Scryfall with its own id');
 

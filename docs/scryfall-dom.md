@@ -317,6 +317,7 @@ Scryfall knows nothing about.
 | `.select2-selection__rendered` | 2 |
 | `.set-header-controls` | 2 |
 | `.set-name-text` | 2 |
+| `.active` | 1 |
 | `.add-to-deck` | 1 |
 | `.add-to-deck-button` | 1 |
 | `.advanced-search-subjoiner` | 1 |
@@ -371,6 +372,7 @@ Scryfall knows nothing about.
 | `.main` | 1 |
 | `.menu` | 1 |
 | `.message` | 1 |
+| `.modal-dialog` | 1 |
 | `.modal-dialog-close` | 1 |
 | `.modal-dialog-content` | 1 |
 | `.modal-dialog-grid-choice` | 1 |
@@ -454,6 +456,7 @@ name itself, without the leading `.` or `#`.
 | `deckbuilder-toolbar-items-right` | class | deck-edhrec.js, deck-search.js |
 | `marketing-features-item-image` | class | theme.js |
 | `modal-dialog-close` | class | deck-edhrec.js, deck-search.js |
+| `modal-dialog-content` | class | deck-edhrec.js |
 | `prints` | class | content.js |
 | `prints-all` | class | content.js, theme.js |
 | `prints-info-section` | class | content.js |
@@ -477,5 +480,5 @@ name itself, without the leading `.` or `#`.
 
 ---
 
-Total: **358** Scryfall class names.
+Total: **360** Scryfall class names.
 

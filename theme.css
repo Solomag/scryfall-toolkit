@@ -685,37 +685,54 @@ html.stk-dark .prints-table tbody td>span:not([class*="currency-"]):not(.pillbox
 
 /* --- the EDHREC suggestions panel ----------------------------------------- */
 
-/* The panel is Scryfall's own modal markup, so it opens and closes the way
-   their dialogs do. Only the contents are ours. Scryfall's .modal-dialog-content
-   is `overflow-y: scroll`, which puts a scrollbar on a panel whether it needs
-   one or not; these scroll where they actually overflow. */
+/* --- the deck editor's shared results area -------------------------------- */
+
+/* Scryfall's .modal-dialog is 480px wide and its .modal-dialog-content scrolls
+   always. A panel showing card art needs room and should scroll when it
+   overflows, not on principle. */
+.modal-dialog.stk-edhrec-panel,.modal-dialog.stk-search-panel{max-width:860px}
 .modal-dialog-content.stk-edhrec-panel,.modal-dialog-content.stk-search-panel{max-height:none;overflow-y:visible;padding:0}
-.stk-edhrec-body{max-height:65vh;overflow-y:auto;padding:10px 14px}
-.stk-edhrec-note{color:#8f8a99;font-size:13px;margin:6px 0}
-.stk-edhrec-list{margin:0 0 14px}
-.stk-edhrec-list-title{font-size:12px;text-transform:uppercase;letter-spacing:.4px;
-  color:#a89fc0;margin:0 0 6px;padding-bottom:4px;border-bottom:1px solid #3a3846}
-.stk-edhrec-list ul{list-style:none;margin:0;padding:0}
-.stk-edhrec-card{display:flex;align-items:center;gap:10px;padding:3px 2px;font-size:13px}
-.stk-edhrec-card-name{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#e6e3df}
-.stk-edhrec-card-rate{flex:0 0 auto;min-width:34px;text-align:right;color:#8fd0a8;font-variant-numeric:tabular-nums}
-.stk-edhrec-add{flex:0 0 auto}
-html.stk-dark .stk-edhrec-list-title{color:#b6a9d6}
-html.stk-dark .stk-edhrec-note{color:#9b95a6}
+
+.stk-results-bar{display:flex;align-items:center;gap:12px;padding:10px 14px 2px}
+.stk-results-toggle{display:flex;gap:0}
+.stk-results-view{padding:4px 12px;font-size:12px;color:#b3aec0;background:transparent;
+  border:1px solid #4b4d52;cursor:pointer}
+.stk-results-view:first-child{border-radius:3px 0 0 3px}
+.stk-results-view:last-child{border-radius:0 3px 3px 0;border-left:0}
+.stk-results-view.active{background:#5b4380;color:#fff;border-color:#8d76ad}
+.stk-results-body{max-height:66vh;overflow-y:auto;padding:8px 14px 14px}
+.stk-results-note{color:#8f8a99;font-size:13px;margin:8px 0}
+.stk-results-more{margin:12px 0 0}
+
+.stk-results-group{margin:0 0 16px}
+.stk-results-group-title{font-size:12px;text-transform:uppercase;letter-spacing:.4px;
+  color:#b6a9d6;margin:0 0 8px;padding-bottom:4px;border-bottom:1px solid #3a3846}
+
+.stk-results-grid{list-style:none;margin:0;padding:0;display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:12px}
+.stk-results-tile{display:flex;flex-direction:column;gap:5px}
+.stk-results-art{position:relative;aspect-ratio:488/680;border-radius:6px;overflow:hidden;background:#22242c}
+.stk-results-art img{width:100%;height:100%;object-fit:cover;display:block}
+.stk-results-noart{width:100%;height:100%;display:flex;align-items:center;justify-content:center;
+  padding:8px;text-align:center;font-size:11px;color:#8f8a99}
+.stk-results-name{font-size:12px;line-height:1.3;color:#e6e3df;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.stk-results-list{list-style:none;margin:0;padding:0}
+.stk-results-row{display:flex;align-items:center;gap:10px;padding:3px 2px;font-size:13px}
+.stk-results-row-name{flex:0 0 28%;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#e6e3df}
+.stk-results-row-type{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#a29bb0;font-size:12px}
+.stk-results-row-cost{flex:0 0 auto;color:#c9c3d4;font-size:12px}
+.stk-results-row-meta{flex:0 0 auto;min-width:38px;text-align:right;color:#8fd0a8;font-size:12px;
+  font-variant-numeric:tabular-nums}
+.stk-results-add{flex:0 0 auto}
+
+html.stk-dark .stk-results-note{color:#9b95a6}
 
 /* --- the deck editor's Scryfall search ------------------------------------ */
 
 .stk-search-form{display:flex;gap:8px;align-items:center;padding:10px 14px 4px}
 .stk-search-input{flex:1 1 auto;min-width:0;font-size:14px;padding:5px 8px}
 .stk-search-options{margin:0 14px 8px;font-size:12px;color:#9b95a6;display:flex;gap:16px}
-.stk-search-results{max-height:60vh;overflow-y:auto;padding:0 14px 12px}
-.stk-search-note{color:#8f8a99;font-size:13px;margin:8px 0}
-.stk-search-list{list-style:none;margin:0;padding:0}
-.stk-search-card{display:flex;align-items:center;gap:10px;padding:3px 2px;font-size:13px}
-.stk-search-card-name{flex:0 0 30%;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#e6e3df}
-.stk-search-card-type{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#a29bb0;font-size:12px}
-.stk-search-card-cost{flex:0 0 auto;color:#c9c3d4;font-size:12px}
-.stk-search-add{flex:0 0 auto}
-.stk-search-more{margin:10px 0 0}
-html.stk-dark .stk-search-options,html.stk-dark .stk-search-note{color:#9b95a6}
+html.stk-dark .stk-search-options{color:#9b95a6}
 html.stk-dark .stk-search-input{background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:var(--stk-border)!important}

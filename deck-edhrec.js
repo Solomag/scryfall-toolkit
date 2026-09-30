@@ -26,9 +26,18 @@
   'use strict';
 
   const scryfall = self.STK_DECK_SCRYFALL;
+  const results = self.STK_DECK_RESULTS;
   // page.js is what defines the bridge and it loads after this file, so it is
   // looked up when it is needed rather than when this runs.
   const bridge = () => self.STK_BRIDGE;
+
+  // The background worker answers in an envelope — {ok, data} or {ok, error} —
+  // and the bridge unwraps it. Taking either shape here means the two cannot get
+  // out of step and quietly show "nothing to suggest" again.
+  function unwrap(result) {
+    return result && typeof result === 'object' && !Array.isArray(result) && 'data' in result
+      ? result.data : result;
+  }
 
   // --- is this a commander deck ---------------------------------------------
 
@@ -57,7 +66,7 @@
               '<span aria-hidden="true">&#10005;</span>' +
             '</button>' +
           '</h6>' +
-          '<div class="modal-dialog-content stk-edhrec-panel stk-edhrec-body"></div>' +
+          '<div class="modal-dialog-content stk-edhrec-panel"></div>' +
         '</div>' +
       '</div>';
   }
@@ -66,113 +75,64 @@
     const holder = document.createElement('div');
     holder.innerHTML = panelMarkup().trim();
     const overlay = holder.firstElementChild;
-    const body = overlay.querySelector('.stk-edhrec-body');
     const close = () => { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); };
     overlay.querySelector('.modal-dialog-close').addEventListener('click', close);
     overlay.addEventListener('click', event => { if (event.target === overlay) close(); });
-    return { overlay, body, close };
-  }
-
-  function note(body, text) {
-    const p = document.createElement('p');
-    p.className = 'stk-edhrec-note';
-    p.textContent = text;
-    body.replaceChildren(p);
-  }
-
-  // Each card is one line: the name, how many of the commander's decks play it,
-  // and a button. The count is EDHREC's own number, divided here and nothing
-  // more.
-  function cardRow(card) {
-    const li = document.createElement('li');
-    li.className = 'stk-edhrec-card';
-
-    const name = document.createElement('span');
-    name.className = 'stk-edhrec-card-name';
-    name.textContent = card.name;
-
-    const rate = document.createElement('span');
-    rate.className = 'stk-edhrec-card-rate';
-    if (Number.isFinite(card.numDecks) && Number.isFinite(card.potentialDecks) && card.potentialDecks > 0) {
-      rate.textContent = Math.round((card.numDecks / card.potentialDecks) * 100) + '%';
-      rate.title = card.numDecks + ' of ' + card.potentialDecks + ' decks';
-    }
-
-    const add = document.createElement('button');
-    add.type = 'button';
-    add.className = 'button-n tiny-n stk-edhrec-add';
-    add.textContent = 'Add';
-    add.addEventListener('click', () => {
-      add.disabled = true;
-      scryfall.addCard(card.id).then(result => {
-        // Scryfall answers with the entry it created. Anything else means it
-        // did not take the card, and the button comes back so it can be tried
-        // again rather than looking like it worked.
-        if (result) {
-          add.textContent = 'Added';
-          return;
-        }
-        add.disabled = false;
-      }).catch(() => { add.disabled = false; });
-    });
-
-    li.append(name, rate, add);
-    return li;
-  }
-
-  function renderLists(body, lists) {
-    const frag = document.createDocumentFragment();
-    lists.forEach(list => {
-      const section = document.createElement('div');
-      section.className = 'stk-edhrec-list';
-
-      const title = document.createElement('h3');
-      title.className = 'stk-edhrec-list-title';
-      title.textContent = list.header;
-
-      const ul = document.createElement('ul');
-      list.cards.forEach(card => ul.appendChild(cardRow(card)));
-
-      section.append(title, ul);
-      frag.appendChild(section);
-    });
-    body.replaceChildren(frag);
+    return {
+      overlay,
+      body: overlay.querySelector('.modal-dialog-content'),
+      close
+    };
   }
 
   // --- wiring ---------------------------------------------------------------
 
-  // The background worker answers in an envelope — {ok, data} or {ok, error} —
-  // and the bridge unwraps it. Taking either shape here means the two cannot get
-  // out of step and quietly show "nothing found" again.
-  function unwrap(result) {
-    return result && typeof result === 'object' && !Array.isArray(result) && 'data' in result
-      ? result.data : result;
+  function addCard(card) {
+    return scryfall.addCard(card.id).then(result => Boolean(result));
+  }
+
+  // EDHREC's grouping is the point of the page, so it survives into the panel:
+  // the cards carry it and the shared renderer draws it as headings.
+  function flatten(lists) {
+    const cards = [];
+    for (const list of lists) {
+      for (const card of list.cards) {
+        cards.push({
+          id: card.id,
+          name: card.name,
+          group: list.header,
+          meta: Number.isFinite(card.numDecks) && Number.isFinite(card.potentialDecks) && card.potentialDecks > 0
+            ? Math.round((card.numDecks / card.potentialDecks) * 100) + '%'
+            : ''
+        });
+      }
+    }
+    return cards;
   }
 
   function openPanel() {
     const panel = buildPanel();
     (document.getElementById('deckbuilder') || document.body).appendChild(panel.overlay);
-    note(panel.body, 'Asking EDHREC…');
+    const area = results.create(panel.body, addCard);
+    area.message('Asking EDHREC…');
 
     commanderName().then(name => {
       if (!name) {
-        note(panel.body, 'This deck has no commander to ask about.');
+        area.message('This deck has no commander to ask about.');
         return;
       }
       return bridge().request('edhrecCommander', { name: name }).then(reply => {
         const lists = unwrap(reply);
         if (!Array.isArray(lists) || !lists.length) {
-          note(panel.body, 'EDHREC has nothing to suggest for ' + name + '.');
+          area.message('EDHREC has nothing to suggest for ' + name + '.');
           return;
         }
-        renderLists(panel.body, lists);
+        area.setCards(flatten(lists), bridge().request);
       });
     }).catch(error => {
-      note(panel.body, 'EDHREC could not be reached. ' + (error && error.message ? error.message : ''));
+      area.message('EDHREC could not be reached. ' + (error && error.message ? error.message : ''));
     });
   }
-
-  let wired = false;
 
   function addButton() {
     if (document.getElementById('stk-edhrec-button')) return;
@@ -193,9 +153,11 @@
     host.appendChild(button);
   }
 
+  let wired = false;
+
   function apply(config) {
     config = config || {};
-    if (!scryfall || !bridge()) {
+    if (!scryfall || !bridge() || !results) {
       return { applied: false, problems: ['the deck modules did not load in order'] };
     }
     if (!wired && config.edhrecSuggestions) {
