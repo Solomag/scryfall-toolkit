@@ -167,7 +167,10 @@
       return commanderRates().then(rates => {
         for (const card of cards) {
           const pct = rates.get(canonical(card.name));
-          if (pct) card.meta = pct;
+          if (pct) {
+            card.meta = pct;
+            card.metaTitle = 'EDHREC: ' + pct + ' of decks playing this commander also play this card';
+          }
         }
         area.setCards(cards, bridge().request);
         if (result.hasMore) {

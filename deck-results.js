@@ -110,7 +110,11 @@
     // EDHREC's number sits with the name, where it is looked for.
     const line = el('div', 'stk-results-line');
     line.append(name);
-    if (card.meta) line.appendChild(el('span', 'stk-results-meta', card.meta));
+    if (card.meta) {
+      const meta = el('span', 'stk-results-meta', card.meta);
+      if (card.metaTitle) meta.title = card.metaTitle;
+      line.appendChild(meta);
+    }
 
     const add = el('button', 'button-n tiny-n stk-results-add', 'Add');
     add.type = 'button';
@@ -129,6 +133,7 @@
     const type = el('span', 'stk-results-row-type', card.typeLine || '');
     const cost = el('span', 'stk-results-row-cost', card.manaCost || '');
     const meta = el('span', 'stk-results-row-meta', card.meta || '');
+    if (card.meta && card.metaTitle) meta.title = card.metaTitle;
 
     const add = el('button', 'button-n tiny-n stk-results-add', 'Add');
     add.type = 'button';
@@ -176,6 +181,16 @@
 
   function create(host, addFn) {
     const bar = el('div', 'stk-results-bar');
+
+    // EDHREC hands over hundreds of cards. Without a way to narrow them the
+    // reader scrolls and hopes; this filters what is already on screen.
+    const filter = document.createElement('input');
+    filter.type = 'text';
+    filter.className = 'stk-results-filter';
+    filter.placeholder = 'Filter these cards…';
+    filter.setAttribute('aria-label', 'Filter these cards');
+    bar.appendChild(filter);
+
     const toggle = el('div', 'stk-results-toggle');
     const buttons = {};
     for (const view of VIEWS) {
@@ -208,14 +223,29 @@
       render();
     }
 
+    function visibleCards() {
+      const needle = filter.value.trim().toLowerCase();
+      if (!needle) return cards;
+      return cards.filter(card =>
+        (card.name || '').toLowerCase().includes(needle) ||
+        (card.typeLine || '').toLowerCase().includes(needle));
+    }
+
+    filter.addEventListener('input', render);
+
     function render() {
+      const shown = visibleCards();
       if (!cards.length) return;
+      if (!shown.length) {
+        body.replaceChildren(el('p', 'stk-results-note', 'Nothing here matches “' + filter.value.trim() + '”.'));
+        return;
+      }
       const frag = document.createDocumentFragment();
       // EDHREC groups its cards; a plain search has nothing to group. Grouping
       // is therefore optional and a list without it is just a list.
       const groups = [];
       const byGroup = new Map();
-      for (const card of cards) {
+      for (const card of shown) {
         const key = card.group || '';
         if (!byGroup.has(key)) {
           byGroup.set(key, []);
@@ -258,6 +288,7 @@
       setCards(next, then) {
         cards = next || [];
         moreFn = null;
+        filter.value = '';
         loadImages(cards, then, render);
         if (cards.length) render();
       },

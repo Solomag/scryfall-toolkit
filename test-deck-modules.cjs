@@ -424,6 +424,49 @@ const card = (name, typeLine, id) => ({
       assertEqual(w.document.querySelector('.stk-edhrec-panel'), null, 'and the panel closes');
     }
 
+    console.log('deck-results: the reader can narrow a long list');
+    {
+      const w = makeWorld({
+        deck: {
+          id: 'deck-8d',
+          sections: { primary: ['commanders', 'nonlands'], secondary: [] },
+          entries: {
+            commanders: [{ id: 'c1', count: 1, section: 'commanders', raw_text: true,
+              card_digest: { name: 'Atraxa, Praetors Voice', type_line: 'Legendary Creature — Phyrexian Angel' } }],
+            nonlands: []
+          }
+        },
+        html: `
+          <div class="deckbuilder-toolbar"><div class="deckbuilder-toolbar-items-right"></div></div>
+          <div class="deckbuilder-section"><h6 class="deckbuilder-section-title">Commanders</h6></div>
+          <div id="deckbuilder"></div>`
+      });
+      w.boot();
+      w.self.STK_BRIDGE = {
+        request: name => name === 'edhrecCommander'
+          ? Promise.resolve([{ header: 'Creatures', cards: [
+              { id: 'a1', name: 'Evolution Sage', numDecks: 9, potentialDecks: 10 },
+              { id: 'a2', name: 'Cankerbloom', numDecks: 5, potentialDecks: 10 }
+            ] }])
+          : Promise.resolve([])
+      };
+      w.self.STK_DECK_EDHREC.apply({ edhrecSuggestions: true });
+      w.document.getElementById('stk-edhrec-button').dispatchEvent(new w.self.Event('click'));
+      await tick();
+
+      const filter = w.document.querySelector('.stk-results-filter');
+      assert(filter, 'both panels get a way to narrow what is on screen');
+      filter.value = 'sage';
+      filter.dispatchEvent(new w.self.Event('input'));
+      assertEqual([...w.document.querySelectorAll('.stk-results-name')].map(n => n.textContent),
+        ['Evolution Sage'], 'and it leaves only what matches');
+
+      filter.value = 'nothing at all';
+      filter.dispatchEvent(new w.self.Event('input'));
+      assert(w.document.querySelector('.stk-results-note') !== null,
+        'saying so when nothing does, rather than showing an empty box');
+    }
+
     console.log('deck-edhrec: a deck with no commander gets no button');
     {
       const w = makeWorld({

@@ -110,6 +110,9 @@
           group: list.header,
           meta: Number.isFinite(card.numDecks) && Number.isFinite(card.potentialDecks) && card.potentialDecks > 0
             ? Math.round((card.numDecks / card.potentialDecks) * 100) + '%'
+            : '',
+          metaTitle: Number.isFinite(card.numDecks) && Number.isFinite(card.potentialDecks)
+            ? 'EDHREC: ' + card.numDecks + ' of ' + card.potentialDecks + ' decks playing this commander also play this card'
             : ''
         });
       }
