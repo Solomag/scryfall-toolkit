@@ -91,7 +91,7 @@
    and cannot sit in a column header. Same height as the neighbouring brand mark
    so the two columns line up. Which of their two files is shown is decided in
    content.js — the black one for light pages, the white one for dark. */
-.prints-table th .stk-price-heading img.stk-brand-logo{height:16px;width:auto}
+.prints-table th .stk-price-heading img.stk-brand-logo{height:22px;width:auto}
 /* The three visible gaps around the panel are 22px on the user's 125% zoom,
    which is 17.6 CSS px: 12px above the panel, 15px under its top border and
    16.5px of panel padding below the last line. The native card-text padding is

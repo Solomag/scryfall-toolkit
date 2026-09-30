@@ -67,7 +67,7 @@
             '</form>' +
             '<p class="stk-search-options">' +
               '<label><input type="checkbox" class="stk-search-identity"> Only the commander\'s colours</label> ' +
-              '<label><input type="checkbox" class="stk-search-no-funny"> No funny cards</label>' +
+              '<label><input type="checkbox" class="stk-search-no-funny" checked> Exclude funny cards</label>' +
             '</p>' +
             '<div class="stk-search-results"></div>' +
           '</div>' +

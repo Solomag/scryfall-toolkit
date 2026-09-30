@@ -39,7 +39,7 @@ const REQUIRED_IDS = [
   'cardNicknames', 'deckNoPrices', 'stackedDeckCards', 'deckTokens',
   'deckCleanUpImprover', 'cleanUpLandsInSingleton', 'sortEntriesPrimary',
   'insertSortingHeadings', 'edhrecSuggestions', 'deckSearch',
-  'deckModuleStatus',
+  'deckModuleStatus', 'grantDeckHosts',
   'setPlatformsAll', 'setPlatformsPaper', 'setPlatformsArena', 'setPlatformsMtgo',
   'printGrouping', 'printFoldGroups', 'printFullPageLink'
 ];
@@ -550,6 +550,22 @@ async function deckModuleStatusTest() {
     'with the page first and the problem after it');
 }
 
+// Chrome answers a permission request only from a click, so the way to give
+// access has to be a thing the user can press. Without it a feature that needs
+// a newly added host falls back silently and nobody knows why.
+async function grantHostsTest() {
+  console.log('options.js: there is a way to give the hosts a feature needs');
+  const page = loadOptions({ edhrecSuggestions: true, settingsLanguage: 'en' });
+  const { document, mock } = page;
+  await settle();
+  const button = document.getElementById('grantDeckHosts');
+  assert(button, 'the deck section has a button for it');
+  button.dispatchEvent(new page.window.Event('click'));
+  await settle();
+  const asked = (mock.permissions && mock.permissions.grantedOrigins) || [];
+  assert(asked.some(origin => String(origin).includes('edhrec.com')), 'and it asks for edhrec.com');
+}
+
 async function formatListTest() {
   console.log('options.js: format list');
   const page = loadOptions({});
@@ -760,6 +776,7 @@ async function discoveredFormatsTest() {
     await languageTest();
     await discoveredFormatsTest();
     await deckModuleStatusTest();
+    await grantHostsTest();
     summary('test-options');
     process.exit(0);
   } catch (error) {

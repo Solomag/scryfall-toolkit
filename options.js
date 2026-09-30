@@ -54,9 +54,10 @@ function reconcileHostAccess(values) {
     if (!values[key] || !hosts.length) continue;
     chrome.permissions.contains({ origins: hosts }, has => {
       if (has) return;
-      requestHostAccess(hosts).then(granted => {
-        if (granted) status.textContent = t('Доступ к хосту выдан — перезагрузи открытые страницы.');
-      });
+      // Silent by design: Chrome only wants a request that follows a click, and
+      // one fired while the page loads is refused. The button below is the
+      // deliberate way, and this just stops a feature running half granted.
+      requestHostAccess(hosts);
     });
   }
 }
@@ -158,7 +159,19 @@ chrome.storage.local.get(defaults, values => {
     chrome.storage.local.set({ darkTheme: darkTheme.value }, () => { status.textContent = t('Сохранено'); });
   });
   // An enabled feature may be missing a host it needs, if the host was added
-  // after the user granted access. Ask rather than let it fall back silently.
+  // after the user granted access. Chrome only answers a permission request
+  // from a click, so this is a button rather than something that fires on load.
+  const grant = document.getElementById('grantDeckHosts');
+  if (grant) {
+    grant.addEventListener('click', () => {
+      const missing = [...new Set(Object.values(OPTIONAL_HOSTS).flat())];
+      requestHostAccess(missing).then(granted => {
+        status.textContent = granted
+          ? t('Доступ к хосту выдан — перезагрузи открытые страницы.')
+          : t('Доступ не выдан.');
+      });
+    });
+  }
   reconcileHostAccess(values);
   for (const key of basicFields) {
     const element = document.getElementById(key);
