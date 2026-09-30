@@ -411,14 +411,18 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
       const result = await getJSON(
         `https://api.scryfall.com/cards/search?q=${encodeURIComponent(query)}&unique=cards&page=${page}`
       );
-      const cards = (result.data || []).slice(0, 60).map(card => ({
-        id: /^[0-9a-f-]{36}$/.test(card.id || "") ? card.id : "",
-        name: String(card.name || "").slice(0, 120),
-        typeLine: String(card.type_line || "").slice(0, 120),
-        manaCost: String(card.mana_cost || "").slice(0, 60),
-        image: /^https:\/\/cards\.scryfall\.io\//.test(card.image_uris?.small || card.card_faces?.[0]?.image_uris?.small || "")
-          ? (card.image_uris?.small || card.card_faces?.[0]?.image_uris?.small) : ""
-      })).filter(card => card.id);
+      const cards = (result.data || []).slice(0, 60).map(card => {
+        // The same size the EDHREC panel shows. The small one is a thumbnail and
+        // reads as blur on a screen where the art is the point.
+        const image = card.image_uris?.normal || card.card_faces?.[0]?.image_uris?.normal || "";
+        return {
+          id: /^[0-9a-f-]{36}$/.test(card.id || "") ? card.id : "",
+          name: String(card.name || "").slice(0, 120),
+          typeLine: String(card.type_line || "").slice(0, 120),
+          manaCost: String(card.mana_cost || "").slice(0, 60),
+          image: /^https:\/\/cards\.scryfall\.io\//.test(image) ? image : ""
+        };
+      }).filter(card => card.id);
       return { cards, hasMore: Boolean(result.has_more), page };
     }
     if (message.type === 'cardtrader') {

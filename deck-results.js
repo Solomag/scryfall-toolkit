@@ -117,7 +117,8 @@
     add.onclick = makeAdd(handlers, card, add);
 
     wrap.append(art, line, add);
-    if (card.image) handlers.preview(wrap, card);
+    // No preview here: the art is the tile. A bigger tile does more for the
+    // reader than a second copy of the same picture under the pointer.
     return wrap;
   }
 
@@ -134,8 +135,10 @@
     add.onclick = makeAdd(handlers, card, add);
 
     li.append(name, type, cost, meta, add);
-    // The row is names only, so the card itself is one hover away.
-    handlers.preview(li, card);
+    // The row is names only, so the card is one hover away — over the name and
+    // nowhere else. Over the Add button a preview only gets in the way of the
+    // click it is covering.
+    handlers.preview(name, card);
     return li;
   }
 

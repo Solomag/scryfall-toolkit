@@ -111,6 +111,41 @@
     });
   }
 
+  // --- what EDHREC knows about these cards ----------------------------------
+
+  // EDHREC's commander page is where "how many of this commander's decks play
+  // it" lives. A search cannot ask EDHREC per card, but it does not have to:
+  // the page already carries that number for every card it lists, and the
+  // background worker caches it. Cards EDHREC does not list simply get nothing.
+  const canonical = name => String(name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+  let ratesPromise = null;
+  let edhrecAllowed = false;
+
+  function commanderRates() {
+    // EDHREC is optional and off until it is switched on, and the privacy
+    // policy says the card and commander names go there only when it is. A
+    // search asking EDHREC on its own would break that, so it does not.
+    if (!edhrecAllowed) return Promise.resolve(new Map());
+    if (ratesPromise) return ratesPromise;
+    ratesPromise = commanderNames().then(names => {
+      if (!names.length) return new Map();
+      return bridge().request('edhrecCommander', { name: names[0] }).then(reply => {
+        const lists = unwrap(reply);
+        const map = new Map();
+        for (const list of (Array.isArray(lists) ? lists : [])) {
+          for (const card of list.cards) {
+            if (!Number.isFinite(card.numDecks) || !Number.isFinite(card.potentialDecks) || !card.potentialDecks) continue;
+            const pct = Math.round((card.numDecks / card.potentialDecks) * 100) + '%';
+            map.set(canonical(card.name), pct);
+          }
+        }
+        return map;
+      }).catch(() => new Map());
+    }).catch(() => new Map());
+    return ratesPromise;
+  }
+
   // --- searching ------------------------------------------------------------
 
   function runSearch(panel, area, page) {
@@ -128,10 +163,17 @@
         area.message(page > 1 ? 'That is everything Scryfall has.' : 'Nothing found.');
         return;
       }
-      area.setCards(cards, bridge().request);
-      if (result.hasMore) {
-        area.showMore(() => runSearch(panel, area, page + 1));
-      }
+      // EDHREC's share of the commander's decks, where EDHREC has one.
+      return commanderRates().then(rates => {
+        for (const card of cards) {
+          const pct = rates.get(canonical(card.name));
+          if (pct) card.meta = pct;
+        }
+        area.setCards(cards, bridge().request);
+        if (result.hasMore) {
+          area.showMore(() => runSearch(panel, area, page + 1));
+        }
+      });
     }).catch(error => {
       area.message('Search failed. ' + (error && error.message ? error.message : ''));
     });
@@ -196,6 +238,7 @@
     }
     if (!wired && config.deckSearch) {
       wired = true;
+      edhrecAllowed = Boolean(config.edhrecSuggestions);
       // Either of these can land first; adding the button is idempotent, so
       // both are waited for rather than guessing which comes first.
       scryfall.elementReady('.deckbuilder-toolbar', addButton);

@@ -460,6 +460,17 @@ const card = (name, typeLine, id) => ({
         request: (name, value) => {
           asked.push({ name, value });
           if (name === 'cardIdentity') return Promise.resolve({ colorIdentity: 'wub' });
+          if (name === 'cardImages') return Promise.resolve([]);
+          // What EDHREC knows about these cards for this commander, which is
+          // where "share of the commander's decks" comes from.
+          if (name === 'edhrecCommander') {
+            return Promise.resolve([
+              { header: 'Top Cards', cards: [
+                { id: 'e1', name: 'Sol Ring', numDecks: 900, potentialDecks: 1000 },
+                { id: 'e2', name: 'Swords to Plowshares', numDecks: 250, potentialDecks: 1000 }
+              ] }
+            ]);
+          }
           return Promise.resolve({
             cards: [
               { id: 's1', name: 'Sol Ring', typeLine: 'Artifact', manaCost: '{1}' },
@@ -469,7 +480,7 @@ const card = (name, typeLine, id) => ({
           });
         }
       };
-      w.self.STK_DECK_SEARCH.apply({ deckSearch: true });
+      w.self.STK_DECK_SEARCH.apply({ deckSearch: true, edhrecSuggestions: true });
       const button = w.document.getElementById('stk-search-button');
       assert(button, 'the deck editor gets the button');
 
@@ -491,6 +502,8 @@ const card = (name, typeLine, id) => ({
 
       assertEqual([...w.document.querySelectorAll('.stk-results-name')].map(n => n.textContent),
         ['Sol Ring', 'Swords to Plowshares'], 'results come back as a grid of cards');
+      assertEqual([...w.document.querySelectorAll('.stk-results-meta')].map(n => n.textContent),
+        ['90%', '25%'], 'each carrying what EDHREC knows about it for this commander');
       assertEqual(w.document.querySelector('.stk-results-more') !== null, true,
         'and Scryfall saying there is more gives a way to ask for it');
 
@@ -554,6 +567,31 @@ const card = (name, typeLine, id) => ({
       w.self.STK_DECK_SCRYFALL.rescanElements();
       assertEqual(w.document.querySelectorAll('#stk-edhrec-button').length, 1,
         'without a second button appearing on the next sweep');
+    }
+
+    console.log('deck-search: a search does not go near EDHREC unless EDHREC is on');
+    {
+      const w = makeWorld({
+        html: '<div class="deckbuilder-toolbar"></div><div id="deckbuilder"></div>'
+      });
+      w.boot();
+      const asked = [];
+      w.self.STK_BRIDGE = {
+        request: (name, value) => {
+          asked.push(name);
+          return Promise.resolve({ cards: [{ id: 's1', name: 'Sol Ring' }], hasMore: false });
+        }
+      };
+      w.self.STK_DECK_SEARCH.apply({ deckSearch: true, edhrecSuggestions: false });
+      w.document.getElementById('stk-search-button').dispatchEvent(new w.self.Event('click'));
+      await tick();
+      w.document.querySelector('.stk-search-input').value = 't:artifact';
+      w.document.querySelector('.stk-search-form').dispatchEvent(new w.self.Event('submit'));
+      await tick();
+      assert(!asked.includes('edhrecCommander'),
+        'the privacy policy says names go to EDHREC only when that feature is on');
+      assertEqual([...w.document.querySelectorAll('.stk-results-meta')].length, 0,
+        'and a card without that data simply has no number');
     }
 
     summary('test-deck-modules');
