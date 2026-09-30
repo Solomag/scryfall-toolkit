@@ -34,30 +34,122 @@
     return node;
   }
 
-  // The art and the type line come from Scryfall rather than from whoever
-  // supplied the card name, so a list of ids goes out in batches.
+  // --- Scryfall's query words, over the fields a card carries ----------------
+  //
+  // The filter is not a second search box, but it does understand the words
+  // Scryfall uses, over the data already on the cards. What it does not
+  // understand it says so about rather than quietly matching nothing.
+
+  const KNOWN_KEYS = ['t', 'type', 'o', 'oracle', 'c', 'color', 'ci', 'identity', 'cmc', 'pow', 'tou', 'r', 'rarity', 'is', 'name'];
+
+  function tokens(query) {
+    const out = [];
+    // `t:creature`, `cmc<=3`, `-o:"draw a card"`, or a bare word for the name.
+    // The key is optional, and so is what joins it: Scryfall writes `t:creature`
+    // with a colon and `cmc<=3` with the operator alone.
+    for (const match of String(query).matchAll(/(-?)(?:([a-z]+)(:|<=|>=|<|>|=))?("[^"]*"|\S+)/gi)) {
+      out.push({
+        negate: match[1] === '-',
+        key: (match[2] || '').toLowerCase(),
+        op: match[3] || '=',
+        value: match[4].replace(/^"|"$/g, '').toLowerCase()
+      });
+    }
+    return out;
+  }
+
+  const coloursIn = cost => (String(cost).match(/\{([wubrg])\}/gi) || []).map(c => c[1].toLowerCase());
+
+  function matches(card, query) {
+    const words = tokens(query);
+    if (!words.length) return { ok: true, unknown: null };
+    let unknown = null;
+    const holds = words.map(word => {
+      const type = String(card.typeLine || '').toLowerCase();
+      const text = String(card.oracleText || '').toLowerCase();
+      const cost = String(card.manaCost || '');
+      const name = String(card.name || '').toLowerCase();
+      const identity = String(card.colorIdentity || '') + coloursIn(cost).join('');
+      let found = true;
+      switch (word.key) {
+        case '': case 'name':
+          found = name.includes(word.value);
+          break;
+        case 't': case 'type':
+          found = type.includes(word.value);
+          break;
+        case 'o': case 'oracle':
+          found = text.includes(word.value);
+          break;
+        case 'c': case 'color':
+          found = [...word.value].every(colour => identity.includes(colour));
+          break;
+        case 'ci': case 'identity':
+          found = [...word.value].every(colour => identity.includes(colour));
+          break;
+        case 'cmc': {
+          const number = Number(card.cmc);
+          const target = Number(word.value.replace(/^[<>=]+/, ''));
+          if (!Number.isFinite(number) || !Number.isFinite(target)) { found = false; break; }
+          found = { '<=': number <= target, '>=': number >= target, '<': number < target, '>': number > target }[word.op] ??
+            number === target;
+          break;
+        }
+        case 'pow': case 'tou': {
+          const raw = word.key === 'pow' ? card.power : card.toughness;
+          const number = Number(raw);
+          const target = Number(word.value.replace(/^[<>=]+/, ''));
+          if (!Number.isFinite(number) || !Number.isFinite(target)) { found = false; break; }
+          found = { '<=': number <= target, '>=': number >= target, '<': number < target, '>': number > target }[word.op] ??
+            number === target;
+          break;
+        }
+        case 'r': case 'rarity':
+          found = String(card.rarity || '').toLowerCase().startsWith(word.value);
+          break;
+        case 'is':
+          found = word.value === 'creature' ? /\bcreature\b/.test(type)
+            : word.value === 'land' ? /\bland\b/.test(type)
+            : word.value === 'commander' ? /\blegendary\b/.test(type) && /\b(creature|planeswalker)\b/.test(type)
+            : false;
+          break;
+        default:
+          found = true;
+          if (unknown === null) unknown = word.key;
+      }
+      return word.negate ? !found : found;
+    });
+    return { ok: holds.every(Boolean), unknown };
+  }
+
   function loadImages(cards, request, done) {
-    const missing = cards.filter(card => card.id && !card.image);
+    const missing = cards.filter(card => (card.id || card.printing) && !card.image);
     if (!missing.length) {
       done();
       return;
     }
     const batches = [];
     for (let i = 0; i < missing.length; i += 75) batches.push(missing.slice(i, i + 75));
-    Promise.all(batches.map(batch => request('cardImages', { ids: batch.map(c => c.id) })))
+    Promise.all(batches.map(batch => request('cardImages', {
+      ids: batch.filter(c => c.id).map(c => c.id),
+      printings: batch.filter(c => !c.id && c.printing).map(c => c.printing)
+    })))
       .then(replies => {
-        const byId = new Map();
+        const byKey = new Map();
         for (const reply of replies) {
           for (const card of (Array.isArray(reply) ? reply : (reply && reply.data) || [])) {
-            byId.set(card.id, card);
+            byKey.set('id:' + card.id, card);
           }
         }
         for (const card of missing) {
-          const found = byId.get(card.id);
+          const found = (card.id && byKey.get('id:' + card.id)) ||
+            [...byKey.values()].find(item => item.name && card.name &&
+              item.name.toLowerCase() === String(card.name).toLowerCase().replace(/ \/\/ .*/, ''));
           if (!found) continue;
-          card.image = found.image || card.image;
-          if (!card.typeLine && found.typeLine) card.typeLine = found.typeLine;
-          if (!card.manaCost && found.manaCost) card.manaCost = found.manaCost;
+          for (const field of ['image', 'typeLine', 'manaCost', 'oracleText', 'cmc', 'colors', 'colorIdentity', 'power', 'toughness', 'rarity']) {
+            if (card[field] === undefined || card[field] === '' || card[field] === null) card[field] = found[field];
+          }
+          if (!card.id) card.id = found.id;
         }
       })
       .catch(() => {})
@@ -190,7 +282,8 @@
     if (opts.filter !== false) {
       filter.type = 'text';
       filter.className = 'stk-results-filter';
-      filter.placeholder = 'Filter these cards…';
+      filter.placeholder = 'Filter: t:creature cmc<3 -o:fly';
+      filter.title = 'Scryfall words, over the cards on screen: t: o: c: ci: cmc pow tou r: is: name:, and a bare word for the name. A leading – excludes.';
       filter.setAttribute('aria-label', 'Filter these cards');
       bar.appendChild(filter);
     }
@@ -220,6 +313,14 @@
       preview
     };
 
+    // A small line beside the results rather than instead of them: what the
+    // filter did not understand, how much was left out.
+    function note(text) {
+      const old = host.querySelector('.stk-results-aside');
+      if (old) old.remove();
+      if (text) bar.appendChild(el('span', 'stk-results-aside', text));
+    }
+
     function setView(next, remember) {
       view = next;
       for (const key of VIEWS) buttons[key].classList.toggle('active', key === view);
@@ -228,14 +329,22 @@
     }
 
     function visibleCards() {
-      const needle = filter.value.trim().toLowerCase();
+      const needle = filter.value.trim();
       if (!needle) return cards;
-      return cards.filter(card =>
-        (card.name || '').toLowerCase().includes(needle) ||
-        (card.typeLine || '').toLowerCase().includes(needle));
+      return cards.filter(card => matches(card, needle).ok);
     }
 
-    filter.addEventListener('input', render);
+    filter.addEventListener('input', () => {
+      render();
+      // If the reader typed a term this does not know, say which one rather
+      // than leaving an empty list and no reason.
+      const unknown = [...new Set(cards.map(card => matches(card, filter.value.trim()).unknown).filter(Boolean))];
+      if (filter.value.trim() && unknown.length) {
+        note('not understood here: ' + unknown.map(key => key + ':').join(' '));
+      } else {
+        note('');
+      }
+    });
 
     function render() {
       const shown = visibleCards();
@@ -301,13 +410,7 @@
       message(text) {
         body.replaceChildren(el('p', 'stk-results-note', text));
       },
-      // A small line beside the results rather than instead of them: how much
-      // was left out, not a replacement for the list.
-      note(text) {
-        const old = host.querySelector('.stk-results-aside');
-        if (old) old.remove();
-        bar.appendChild(el('span', 'stk-results-aside', text));
-      },
+      note,
       // Scryfall pages its searches. This is the way to ask for the next one.
       showMore(next) {
         moreFn = next;
@@ -316,5 +419,5 @@
     };
   }
 
-  self.STK_DECK_RESULTS = { create: create, loadImages: loadImages };
+  self.STK_DECK_RESULTS = { create: create, loadImages: loadImages, matches: matches, tokens: tokens };
 })();

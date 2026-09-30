@@ -680,6 +680,28 @@ const card = (name, typeLine, id) => ({
         'and the reader is told how much was left out');
     }
 
+    console.log('deck-results: the filter speaks Scryfall\'s words');
+    {
+      const q = makeWorld({});
+      q.boot();
+      const results = q.self.STK_DECK_RESULTS;
+      const card = {
+        name: 'Sol Ring', typeLine: 'Artifact', manaCost: '{1}', oracleText: 'Add {C}{C}.',
+        cmc: 1, colors: '', colorIdentity: '', power: '', toughness: '', rarity: 'common'
+      };
+      assertEqual(results.matches(card, 't:artifact').ok, true, 't: matches the type line');
+      assertEqual(results.matches(card, 't:creature').ok, false, 'and a wrong type does not');
+      assertEqual(results.matches(card, '-t:creature').ok, true, 'a leading dash excludes');
+      assertEqual(results.matches(card, 'cmc<2').ok, true, 'cmc takes a comparison');
+      assertEqual(results.matches(card, 'cmc>2').ok, false, 'and it is read either way');
+      assertEqual(results.matches(card, 'o:"add {c}"').ok, true, 'o: searches the text in quotes');
+      assertEqual(results.matches(card, 'sol').ok, true, 'a bare word matches the name');
+      assertEqual(results.matches(card, 't:artifact sol').ok, true, 'and words combine');
+      const unknown = results.matches(card, 'zone:hand');
+      assertEqual(unknown.ok, true, 'a term this does not know is not a filter');
+      assertEqual(unknown.unknown, 'zone', 'and it is named so the reader knows why');
+    }
+
     summary('test-deck-modules');
     process.exit(0);
   } catch (error) {

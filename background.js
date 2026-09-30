@@ -369,24 +369,44 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
       return { id: /^[0-9a-f-]{36}$/.test(card.id || "") ? card.id : "" };
     }
     if (message.type === "cardImages") {
-      // Card art and the type line for a set of cards, so the deck editor's
-      // panels can show what a card is rather than only what it is called. Same
-      // batched collection call the finish column uses, at Scryfall's limit.
-      const ids = message.ids;
-      if (!Array.isArray(ids) || ids.length > 75 || ids.some(id => !/^[0-9a-f-]{36}$/.test(String(id)))) {
-        throw new Error("Invalid card IDs");
+      // Card art and the fields a query needs to be answered: what it is, what
+      // it costs, what it does. Identified either by Scryfall's id or by the
+      // printing EDHREC names. Same batched collection call the finish column
+      // uses, at Scryfall's limit.
+      const ids = Array.isArray(message.ids) ? message.ids : [];
+      const printings = Array.isArray(message.printings) ? message.printings : [];
+      const identifiers = ids.map(id => ({ id }));
+      for (const printing of printings) {
+        identifiers.push({
+          set: String(printing && printing.set || "").toLowerCase(),
+          collector_number: String(printing && printing.number || "").trim()
+        });
+      }
+      if (!identifiers.length || identifiers.length > 75) throw new Error("Invalid card identifiers");
+      if (identifiers.some(item => item.id
+        ? !/^[0-9a-f-]{36}$/.test(item.id)
+        : (!/^[a-z0-9_-]{1,16}$/.test(item.set) || !/^[a-z0-9★-]{1,24}$/.test(item.collector_number)))) {
+        throw new Error("Invalid card identifiers");
       }
       const result = await scryfallJSON("https://api.scryfall.com/cards/collection", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ identifiers: ids.map(id => ({ id })) })
+        body: JSON.stringify({ identifiers })
       });
       return (result.data || []).map(card => {
         const image = card.image_uris?.normal || card.card_faces?.[0]?.image_uris?.normal || "";
         return {
           id: /^[0-9a-f-]{36}$/.test(card.id || "") ? card.id : "",
           image: /^https:\/\/cards\.scryfall\.io\//.test(image) ? image : "",
+          name: String(card.name || "").slice(0, 120),
           typeLine: String(card.type_line || "").slice(0, 120),
-          manaCost: String(card.mana_cost || "").slice(0, 60)
+          manaCost: String(card.mana_cost || "").slice(0, 60),
+          oracleText: String(card.oracle_text || "").slice(0, 2000),
+          cmc: Number.isFinite(card.cmc) ? card.cmc : null,
+          colors: (card.colors || []).filter(c => /^[wubrg]$/.test(c)).join(""),
+          colorIdentity: (card.color_identity || []).filter(c => /^[wubrg]$/.test(c)).join(""),
+          power: String(card.power ?? "").slice(0, 8),
+          toughness: String(card.toughness ?? "").slice(0, 8),
+          rarity: String(card.rarity || "").slice(0, 20)
         };
       }).filter(card => card.id);
     }
