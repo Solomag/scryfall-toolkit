@@ -148,10 +148,41 @@ function createChrome(options = {}) {
   const permissions = {
     grantedOrigins: [],
     deny: false,
+    // When set, the browser refuses the question outright — which is what Chrome does
+    // to a permission request made outside a user gesture.
+    refuseWith: null,
+    // Refusals the code under test did not look at. Real Chrome prints each of these
+    // as "Unchecked runtime.lastError", which is the line a reader sees in the console
+    // and the reason this is recorded rather than merely returned.
+    unchecked: [],
+    requestCount: 0,
     request(options, callback) {
-      const granted = permissions.deny !== true;
+      permissions.requestCount = (permissions.requestCount || 0) + 1;
+      const refusal = permissions.refuseWith;
+      const granted = refusal ? false : permissions.deny !== true;
       if (granted) permissions.grantedOrigins.push(...(options.origins || []));
-      if (typeof callback === 'function') { callback(granted); return undefined; }
+
+      // The error is delivered by assignment and taken by reading — so whether it was
+      // read is observable, and nothing else can tell.
+      let read = false;
+      chrome.__lastError = refusal ? { message: refusal } : undefined;
+      Object.defineProperty(chrome.runtime, 'lastError', {
+        configurable: true,
+        get() { read = true; return chrome.__lastError; },
+        set(value) { chrome.__lastError = value; },
+        enumerable: true
+      });
+
+      const done = typeof callback === 'function' ? callback : null;
+      if (done) {
+        done(granted);
+        if (refusal && !read) permissions.unchecked.push(refusal);
+        chrome.__lastError = undefined;
+        return undefined;
+      }
+      // No callback: nothing can read the error, which is the other way to get an
+      // unchecked one, and it is recorded as such.
+      if (refusal) permissions.unchecked.push(refusal);
       return Promise.resolve(granted);
     },
     contains(options, callback) {

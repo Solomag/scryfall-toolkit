@@ -171,7 +171,45 @@ duplicated. It passes over the defect it was written for. It now keys on the lab
 sees, and it was verified by breaking the fixture on purpose: the tool fails with the ten
 duplicates named.
 
-Tests: 1637 assertions pass across eight suites.
+### The error a reader reported
+
+```
+Unchecked runtime.lastError: This function must be called during a user gesture
+```
+
+On every visit to the settings page. This one is in the extension, not in the tooling, and
+it was two mistakes stacked.
+
+The settings page checked whether an enabled feature had the host it needs, and asked for
+the missing one — while the page was loading, from inside the callback of
+`permissions.contains`. Chrome grants an optional permission only from within a gesture,
+and by that point there is no gesture left to ask with, so the request is refused.
+
+Then the refusal arrives. Chrome delivers it through the callback and not as a throw, so
+the `try`/`catch` around the call caught nothing. And nobody read
+`chrome.runtime.lastError`, which is the part that turned a refusal into a *console line*:
+Chrome prints any error that is left unread as "Unchecked", on every load, forever. The
+comment above that call said the request was refused silently "by design". It was refused
+loudly, at the reader, and the design was wrong.
+
+So the page asks for nothing on load. It reports instead: which features are on without a
+host, named as the interface names them rather than as storage keys — a reader with EDHREC
+on and CardTrader off is missing one host, and "two" would send them hunting for a switch
+that is deliberately off. The button that grants access is marked on the page so it is
+findable, and it is the only thing that asks. Where the browser refuses even to ask, that
+is now said, because it is a different problem from a reader clicking "no" and it used to
+be reported as one.
+
+The same unread error was in the popup's helper, where it is unreachable in practice — the
+call is inside a click — and is fixed anyway, because the cost of the guard is one line
+and the cost of the bug was a console line on every page.
+
+The test that holds this down records what the old code did: the mock browser refuses the
+question the way Chrome does, remembers whether the refusal was read, and the check is
+that it was. Verified by putting the old code back — the page then throws on load, which
+is the loudest way it could fail.
+
+Tests: 1648 assertions pass across eight suites.
 
 ### The theme, in seven files
 

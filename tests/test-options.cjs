@@ -877,6 +877,67 @@ function featureShotsTest() {
   assertEqual(untranslated, [], 'and every caption is in the dictionary, so an English page is not half Russian');
 }
 
+// The bug a reader reported, and the two things it was made of.
+//
+// Opening the settings page printed:
+//
+//   Unchecked runtime.lastError: This function must be called during a user gesture
+//
+// twice over. The page asked for an optional host while it was loading, from inside the
+// callback of permissions.contains — so there was no gesture left to ask with, and
+// Chrome refused. A refusal arrives through the callback rather than as a throw, so the
+// try/catch around the call caught nothing; and because nobody read
+// chrome.runtime.lastError, Chrome printed it as "Unchecked" on every load.
+async function hostAccessTest() {
+  console.log('options.js: host access is asked for from a click, and every refusal is read');
+
+  // Loading the page must ask for nothing. Not "ask and fail quietly" — ask nothing.
+  const page = loadOptions({ edhrecUsage: true, edhrecSalt: true, cardtraderPrices: false });
+  const { document, mock } = page;
+  await tick();
+  await tick();
+  assertEqual(mock.permissions.grantedOrigins, [],
+    'loading the settings page asks for no host at all');
+  assertEqual(mock.permissions.requestCount, 0,
+    'and makes no request to be refused');
+
+  // What it does instead is name what is missing, so a reader has something to act on.
+  const status = document.getElementById('status');
+  assert(/EDHREC/.test(status.textContent),
+    'a feature that is on without its host is named in the status line (' +
+      status.textContent.slice(0, 60) + ')');
+  assert(document.getElementById('grantDeckHosts').classList.contains('stk-needs-grant'),
+    'and the button that grants it is marked on the page');
+
+  // A refusal must be read, or Chrome prints it as unchecked.
+  mock.permissions.unchecked.length = 0;
+  mock.permissions.refuseWith = 'This function must be called during a user gesture';
+  const prices = document.getElementById('cardtraderPrices');
+  assert(prices.checked === false, 'the feature under test starts switched off');
+  prices.checked = true;
+  fireEvent(prices, 'change');
+  await tick();
+  await tick();
+  assertEqual(mock.permissions.unchecked, [],
+    'a refused request is read through chrome.runtime.lastError, so nothing is printed');
+  assert(prices.checked === false, 'and the switch goes back rather than looking switched on');
+  assert(mock.state.cardtraderPrices !== true, 'and nothing was saved as if it had worked');
+  assert(/не дал спросить|would not let/.test(status.textContent),
+    'saying the browser would not ask, which is not the reader saying no (' +
+      status.textContent.slice(0, 60) + ')');
+  mock.permissions.refuseWith = null;
+
+  // And the way that works: the button, from a click.
+  const grant = document.getElementById('grantDeckHosts');
+  grant.click();
+  await tick();
+  await tick();
+  assert(mock.permissions.grantedOrigins.includes('https://json.edhrec.com/*'),
+    'the button grants what the page said was missing');
+  assertEqual(mock.permissions.unchecked, [],
+    'and a refusal there is read as well');
+}
+
 (async () => {
   try {
     htmlIdCheck();
@@ -884,6 +945,7 @@ function featureShotsTest() {
     sectionOrderTest();
     popupTest();
     await optionalHostsTest();
+    await hostAccessTest();
     await lastPlatformTest();
     settingsLanguageTest();
     await settingsLanguageChainTest();

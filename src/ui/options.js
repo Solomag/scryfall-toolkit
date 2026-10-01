@@ -39,6 +39,13 @@ const OPTIONAL_HOSTS = {
   edhrecSuggestions: ['https://json.edhrec.com/*', 'https://edhrec.com/*'],
   cardtraderPrices: ['https://api.cardtrader.com/*']
 };
+// What each of those is called in the interface. Every key is listed, so adding a
+// feature with a host cannot leave the message showing a storage key to a reader.
+const OPTIONAL_HOST_NAMES = {
+  edhrecUsage: 'EDHREC', edhrecSalt: 'EDHREC', edhrecLink: 'EDHREC',
+  edhrecSuggestions: 'EDHREC', cardtraderPrices: 'CardTrader',
+  euroPriceSources: 'CardTrader'
+};
 // The hosts each optional feature needs, and what turns them on. euroPriceSources
 // is the one that is easy to miss: choosing CardTrader as the EUR source reaches
 // api.cardtrader.com whether or not the CardTrader switch is on, so it has to ask
@@ -47,19 +54,36 @@ const OPTIONAL_HOSTS = {
 // added over time and the grant the user gave covers only what existed then. A
 // missing host does not fail loudly — the feature quietly falls back to
 // something blander and nobody knows why. So the settings page checks what an
-// enabled feature has and asks for what is missing.
+// enabled feature has, and *reports* what is missing.
+//
+// It does not ask for it. Asking here was what put this error on the reader's screen:
+//
+//   Unchecked runtime.lastError: This function must be called during a user gesture
+//
+// Chrome grants an optional permission only from inside a gesture, and this runs while
+// the page loads — and one step further out, inside the callback of
+// permissions.contains, so by the time it asks there is nothing a gesture could have
+// been. The refusal then arrives through the callback rather than as a throw, so the
+// try/catch around it catches nothing, and because nobody reads
+// chrome.runtime.lastError Chrome prints it as "Unchecked" on every page load.
+//
+// So the check reports, and the button asks. A reader is told what is missing instead of
+// being handed a console line they cannot act on.
 function reconcileHostAccess(values) {
-  if (!chrome.permissions || !chrome.permissions.contains) return;
+  if (!chrome.permissions || !chrome.permissions.contains) return Promise.resolve([]);
+  const checks = [];
   for (const [key, hosts] of Object.entries(OPTIONAL_HOSTS)) {
     if (!values[key] || !hosts.length) continue;
-    chrome.permissions.contains({ origins: hosts }, has => {
-      if (has) return;
-      // Silent by design: Chrome only wants a request that follows a click, and
-      // one fired while the page loads is refused. The button below is the
-      // deliberate way, and this just stops a feature running half granted.
-      requestHostAccess(hosts);
-    });
+    checks.push(new Promise(resolve => {
+      chrome.permissions.contains({ origins: hosts }, has => {
+        // Reading lastError here matters for the same reason: an unchecked one is
+        // printed whether or not anybody looks at it.
+        void chrome.runtime.lastError;
+        resolve(has ? null : key);
+      });
+    }));
   }
+  return Promise.all(checks).then(results => results.filter(Boolean));
 }
 function optionalHostsFor(key, value) {
   if (key === 'euroPriceSources') {
@@ -67,13 +91,28 @@ function optionalHostsFor(key, value) {
   }
   return OPTIONAL_HOSTS[key] || [];
 }
+
+// Asks for hosts. Only ever from inside a click.
+//
+// The answer distinguishes "the reader said no" from "the browser would not even ask",
+// because they are different problems and a caller that treats them alike reverts a
+// switch for no reason the reader can see. Reading chrome.runtime.lastError inside the
+// callback is what stops the refusal being printed as an unchecked error.
 function requestHostAccess(origins) {
-  if (!origins || !origins.length || !chrome.permissions || !chrome.permissions.request) return Promise.resolve(true);
+  if (!origins || !origins.length || !chrome.permissions || !chrome.permissions.request) {
+    return Promise.resolve({ granted: true, reason: '' });
+  }
   return new Promise(resolve => {
     try {
-      chrome.permissions.request({ origins }, granted => resolve(Boolean(granted)));
+      chrome.permissions.request({ origins }, granted => {
+        const refusal = chrome.runtime.lastError;
+        resolve({
+          granted: Boolean(granted),
+          reason: refusal ? refusal.message || String(refusal) : ''
+        });
+      });
     } catch (error) {
-      resolve(false);
+      resolve({ granted: false, reason: (error && error.message) || String(error) });
     }
   });
 }
@@ -223,14 +262,30 @@ chrome.storage.local.get(defaults, values => {
   if (grant) {
     grant.addEventListener('click', () => {
       const missing = [...new Set(Object.values(OPTIONAL_HOSTS).flat())];
-      requestHostAccess(missing).then(granted => {
-        status.textContent = granted
-          ? t('Доступ к хосту выдан — перезагрузи открытые страницы.')
+      requestHostAccess(missing).then(answer => {
+        if (answer.granted) {
+          status.textContent = t('Доступ к хосту выдан — перезагрузи открытые страницы.');
+          return;
+        }
+        // The browser refusing to ask at all is not the reader saying no, and
+        // saying "не выдан" for it would be a message about the wrong thing.
+        status.textContent = answer.reason
+          ? t('Браузер не дал спросить: ') + answer.reason
           : t('Доступ не выдан.');
       });
     });
   }
-  reconcileHostAccess(values);
+  reconcileHostAccess(values).then(missing => {
+    // Named, not merely counted, and named by the product rather than by the storage key:
+    // a reader who has EDHREC switched on and CardTrader switched off is missing one
+    // host, and telling them that two are missing sends them looking for a switch that
+    // is deliberately off. A storage key in the message would be worse than either.
+    if (!missing.length) return;
+    const named = [...new Set(missing.map(key => (OPTIONAL_HOST_NAMES[key] || key)))];
+    status.textContent = t('Не выдан доступ к хостам для: ') + named.join(', ') +
+      '. Нажми «Выдать доступ к хостам».';
+    if (grant) grant.classList.add('stk-needs-grant');
+  });
   for (const key of basicFields) {
     const element = document.getElementById(key);
     if (element.type === "checkbox") element.checked = Boolean(values[key]);
@@ -242,13 +297,17 @@ chrome.storage.local.get(defaults, values => {
       // that cannot reach anything.
       const needs = optionalHostsFor(key, wanted);
       if (needs.length) {
-        requestHostAccess(needs).then(granted => {
-          if (!granted) {
+        requestHostAccess(needs).then(answer => {
+          if (!answer.granted) {
             // Without its host the feature reaches nothing, so the control goes
             // back to what storage holds rather than saving a switch that only
-            // looks like it works.
+            // looks like it works. The browser refusing to ask is reported, because
+            // a switch that quietly reverts looks like a broken checkbox.
             if (element.type === 'checkbox') element.checked = Boolean(values[key]);
             else if (values[key] !== undefined) element.value = values[key];
+            status.textContent = answer.reason
+              ? t('Браузер не дал спросить: ') + answer.reason
+              : t('Доступ не выдан.');
             return;
           }
           chrome.storage.local.set({ [key]: wanted }, () => { status.textContent = t('Сохранено'); });
