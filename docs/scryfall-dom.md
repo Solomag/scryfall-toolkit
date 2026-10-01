@@ -258,6 +258,7 @@ Scryfall knows nothing about.
 | `.dropdown-menu` | 4 | `02-shared-pages`, `03-account-and-marketing` |
 | `.form-row` | 4 | `01-card-page`, `02-shared-pages` |
 | `.form-row-label` | 4 | `01-card-page`, `02-shared-pages` |
+| `.modal-dialog` | 4 | `07-our-own-ui` |
 | `.primary-n` | 4 | `02-shared-pages`, `04-surfaces`, `06-shared-surfaces` |
 | `.search-info` | 4 | `02-shared-pages`, `04-surfaces` |
 | `.select2-results__option` | 4 | `02-shared-pages` |
@@ -301,6 +302,7 @@ Scryfall knows nothing about.
 | `.form-input` | 2 | `01-card-page`, `02-shared-pages`, `04-surfaces` |
 | `.form-n-file-input-control` | 2 | `02-shared-pages`, `04-surfaces` |
 | `.form-n-input` | 2 | `04-surfaces` |
+| `.modal-dialog-close` | 2 | `04-surfaces`, `07-our-own-ui` |
 | `.muted-n` | 2 | `03-account-and-marketing`, `04-surfaces` |
 | `.positive-n` | 2 | `04-surfaces` |
 | `.primary` | 2 | `02-shared-pages`, `06-shared-surfaces` |
@@ -376,11 +378,10 @@ Scryfall knows nothing about.
 | `.main` | 1 | `01-card-page`, `03-account-and-marketing` |
 | `.menu` | 1 | `02-shared-pages` |
 | `.message` | 1 | `02-shared-pages` |
-| `.modal-dialog` | 1 | `07-our-own-ui` |
-| `.modal-dialog-close` | 1 | `04-surfaces` |
 | `.modal-dialog-content` | 1 | `07-our-own-ui` |
 | `.modal-dialog-grid-choice` | 1 | `04-surfaces` |
 | `.modal-dialog-grid-choice-title` | 1 | `04-surfaces` |
+| `.modal-dialog-title` | 1 | `07-our-own-ui` |
 | `.negative` | 1 | `02-shared-pages` |
 | `.notice` | 1 | `02-shared-pages` |
 | `.notice-n` | 1 | `02-shared-pages` |
@@ -487,5 +488,5 @@ name itself, without the leading `.` or `#`.
 
 ---
 
-Total: **361** Scryfall class names.
+Total: **362** Scryfall class names.
 

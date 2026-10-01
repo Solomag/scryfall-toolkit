@@ -491,6 +491,92 @@ function paletteTest() {
 }
 
 
+// A panel that states its colours but not its surface.
+//
+// This is a bug a reader found, not one a reader reported: the deck editor's EDHREC
+// panel listed its card names in #e6e3df, its type lines in #a29bb0 and its counts in
+// #c9c3d4, and all of it was readable — against the dark surface Scryfall's dialog
+// happens to have while this extension's dark theme is on. Nothing in our own thirty-
+// three rules said "dark", because the background was never among them. Set the theme
+// to light, the dialog came out white, and every card name in the list went invisible
+// while the percentages stayed legible, which reads as a rendering fault rather than as
+// a missing colour.
+//
+// So: a colour we declare has to come with the thing it sits on. That is checkable, and
+// the check is here because nothing else would have caught it — the panel rendered, the
+// rows were all there, and every assertion in this file passed.
+function panelSurfaceTest() {
+  console.log('static: our own panels declare the surface their text sits on');
+  const css = themeCss().text;
+
+  // Luminance and contrast, so the check is about whether the pair can be read rather
+  // than about whether two strings are present. A check that only asked "is there a
+  // background here" passed happily against a white one — which is precisely the bug,
+  // in the exact form it was reported in.
+  const channel = value => {
+    const c = value / 255;
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  };
+  const luminance = hex => {
+    const n = parseInt(hex.replace('#', ''), 16);
+    return 0.2126 * channel((n >> 16) & 255) + 0.7152 * channel((n >> 8) & 255) + 0.0722 * channel(n & 255);
+  };
+  const contrast = (a, b) => {
+    const [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+    return (light + 0.05) / (dark + 0.05);
+  };
+  const hexIn = (text, property) => {
+    // The boundary matters: without it "color" matches the tail of "background-color"
+    // and the panel comes out with its background reading as its text colour, at a
+    // contrast ratio of one to one — which is a check that passes on a broken panel.
+    const match = text.match(new RegExp('(?:^|[;{\\s])' + property + '\\s*:\\s*(#[0-9a-fA-F]{3,8})'));
+    return match ? match[1] : null;
+  };
+
+  const panelRules = [...css.matchAll(/\.modal-dialog\.stk-(?:edhrec|search)-panel[^{]*\{([^}]*)\}/g)]
+    .map(match => match[1]);
+  // The first rule for these selectors sets the width and no surface, so the one that
+  // matters is whichever of them actually paints something behind the text.
+  const panels = panelRules.filter(body => /background/.test(body));
+  assertEqual(panels.length, 2, 'both of our deck dialogs declare a surface of their own');
+  for (const [index, body] of panels.entries()) {
+    const surface = hexIn(body, 'background-color');
+    assert(surface, `panel ${index + 1} names a background colour`);
+    const ink = hexIn(body, 'color') || '#e6e3df';
+    assert(contrast(surface, ink) >= 4.5,
+      `panel ${index + 1}: its own text reads on its own surface (${surface} vs ${ink}, ` +
+      contrast(surface, ink).toFixed(1) + ':1, needs 4.5:1)');
+  }
+
+  // The rows sit on that surface, so the row colours are checked against it too. These
+  // are the values that vanished in the light theme: the name, the type line, the count.
+  const surface = hexIn(panels[0], 'background-color');
+  for (const [selector, property] of [
+    ['.stk-results-row-name', 'color'],
+    ['.stk-results-row-type', 'color'],
+    ['.stk-results-row-cost', 'color'],
+    ['.stk-results-row-meta', 'color'],
+    ['.stk-results-aside', 'color'],
+    ['.stk-results-note', 'color'],
+    ['.stk-results-group-title', 'color']
+  ]) {
+    const rule = (css.match(new RegExp('\\' + selector + '[^{]*\\{([^}]*)\\}')) || [])[1] || '';
+    const value = hexIn(rule, property);
+    assert(value, `${selector} names its text colour`);
+    assert(contrast(surface, value) >= 3,
+      `${selector} is readable on the panel surface (${surface} vs ${value}, ` +
+      contrast(surface, value).toFixed(1) + ':1, needs 3:1)');
+  }
+
+  // And the deck editor is dark whatever our setting says, so the clipboard is styled
+  // there from Scryfall's own root rather than from the theme switch.
+  assert(/body:has\(#deckbuilder\)\s*#scryfall-toolkit-clipboard/.test(css),
+    'the clipboard is styled for the deck editor, which Scryfall draws dark itself');
+  // The marker must be theirs, not ours: a class of our own would have to be kept in
+  // step with their markup, which is the dependency this project has been removing.
+  assert(!/stk-deck-page/.test(css), 'and the marker is not a class of ours to keep in step');
+}
+
 function hoverStatesTest() {
   console.log('static: hover states differ from the resting state');
   const css = themeCss().text.replace(/\/\*[\s\S]*?\*\//g, '');
@@ -792,6 +878,7 @@ async function pathClasses() {
     noDoublePaintingTest();
     domContractTest();
     paletteTest();
+    panelSurfaceTest();
     hoverStatesTest();
     auditGapCheck();
     syntaxCheck();

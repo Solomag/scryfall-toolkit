@@ -28,6 +28,41 @@
 .modal-dialog.stk-edhrec-panel,.modal-dialog.stk-search-panel{max-width:860px}
 .modal-dialog-content.stk-edhrec-panel,.modal-dialog-content.stk-search-panel{max-height:none;overflow-y:visible;padding:0;position:relative}
 
+/* These panels carry their own surface, and the reason is a bug that was only visible
+   in the light theme.
+
+   Every colour in this panel — the card name at #e6e3df, the type line at #a29bb0, the
+   count at #c9c3d4 — is a dark-theme colour, and all thirty-three rules here said so
+   without ever saying it. The background was not among them: the panel inherited it
+   from Scryfall's .modal-dialog, which is white unless this extension's dark theme is
+   on. So the two halves were a promise and the other party, and while they agreed the
+   text was readable.
+
+   Then the theme was set to light and the agreement broke: white modal, near-white card
+   names. Every name in the list disappeared while the type line, the percentages and
+   the Add buttons stayed legible, which is what makes it read as a rendering fault
+   rather than as a missing one.
+
+   The deck editor is dark whatever this extension's setting says — Scryfall draws it
+   that way, and the dark theme here only repaints what it can — so the panel is dark on
+   both settings. Declaring the surface next to the text is the point: a colour is a
+   statement about what it sits on, and that statement cannot be checked while the other
+   half of it lives in somebody else's stylesheet. */
+.modal-dialog.stk-edhrec-panel,
+.modal-dialog.stk-search-panel {
+  background-color: #1d1d23;
+  color: #e6e3df;
+  border-color: #3a3846;
+}
+.modal-dialog.stk-edhrec-panel :is(.stk-account-light-bar,.modal-dialog-title),
+.modal-dialog.stk-search-panel :is(.stk-account-light-bar,.modal-dialog-title) {
+  background-color: #292c2e;
+  color: #e6e3df;
+  border-bottom-color: #3a3846;
+}
+.modal-dialog.stk-edhrec-panel .modal-dialog-close,
+.modal-dialog.stk-search-panel .modal-dialog-close { color: #cfc8d8; }
+
 .stk-results-bar{display:flex;align-items:center;gap:12px;padding:10px 14px 2px}
 .stk-results-aside{flex:0 0 auto;color:#8f8a99;font-size:11px}
 .stk-results-filter{flex:1 1 auto;min-width:0;max-width:280px;font-size:13px;padding:5px 9px;

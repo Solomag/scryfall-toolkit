@@ -72,6 +72,28 @@ html.stk-dark #scryfall-toolkit-clipboard .stk-copy-menu{background:#292c2e!impo
 html.stk-dark #scryfall-toolkit-clipboard .stk-copy-plain{background:#33373b!important;border-color:#565c61!important;color:var(--stk-ink)!important}
 html.stk-dark #scryfall-toolkit-clipboard .stk-copy-plain::before{color:#9aa3ab}
 html.stk-dark #scryfall-toolkit-clipboard .stk-copy-plain:hover,html.stk-dark #scryfall-toolkit-clipboard .stk-copy-plain:focus-visible{background:#3f4b58!important;border-color:#6f9fd6!important}
+/* The clipboard on the deck editor, in the light theme as well.
+
+   The deck editor is Scryfall's own dark page and this extension does not repaint it
+   into light, so a clipboard that took its colours from the theme setting put a light
+   box in the corner of a dark page — legible, and looking as though it belonged to
+   something else entirely. The marker is Scryfall's own root element rather than one
+   of ours, because the page being dark has nothing to do with which settings are on
+   and a class of our own would have to be kept in step with theirs to notice. */
+body:has(#deckbuilder) #scryfall-toolkit-clipboard .stk-toolbar,
+body:has(#deckbuilder) #scryfall-toolkit-clipboard .stk-list{background:#292c2e!important;color:var(--stk-ink)!important;border-color:#4d5255!important}
+body:has(#deckbuilder) #scryfall-toolkit-clipboard .stk-icon-button:hover,
+body:has(#deckbuilder) #scryfall-toolkit-clipboard .stk-icon-button:focus-visible{background:#3a3d40!important}
+body:has(#deckbuilder) #scryfall-toolkit-clipboard .stk-icon-button img{filter:invert(.85)}
+body:has(#deckbuilder) #scryfall-toolkit-clipboard .stk-list-row button{color:#c69de1}
+body:has(#deckbuilder) #scryfall-toolkit-clipboard .stk-copied{background:#2f9e44!important}
+body:has(#deckbuilder) #scryfall-toolkit-clipboard .stk-list-set{color:#9aa3ab}
+body:has(#deckbuilder) #scryfall-toolkit-clipboard .stk-copy-menu{background:#292c2e!important;color:var(--stk-ink)!important;border-color:#4d5255!important;box-shadow:0 6px 16px #0007}
+body:has(#deckbuilder) #scryfall-toolkit-clipboard .stk-copy-plain{background:#33373b!important;border-color:#565c61!important;color:var(--stk-ink)!important}
+body:has(#deckbuilder) #scryfall-toolkit-clipboard .stk-copy-plain::before{color:#9aa3ab}
+body:has(#deckbuilder) #scryfall-toolkit-clipboard .stk-copy-plain:hover,
+body:has(#deckbuilder) #scryfall-toolkit-clipboard .stk-copy-plain:hover,
+body:has(#deckbuilder) #scryfall-toolkit-clipboard .stk-copy-plain:focus-visible{background:#3f4b58!important;border-color:#6f9fd6!important}
 /* Native gold info boxes keep their background, but the text must stay dark. */
 html.stk-dark .prints-info-section,html.stk-dark .prints-info-section h2{color:#29252c!important}
 /* The DFC flip button is white on card images; repaint it for the dark theme

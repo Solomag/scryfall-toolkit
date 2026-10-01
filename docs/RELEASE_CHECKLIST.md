@@ -44,7 +44,12 @@ that cannot be automated.
       that needs them turned on first, and the step most likely to find something.
 - [ ] **Tagger page.** Clipboard and the Tagger link on search results.
 - [ ] **A Scryfall page in the light theme**, if the dark theme has just changed: the theme
-      paints over their stylesheet and depends on their class names.
+      paints over their stylesheet and depends on their class names. Read the text, not the
+      layout — the failure that reached 1.0.0 was white card names on a white panel, which
+      looks like a rendering fault and is a missing background.
+- [ ] **The deck editor in the light theme**, for the same reason. Scryfall draws that page
+      dark whatever our setting says, so anything of ours sitting on it has to carry its
+      own surface rather than borrow one.
 
 ## Then, in this order
 

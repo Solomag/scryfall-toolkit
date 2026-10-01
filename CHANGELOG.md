@@ -8,6 +8,46 @@ All releases: <https://github.com/Solomag/scryfall-toolkit/releases>
 
 ---
 
+### The deck editor's panels, in the light theme
+
+The live pass found one thing wrong, and it was not a small thing.
+
+Every colour in the EDHREC suggestions panel is a dark-theme colour: the card name in
+`#e6e3df`, the type line in `#a29bb0`, the count in `#c9c3d4`. All thirty-three rules in
+that part of the stylesheet said so — and none of them said "dark", because the background
+was not among them. The panel inherited it from Scryfall's own dialog, which is white
+unless this extension's dark theme is on.
+
+While the two halves agreed the text was readable, so nothing was wrong. Set the theme to
+light and they stopped agreeing: a white dialog with near-white card names. Every name in
+the list disappeared while the type lines, the percentages and the Add buttons stayed
+legible, which is what makes it read as a rendering fault rather than as a missing colour —
+and it is why it took a person looking at a browser rather than a suite looking at a
+repository.
+
+The panels now declare their own surface next to their text. The deck editor is dark
+whatever this extension's setting says, because Scryfall draws it that way and the dark
+theme here only repaints what it can, so the panel is dark on both settings. The clipboard
+in the corner of that page had the same cause from the other direction — a light box on a
+dark page — and is now styled there from Scryfall's own `#deckbuilder` root rather than
+from our switch.
+
+**And the check that would have caught it, which nothing in the suite was.** A colour is a
+statement about what it sits on, and that statement cannot be checked while the other half
+of it lives in somebody else's stylesheet. So the test now reads the panel's own
+background and computes the contrast ratio of every text colour against it: 13.1:1 for the
+card name, 6.3:1 for the type line, 9.4:1 for the percentages. A panel set to white now
+fails at 1.3:1.
+
+The first version of that check asked only whether a background was declared, and it passed
+against a white one — which is the bug, in the exact form it was reported in. It also
+matched the tail of `background-color` when looking for `color`, and read the background as
+the text: a contrast ratio of one to one, on a broken panel. Both of those were found by
+mutating the stylesheet and watching the check not complain, which is the only way a check
+about legibility can be trusted at all.
+
+Tests: 1682 assertions pass across eight suites.
+
 ## [v1.0.0](https://github.com/Solomag/scryfall-toolkit/releases/tag/v1.0.0) — 2026-10-02
 
 The first version whose behaviour this project calls settled.
@@ -279,7 +319,7 @@ The review's other point is right and worth acting on: this project's suites che
 repository invariants, and every one of them can pass while the extension is broken on
 Scryfall's own site. Scryfall can change its markup or its application internals with no
 deprecation cycle, and the live pass on 2026-10-01 already found four wrong assumptions that
-1658 assertions could not.
+1659 assertions could not.
 
 `docs/RELEASE_CHECKLIST.md` is that pass, written down: ten minutes in a browser, seven
 things to look at, then the order to run the tools in and the rule that the release archive
@@ -287,8 +327,6 @@ comes from the tag rather than from a laptop. It also lists the limits that are 
 defects — the theme's dependence on their class names, the deck modules' dependence on
 undocumented internals, and why the settings illustrations are not a photograph of the
 extension running — so that finding one during a pass is a decision rather than a surprise.
-
-Tests: 1659 assertions pass across eight suites.
 
 ### Work that had not been pushed
 
