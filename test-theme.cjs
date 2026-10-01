@@ -95,16 +95,19 @@ function iconCheck() {
     assert(exists(`icons/${icon}.svg`), `icons/${icon}.svg bundled`);
   }
   assert(exists('icons/edhrec.png'), 'icons/edhrec.png bundled');
-  // Cardmarket's symbol, as they distribute it: black for light backgrounds,
-  // white for dark. Cropped from their horizontal lockup — the wordmark beside
+  // Cardmarket's symbol, as they distribute it, from the file they publish for
+  // dark backgrounds. Cropped from their horizontal lockup — the wordmark beside
   // it and the empty margin are what is gone, the artwork is theirs untouched.
-  for (const file of ['icons/cardmarket-black.png', 'icons/cardmarket-white.png']) {
-    assert(exists(file), `${file} bundled`);
-    const png = fs.readFileSync(path.join(ROOT, file));
-    assertEqual([...png.slice(0, 4)], [0x89, 0x50, 0x4e, 0x47], `${file} is a real PNG`);
-    assertEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [89, 93],
-      `${file} is Cardmarket's symbol at its own proportions, not a stub`);
-  }
+  // There is one file and not a black one and a white one: the mark is drawn as
+  // a mask, so the colour comes from the heading and there is no variant to pick
+  // wrongly. Shipping the black one again would put that risk back.
+  assert(exists('icons/cardmarket-white.png'), 'icons/cardmarket-white.png bundled');
+  const cm = fs.readFileSync(path.join(ROOT, 'icons/cardmarket-white.png'));
+  assertEqual([...cm.slice(0, 4)], [0x89, 0x50, 0x4e, 0x47], 'it is a real PNG');
+  assertEqual([cm.readUInt32BE(16), cm.readUInt32BE(20)], [89, 93],
+    'it is Cardmarket\'s symbol at its own proportions, not a stub');
+  assert(!exists('icons/cardmarket-black.png'),
+    'the black variant is not shipped: the mark is a mask and has no variant to choose');
   assert(!exists('icons/cardmarket.svg'),
     'the placeholder glyph is gone now that Cardmarket\'s own mark is used');
 }

@@ -127,26 +127,63 @@
     });
   }
 
-  // Their own answer: a card name, the type it is, the art, and how much of the
-  // recommendation it is. The set and number come out of their Scryfall link,
-  // which is what a printing is named by.
+  // Their own answer, read from what the endpoint actually returns:
+  //
+  //   {name, names, oracle_id, primary_type, salt, score}
+  //
+  // Three things about that shape are worth writing down, because getting any of
+  // them wrong is quiet rather than loud:
+  //
+  //  - `score` is already a whole number out of 100. Multiplying it by 100 again
+  //    to make a percentage shows "9000%".
+  //  - there is no `image` and no `scryfall_uri`. So there is no art to draw and
+  //    no printing to add, and the card has to be resolved through Scryfall by
+  //    its oracle id before it can be shown or added.
+  //  - `names` is the set of printed names. `name` is the card.
   function fromRecs(list) {
     return (list || []).map(rec => {
-      // Their link is scryfall.com/card/<set>/<number>/<slug>, so the printing
-      // is the two segments before the slug.
-      const parts = String(rec.scryfall_uri || '').split('/');
-      const set = parts[parts.length - 3] || '';
-      const number = parts[parts.length - 2] || '';
+      const score = Number(rec.score);
       return {
-        name: (rec.names && rec.names.length ? rec.names.join(' // ') : '').slice(0, 120),
+        name: String(rec.name || (rec.names && rec.names[0]) || '').slice(0, 120),
         typeLine: String(rec.primary_type || '').slice(0, 120),
-        image: /^https:\/\/cards\.scryfall\.io\//.test(rec.image || '') ? rec.image : '',
-        group: String(rec.primary_type || '') ? String(rec.primary_type) + 's' : '',
-        meta: Number.isFinite(rec.score) ? Math.round(rec.score * 100) + '%' : '',
-        metaTitle: Number.isFinite(rec.score) ? 'EDHREC synergy score for this deck' : '',
-        printing: { set: set, number: number }
+        oracleId: /^[0-9a-f-]{36}$/i.test(String(rec.oracle_id || '')) ? String(rec.oracle_id) : '',
+        // Their grouping, in their words. Not pluralised here: guessing turns
+        // "Sorcery" into "Sorcerys".
+        group: String(rec.primary_type || '').slice(0, 40),
+        meta: Number.isFinite(score) ? score + '%' : '',
+        metaTitle: Number.isFinite(score)
+          ? 'EDHREC scores this card ' + score + ' out of 100 for this commander and this deck'
+          : ''
       };
     }).filter(card => card.name);
+  }
+
+  // Their suggestions arrive with no art and nothing to add them by. Scryfall has
+  // both, keyed by the oracle id EDHREC gave, and takes up to 75 of them at a
+  // time — so this is one or two requests for the whole list, not one per card.
+  function withScryfallDetails(cards) {
+    const wanted = cards.filter(card => card.oracleId);
+    if (!wanted.length) return Promise.resolve(cards);
+    return bridge().request('cardImages', { oracleIds: wanted.map(card => card.oracleId) })
+      .then(reply => {
+        const rows = unwrap(reply) || [];
+        const byOracle = new Map();
+        for (const row of Array.isArray(rows) ? rows : []) {
+          if (row && row.oracleId) byOracle.set(String(row.oracleId).toLowerCase(), row);
+        }
+        return cards.map(card => {
+          const row = byOracle.get(String(card.oracleId || '').toLowerCase());
+          if (!row) return card;
+          return Object.assign({}, card, {
+            // With an id, Add goes straight to Scryfall and needs no lookup.
+            id: row.id || card.id,
+            image: row.image || card.image,
+            typeLine: row.typeLine || card.typeLine,
+            manaCost: row.manaCost || card.manaCost
+          });
+        });
+      })
+      .catch(() => cards);
   }
 
   // EDHREC's grouping is the point of the page, so it survives into the panel:
@@ -217,18 +254,24 @@
             deck: false
           };
         }))
-        .then(found => deckCardNames().then(owned => {
-          const cards = found.cards.filter(card => !owned.has(canonical(card.name)));
-          area.setCards(cards, bridge().request);
-          const hidden = found.cards.length - cards.length;
+        .then(found => withScryfallDetails(found.cards).then(cards => deckCardNames().then(owned => {
+          const fresh = cards.filter(card => !owned.has(canonical(card.name)));
+          area.setCards(fresh, bridge().request);
+          const hidden = cards.length - fresh.length;
           // Which of the two is showing has to be visible. One answers to this
           // deck, the other is EDHREC's page for the commander and is the same
           // for everyone playing it — and falling back to it is what happens
           // when the deck request cannot run at all.
-          area.note(found.deck
-            ? 'for this deck' + (hidden ? ' · ' + hidden + ' already in it' : '')
-            : 'EDHREC\'s commander page — not deck specific' + (hidden ? ' · ' + hidden + ' already in it' : ''));
-        }))
+          let note = found.deck
+            ? 'for this deck'
+            : 'EDHREC\'s commander page — not deck specific';
+          if (hidden) note += ' · ' + hidden + ' already in it';
+          // A suggestion with neither art nor a Scryfall id cannot be shown
+          // properly or added, so say how many rather than leaving gaps.
+          const bare = cards.filter(card => !card.id).length;
+          if (bare) note += ' · ' + bare + ' Scryfall could not look up';
+          area.note(note);
+        })))
         .then(() => {
           if (!area.hasCards()) area.message('EDHREC has nothing to suggest for ' + name + '.');
         });

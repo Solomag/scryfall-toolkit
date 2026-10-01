@@ -320,6 +320,25 @@ async function cardPageTest() {
   const emptyRow = entryOf('/mh3/43/');
   assert(!emptyRow.querySelector('.currency-usd') && !emptyRow.querySelector('.currency-eur'),
     'row without any price has no price cells');
+  // The EUR column heads. Cardmarket's mark is a mask filled with the ink of
+  // the heading, not an image chosen by looking for a class on <html>: that is
+  // what keeps it the same colour as CardTrader's heading on either theme, and
+  // there is no variant that can be picked wrongly.
+  const cmMark = printBody.parentNode.querySelector('.stk-price-heading .stk-brand-mark');
+  assert(cmMark, 'the Cardmarket column is headed by their mark');
+  assertEqual(cmMark.getAttribute('aria-label'), 'Cardmarket', 'and it says whose mark it is');
+  const mask = cmMark.style.getPropertyValue('mask-image') || cmMark.style.webkitMaskImage;
+  assert(/cardmarket-white\.png/.test(mask), 'drawn from the file they publish for dark backgrounds');
+  assert(!cmMark.querySelector('img') && cmMark.tagName === 'SPAN',
+    'and it is not an <img>, so there is no black file to show by mistake');
+  const cmHeading = cmMark.parentNode;
+  assertEqual(cmHeading.textContent, 'EUR', 'beside the currency it is the price of');
+  const ctHeading = [...cmHeading.closest('table').querySelectorAll('.stk-price-heading')]
+    .find(h => h !== cmHeading);
+  assert(ctHeading && ctHeading.textContent === 'EUR', 'and CardTrader\'s column is headed the same way');
+  assert(ctHeading.querySelector('img[src*="cardtrader"]'),
+    'with their own mark, so the two columns are headed the same way rather than one being an exception');
+
   const nativeCtLink = await waitFor(
     () => printBody.querySelector('tr:not(.stk-print-extra) .stk-ct-price-cell a'),
     'CardTrader price for a native row'

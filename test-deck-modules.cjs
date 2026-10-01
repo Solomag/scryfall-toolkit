@@ -364,21 +364,27 @@ const card = (name, typeLine, id) => ({
       w.self.STK_BRIDGE = {
         request: (name, value) => {
           asked.push({ name, value });
-          if (name === 'cardImages') return Promise.resolve({ ok: true, data: [] });
+          if (name === 'cardImages') return Promise.resolve({ ok: true, data: [
+            { oracleId: 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa', id: 'scry-evo',
+              image: 'https://cards.scryfall.io/normal/front/1/1/aaa.jpg', typeLine: 'Creature — Sage' },
+            { oracleId: 'bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb', id: 'scry-tek',
+              image: 'https://cards.scryfall.io/normal/front/2/2/bbb.jpg', typeLine: 'Creature — Phyrexian Praetox' }
+            // Cankerbloom is deliberately absent, so the "could not look up" count
+            // has something to count.
+          ] });
           if (name === 'cardBySet') return Promise.resolve({ id: 'scry-' + value.set + '-' + value.number });
-          // What EDHREC makes of this deck: a name, a type, art, and how much
-          // of the recommendation it is.
+          // What EDHREC makes of this deck, in the shape their endpoint really
+          // returns: a name, its printed names, the oracle id, the type, the salt
+          // and a score that is ALREADY a whole number out of 100. There is no
+          // art and no printing — that is why cardImages is asked for above.
           return Promise.resolve({ ok: true, data: {
             inRecs: [
-              { primary_type: 'Creature', names: ['Evolution Sage'], score: 0.9,
-                scryfall_uri: 'https://scryfall.com/card/one/123/evolution-sage',
-                image: 'https://cards.scryfall.io/normal/front/1/1/aaa.jpg' },
-              { primary_type: 'Creature', names: ['Tekuthal'], score: 0,
-                scryfall_uri: 'https://scryfall.com/card/two/45/tekuthal',
-                image: 'https://cards.scryfall.io/normal/front/2/2/bbb.jpg' },
-              { primary_type: 'Instant', names: ['Cankerbloom'], score: 0.25,
-                scryfall_uri: 'https://scryfall.com/card/three/6/cankerbloom',
-                image: 'https://cards.scryfall.io/normal/front/3/3/ccc.jpg' }
+              { name: 'Evolution Sage', names: ['Evolution Sage'], primary_type: 'Creature',
+                oracle_id: 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa', salt: 1.1, score: 90 },
+              { name: 'Tekuthal', names: ['Tekuthal', 'Tekuthal, Necropolis Hacker'],
+                primary_type: 'Creature', oracle_id: 'bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb', salt: 0.9, score: 0 },
+              { name: 'Cankerbloom', names: ['Cankerbloom'], primary_type: 'Instant',
+                oracle_id: 'cccccccc-3333-4333-8333-cccccccccccc', salt: 0.4, score: 25 }
             ]
           } });
         }
@@ -404,11 +410,36 @@ const card = (name, typeLine, id) => ({
       views[1].dispatchEvent(new w.self.Event('click'));
 
       const titles = [...w.document.querySelectorAll('.stk-results-group-title')].map(t => t.textContent);
-      assertEqual(titles, ['Creatures', 'Instants'], 'EDHREC\'s own grouping is kept');
+      // EDHREC says "Creature", not "Creatures". Pluralising here would put
+      // "Sorcerys" on the screen.
+      assertEqual(titles, ['Creature', 'Instant'], 'EDHREC\'s own grouping is kept, in their words');
       assertEqual([...w.document.querySelectorAll('.stk-results-row-name')].map(n => n.textContent),
         ['Evolution Sage', 'Tekuthal', 'Cankerbloom'], 'with its cards in its order');
+      // The score arrives as a whole number out of 100. Treating it as a
+      // fraction and multiplying showed "9000%".
       assertEqual([...w.document.querySelectorAll('.stk-results-row-meta')].map(n => n.textContent),
-        ['90%', '0%', '25%'], 'and how strongly EDHREC recommends each for this deck');
+        ['90%', '0%', '25%'], 'and how strongly EDHREC recommends each, not a hundred times over');
+      assertEqual(w.document.querySelector('.stk-results-row-meta').title,
+        'EDHREC scores this card 90 out of 100 for this commander and this deck',
+        'and the number says what it is a number out of');
+
+      // EDHREC sends no art and nothing to add a card by, so both come from
+      // Scryfall in one batched call rather than one request per suggestion.
+      const art = asked.filter(a => a.name === 'cardImages');
+      assertEqual(art.length, 1, 'the art and the ids are asked for in one call');
+      assertEqual(art[0].value.oracleIds, [
+        'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa',
+        'bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb',
+        'cccccccc-3333-4333-8333-cccccccccccc'
+      ], 'by the oracle ids EDHREC gave, which is the only identity it gives');
+      // Back to Images: this is the view the art is for.
+      w.document.querySelectorAll('.stk-results-view')[0].dispatchEvent(new w.self.Event('click'));
+      const imgs = [...w.document.querySelectorAll('.stk-results-art img')].map(i => i.getAttribute('src'));
+      assert(imgs.includes('https://cards.scryfall.io/normal/front/1/1/aaa.jpg'),
+        'and the art that comes back is shown');
+      assertEqual(w.document.querySelectorAll('.stk-results-noart').length, 1,
+        'while the one Scryfall could not resolve says so instead of showing a blank');
+      w.document.querySelectorAll('.stk-results-view')[1].dispatchEvent(new w.self.Event('click'));
 
       const added = [];
       const removed = [];
@@ -417,16 +448,19 @@ const card = (name, typeLine, id) => ({
       const buttons = w.document.querySelectorAll('.stk-results-add');
       buttons[0].dispatchEvent(new w.self.Event('click'));
       await tick();
-      assertEqual(added, ['scry-one-123'], 'a suggestion names a printing, which is resolved before it is added');
+      // The oracle id was resolved to a Scryfall id, so adding needs no second
+      // lookup for a printing EDHREC never named.
+      assertEqual(added, ['scry-evo'], 'a suggestion is added by the Scryfall id its art came with');
       assertEqual(buttons[0].textContent, 'Remove',
         'and the button turns into the way to take it back');
       buttons[0].dispatchEvent(new w.self.Event('click'));
       await tick();
-      assertEqual(removed, ['entry-scry-one-123'], 'so a card added by mistake goes again');
+      assertEqual(removed, ['entry-scry-evo'], 'so a card added by mistake goes again');
       assertEqual(buttons[0].textContent, 'Add', 'and the button returns to Add');
 
-      assertEqual(w.document.querySelector('.stk-results-aside').textContent, 'for this deck',
-        'and says the suggestions answer to this deck, not only to the commander');
+      assertEqual(w.document.querySelector('.stk-results-aside').textContent,
+        'for this deck · 1 Scryfall could not look up',
+        'and says the suggestions answer to this deck, and how many Scryfall could not resolve');
 
       w.document.querySelector('.modal-dialog-close').dispatchEvent(new w.self.Event('click'));
       assertEqual(w.document.querySelector('.stk-edhrec-panel'), null, 'and the panel closes');

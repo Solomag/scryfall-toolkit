@@ -611,51 +611,41 @@
     });
   }
 
-  // Providers whose own published logo is used as it stands. Cardmarket puts its
-  // marks up for download, black for light backgrounds and white for dark.
+  // Providers whose own published logo is used as it stands.
   //
-  // Which of the two goes in is decided here rather than by CSS. Styling two
-  // images and hiding one per theme looked right and rendered the black mark on
-  // the dark page, where it is nearly invisible; setting the source directly
-  // cannot get that wrong. Everything here is a function declaration on purpose:
-  // priceHeading runs while this file is still being read.
-  function brandLogoFiles(provider) {
+  // Cardmarket puts its marks up for download, black for light backgrounds and
+  // white for dark, and this had been choosing between the two by looking for a
+  // class on <html>. Two things were wrong with that. The class is not
+  // guaranteed to be there at the moment the heading is built, so the wrong one
+  // could be used and the mark would sit on the dark page as a dark shape. And a
+  // black mark beside CardTrader's reads as heavier than it, because it is not
+  // the ink of anything around it.
+  //
+  // So there is one mark, and it takes the colour of the text beside it. The
+  // mark is used as a CSS mask, which means what shows is the alpha of their
+  // file while the colour is `currentColor` — right on either theme without
+  // having to know which theme it is on, and never the wrong shade.
+  function brandLogo(provider) {
     if (provider === 'cardmarket') {
-      return {
-        light: 'icons/cardmarket-black.png',
-        dark: 'icons/cardmarket-white.png',
-        title: 'Cardmarket'
-      };
+      return { mask: 'icons/cardmarket-white.png', title: 'Cardmarket' };
     }
     return null;
-  }
-
-  function logoSrc(logo) {
-    return chrome.runtime.getURL(document.documentElement.classList.contains('stk-dark') ? logo.dark : logo.light);
-  }
-
-  // Every branded mark on the page, so a theme change can be pushed to all of
-  // them at once.
-  function brandLogoImages() {
-    if (!brandLogoImages.list) brandLogoImages.list = [];
-    return brandLogoImages.list;
   }
 
   function priceHeading(provider) {
     const wrapper = document.createElement('span');
     wrapper.className = 'stk-price-heading';
-    const logo = brandLogoFiles(provider);
+    const logo = brandLogo(provider);
     if (logo) {
-      const icon = document.createElement('img');
-      icon.src = logoSrc(logo);
-      icon.alt = logo.title;
-      icon.title = logo.title;
-      icon.className = 'stk-brand-logo';
-      // The theme can change while the page is open; the mark follows it.
-      icon.dataset.logoLight = logo.light;
-      icon.dataset.logoDark = logo.dark;
-      brandLogoImages().push(icon);
-      wrapper.append(icon);
+      const mark = document.createElement('span');
+      mark.className = 'stk-brand-mark';
+      const url = chrome.runtime.getURL(logo.mask);
+      mark.style.setProperty('-webkit-mask-image', 'url("' + url + '")');
+      mark.style.setProperty('mask-image', 'url("' + url + '")');
+      mark.setAttribute('role', 'img');
+      mark.setAttribute('aria-label', logo.title);
+      mark.title = logo.title;
+      wrapper.append(mark);
     } else {
       const icon = document.createElement('img');
       icon.src = chrome.runtime.getURL(`icons/${provider}.svg`);
@@ -665,14 +655,6 @@
     wrapper.append(document.createTextNode('EUR'));
     return wrapper;
   }
-
-  new MutationObserver(() => {
-    const dark = document.documentElement.classList.contains('stk-dark');
-    for (const icon of brandLogoImages()) {
-      const want = chrome.runtime.getURL(dark ? icon.dataset.logoDark : icon.dataset.logoLight);
-      if (icon.getAttribute('src') !== want) icon.setAttribute('src', want);
-    }
-  }).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
 
   function initPriceFilter() {
     for (const table of document.querySelectorAll('#main .prints-table')) {

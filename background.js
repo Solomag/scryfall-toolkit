@@ -375,7 +375,15 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
       // uses, at Scryfall's limit.
       const ids = Array.isArray(message.ids) ? message.ids : [];
       const printings = Array.isArray(message.printings) ? message.printings : [];
+      // EDHREC's recommendations name a card by its Scryfall oracle id and carry
+      // neither a printing nor any art, so the art and the id needed to add the
+      // card have to come from Scryfall. Oracle ids go in the same batch: one
+      // request, not one per suggestion.
+      const oracleIds = Array.isArray(message.oracleIds) ? message.oracleIds : [];
       const identifiers = ids.map(id => ({ id }));
+      for (const oracleId of oracleIds) {
+        if (/^[0-9a-f-]{36}$/i.test(String(oracleId || ''))) identifiers.push({ oracle_id: String(oracleId) });
+      }
       for (const printing of printings) {
         identifiers.push({
           set: String(printing && printing.set || "").toLowerCase(),
@@ -385,7 +393,9 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
       if (!identifiers.length || identifiers.length > 75) throw new Error("Invalid card identifiers");
       if (identifiers.some(item => item.id
         ? !/^[0-9a-f-]{36}$/.test(item.id)
-        : (!/^[a-z0-9_-]{1,16}$/.test(item.set) || !/^[a-z0-9★-]{1,24}$/.test(item.collector_number)))) {
+        : item.oracle_id
+          ? !/^[0-9a-f-]{36}$/i.test(item.oracle_id)
+          : (!/^[a-z0-9_-]{1,16}$/.test(item.set) || !/^[a-z0-9★-]{1,24}$/.test(item.collector_number)))) {
         throw new Error("Invalid card identifiers");
       }
       const result = await scryfallJSON("https://api.scryfall.com/cards/collection", {
@@ -406,7 +416,10 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
           colorIdentity: (card.color_identity || []).filter(c => /^[wubrg]$/.test(c)).join(""),
           power: String(card.power ?? "").slice(0, 8),
           toughness: String(card.toughness ?? "").slice(0, 8),
-          rarity: String(card.rarity || "").slice(0, 20)
+          rarity: String(card.rarity || "").slice(0, 20),
+          // So the caller can match a card back to whatever asked for it. EDHREC
+          // asks by oracle id and has nothing else to match on.
+          oracleId: /^[0-9a-f-]{36}$/i.test(card.oracle_id || "") ? card.oracle_id : ""
         };
       }).filter(card => card.id);
     }

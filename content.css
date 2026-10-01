@@ -88,10 +88,17 @@
 .prints-table th .stk-price-heading{display:inline-flex;align-items:center;justify-content:flex-end;gap:4px;white-space:nowrap;vertical-align:middle;line-height:15px}
 .prints-table th .stk-price-heading img{display:block;flex:none;vertical-align:middle}
 /* Cardmarket's symbol, not their horizontal lockup: a wordmark is a wide thing
-   and cannot sit in a column header. Same height as the neighbouring brand mark
-   so the two columns line up. Which of their two files is shown is decided in
-   content.js — the black one for light pages, the white one for dark. */
-.prints-table th .stk-price-heading img.stk-brand-logo{height:22px;width:auto}
+   and cannot sit in a column header. It is painted as a mask rather than shown
+   as an image, so the shape is their file and the colour is the ink of the
+   heading around it. That is what stops it reading as a dark shape on a dark
+   page, and it is the same ink CardTrader's heading is drawn in — no theme to
+   detect, and no way to pick the wrong one. Sized in em so it follows the
+   header's own text, next to "EUR". */
+.prints-table th .stk-price-heading .stk-brand-mark{display:inline-block;flex:none;vertical-align:middle;
+  width:1.15em;height:1.15em;background-color:currentColor;
+  -webkit-mask-position:center;mask-position:center;
+  -webkit-mask-size:contain;mask-size:contain;
+  -webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
 /* The three visible gaps around the panel are 22px on the user's 125% zoom,
    which is 17.6 CSS px: 12px above the panel, 15px under its top border and
    16.5px of panel padding below the last line. The native card-text padding is

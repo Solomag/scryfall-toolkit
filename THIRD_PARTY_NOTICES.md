@@ -281,6 +281,24 @@ nothing at all when a field is missing, rather than an error or a wrong number.
 - Used: **service data fetched at run time only**, using a personal access token the user
   supplies. No CardTrader code is copied.
 
+**What their own documentation says, checked against the live service.** The reference at
+<https://www.cardtrader.com/en-US/docs/api/full/reference> states that every call must carry
+`Authorization: Bearer [YOUR_AUTH_TOKEN]`, and that the token is obtained from the settings
+page of a CardTrader account. A request without one is refused:
+
+```
+GET https://api.cardtrader.com/api/v2/products     → 401
+{"error_code":"unauthorized","extra":{"message":"You are not authorized to access this page"}}
+```
+
+So this is not a matter of reading a public endpoint. It is an account-bound API, and the
+account is the user's own. The extension asks for no token, stores none, and sends none; the
+CardTrader price source stays off until the user supplies a token they got themselves, and
+without one the background refuses the request rather than calling out and being turned
+away. Nothing here is a claim that this use is permitted. It has not been established, and
+the token in the user's hand is not the same as permission to redistribute a third party's
+marks or to publish their data.
+
 | File in this repo | Status |
 | --- | --- |
 | `icons/cardtrader.svg` | **Unresolved.** CardTrader's brand mark. Trademarks are not licensed as MIT. |
@@ -333,8 +351,19 @@ Scryfall's and because the mark over a Cardmarket column ought to be Cardmarket'
 
 | File in this repo | What it is | Status |
 | --- | --- | --- |
-| `icons/cardmarket-black.png` | Cardmarket's symbol, black, cropped out of the horizontal logo on their Downloads page | **Used under their published terms**, quoted above. The artwork itself is unchanged; the wordmark beside it and the empty margin are what is gone. |
-| `icons/cardmarket-white.png` | The same symbol, white, from the file they publish for dark backgrounds | **Used under their published terms**, quoted above. The artwork itself is unchanged; the wordmark beside it and the empty margin are what is gone. |
+| `icons/cardmarket-white.png` | Cardmarket's symbol, white, from the file they publish for dark backgrounds | **Used under their published terms**, quoted above. The artwork itself is unchanged; the wordmark beside it and the empty margin are what is gone. |
+
+**How it is drawn.** The mark is not shown as an image. It is used as a CSS mask, so the
+shape on screen is the alpha of that file and the colour is `currentColor` — the ink of the
+column heading it sits in. The artwork is not recoloured, stretched or redrawn; it is the
+same outline, and the only thing that varies is the ink it is filled with. This is why
+there is one file and not a black one and a white one: a black mark on the dark page
+rendered as a dark shape, and choosing between two files needs to know which theme is on.
+
+`icons/cardmarket-black.png` was shipped until this change and is not shipped now. The
+earlier approach picked between their two published files by looking for a class on
+`<html>`, which is not reliable: the class is not guaranteed to be there at the moment the
+heading is built, and when it was missing the black mark went on the dark page.
 
 ## 10. Development-only dependency (not shipped)
 

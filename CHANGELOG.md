@@ -10,7 +10,13 @@ All releases: <https://github.com/Solomag/scryfall-toolkit/releases>
 
 ## Unreleased
 
-Nothing yet.
+Deck-specific EDHREC suggestions work, now that access to `edhrec.com` can actually be given
+— the settings page has a button for it, because Chrome only answers a permission request
+that follows a click. The percentages were out by a hundred times and there was no art,
+because the code had been written against a guessed shape of the response rather than the
+one the endpoint returns. The Cardmarket mark is drawn in the ink of its own column
+heading instead of being picked between a black and a white file. CardTrader's API turns out
+to be account-bound, and that is written down.
 
 ## [v0.52.0](https://github.com/Solomag/scryfall-toolkit/releases/tag/v0.52.0) — 2026-09-29
 

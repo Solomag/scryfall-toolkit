@@ -106,7 +106,7 @@ function jsonResponse(data, status = 200) {
   return { ok: status >= 200 && status < 300, status, json: async () => data };
 }
 
-async function fetchMock(url) {
+async function fetchMock(url, init) {
   const target = String(url);
   fetchLog.push(target);
   if (target.startsWith('https://tagger.scryfall.com/graphql/registry')) {
@@ -122,7 +122,33 @@ async function fetchMock(url) {
   if (target === 'https://data.scryfall.io/bulk/oracle-tags.json') return jsonResponse(ORACLE_BULK);
   if (target === 'https://data.scryfall.io/bulk/art-tags.json') return jsonResponse(ART_BULK);
   if (target === 'https://api.scryfall.com/sets') return jsonResponse(setsResponse);
-  if (target === 'https://api.scryfall.com/cards/collection') return jsonResponse(collectionResponse);
+  if (target === 'https://api.scryfall.com/cards/collection') {
+    // One endpoint serves two callers: the finish column, which identifies by
+    // printing, and EDHREC's suggestions, which identify by oracle id. Answer
+    // each the way Scryfall does — the oracle id is echoed back so the caller
+    // can match, and a bad identifier fails the whole batch rather than being
+    // quietly dropped.
+    let identifiers = [];
+    try { identifiers = (JSON.parse((init && init.body) || '{}').identifiers) || []; } catch (e) { identifiers = []; }
+    if (identifiers.some(item => item.oracle_id === '00000000-0000-0000-0000-000000000000')) {
+      return jsonResponse({ object: 'error', code: 'bad_identifiers' }, 400);
+    }
+    if (identifiers.length && identifiers.every(item => item.oracle_id)) {
+      return jsonResponse({ data: identifiers.map(item => {
+        // A real UUID, because the background checks the shape of what comes
+        // back and drops a row it cannot trust.
+        const id = '00000000-0000-4000-8000-' + item.oracle_id.replace(/-/g, '').slice(0, 12);
+        return {
+          id,
+          oracle_id: item.oracle_id,
+          name: 'Oracle Card',
+          type_line: 'Creature',
+          image_uris: { normal: 'https://cards.scryfall.io/normal/front/a/aa/' + id.slice(-12) + '.jpg' }
+        };
+      }) });
+    }
+    return jsonResponse(collectionResponse);
+  }
   if (target.startsWith('https://api.scryfall.com/cards/search')) {
     const parsed = new URL(target);
     const q = parsed.searchParams.get('q') || '';
@@ -273,6 +299,31 @@ async function edhrecThrottleTest() {
     const guarded = await send({ type: 'tags', set: 'tst', number: '1' }, 'https://evil.example/page');
     assertEqual(guarded, { noResponse: true }, 'foreign senders get no response at all');
     assertEqual(fetchLog.length, fetchesBefore, 'guarded request performed no network calls');
+
+    console.log('background.js: EDHREC suggestions are resolved through Scryfall');
+    // EDHREC names a card by its oracle id and sends no art and no printing, so
+    // the panel cannot draw it or add it until Scryfall has been asked. That ask
+    // is one batched call, and the oracle id comes back so the caller can match.
+    {
+      const oracleA = 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa';
+      const oracleB = 'bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb';
+      const before = fetchLog.length;
+      const rows = (await send({ type: 'cardImages', oracleIds: [oracleA, oracleB] })).data;
+      const calls = fetchLog.slice(before).filter(u => u === 'https://api.scryfall.com/cards/collection');
+      assertEqual(calls.length, 1, 'both suggestions are asked for in one request');
+      assertEqual(rows.length, 2, 'and both come back');
+      assertEqual(rows[0].oracleId, oracleA, 'each row carries the oracle id it was asked by');
+      assert(/^[0-9a-f-]{36}$/.test(rows[0].id), 'and the Scryfall id needed to add it');
+      assert(/^https:\/\/cards\.scryfall\.io\//.test(rows[0].image), 'with its art');
+    }
+    {
+      // Scryfall rejects a whole batch when one identifier is bad, so a
+      // malformed one must fail the request rather than slip through and leave
+      // the panel showing cards that were never looked up.
+      const bad = await send({ type: 'cardImages', oracleIds: ['not-a-uuid'] });
+      assertEqual(bad, { ok: false, error: 'Invalid card identifiers' },
+        'a malformed oracle id is refused rather than passed on');
+    }
 
     console.log('background.js: parseTaggerCard classifier direction');
     const forward = ctx.parseTaggerCard({ oracleId: ORACLE_ID, edges: [REL_FORWARD] });
