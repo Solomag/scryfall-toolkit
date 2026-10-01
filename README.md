@@ -1,4 +1,4 @@
-# Scryfall Toolkit 0.62.0
+# Scryfall Toolkit 0.63.0
 
 An independent browser extension for **Scryfall** and **Scryfall Tagger**: a shared card clipboard, tag panels on card pages, extra format legalities, a dark theme, and optional EDHREC and CardTrader data.
 
@@ -10,11 +10,39 @@ Not produced, endorsed or approved by Scryfall, Wizards of the Coast, EDHREC, Ca
 
 ## What it looks like
 
-The whole settings page, top to bottom. Each section that changes what a Scryfall page
-shows carries a picture of it, taken from the feature files themselves — so what you see
-beside a switch is the panel the switch turns on, not a drawing of one:
+Everything below is a real Scryfall card page — their markup, their stylesheet, this
+extension's panels on it, in this extension's dark theme. Not a mock-up and not a drawing:
+the card is Counterspell and the printings, prices, legalities and tags are the ones
+Scryfall and Tagger returned.
 
-![Scryfall Toolkit settings page, showing all ten sections from General to Credits](store-assets/settings-page-full.png)
+**Printings grouped by set**, with a finish badge per row and the full-page link. Scryfall
+shows ten printings on its own; this collects all of them:
+
+![All of Counterspell's printings, grouped by set, with finish badges](assets/shots/prints.png)
+
+**Card and art tags** from Tagger, next to the printings:
+
+![Counterspell's card tags and art tags](assets/shots/tags.png)
+
+**Extra formats** in Scryfall's own legality block — Premodern here is the one this
+extension added, from Scryfall's answer about the card:
+
+![The legality block with Premodern added](assets/shots/legality.png)
+
+**The clipboard** in the corner of any page, with per-card copy:
+
+![The shared card clipboard](assets/shots/cardclip.png)
+
+No card artwork appears in any of these pictures, and none ships inside the extension.
+
+## The settings page
+
+The settings page, top to bottom. Every section that changes what a Scryfall page shows
+carries a **?** beside its heading: press it and the panel that switch turns on opens over
+the page. The pictures are cut from a real card page, so what you see behind the "?" is
+the panel the switch turns on.
+
+![Scryfall Toolkit settings page, showing every section](store-assets/settings-page-full.png)
 
 ## Install
 

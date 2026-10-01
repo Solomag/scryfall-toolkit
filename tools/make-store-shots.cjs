@@ -8,6 +8,11 @@
 // real stylesheet and the real script, so the tiles can be re-made after any change
 // to the page instead of being a screenshot somebody took once.
 //
+// The capture is in English, and it has to be. The settings page picks its language from
+// storage or from the browser, so a machine set to Russian produced Russian screenshots
+// for an English listing and an English README — a page in a language nobody chose. The
+// language is stored rather than guessed, because there is no other way to ask for it.
+//
 //   node tools/make-store-shots.cjs
 //   powershell -File store-assets/make-store-shots.ps1 -Source store-assets/settings-page-full.png -OutDir store-assets -Tiles 5
 const fs = require('node:fs');
@@ -17,12 +22,14 @@ const { ROOT, copyPage, Session, sizeOf } = require('./shots/render.cjs');
 const STORE = path.join(ROOT, 'store-assets');
 const WORK = path.join(ROOT, 'dist', 'store-shots');
 const WIDTH = 1280;
+const LANGUAGE = 'en';
 
 async function main() {
   fs.mkdirSync(STORE, { recursive: true });
   const page = copyPage(
     path.join(ROOT, 'src', 'ui', 'options.html'),
-    path.join(WORK, 'options.html')
+    path.join(WORK, 'options.html'),
+    { storage: { settingsLanguage: LANGUAGE, siteLanguage: LANGUAGE } }
   );
 
   const session = new Session();

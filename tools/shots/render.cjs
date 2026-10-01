@@ -56,11 +56,11 @@ function fileUrl(file) {
 // page render in a state no user ever sees: every feature off, every sub-setting
 // greyed out, every select blank. It is a plausible-looking picture of the settings
 // page and it is not the settings page a reader will get.
-const STUB = `
+const STUB = (seed = {}) => `
 // The chrome.* surface these pages use, standing in for the one an extension page
 // is given. Injected only for rendering; never shipped.
 (function () {
-  var stored = {};
+  var stored = ${JSON.stringify(seed)};
   function keysOf(arg) {
     if (Array.isArray(arg)) {
       var out = {};
@@ -111,7 +111,12 @@ const STUB = `
 // Copies a page out of the project so it can be rendered, with its relative
 // references made absolute and the stub in front of its own scripts. The page
 // itself is not edited, so what is rendered is what ships.
-function copyPage(pageFile, outFile, { stub = STUB, css = [] } = {}) {
+//
+// `storage` is what the page finds already in the extension's storage, which is the only
+// way to choose a starting state: the settings page is Russian or English according to a
+// stored language, and it picks one by itself from the browser otherwise. A picture of
+// the settings page in a language nobody asked for is a picture of the wrong page.
+function copyPage(pageFile, outFile, { stub = null, css = [], storage = {} } = {}) {
   const dir = path.dirname(pageFile);
   let html = fs.readFileSync(pageFile, 'utf8');
 
@@ -127,7 +132,7 @@ function copyPage(pageFile, outFile, { stub = STUB, css = [] } = {}) {
     html = html.replace('</head>',
       '<link rel="stylesheet" href="' + fileUrl(path.resolve(ROOT, sheet)) + '"></head>');
   }
-  const script = '<script>' + stub + '</script>';
+  const script = '<script>' + (stub || STUB(storage)) + '</script>';
   html = html.includes('</head>') ? html.replace('</head>', script + '</head>') : script + html;
 
   fs.mkdirSync(path.dirname(outFile), { recursive: true });

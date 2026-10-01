@@ -209,7 +209,26 @@ question the way Chrome does, remembers whether the refusal was read, and the ch
 that it was. Verified by putting the old code back — the page then throws on load, which
 is the loudest way it could fail.
 
-Tests: 1648 assertions pass across eight suites.
+### The picture on the project page
+
+The README led with a 1280×4860 strip of the settings page — at the width a README is read
+at that is a line, not a picture — and it was **in Russian**, because the settings page
+takes its language from storage or else from the browser, and the machine that took the
+capture is set to Russian. The README is English and so is the store listing, so a reader
+of either was looking at a page in a language nobody asked for. The capture now stores
+`settingsLanguage: 'en'`; the page has no other way to be told, which is why this was a
+tool change and not a switch someone remembered to flip.
+
+The README now opens with what the extension does rather than what it is configured to do:
+four pictures cut from a real Scryfall card page — printings grouped by set with finish
+badges, the tag tables, the legality block with Premodern added, the clipboard. Its
+sentence about "a picture beside each switch" described a layout the page no longer has,
+since the pictures moved behind the "?".
+
+Two checks hold this down: every picture the README names must exist, and the capture must
+be a picture rather than a strip. Both were verified by breaking them.
+
+Tests: 1658 assertions pass across eight suites.
 
 ### The theme, in seven files
 

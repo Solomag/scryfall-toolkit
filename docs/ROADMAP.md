@@ -43,11 +43,14 @@ browser with the extension loaded would close that, and nothing else would.
 
 ### Store screenshots of Scryfall itself
 
-The five screenshots show the settings page. Nothing shows what the extension does to
-Scryfall — tags beside the printings, the clipboard, the extra legality rows, the deck
-editor tools. A listing whose images only show a settings form does not tell a user what
-they are installing. At least one shot of a card page in the dark theme with the tag tables
-and the clipboard visible, and one of the deck editor with the three tools in use.
+**Half done, and the half that is missing is the part that matters.** The README now shows
+the real thing — a card page with the printings, the tag tables and the extra legality row
+on it — so the project page is no longer five pictures of a settings form.
+
+The store listing still is: its five slots are cut from one capture of the settings page,
+because they must not repeat and must not crop, and one capture of that page is 1280×4860.
+That is the honest constraint, and the way round it is a card-page capture — which needs
+the extension loaded in a browser, which Chrome 154 will not do.
 
 A card may appear in one. What may not: cropping the card so the copyright and artist line
 goes with it, recolouring or rescaling it, or putting anything on top of it. A screenshot

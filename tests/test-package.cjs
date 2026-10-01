@@ -246,6 +246,42 @@ async function settingsPowerOnTest(dir) {
 // -----------------------------------------------------------------------------
 
 
+// The two things the README was wrong about, both of them reported by a reader.
+//
+// Its picture was a 1280x4860 strip of the settings page — an unreadable sliver at the
+// width a README is read at — and it was in Russian, because the settings page takes its
+// language from storage or else from the browser, and the machine that took the capture
+// is set to Russian. The store listing is English and the README is English, so the
+// capture asks for English and has it stored; there is no other way to ask.
+function documentationTest() {
+  console.log('docs: the README shows pictures that exist, and the capture is in English');
+
+  const readme = read('README.md');
+  const shots = [...readme.matchAll(/!\[[^\]]*\]\(([^)]+)\)/g)].map(match => match[1]);
+  assert(shots.length >= 3, `the README shows what the extension looks like (${shots.length} pictures)`);
+  for (const file of shots) {
+    assert(fs.existsSync(path.join(ROOT, file)), `the README's picture ${file} is in the repository`);
+  }
+  // A strip three times taller than it is wide reads as a line, not a picture.
+  const full = path.join(ROOT, 'store-assets', 'settings-page-full.png');
+  if (fs.existsSync(full)) {
+    const buffer = fs.readFileSync(full);
+    const height = buffer.readUInt32BE(20);
+    const width = buffer.readUInt32BE(16);
+    assert(height < width * 8, `the settings capture is a picture and not a strip (${width}x${height})`);
+  }
+  // The language is stored, not guessed: the page would otherwise take it from the
+  // browser, which is how an English listing ended up with Russian screenshots.
+  const tool = read('tools/make-store-shots.cjs');
+  assert(/settingsLanguage:\s*LANGUAGE/.test(tool),
+    'the store capture asks for a language instead of taking the browser\'s');
+  assert(/const LANGUAGE = 'en'/.test(tool), 'and that language is English');
+  // The "?" replaced the pictures in the page, so the README must not still describe
+  // pictures sitting beside the switches.
+  assert(!/beside a switch is the panel/.test(readme),
+    'the README describes where the pictures actually are');
+}
+
 // Every host the manifest asks for, whether required or optional, as a bare
 // hostname. Chrome shows this list to the user and the store asks about it in
 // review, so what the code talks to and what the documents declare have to be the
@@ -624,6 +660,7 @@ function packagedArchiveTest() {
     packagedArchiveTest(dir);
     scriptsParseTest(dir);
     pagesAreCompleteTest(dir);
+    documentationTest();
     await themeTurnsOnTest(dir);
     await popupPowersOnTest(dir);
     await settingsPowerOnTest(dir);
