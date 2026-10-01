@@ -159,11 +159,15 @@
   }
 
   // Their suggestions arrive with no art and nothing to add them by. Scryfall has
-  // both, keyed by the oracle id EDHREC gave, and takes up to 75 of them at a
-  // time — so this is one or two requests for the whole list, not one per card.
+  // both, keyed by the oracle id EDHREC gave, and takes 75 identifiers at a time —
+  // so this is a couple of requests for the whole list, not one per card.
+  //
+  // A failure here is not swallowed. Every suggestion depends on it: with no art
+  // and no id there is nothing to show and nothing to add, and a panel that says
+  // nothing leaves the reader looking at a list of names wondering why.
   function withScryfallDetails(cards) {
     const wanted = cards.filter(card => card.oracleId);
-    if (!wanted.length) return Promise.resolve(cards);
+    if (!wanted.length) return Promise.resolve({ cards, failed: false });
     return bridge().request('cardImages', { oracleIds: wanted.map(card => card.oracleId) })
       .then(reply => {
         const rows = unwrap(reply) || [];
@@ -171,19 +175,22 @@
         for (const row of Array.isArray(rows) ? rows : []) {
           if (row && row.oracleId) byOracle.set(String(row.oracleId).toLowerCase(), row);
         }
-        return cards.map(card => {
-          const row = byOracle.get(String(card.oracleId || '').toLowerCase());
-          if (!row) return card;
-          return Object.assign({}, card, {
-            // With an id, Add goes straight to Scryfall and needs no lookup.
-            id: row.id || card.id,
-            image: row.image || card.image,
-            typeLine: row.typeLine || card.typeLine,
-            manaCost: row.manaCost || card.manaCost
-          });
-        });
+        return {
+          cards: cards.map(card => {
+            const row = byOracle.get(String(card.oracleId || '').toLowerCase());
+            if (!row) return card;
+            return Object.assign({}, card, {
+              // With an id, Add goes straight to Scryfall and needs no lookup.
+              id: row.id || card.id,
+              image: row.image || card.image,
+              typeLine: row.typeLine || card.typeLine,
+              manaCost: row.manaCost || card.manaCost
+            });
+          }),
+          failed: false
+        };
       })
-      .catch(() => cards);
+      .catch(() => ({ cards, failed: true }));
   }
 
   // EDHREC's grouping is the point of the page, so it survives into the panel:
@@ -254,10 +261,10 @@
             deck: false
           };
         }))
-        .then(found => withScryfallDetails(found.cards).then(cards => deckCardNames().then(owned => {
-          const fresh = cards.filter(card => !owned.has(canonical(card.name)));
-          area.setCards(fresh, bridge().request);
-          const hidden = cards.length - fresh.length;
+        .then(found => withScryfallDetails(found.cards).then(looked => deckCardNames().then(owned => {
+          const cards = looked.cards.filter(card => !owned.has(canonical(card.name)));
+          area.setCards(cards, bridge().request);
+          const hidden = looked.cards.length - cards.length;
           // Which of the two is showing has to be visible. One answers to this
           // deck, the other is EDHREC's page for the commander and is the same
           // for everyone playing it — and falling back to it is what happens
@@ -266,10 +273,14 @@
             ? 'for this deck'
             : 'EDHREC\'s commander page — not deck specific';
           if (hidden) note += ' · ' + hidden + ' already in it';
-          // A suggestion with neither art nor a Scryfall id cannot be shown
-          // properly or added, so say how many rather than leaving gaps.
-          const bare = cards.filter(card => !card.id).length;
-          if (bare) note += ' · ' + bare + ' Scryfall could not look up';
+          if (looked.failed) {
+            // Every suggestion needs Scryfall for its art and its id. Say that
+            // plainly rather than showing a column of names with no pictures.
+            note += ' · Scryfall would not answer, so these have no art and cannot be added';
+          } else {
+            const bare = looked.cards.filter(card => !card.id).length;
+            if (bare) note += ' · ' + bare + ' Scryfall could not look up';
+          }
           area.note(note);
         })))
         .then(() => {

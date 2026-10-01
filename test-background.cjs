@@ -325,6 +325,21 @@ async function edhrecThrottleTest() {
         'a malformed oracle id is refused rather than passed on');
     }
 
+    {
+      // A list of suggestions is longer than Scryfall's 75 identifiers per call.
+      // EDHREC sends a hundred at a time, and the art is the whole point of the
+      // panel, so this has to be split rather than refused.
+      const many = Array.from({ length: 100 }, (_, i) =>
+        '00000000-0000-4000-8000-' + String(i).padStart(12, '0'));
+      const before = fetchLog.length;
+      const rows = (await send({ type: 'cardImages', oracleIds: many })).data;
+      const calls = fetchLog.slice(before).filter(u => u === 'https://api.scryfall.com/cards/collection');
+      assertEqual(calls.length, 2, 'a hundred suggestions go as two calls, not one refused call');
+      assertEqual(rows.length, 100, 'and every one of them comes back with art');
+      assert(rows.every(row => /^https:\/\/cards\.scryfall\.io\//.test(row.image)),
+        'each with the art it was asked for');
+    }
+
     console.log('background.js: parseTaggerCard classifier direction');
     const forward = ctx.parseTaggerCard({ oracleId: ORACLE_ID, edges: [REL_FORWARD] });
     assertEqual(forward.card[0],

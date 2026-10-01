@@ -377,8 +377,14 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
       const printings = Array.isArray(message.printings) ? message.printings : [];
       // EDHREC's recommendations name a card by its Scryfall oracle id and carry
       // neither a printing nor any art, so the art and the id needed to add the
-      // card have to come from Scryfall. Oracle ids go in the same batch: one
-      // request, not one per suggestion.
+      // card have to come from Scryfall. Oracle ids go in the same batches as
+      // everything else: Scryfall takes 75 identifiers per call and answers
+      // "bad_identifiers" for the whole call if one is wrong.
+      //
+      // A list of suggestions is longer than 75 — EDHREC sends a hundred at a
+      // time — so it is split and sent in order. Asking for the art is the whole
+      // point of the panel: a suggestion with no art and no id cannot be shown
+      // or added, and one refused request left the reader with neither.
       const oracleIds = Array.isArray(message.oracleIds) ? message.oracleIds : [];
       const identifiers = ids.map(id => ({ id }));
       for (const oracleId of oracleIds) {
@@ -390,7 +396,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
           collector_number: String(printing && printing.number || "").trim()
         });
       }
-      if (!identifiers.length || identifiers.length > 75) throw new Error("Invalid card identifiers");
+      if (!identifiers.length || identifiers.length > 300) throw new Error("Invalid card identifiers");
       if (identifiers.some(item => item.id
         ? !/^[0-9a-f-]{36}$/.test(item.id)
         : item.oracle_id
@@ -398,11 +404,15 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
           : (!/^[a-z0-9_-]{1,16}$/.test(item.set) || !/^[a-z0-9★-]{1,24}$/.test(item.collector_number)))) {
         throw new Error("Invalid card identifiers");
       }
-      const result = await scryfallJSON("https://api.scryfall.com/cards/collection", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ identifiers })
-      });
-      return (result.data || []).map(card => {
+      const collected = [];
+      for (let i = 0; i < identifiers.length; i += 75) {
+        const result = await scryfallJSON("https://api.scryfall.com/cards/collection", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ identifiers: identifiers.slice(i, i + 75) })
+        });
+        collected.push(...(result.data || []));
+      }
+      return collected.map(card => {
         const image = card.image_uris?.normal || card.card_faces?.[0]?.image_uris?.normal || "";
         return {
           id: /^[0-9a-f-]{36}$/.test(card.id || "") ? card.id : "",
