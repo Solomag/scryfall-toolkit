@@ -10,6 +10,11 @@ All releases: <https://github.com/Solomag/scryfall-toolkit/releases>
 
 ## Unreleased
 
+The documents that describe permissions now match what the manifest asks for. The live
+editor round found three things a stand-in could not catch — a permission Chrome refused to
+grant, a response shape that had been assumed rather than read, and a list of suggestions
+longer than one request.
+
 Deck-specific EDHREC suggestions work, now that access to `edhrec.com` can actually be given
 — the settings page has a button for it, because Chrome only answers a permission request
 that follows a click. The percentages were out by a hundred times and there was no art,
