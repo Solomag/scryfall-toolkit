@@ -1,4 +1,4 @@
-# Chrome Web Store listing — Scryfall Toolkit 0.63.0
+# Chrome Web Store listing — Scryfall Toolkit 0.64.0
 
 Everything here is written from the shipped code, so that the answers given in the store
 console match what the extension actually does. Where a field needs a decision from the
@@ -105,7 +105,7 @@ The store asks why each permission is needed. These are the answers, matched to
 
 | Requested | Why the extension needs it | Where the code uses it |
 | --- | --- | --- |
-| `storage` | keep the clipboard and the settings between sessions | `content.js`, `src/ui/options.js`, `src/core/theme.js`, `src/card-page/tagger-clipboard.js` |
+| `storage` | keep the clipboard and the settings between sessions | `src/background/worker.js`, `src/ui/options.js`, `src/core/theme.js`, `src/card-page/clipboard.js`, `src/card-page/tagger-clipboard.js` |
 | `unlimitedStorage` | cache the bundled tag indexes locally instead of re-downloading several megabytes on every card page | `src/background/worker.js` (`tagIndexes`) |
 | `alarms` | refresh the tag data at most once every seven days | `src/background/worker.js` |
 | `https://api.scryfall.com/*` | card, print, set and search lookups, and the tag bulk files | `src/background/worker.js` |

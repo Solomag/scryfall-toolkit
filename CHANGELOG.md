@@ -228,7 +228,54 @@ since the pictures moved behind the "?".
 Two checks hold this down: every picture the README names must exist, and the capture must
 be a picture rather than a strip. Both were verified by breaking them.
 
-Tests: 1658 assertions pass across eight suites.
+### The documents had started to disagree with each other
+
+An external review of the repository found six defects, and they were all in this project's
+own paperwork rather than in its code. Worth recording because the shape of the problem is
+the point: **every value in those documents was correct.** What was wrong was that two
+places said two different things about the same fact, which no test that reads one file can
+see.
+
+- `THIRD_PARTY_NOTICES.md` said "only the first is settled, the unresolved status in
+  sections 7 and 8 is the real status" while sections 7 and 8 stated a settled position.
+  A document that claims two incompatible things about a licence is worse than one that
+  claims nothing: a reader cannot tell which half to believe.
+- The same file still listed, as open questions, three things the road map had already
+  decided. A list of settled questions next to a file we ship reads as doubt about it.
+- The notices said the deck editor modules were off by default "because neither has yet
+  been checked against a live deck editor", while the road map recorded that all three were
+  used in a real commander deck on 2026-10-01. That is not a stale detail — it tells a
+  reader the code has never run.
+- `PRIVACY.md` said version 0.51.0 while the code was at 0.58.0, because it was the one
+  release-facing file `set-version` did not write. The version is gone from the policy
+  rather than synchronised: the policy changes when the code changes, and a number beside
+  the date says nothing a reader can act on.
+- The road map's "waiting on someone else" had the same two rows twice.
+- `README.md` still licensed `content-*.js`, a file prefix removed when the scripts were
+  split, and the notices and store listing still named `content.js`.
+
+So the facts are now written down once, in `tools/project-status.cjs`, with what each
+document **must** say and — the half that matters — the wording that would put the old
+position back. `node tools/project-status.cjs` reports; the package suite asserts. It
+generates no prose: these documents are read by people deciding whether to trust the
+project, and a generated status block reads like a machine talking.
+
+### A release checklist, because the tests cannot see Scryfall
+
+The review's other point is right and worth acting on: this project's suites check
+repository invariants, and every one of them can pass while the extension is broken on
+Scryfall's own site. Scryfall can change its markup or its application internals with no
+deprecation cycle, and the live pass on 2026-10-01 already found four wrong assumptions that
+1658 assertions could not.
+
+`docs/RELEASE_CHECKLIST.md` is that pass, written down: ten minutes in a browser, seven
+things to look at, then the order to run the tools in and the rule that the release archive
+comes from the tag rather than from a laptop. It also lists the limits that are **not**
+defects — the theme's dependence on their class names, the deck modules' dependence on
+undocumented internals, and why the settings illustrations are not a photograph of the
+extension running — so that finding one during a pass is a decision rather than a surprise.
+
+Tests: 1659 assertions pass across eight suites.
 
 ### The theme, in seven files
 

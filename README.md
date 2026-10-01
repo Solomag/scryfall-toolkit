@@ -1,4 +1,4 @@
-# Scryfall Toolkit 0.63.0
+# Scryfall Toolkit 0.64.0
 
 An independent browser extension for **Scryfall** and **Scryfall Tagger**: a shared card clipboard, tag panels on card pages, extra format legalities, a dark theme, and optional EDHREC and CardTrader data.
 
@@ -42,7 +42,7 @@ carries a **?** beside its heading: press it and the panel that switch turns on 
 the page. The pictures are cut from a real card page, so what you see behind the "?" is
 the panel the switch turns on.
 
-![Scryfall Toolkit settings page, showing every section](store-assets/settings-page-full.png)
+![Scryfall Toolkit settings page: General, Tags, CardClip, and the "?" beside each heading](store-assets/readme-settings.png)
 
 ## Install
 
@@ -95,11 +95,13 @@ Settings and the clipboard live in `chrome.storage.local` and never leave your b
 
 ```
 npm install     # linkedom, for the tests
-npm test        # six suites
+npm test        # eight suites
 npm run package # build the release archive
 ```
 
 The last suite is a smoke test of the package: it builds the archive, unpacks it and turns it on. Two earlier releases shipped with a file missing from the zip while the working folder was fine, which is what that suite exists to stop.
+
+**Before a release, run the live pass.** The suites check repository invariants — that the archive holds what the pages reference, that the version is written everywhere it is shown, that no host is used without being declared, and that the documents do not contradict each other. None of that can see Scryfall, and Scryfall can change its markup or its application internals with no deprecation cycle. **[docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md)** is the ten minutes of browser work that closes that gap, and it lists the limits that are known rather than defects.
 
 **Release archives are built by CI**, from the tag, on a runner anyone can name. The workflow prints the SHA-256 of the file it publishes, so the bytes on the release page can be tied to a commit and a runner. A zip built locally is for trying things out.
 
@@ -118,7 +120,7 @@ Material from other projects keeps its own licence and its own notice. The MPL c
 | `assets/icons/clip.svg`, `assets/icons/duplicate.svg`, `assets/icons/trash.svg` | CardClip icons — MIT, © 2022 Jacob Hearst |
 | `assets/icons/edhrec.png`, `assets/icons/cardtrader.svg`, `assets/icons/cardtrader.png` | Third-party brand marks. **Not covered by any licence of this project**, and not cleared: no permission was requested from those services and none was received. |
 | `assets/icons/cardmarket-white.png` | **Cardmarket's symbol**, cropped out of the logo file they publish for download and used on their terms. Drawn as a mask, so the shape is theirs and the colour is the heading's own ink. Their rights stay theirs and the goodwill from use is theirs; `THIRD_PARTY_NOTICES.md` quotes the terms and says what is done to stay inside them. |
-| `manifest.json`, `package.json`, `src/card-page/core.js`, `content-*.js` and the rest of this project's own files | MPL-2.0 |
+| `manifest.json`, `package.json`, and everything under `src/` and `assets/` that is not listed above | MPL-2.0 |
 
 Full detail, source by source: **[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)**. Licence texts are in [`assets/licences/`](assets/licences/) and ship inside the extension archive.
 

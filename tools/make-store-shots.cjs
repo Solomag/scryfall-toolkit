@@ -46,7 +46,24 @@ async function main() {
       console.error('the browser did not give the width asked for, so the tiles would be the wrong shape');
       process.exit(1);
     }
-    console.log('\nnow cut it into the five the store takes:');
+
+    // And one capture for the project page, at the height a window is.
+    //
+    // The full capture above is right for the store — five tiles have to come from one
+    // document, so nothing repeats and nothing is cut away — and wrong for a README,
+    // where it is a strip six times taller than it is wide and reads as a line. A page
+    // shown the way a window shows it is also the more honest picture: nobody scrolls
+    // through 4860 pixels of settings to find out what the settings look like.
+    //
+    // It is a new filename on purpose. A repository page caches an image by its path,
+    // so re-writing the old one can leave a reader looking at the picture that was
+    // there before, unchanged, and wondering why nothing happened.
+    const readme = path.join(STORE, 'readme-settings.png');
+    await session.shoot(readme, { clip: { x: 0, y: 0, width: WIDTH, height: 1080, scale: 1 } });
+    console.log('readme: ' + sizeOf(readme).width + ' x ' + sizeOf(readme).height +
+      '  (' + Math.round(fs.statSync(readme).size / 1024) + ' KB)');
+
+    console.log('\nnow cut the full capture into the five the store takes:');
     console.log('  powershell -File store-assets/make-store-shots.ps1 ' +
       '-Source store-assets/settings-page-full.png -OutDir store-assets -Tiles 5');
   } finally {

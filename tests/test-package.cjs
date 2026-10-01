@@ -280,6 +280,29 @@ function documentationTest() {
   // pictures sitting beside the switches.
   assert(!/beside a switch is the panel/.test(readme),
     'the README describes where the pictures actually are');
+  // And the tall capture is not in the README. It is right for the store, where five
+  // tiles have to come from one document, and unreadable in a README — and a page caches
+  // an image by its path, so a reader can be looking at the previous one while the file
+  // on disk is already correct.
+  assert(!/settings-page-full\.png/.test(readme),
+    'the README shows the settings page at a readable size, not the store capture');
+  assert(fs.existsSync(path.join(ROOT, 'store-assets', 'readme-settings.png')),
+    'and that picture exists');
+}
+
+// The documents agreeing with each other.
+//
+// This is the one class of check the project did not have, and it is the one that would
+// have caught the defect a reader's review found: the notices file stated a decision and
+// its own opposite in the same document, and the road map had settled a question the
+// notices still listed as open. Every value in those documents was right. What was wrong
+// was that two places said two different things about the same fact, which no test that
+// reads one file can see.
+function documentsAgreeTest() {
+  console.log('docs: the documents do not contradict each other');
+  const { problems, notes } = require('../tools/project-status.cjs').check();
+  for (const problem of problems) assert(false, problem);
+  assert(notes.length >= 5, `the project states its own facts in one place (${notes.length})`);
 }
 
 // Every host the manifest asks for, whether required or optional, as a bare
@@ -661,6 +684,7 @@ function packagedArchiveTest() {
     scriptsParseTest(dir);
     pagesAreCompleteTest(dir);
     documentationTest();
+    documentsAgreeTest();
     await themeTurnsOnTest(dir);
     await popupPowersOnTest(dir);
     await settingsPowerOnTest(dir);

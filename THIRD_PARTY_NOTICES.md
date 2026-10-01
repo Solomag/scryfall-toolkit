@@ -31,12 +31,13 @@ In particular, and stated plainly because it is easy to get wrong:
 - The MPL-2.0 notice does **not** cover `assets/icons/edhrec.png`, `assets/icons/cardtrader.svg` or
   `assets/icons/cardtrader.png`. Those are third-party brand marks, and their rights stay with
   their owners.
-- **Data access and logos are different questions, and only the first is settled.**
-  EDHREC answered with their published data policy and it permits this use, so the data
-  side is covered and recorded in section 7. Their policy says nothing about the logo,
-  and neither did their answer. CardTrader's mark was taken from their own site and no
-  permission for it has been given. Nothing here claims a logo is cleared: the
-  unresolved status in sections 7 and 8 is about the marks, and that is the real status.
+- **Data access and logos are two different questions, and both are answered.** EDHREC
+  answered with their published data policy, which permits this use, so the data side is
+  covered and recorded in section 7. Nothing was said about their logo. CardTrader's mark
+  was taken from their own site and no permission for it has been given. Both marks ship
+  on the basis set out in sections 7 and 8 — nominative use: the mark says whose data is
+  on screen, is never altered, and sits on a control that already carries the name in
+  words. No permission was sought and none was granted, and nothing here claims one was.
 - **Cardmarket's logo is theirs and is used on their terms.** Two of their published
   files head the EUR price column. Their rights stay theirs, the goodwill from use is
   theirs, and nothing here implies they endorse this project. Section 9 has the terms
@@ -69,13 +70,13 @@ All three were verified byte-identical to the files in the upstream repository b
 on 2026-09-25. Because they are copies, CardClip's MIT notice is retained in
 `assets/licences/CardClip-LICENSE`.
 
-The clipboard feature itself is **not** a copy: `content.js` and `src/card-page/tagger-clipboard.js`
-are original implementations, and none of CardClip's function names
-(`showClipboardList`, `loadClipboardFromStorage`, `transformButton`,
+The clipboard feature itself is **not** a copy: `src/card-page/clipboard.js` and
+`src/card-page/tagger-clipboard.js` are original implementations, and none of CardClip's
+function names (`showClipboardList`, `loadClipboardFromStorage`, `transformButton`,
 `findExistingButtons`, …) appear in this repository. The one place CardClip's data is
-read is `content.js`, which reads the legacy Scryfall-page key `localStorage.cardClipboard`
-and its `cardName` / `cardLink` fields to import a user's old clipboard once. That is an
-interface with an existing installation, not copied code.
+read is `src/card-page/clipboard.js`, which reads the legacy Scryfall-page key
+`localStorage.cardClipboard` and its `cardName` / `cardLink` fields to import a user's old
+clipboard once. That is an interface with an existing installation, not copied code.
 
 ## 2. Paruhas/CardClip — behaviour only
 
@@ -133,8 +134,13 @@ in place of the message bus and a Scryfall adapter that fails soft where upstrea
 the shape of `window.Scryfall` and `window.ScryfallAPI` is fixed. Those two globals are
 Scryfall's application internals and are not covered by anyone's licence — see section 6.
 The preview reuses Scryfall's own `#card-tooltip` element rather than upstream's separate
-tooltip markup. Both features are off by default because neither has yet been checked
-against a live deck editor.
+tooltip markup. Both features are **off by default**, and that is a statement about the
+dependency rather than about the port: they run through `window.Scryfall` and
+`window.ScryfallAPI`, Scryfall's own application internals, which are covered by no licence
+and carry no deprecation cycle (section 6). They were used in a real commander deck on
+2026-10-01 and work there — that live pass is what found the four wrong assumptions the
+port started with. They stay opt-in because a module that depends on an interface the site
+can change without notice should be something a reader turns on deliberately.
 
 Upstream's TypeScript types, webpack aliases and `framebus` dependency are not used, and
 no upstream file is present verbatim.
@@ -437,25 +443,24 @@ from anyone. The MPL covers this artwork; it covers no one else's mark.
 
 ## Open questions
 
-These could not be settled from the repository or from public sources, and each needs a
-decision before the archive is published widely.
+What is left open, and why each one is still open. Everything that used to sit in this
+list and has since been answered has been **removed** rather than annotated: a list of
+settled questions next to the file we ship reads as though the settlement were in doubt,
+which is the opposite of what a provenance document is for. The decisions themselves are in
+sections 7, 8 and 9, and in `docs/ROADMAP.md` under "Decided, with the reasoning".
 
-1. **`assets/icons/edhrec.png`** — establish whether this is EDHREC's own logo, and whether it may
-   be redistributed. If not, replace it with a text label such as "EDHREC" (the feature
-   already prints the name next to the value).
-2. **`assets/icons/cardtrader.svg` and `assets/icons/cardtrader.png`** — CardTrader's marks. Check
-   CardTrader's brand/API terms; if redistribution is not permitted, drop the images and
-   use the existing text label, which already reads "CardTrader …" beside the price.
-3. **Cardmarket's logo** — **closed.** They publish their brand assets for download with
-   terms attached, and this project uses two of them on those terms: unmodified apart
-   from trimming the empty margin, no claim of endorsement, and the values in the column
-   linking to their site. The Scryfall asset that used to head that column is gone.
-4. **EDHREC's logo** — their data policy covers using their data and says nothing about
-   the mark. Either establish that it may be redistributed or replace it with a text
-   label. The policy itself is now recorded in section 7.
-5. **CardTrader API terms** — confirm the display rules for a third-party extension
-   showing prices with the user's own token.
-6. **Scryfall's acceptable-use rules** — the Terms say "You may not scrape Scryfall" and
+**Closed, and removed from this list:**
+
+- the two brand marks, EDHREC's and CardTrader's — shipped on nominative use, basis in
+  sections 7 and 8;
+- the CardTrader API — nothing is fetched without the user's own token, so there is no
+  redistribution to ask about;
+- Cardmarket's logo — used on their published terms, section 9.
+
+What remains is a question for the other party rather than for this repository, and each
+one says so.
+
+1. **Scryfall's acceptable-use rules** — the Terms say "You may not scrape Scryfall" and
    "You may not place undue burden on Scryfall through the use of automated means", and
    their API documentation says the same in more detail. This project reads the page the
    user is viewing and calls the documented API; it does not crawl, and it does not keep
@@ -477,7 +482,7 @@ decision before the archive is published widely.
    about four times their limit for the card endpoints — the ones the finish column, the
    EDHREC artwork, the deck search and the hover preview all use — and a 429 was treated
    as an ordinary failure, so a burst that crossed a limit kept crossing it.
-7. **Nickname data revision** — `assets/data/shambleshark-nicknames.js` matches Shambleshark's
+2. **Nickname data revision** — `assets/data/shambleshark-nicknames.js` matches Shambleshark's
    `main` branch as read on 2026-09-25, with the `stc` → `snc` set-code difference noted
    above. If Shambleshark publishes a new revision, the bundle should be re-derived and
    this file updated.
