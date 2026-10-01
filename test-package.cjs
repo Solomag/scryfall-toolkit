@@ -291,6 +291,55 @@ function packagedNoticesTest() {
   const privacy = read('PRIVACY.md');
   assert(!/\b(five|six|seven) hosts\b/.test(privacy), 'the privacy policy states no host count that can go stale');
 
+  // The DOM contract has to be current, or it is worse than nothing: it is the
+  // place to look when Scryfall renames a class, and a stale one describes a page
+  // that no longer exists.
+  //
+  // It went stale once already. The tool had its own list of scripts to scan and
+  // that list named content.js; content.js was split into a core and nine feature
+  // files, the tool skipped the one that was not there, and it went on writing a
+  // document describing a card page with none of the files that draw it. Nothing
+  // noticed, because nothing ran it. So: it reads the manifest now, and this test
+  // runs it and compares what comes out with what is committed.
+  {
+    const out = path.join(os.tmpdir(), `stk-dom-contract-${process.pid}.md`);
+    fs.rmSync(out, { force: true });
+    // Run the tool as it is. It writes where STK_CONTRACT_OUT says, so the
+    // comparison is against its real output and not against a rewrite of its
+    // source that happens to behave the same.
+    execFileSync(process.execPath, [path.join(ROOT, 'tools', 'dom-contract.cjs')], {
+      encoding: 'utf8', cwd: ROOT, maxBuffer: 32 * 1024 * 1024,
+      env: { ...process.env, STK_CONTRACT_OUT: out }
+    });
+    const fresh = fs.readFileSync(out, 'utf8');
+    fs.rmSync(out, { force: true });
+
+    const committed = read('docs/scryfall-dom.md');
+    assertEqual(fresh, committed,
+      'the DOM contract in docs is what the tool produces from the current source');
+
+    // And it must describe the card page as it is now, not as it was. A file that
+    // reaches for a class of Scryfall's own is a file whose selectors break when
+    // Scryfall renames it, and those are the ones the contract exists to list.
+    const ours = ['stk-', 'modal-dialog', 'button-n', 'tiny-n', 'tooltip-', 'data-heading-'];
+    const shipped = JSON.parse(read('manifest.json')).content_scripts
+      .flatMap(entry => entry.js || [])
+      .filter(file => file.startsWith('content-'));
+    const silent = [];
+    for (const file of shipped) {
+      const text = read(file);
+      const queries = [...text.matchAll(/querySelector(?:All)?\(\s*['"`]([^'"`]+)['"`]/g)]
+        .map(m => m[1]);
+      // Only the selectors that name something of Scryfall's, and not one of ours.
+      const theirs = queries.some(q => /[.#][a-zA-Z]/.test(q) && !ours.some(o => q.includes(o)));
+      if (theirs && !committed.includes(file)) silent.push(file);
+    }
+    assertEqual(silent, [],
+      'every shipped feature that queries the page is named in the contract');
+    assert(!/(^|[^\w-])content\.js([^\w-]|$)/.test(committed),
+      'and the contract does not still describe content.js, which is not a file any more');
+  }
+
   // The card page is a core and nine feature files, and the two things that make
   // that work are easy to undo by accident: a feature that destructures the
   // context at load time instead of waiting for it gets undefined for everything,

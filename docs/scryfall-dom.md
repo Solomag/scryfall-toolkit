@@ -428,29 +428,31 @@ name itself, without the leading `.` or `#`.
 
 | Name | Kind | Used by |
 | --- | --- | --- |
-| `card-grid` | class | content.js |
-| `card-grid-item` | class | content.js |
-| `card-grid-item-card` | class | content.js |
-| `card-grid-item-invisible-label` | class | content.js |
-| `card-image` | class | content.js |
-| `card-legality` | class | content.js, theme.js |
-| `card-legality-item` | class | content.js |
-| `card-legality-row` | class | content.js |
-| `card-symbol` | class | content.js |
-| `card-text` | class | content.js |
-| `card-text-card-name` | class | content.js |
-| `card-text-mana-cost` | class | content.js |
-| `card-text-type-line` | class | content.js |
-| `color-indicator` | class | content.js |
-| `currency-eur` | class | content.js |
-| `currency-tix` | class | content.js |
-| `currency-usd` | class | content.js |
-| `currency-usd-promo` | class | content.js |
-| `current` | class | content.js |
-| `deck-list` | class | content.js, theme.js |
-| `deck-list-entry` | class | content.js, theme.js |
-| `deck-list-entry-axial-data` | class | content.js |
-| `deck-list-entry-name` | class | content.js |
+| `card` | class | tagger-clipboard.js |
+| `card-grid` | class | content-deck.js |
+| `card-grid-item` | class | content-clipboard.js, content-deck.js, content-tags.js, tagger-clipboard.js |
+| `card-grid-item-card` | class | content-clipboard.js, content-deck.js, content-tags.js |
+| `card-grid-item-invisible-label` | class | content-clipboard.js |
+| `card-image` | class | content-clipboard.js, content-core.js, tagger-clipboard.js |
+| `card-layout` | class | tagger-clipboard.js |
+| `card-legality` | class | content-edhrec.js, content-legalities.js, theme.js |
+| `card-legality-item` | class | content-edhrec.js, content-legalities.js |
+| `card-legality-row` | class | content-legalities.js |
+| `card-symbol` | class | content-card.js |
+| `card-text` | class | content-edhrec.js |
+| `card-text-card-name` | class | content-clipboard.js, content-edhrec.js |
+| `card-text-mana-cost` | class | content-card.js |
+| `card-text-type-line` | class | content-card.js |
+| `color-indicator` | class | content-card.js |
+| `currency-eur` | class | content-prints.js |
+| `currency-tix` | class | content-prints.js |
+| `currency-usd` | class | content-prints.js |
+| `currency-usd-promo` | class | content-prints.js |
+| `current` | class | content-legalities.js, content-prices.js, content-prints.js |
+| `deck-list` | class | content-deck.js, theme.js |
+| `deck-list-entry` | class | content-deck.js, theme.js |
+| `deck-list-entry-axial-data` | class | content-deck.js |
+| `deck-list-entry-name` | class | content-deck.js |
 | `deckbuilder-section-title` | class | deck-edhrec.js |
 | `deckbuilder-section-title-bar` | class | deck-clean-up.js |
 | `deckbuilder-toolbar` | class | deck-edhrec.js, deck-search.js |
@@ -458,26 +460,27 @@ name itself, without the leading `.` or `#`.
 | `marketing-features-item-image` | class | theme.js |
 | `modal-dialog-close` | class | deck-edhrec.js, deck-search.js |
 | `modal-dialog-content` | class | deck-edhrec.js |
-| `prints` | class | content.js |
-| `prints-all` | class | content.js, theme.js |
-| `prints-info-section` | class | content.js |
-| `prints-table` | class | content.js, theme.js |
-| `search-controls` | class | content.js, theme.js |
-| `select2-container` | class | content.js |
-| `select2-results__option` | class | content.js |
-| `sidebar` | class | content.js |
-| `sidebar-prices` | class | content.js |
-| `sidebar-toolbox` | class | content.js |
-| `toolbox-disclaimer` | class | content.js |
-| `toolbox-links` | class | content.js |
+| `prints` | class | content-card.js, content-clipboard.js, content-prices.js, content-prints.js, content-tags.js |
+| `prints-all` | class | content-prints.js, theme.js |
+| `prints-info-section` | class | content-card.js |
+| `prints-table` | class | content-clipboard.js, content-core.js, content-legalities.js, content-prices.js, content-prints.js, content-sets.js, content-tags.js, theme.js |
+| `search-controls` | class | content-sets.js, theme.js |
+| `select2-container` | class | content-sets.js |
+| `select2-results__option` | class | content-sets.js |
+| `sidebar` | class | content-deck.js |
+| `sidebar-prices` | class | content-deck.js |
+| `sidebar-toolbox` | class | content-prices.js |
+| `toolbox-disclaimer` | class | content-prices.js |
+| `toolbox-links` | class | content-prices.js |
 | `[data-entry]` | attribute | deck-clean-up.js |
 | `deckbuilder` | id | deck-edhrec.js, deck-search.js |
 | `header` | id | theme.js |
-| `header-search-field` | id | content.js, theme.js |
-| `js-checklist` | id | content.js |
-| `main` | id | content.js, theme.js |
-| `stores` | id | content.js |
-| `with` | id | content.js |
+| `header-search-field` | id | content-tags.js, theme.js |
+| `js-checklist` | id | content-sets.js |
+| `main` | id | content-card.js, content-clipboard.js, content-core.js, content-deck.js, content-edhrec.js, content-legalities.js, content-prices.js, content-prints.js, content-sets.js, content-tags.js, theme.js |
+| `scryfall-toolkit-clipboard` | id | tagger-clipboard.js |
+| `stores` | id | content-prices.js |
+| `with` | id | content-deck.js |
 
 ---
 

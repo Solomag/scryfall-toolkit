@@ -3,6 +3,7 @@
 // to look in, and a test stops the stylesheet from quietly growing a dependency
 // that nobody wrote down.
 const fs = require('node:fs');
+const path = require('node:path');
 const ROOT = 'H:/Solo/Downloads/scryfall-toolkit/';
 const css = fs.readFileSync(ROOT + 'theme.css', 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
 const bare = css.replace(/url\([^)]*\)/g, '').replace(/https?:\/\/[^\s"')]+/g, '');
@@ -87,14 +88,30 @@ out.push('');
 out.push('| Name | Kind | Used by |');
 out.push('| --- | --- | --- |');
 
-const SCRIPTS = ['content.js', 'deck-clean-up.js', 'deck-edhrec.js', 'deck-results.js', 'deck-search.js', 'deck-tools.js', 'deck-scryfall.js', 'theme.js'];
+// The scripts to scan come from the manifest, not from a list written here.
+//
+// The list this replaced named content.js, and content.js was split into a core and
+// nine feature files. The tool did not fail — a file that is not there is skipped —
+// so it went on producing a document that described a card page which no longer
+// existed, with none of the nine files that draw it. Reading the manifest means the
+// contract cannot fall behind the extension again: a script that ships is a script
+// that is scanned.
+const manifest = JSON.parse(fs.readFileSync(ROOT + 'manifest.json', 'utf8'));
+const SCRIPTS = [...new Set([
+  ...(manifest.content_scripts || []).flatMap(entry => entry.js || []),
+  ...(manifest.background ? [manifest.background.service_worker] : [])
+])].filter(file => typeof file === 'string');
 // Names this project invents are not Scryfall's to rename.
 const OUR_PREFIXES = ['stk-', 'cleanup-improver__', 'modify-cleanup-', 'data-heading-'];
 const isOurs = name => OUR_PREFIXES.some(prefix => name.replace(/^[.#[\]]+/, '').startsWith(prefix));
 const jsNames = new Map();
 for (const file of SCRIPTS) {
   const path = ROOT + file;
-  if (!fs.existsSync(path)) continue;
+  if (!fs.existsSync(path)) {
+    console.error('the manifest names ' + file + ' and it is not there');
+    process.exitCode = 1;
+    continue;
+  }
   const js = fs.readFileSync(path, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
   const names = new Set();
   for (const m of js.matchAll(/querySelector(?:All)?\(\s*['"`]([^'"`]+)['"`]/g)) {
@@ -122,8 +139,14 @@ out.push('');
 out.push(`Total: **${total}** Scryfall class names.`);
 out.push('');
 
-fs.writeFileSync(ROOT + 'docs/scryfall-dom.md', out.join('\n') + '\n', 'utf8');
-console.log('docs/scryfall-dom.md written');
+// Where to write. The test runs this and compares the result with what is
+// committed, so it needs the output somewhere of its own — and it should not have
+// to rewrite this file's source to get it, which is how a test ends up testing
+// something other than the tool.
+const OUT = process.env.STK_CONTRACT_OUT || (ROOT + 'docs/scryfall-dom.md');
+fs.mkdirSync(path.dirname(OUT), { recursive: true });
+fs.writeFileSync(OUT, out.join('\n') + '\n', 'utf8');
+console.log(OUT + ' written');
 console.log('families:', FAMILIES.filter(([k]) => byFamily.get(k).size).length);
 console.log('class names:', total);
 console.log('rules scanned:', rules.length);
