@@ -1,0 +1,97 @@
+/*
+ * Scryfall Toolkit. Copyright (c) 2026 Scryfall Toolkit contributors.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ *
+ * Third-party data, images and code in this project keep their own licence and
+ * are described in THIRD_PARTY_NOTICES.md. The MPL does not cover them.
+ */
+/* 06-shared-surfaces.css — more shared surfaces: the deck tray, the select lists, the narrow-viewport search.
+ *
+ * Part 6 of 7 of the dark theme, in cascade order.
+ * The manifest lists these in this order, and CSS only knows the order a stylesheet
+ * is loaded in: moving a rule from one part to another can change which of two
+ * equally specific rules wins. If a rule has to move, move it and check the page it
+ * was on.
+ */
+
+/* Three mana symbols are bare glyphs with nothing behind them: {H} is filled
+   #111212, {L} and {D} are #000. Every other symbol carries its own light coin
+   inside the image, so on a dark page only these three go black and disappear.
+   Give them the same coin the others already have. */
+html.stk-dark :is(.card-symbol-H,.card-symbol-L,.card-symbol-D){background-color:#c9c4be!important;border-radius:50%!important}
+
+/* The narrow-viewport search block carries Scryfall's own light field, and the
+   theme was leaving it: a white slab with dark buttons in the middle of a dark
+   page. Its controls are the same ones the set header shows as Images /
+   Set-Number / Auto, so they are given that look. */
+html.stk-dark .search-controls-mobile{background:var(--stk-panel)!important;color:var(--stk-ink)!important;border-color:#55515a!important}
+html.stk-dark .search-controls-mobile-options{background:transparent!important;border-color:#55515a!important}
+html.stk-dark .search-controls-mobile :is(label,.search-controls-mobile-option){color:#ded8e3!important}
+html.stk-dark .search-controls-mobile :is(.button-n,.select-n){background-color:rgba(255,255,255,.09)!important;color:#fff!important;border-color:rgba(255,255,255,.6)!important;border-radius:3px!important}
+html.stk-dark .search-controls-mobile .button-n.primary-n{background-color:var(--stk-hover)!important;color:#f3ecfb!important;border-color:#6d5a7d!important}
+html.stk-dark .search-controls-mobile .button-n.disabled{background-color:rgba(255,255,255,.05)!important;color:#8d8992!important}
+
+/* .deck-tray-buttons holds the tray's buttons and nothing else. Painting the
+   wrapper too left a grey slab sticking out beside the backpack button; the
+   buttons inside carry their own surfaces. */
+html.stk-dark .deck-tray-buttons{background-color:transparent!important;border-color:transparent!important}
+html.stk-dark .deck-tray-buttons .button-n{background:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:#59535e!important}
+html.stk-dark .deck-tray-buttons .button-n.primary{background:#554267!important;color:#f4eff7!important}
+html.stk-dark .deck-tray-buttons .button-n svg :is(path,g){fill:currentColor!important}
+
+/* A native option list is drawn by the browser from the page's own colours, and
+   Scryfall leaves those options dark ink on a light field. On a dark page the
+   open list was the one light rectangle left -- the black text of the contact
+   page's Topic list. */
+html.stk-dark select option,html.stk-dark select optgroup,html.stk-dark select optgroup>option{background-color:#24242a!important;color:#e9e5ee!important}
+html.stk-dark select option:checked,html.stk-dark select option:hover{background-color:#4a2c8c!important;color:#fff!important}
+
+/* Scryfall draws the blocks of its account forms as white panels carrying a
+   faint black border, on a light grey page. The theme repainted both the panel
+   and the page the same var(--stk-page), which took the edge away, and left the border
+   at rgba(0,0,0,0.15) -- a black hairline on a dark ground, invisible. Three of
+   the four blocks on the safety and security pages lost their rectangle that
+   way; the fourth kept one only because a different rule reached it. The panel
+   is one step lighter than the page again, and its border is set as a shorthand
+   because a colour alone draws nothing when a width is left at zero. */
+html.stk-dark.stk-account-page #main .form-n{background-color:var(--stk-panel)!important;border:1px solid rgba(255,255,255,0.22)!important}
+html.stk-dark.stk-account-page #main .form-n .form-n-title{background-color:transparent!important}
+html.stk-dark :is(.button-n,.select-n).inverted{background-color:rgba(255,255,255,.09)!important;color:#fff!important;border-color:rgba(255,255,255,.6)!important}
+html.stk-dark :is(.button-n,.select-n).inverted:is(:hover,:active,:focus){background-color:rgba(255,255,255,.18)!important;color:#fff!important}
+html.stk-dark :is(.button-n,.select-n).inverted svg :is(path,g,circle,rect,polygon):not([fill="none"]){fill:#fff!important;stroke:#fff!important}
+
+/* Jump to is the dropdown of an .inverted header control -- the same control
+   Images, Set/Number and Auto are. Its button already took that look, but the
+   menu underneath still dropped as an ordinary link menu: a grey panel with
+   purple text, where the selects beside it drop a dark list with light text and
+   a purple row for the one under the pointer. The menu is that list now. */
+html.stk-dark #main .dropdown-menu-items:has(.dropdown-menu-item.inverted){background-color:#24242a!important;color:#e9e5ee!important;border-color:#4a2c8c!important}
+html.stk-dark #main .dropdown-menu-item.inverted{background-color:transparent!important;color:#e9e5ee!important;border-color:transparent!important}
+html.stk-dark #main .dropdown-menu-item.inverted:is(:hover,:active,:focus,:focus-visible){background-color:#4a2c8c!important;color:#fff!important}
+html.stk-dark #main .dropdown-menu-item.inverted svg :is(path,g,circle,rect,polygon):not([fill="none"]):not([stroke="none"]){fill:#e9e5ee!important;stroke:#e9e5ee!important}
+html.stk-dark #main .dropdown-menu-item.inverted:is(:hover,:active,:focus) svg :is(path,g,circle,rect,polygon):not([fill="none"]):not([stroke="none"]){fill:#fff!important;stroke:#fff!important}
+
+/* --- the deck editor's print chooser and its narrow columns ---------------- */
+
+/* Scryfall paints every language chip a solid violet and the selected one a
+   brighter violet. On the dark page that reads as one purple slab with no way
+   to tell which language is chosen. The chips go quiet and the selection is the
+   only one carrying colour. */
+html.stk-dark #main .print-langs-item{background-color:transparent!important;color:#b3aec0!important;border:1px solid #4b4d52!important}
+html.stk-dark #main .print-langs-item.current{background-color:#5b4380!important;color:#fff!important;border-color:#8d76ad!important}
+html.stk-dark #main .print-langs-item:is(:hover,:active,:focus):not(.current){background-color:var(--stk-hover)!important;color:#fff!important;border-color:#6d5a7d!important}
+
+/* The print names are plain text in the cell, not links, so the rule that sets
+   the table's ink never reached them and they stayed at whatever Scryfall's
+   stylesheet said -- dark grey on a dark page. */
+html.stk-dark .prints-table tbody td>span:not([class*="currency-"]):not(.pillbox){color:var(--stk-ink)!important}
+
+/* Scryfall overlays the set badge and the mana cost on the name field, which is
+   fine in a wide column and a collision in a narrow one: the name runs
+   underneath them. Making the row a real flex row lets the name give way and
+   keeps both readable. The 32px Scryfall reserves for the row menu stays
+   reserved. */
+#deckbuilder .deckbuilder-entry-input{width:auto!important;flex:1 1 auto!important;min-width:0!important}

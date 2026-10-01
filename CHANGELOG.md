@@ -10,36 +10,33 @@ All releases: <https://github.com/Solomag/scryfall-toolkit/releases>
 
 ## Unreleased
 
-The repository has folders now. A root of fifty-one files is a root where nobody can find
-anything, and "which file holds the EUR column" had four answers depending on the page.
-`src/background` is the worker, `src/core` what it and the pages share, `src/card-page` the
-content scripts, `src/deck-page` the ones that run in Scryfall's own page world, `src/ui` the
-two extension pages, `src/styles` the stylesheets, `assets` the artwork, the generated tag
-snapshot and the licences, `tests` the suites and `tools` the build.
+The dark theme was one 753-line stylesheet. It is seven files now, under
+`src/styles/theme/`: the card page, shared pages, the account and marketing pages,
+surfaces, Tagger, more shared surfaces, and our own panels. The manifest lists them in
+cascade order, because CSS only knows the order a stylesheet is loaded in — moving a
+rule from one part to another can change which of two equally specific rules wins.
 
-The prefixes went with the folders: `card-page/edhrec.js` beside `deck-page/edhrec.js` says
-which one it is, where `content-edhrec.js` and `deck-edhrec.js` said it twice and told you
-nothing about where the file lived.
-The card page is ten files instead of one. `content.js` was 1901 lines in a single closure;
-it is now a core and nine files named for what they draw, and the order the features run in
-is a written-down list rather than the order the manifest happens to list the files in.
-No line of logic changed: a check confirms that of 1692 code lines, the only ones absent
-afterwards are the four declarations that became one shared object and the eighteen `if`
-lines that became the boot list. A feature that throws is now reported instead of taking
-every feature below it down with it.
+The split is contiguous, not grouped by page. That was the constraint worth
+understanding: a stylesheet cannot be reorganised by what a rule is about without
+changing what it does, and no amount of care afterwards gets that back. So the parts
+are unbroken runs of the original, and the boundaries are placed where a run of rules
+settles on one subject. `tools/css-write-parts.cjs` puts the parts back together and
+compares the result with the file they came from, character for character; the
+contract document came out with the same 361 class names and the same 404 rules.
 
-The documents that describe permissions now match what the manifest asks for. The live
-editor round found three things a stand-in could not catch — a permission Chrome refused to
-grant, a response shape that had been assumed rather than read, and a list of suggestions
-longer than one request.
+Each part carries the MPL notice in its own header. Seven files are one work under one
+licence, and a notice in the first part is a notice about six sevenths of the
+stylesheet that nobody would find.
 
-Deck-specific EDHREC suggestions work, now that access to `edhrec.com` can actually be given
-— the settings page has a button for it, because Chrome only answers a permission request
-that follows a click. The percentages were out by a hundred times and there was no art,
-because the code had been written against a guessed shape of the response rather than the
-one the endpoint returns. The Cardmarket mark is drawn in the ink of its own column
-heading instead of being picked between a black and a white file. CardTrader's API turns out
-to be account-bound, and that is written down.
+`docs/scryfall-dom.md` now names the part each dependency is written in, which is the
+question the split was made to answer: when Scryfall renames a class, one file to open.
+It is generated, and a test runs the generator and fails if the committed document is
+not what it produces, so a rule that moves without the document moving says so.
+
+The checks that read the theme read it as the concatenation, in manifest order, through
+one harness function. Six of them read a single file before, and after the split a
+check that read one part would have been checking a page of the theme and calling it
+the theme.
 
 ## [v0.52.0](https://github.com/Solomag/scryfall-toolkit/releases/tag/v0.52.0) — 2026-09-29
 

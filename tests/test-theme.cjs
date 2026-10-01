@@ -15,7 +15,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const {
-  assert, assertEqual, summary, sleep, createPage, ROOT
+  assert, assertEqual, summary, sleep, createPage, themeCss, ROOT
 } = require('./testlib.cjs');
 
 const read = file => fs.readFileSync(path.join(ROOT, file), 'utf8');
@@ -70,8 +70,13 @@ async function manifestIntegrity() {
     'and so does its root entry, because npm ci refuses to install when they differ');
   const taggerGroups = manifest.content_scripts.filter(group => group.matches.some(host => host.includes('tagger.scryfall.com')));
   assert(taggerGroups.length >= 1, 'manifest keeps a Tagger content script');
-  assert(taggerGroups.some(group => group.js.includes('src/core/theme.js') && group.css.includes('src/styles/theme.css')),
-    'the theme is injected on Tagger as well, so the setting reaches it');
+  // Every part of the theme, not one file of it: a Tagger group carrying only
+  // the first part would style the page and leave it half dark, with nothing
+  // anywhere saying so.
+  for (const part of ["src/styles/theme/01-card-page.css","src/styles/theme/02-shared-pages.css","src/styles/theme/03-account-and-marketing.css","src/styles/theme/04-surfaces.css","src/styles/theme/05-tagger.css","src/styles/theme/06-shared-surfaces.css","src/styles/theme/07-our-own-ui.css"]) {
+    assert(taggerGroups.some(group => group.js.includes('src/core/theme.js') && group.css.includes(part)),
+      'Tagger is given ' + part + ', so the setting reaches the whole theme there');
+  }
   assert(taggerGroups.some(group => group.run_at === 'document_start'), 'the Tagger theme runs at document_start');
 }
 
@@ -90,6 +95,61 @@ function syntaxCheck() {
     catch (error) { failures.push(`${file}: ${error.message}`); }
   }
   assertEqual(failures, [], 'all extension scripts compile');
+}
+
+// The theme is seven files, and the two ways that can go quietly wrong are both
+// invisible on the page: a part that is written and never listed loads nothing,
+// and a part that is listed out of order changes which of two equally specific
+// rules wins. Neither shows up as an error anywhere, so both are checked here.
+function themePartsTest() {
+  console.log('static: the theme is seven files and the manifest lists all of them');
+  const dir = 'src/styles/theme';
+  const onDisk = fs.readdirSync(path.join(ROOT, dir)).filter(name => name.endsWith('.css')).sort();
+  assert(onDisk.length > 1, 'the theme really is more than one file, or this is all noise');
+
+  const manifest = JSON.parse(read('manifest.json'));
+  const groups = manifest.content_scripts.filter(group =>
+    (group.css || []).some(file => file.startsWith(dir + '/')));
+  assert(groups.length > 0, 'the manifest lists the theme somewhere');
+
+  const listed = group => group.css.filter(file => file.startsWith(dir + '/')).map(file =>
+    file.slice(dir.length + 1));
+
+  // Same order as the filenames sort in, because that is the order they are meant
+  // to be loaded in and the numbering in each part's header says so.
+  for (const group of groups) {
+    assertEqual(listed(group), onDisk, 'every part on disk is listed, in filename order, in ' +
+      (group.matches || []).join(', '));
+  }
+
+  onDisk.forEach((name, index) => {
+    const text = read(dir + '/' + name);
+    // The notice travels with the file. Six sevenths of a stylesheet with no
+    // licence header is a licence header that nobody will find.
+    assert(text.includes('Mozilla Public') && text.includes('MPL'),
+      name + ' carries the MPL notice, like every file of this project');
+    assert(text.includes('Part ' + (index + 1) + ' of ' + onDisk.length),
+      name + ' says it is part ' + (index + 1) + ' of ' + onDisk.length);
+    assert(text.includes('/* ' + name + ' '),
+      name + ' names itself in its own header, so a rename cannot leave a lie');
+    const rules = [...text.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{[^{}]*\}/g)]
+      .filter(m => m[1].trim());
+    assert(rules.length > 0, name + ' holds at least one rule');
+    const braces = (text.replace(/\/\*[\s\S]*?\*\//g, '').match(/[{}]/g) || []).length;
+    assertEqual(braces % 2, 0, name + ' has balanced braces');
+  });
+
+  // What the browser ends up applying, in one string: the parts in the order the
+  // manifest gives them. Every other check in this file that reads the theme
+  // reads it this way, so this is the thing they are all reading.
+  const whole = themeCss().text;
+  for (const name of onDisk) {
+    assert(whole.includes(read(dir + '/' + name).slice(0, 200)),
+      name + ' is really in the concatenation every other check in this file reads');
+  }
+  assert(whole.includes('--stk-page'), 'the concatenation carries the palette');
+  assertEqual(themeCss().files.map(file => file.slice(dir.length + 1)), onDisk,
+    'and the harness reads the same parts, in the same order');
 }
 
 function importScriptsCheck() {
@@ -215,7 +275,7 @@ function cssCheck() {
   assert(flipLine && flipLine.includes('WORSE_THAN'),
     'WORSE_THAN flips the relation icon');
 
-  const theme = read('src/styles/theme.css');
+  const theme = themeCss().text;
   assert(/html\.stk-dark\{[^}]*--stk-link-purple:#c4a7ea/.test(theme),
     'dark theme link purple variable');
   assert(theme.includes('html.stk-dark #main .stk-brighter-purple{color:var(--stk-link-purple)!important}'),
@@ -339,7 +399,7 @@ function firstPaintTest() {
 // dark grey on dark grey. Only the dimmed band may remain.
 function noDoublePaintingTest() {
   console.log('static: no surface is painted twice with disagreeing colours');
-  const css = read('src/styles/theme.css').replace(/\/\*[\s\S]*?\*\//g, '');
+  const css = themeCss().text.replace(/\/\*[\s\S]*?\*\//g, '');
   const bands = css.match(/[^\n{]*\.team-header[^\n{]*\{[^}]*background[^}]*\}/g) || [];
   const paintsBackground = bands.filter(rule => /background-color:(?!transparent)/.test(rule));
   assertEqual(paintsBackground.length, 1,
@@ -357,7 +417,7 @@ function noDoublePaintingTest() {
 // quietly reach for a class nobody wrote down.
 function domContractTest() {
   console.log('static: the stylesheet stays inside the DOM contract');
-  const css = read('src/styles/theme.css').replace(/\/\*[\s\S]*?\*\//g, '');
+  const css = themeCss().text.replace(/\/\*[\s\S]*?\*\//g, '');
   const contract = read('docs/scryfall-dom.md');
 
   // Class names come out of selectors, not out of rule bodies: a data URI can
@@ -404,7 +464,7 @@ function domContractTest() {
 
 function paletteTest() {
   console.log('static: the palette holds the colours it replaced');
-  const css = read('src/styles/theme.css');
+  const css = themeCss().text;
   for (const [name, value] of [
     ['--stk-page', '#1d2021'],
     ['--stk-panel', '#252829'],
@@ -428,7 +488,7 @@ function paletteTest() {
 
 function hoverStatesTest() {
   console.log('static: hover states differ from the resting state');
-  const css = read('src/styles/theme.css').replace(/\/\*[\s\S]*?\*\//g, '');
+  const css = themeCss().text.replace(/\/\*[\s\S]*?\*\//g, '');
   const paint = '(#[0-9a-f]{3,8}|var\\(--stk-[a-z0-9-]+\\))';
   const resting = css.match(new RegExp('\\.faq-link\\{background:' + paint));
   const hovered = css.match(new RegExp('\\.faq-link:is\\(:hover,:active,:focus\\)\\{background:' + paint));
@@ -440,7 +500,7 @@ function hoverStatesTest() {
 
 function auditGapCheck() {
   console.log('static: dark theme covers the surfaces the audit found');
-  const theme = read('src/styles/theme.css');
+  const theme = themeCss().text;
   const js = read('src/core/theme.js');
   // Each of these was a light surface on a live page with the dark theme on.
   for (const [what, pattern] of [
@@ -730,6 +790,7 @@ async function pathClasses() {
     hoverStatesTest();
     auditGapCheck();
     syntaxCheck();
+    themePartsTest();
     importScriptsCheck();
     iconCheck();
     cssCheck();

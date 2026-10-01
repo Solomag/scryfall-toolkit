@@ -40,11 +40,26 @@ section 7 of the store listing.
 | 3 | **Rate limits, checked against the page that states them** | Done, 2026-10-01. Reading <https://scryfall.com/docs/api/rate-limits> rather than trusting the number already in the code found that one 130 ms slot for everything was about four times their limit for `/cards/search`, `/cards/named` and `/cards/collection` — the endpoints the finish column, the EDHREC artwork, the deck search and the hover preview all use. There was also no hold-back on a 429, and their page says a 429 means thirty seconds of limitation and then a possible ban. Each class now has its own queue at their published ceiling plus a margin, every call to the host goes through one of them, and a 429 holds all of them. The test that checks this reads the ceilings out of the source, because a `const` in a `vm` script is not reachable from the test context and because the numbers are the thing being asserted. |
 | 4 | **Split `content.js`** | Done, 2026-10-01. `content.js` was 1901 lines in one closure holding the clipboard, tags, print manipulation, CardTrader, EDHREC, formats, the deck page and the set filters. It is now `src/card-page/core.js` (the settings, what page this is, the request wrapper, the shared clipboard, the hover preview, and the boot) and nine feature files. Every line of logic was moved as it stands rather than retyped, and a check confirmed it: of 1692 code lines, the only ones absent afterwards are the four `let` declarations that became one `shared` object and the eighteen `if (settings.x) initY();` lines that became the boot list. Nothing else moved. The CSS half of this item is still open, and so is the contract layer it was really about. |
 
-**The half of this that is not done.** 270 names of Scryfall's own markup are still reached
-for from wherever they are needed: 404 rules in one `src/styles/theme.css`, and selectors spelled out
-in each feature file. The original note was right that the second layer mattered more than
-the first — a renamed class still breaks whatever rule happened to reach it. So the DOM
-contract is the next piece, not a finished thing.
+**The second layer, done.** 270 names of Scryfall's own markup are no longer reached for from
+wherever they are needed. `docs/scryfall-dom.md` lists every one of them, the page family it
+belongs to, and **the part of the theme that reaches for it** — so a class Scryfall renames
+names the one file to open, rather than leaving a reader to search 404 rules. The document is
+generated and a test fails if it is not what the generator produces, so a rule that gains a
+dependency without the document gaining a line stops the build.
+
+On the stylesheet side that meant splitting it: `src/styles/theme.css` was 753 lines and is
+seven files under `src/styles/theme/`. The cut is contiguous rather than grouped by page —
+a stylesheet cannot be reorganised by what a rule is about without changing what it does,
+because two rules of equal specificity are decided by which came last. `tools/css-write-parts.cjs`
+puts the parts back together and compares against the file they came from, character for
+character; the contract came out with the same 361 class names and the same 404 rules.
+
+**What is still open.** Selectors spelled out in the JavaScript are recorded in the same
+document, but they are still spelled in the code: `querySelector('.card-legality')` in four
+feature files names the same class four times, and renaming it means four edits. CSS cannot
+alias a selector, so closing this properly means either a build step that expands names from
+one table, or a runtime lookup. Both are a real cost against a project that has otherwise
+chosen plain files and no bundler, and the honest position is that it is not decided.
 
 The tool meant to support it, `tools/dom-contract.cjs`, was itself an example of the
 problem. It had its own list of scripts to scan, that list named `content.js`, and when

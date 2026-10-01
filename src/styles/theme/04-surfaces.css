@@ -1,0 +1,140 @@
+/*
+ * Scryfall Toolkit. Copyright (c) 2026 Scryfall Toolkit contributors.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ *
+ * Third-party data, images and code in this project keep their own licence and
+ * are described in THIRD_PARTY_NOTICES.md. The MPL does not cover them.
+ */
+/* 04-surfaces.css — surfaces more than one page asks for, and the palette they share.
+ *
+ * Part 4 of 7 of the dark theme, in cascade order.
+ * The manifest lists these in this order, and CSS only knows the order a stylesheet
+ * is loaded in: moving a rule from one part to another can change which of two
+ * equally specific rules wins. If a rule has to move, move it and check the page it
+ * was on.
+ */
+/* Scryfall lifts the text on this page with a white one-pixel shadow, which on a
+   dark page reads as a second, offset copy of every line. */
+html.stk-dark.stk-bots-page #main :is(p,h1,h2,h3,h4,h5,h6,a,span,b,li,div){text-shadow:none!important;-webkit-text-stroke:0!important}
+
+/* The two screenshots on the bots page are pictures of Scryfall's own bot
+   inside Slack, taken while Slack wore its light theme: a white window on a
+   dark card reads as a blank block rather than as a picture. theme.js measures
+   each one and marks the light ones, so a screenshot Scryfall publishes later in
+   dark colours keeps the paint it arrived with. */
+html.stk-dark.stk-bots-page #main img.stk-light-screenshot{filter:invert(1) hue-rotate(180deg)}
+
+/* A link that looks like a button is Scryfall's own white pill with dark purple
+   ink — a light surface with a light-mode colour on a dark page, and one the
+   theme never reached: the empty search, a blog index and any page that writes a
+   button into its prose all carry it. The button is stated here with the lowest
+   specificity that still beats Scryfall's own, so every container the theme
+   already paints keeps the colours it was given.
+   The states matter as much as the button: Scryfall paints the hover and the
+   press white with a purple border, and a disabled one black, so the pointer
+   brought a flash of light and a line of ink that could not be read. */
+html.stk-dark .button-n:not(.inverted),html.stk-dark .select-n:not(.inverted){background-color:var(--stk-panel-2)!important;color:var(--stk-link)!important;border-color:var(--stk-border)!important}
+html.stk-dark .button-n svg,html.stk-dark .select-n svg{fill:currentColor!important}
+html.stk-dark .button-n.primary-n,html.stk-dark .select-n.primary-n{background-color:var(--stk-hover)!important;color:#f3ecfb!important;border-color:#6d5a7d!important}
+html.stk-dark .button-n.muted-n,html.stk-dark .select-n.muted-n{background-color:var(--stk-panel)!important;color:#a8a2af!important;border-color:var(--stk-border-2)!important}
+html.stk-dark .button-n:is(.danger-n,.primary-danger-n),html.stk-dark .select-n:is(.danger-n,.primary-danger-n){color:#ee9d9d!important;border-color:#915c65!important}
+html.stk-dark .button-n:is(.positive-n,.primary-positive-n),html.stk-dark .select-n:is(.positive-n,.primary-positive-n){color:#b6e0b6!important;border-color:#3d6b45!important}
+html.stk-dark .button-n:is(.disabled,:disabled),html.stk-dark .select-n:is(.disabled,:disabled){background-color:var(--stk-panel)!important;color:#6f6b74!important;border-color:#3c3e42!important}
+html.stk-dark .button-n:is(:hover,:active,:focus,:focus-visible),html.stk-dark .select-n:is(:hover,:active,:focus,:focus-visible){background-color:var(--stk-hover)!important;color:#fff!important;border-color:#6d5a7d!important;box-shadow:none!important}
+html.stk-dark .button-n.primary-n:is(:hover,:active,:focus,:focus-visible){background-color:#554267!important;color:#fff!important}
+html.stk-dark .button-n.muted-n:is(:hover,:active,:focus,:focus-visible){background-color:#2f3133!important;color:#a8a2af!important;border-color:#4b4d52!important}
+html.stk-dark .button-n:is(.danger-n,.primary-danger-n):is(:hover,:active,:focus,:focus-visible){background-color:#4a2b2f!important;color:#f0b4b4!important;border-color:#915c65!important}
+html.stk-dark .button-n:is(.positive-n,.primary-positive-n):is(:hover,:active,:focus,:focus-visible){background-color:#1f3a26!important;color:#d3f0d3!important;border-color:#3d6b45!important}
+html.stk-dark .button-n:is(.disabled,:disabled):is(:hover,:active,:focus,:focus-visible){background-color:var(--stk-panel)!important;color:#6f6b74!important;border-color:#3c3e42!important}
+html.stk-dark :is(a,button).button-n:is(.disabled,:disabled):is(:hover,:active,:focus,:focus-visible){background-color:var(--stk-panel)!important;color:#6f6b74!important;border-color:#3c3e42!important}
+/* A link the repair had to lift keeps the lifted purple under the pointer too,
+   so the pointer never drops a line back onto Scryfall's own colour. */
+html.stk-dark #main a.stk-brighter-purple:is(:hover,:active,:focus){color:#d6c2f2!important}
+
+/* The purple Scryfall hands to a shape rather than to a line. The repair only
+   reads the ink of a text element, so a fill, a stroke, a border and a meter are
+   stated here, in the lifted purple, wherever Scryfall wrote its own. The icon
+   groups are the ones its stylesheet paints: the search reference headings, the
+   blog post cards, the form controls, the modal choices and the file picker. */
+html.stk-dark #main :is(.prose-complex-h1,.blog-post-small-content,.form-n-file-input-control,.modal-dialog-grid-choice-title,.button-n,.select-n) :is(svg,g,path,circle,rect,polygon):not([fill="none"]):not([stroke="none"]){fill:var(--stk-link-purple)!important;stroke:var(--stk-link-purple)!important}
+/* The same purple as a field of its own: a notice, a warning bar, the current
+   language of a print, the meter of a deck curve, a member's frame. */
+html.stk-dark #main :is(.notification.purple,.read-only-warning,.print-langs-item.current){background-color:var(--stk-hover)!important;color:#f3ecfb!important;border-color:#6d5a7d!important}
+html.stk-dark #main .deckbuilder-cmc-stat-meter::-webkit-progress-value{background-color:var(--stk-link-purple)!important}
+html.stk-dark #main .deckbuilder-cmc-stat-meter::-moz-progress-bar{background-color:var(--stk-link-purple)!important}
+html.stk-dark #main .team-member-avatar{border-color:var(--stk-link-purple)!important}
+
+/* Every state Scryfall paints with a light-mode colour. Its own stylesheet hands
+   the pointer a near-black ink on a page of light ink, so a line of text turned
+   to #16161D under the cursor, and a field turned white. Each of these is named
+   after the rule it answers, so the pair can be read together. */
+html.stk-dark #main :is(.prose,.checklist,.form-n-description,.control-panel-prose,.rulings,.search-info) a:is(:hover,:active,:focus):not(.button-n):not(.select-n){color:var(--stk-link-purple)!important;outline-color:transparent!important}
+html.stk-dark #main :is(.checklist th a:hover .arrow,.checklist th a:active .arrow,.checklist th a:focus .arrow){color:var(--stk-link-purple)!important}
+html.stk-dark #main :is(.form-input,.form-n-input,.form-n-file-input-control,.advanced-search-subjoiner,.modal-dialog-grid-choice):is(:hover,:active,:focus,:focus-visible){background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:#6d5a7d!important;box-shadow:none!important}
+html.stk-dark #main :is(.advanced-search-checkbox input[type="checkbox"]):is(:hover,:active,:focus){background-color:var(--stk-panel-2)!important;border-color:#6d5a7d!important}
+html.stk-dark #main .deckbuilder-entry-input:focus{background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important}
+html.stk-dark #main :is(.session-form .button,.button):is(:hover,:focus):not(.button-n){background-color:var(--stk-hover)!important;color:#fff!important}
+html.stk-dark #main :is(.pillbox-item,.print-langs-item):is(:hover,:active,:focus):not(.disabled){background-color:var(--stk-hover)!important;color:#fff!important}
+html.stk-dark #main .control-panel-table tbody tr:hover{background-color:#2a2c2d!important;color:var(--stk-ink)!important}
+html.stk-dark #main .modal-dialog-close:is(:hover,:active,:focus) :is(svg,g,path,circle):not([fill="none"]){fill:var(--stk-ink)!important}
+html.stk-dark #main .homepage-promo:is(:hover,:active){background-color:rgba(255,255,255,0.2)!important}
+html.stk-dark #main select.form-n-input:is(:focus,:hover),html.stk-dark #main select.form-n-input option:focus{color:var(--stk-ink)!important}
+
+/* The donation tiles and the payment service tiles. */
+html.stk-dark.stk-info-page #main :is(.donation-stripe-amount,.donation-service){background-color:var(--stk-panel)!important;color:var(--stk-ink)!important;border-color:var(--stk-border-2)!important}
+html.stk-dark.stk-info-page #main :is(.donation-stripe-amount,.donation-service) :is(b,span,svg){color:var(--stk-ink)!important}
+html.stk-dark.stk-info-page #main :is(.donation-stripe-amount,.donation-service):hover{background-color:#2f3133!important}
+
+/* The button on Scryfall's own error pages, which it renders straight into the
+   body, and the buttons a post carries in its own prose. */
+html.stk-dark :is(a.button,button.button){background-color:var(--stk-panel-2)!important;color:var(--stk-link)!important;border-color:var(--stk-border)!important}
+html.stk-dark.stk-blog-page #main .blog-post-large-content a.button-n{background-color:var(--stk-panel-2)!important;color:var(--stk-link)!important;border-color:var(--stk-border)!important}
+
+/* Pasting a word the browser remembers paints the field with its own autofill
+   yellow, which is unreadable on a dark page. The suggestion list below the field
+   is browser UI and cannot be restyled, but the field itself can. */
+html.stk-dark #header-search-field:-webkit-autofill,
+html.stk-dark #header-search-field:-webkit-autofill:hover,
+html.stk-dark #header-search-field:-webkit-autofill:focus,
+html.stk-dark #header-search-field:-webkit-autofill:active{
+  -webkit-text-fill-color:#e9e4ee!important;
+  -webkit-text-fill-color:#e9e4ee;
+  caret-color:#e9e4ee;
+  -webkit-box-shadow:0 0 0 1000px var(--stk-panel-2) inset!important;
+  box-shadow:0 0 0 1000px var(--stk-panel-2) inset!important;
+  transition:background-color 600000s 0s,color 600000s 0s;
+}
+html.stk-dark #header-search-field::placeholder{color:#8d8894!important;-webkit-text-fill-color:#8d8894!important}
+/* The skip links stay out of sight until the keyboard reaches them, and then a
+   cream band flashed across the top of a dark page. Scryfall writes them as
+   absolute links on some pages and as bare fragments on others. */
+html.stk-dark a:is([href$="#main"],[href$="#footer"]){background-color:var(--stk-panel-2)!important;color:var(--stk-link)!important;outline-color:var(--stk-border)!important}
+
+/* Scryfall's "Nothing Here" page is built straight into the body, with no #main
+   at all, so every rule above missed it: its body carried Scryfall's light
+   gradient, which painted the whole page white, and its drawing was filled with
+   the site purple. Both are stated here, on the body itself. */
+html.stk-dark body{background-image:none!important}
+html.stk-dark body>svg :is(path,g,circle,rect,polygon,ellipse):not([fill="none"]){fill:var(--stk-link-purple)!important}
+
+/* The dot between the counts in a set's card grid header is a faint grey that
+   all but vanished on the dark surface. */
+html.stk-dark #main .card-grid-header-dot{color:#8f8a96!important}
+
+/* Tagger is a separate Vue app on its own host, with its own stylesheet and
+   its own dark design: `.light-mode` is how Tagger itself marks the few panels
+   it keeps light, and its ink inside them is a dark grey. So of everything
+   above only the body colour ever reached Tagger, and repainting those light
+   panels without repainting their ink left grey text on a dark panel. The
+   block below therefore states every surface Tagger owns rather than assuming
+   an inherited palette, and always paints the ink together with the panel.
+   theme.js only adds stk-tagger on the Tagger host, so nothing here can reach
+   Scryfall's own components that happen to share a class name. */
+/* Tagger's own surfaces, by Tagger's own values. The page field is Tagger's
+   #191820, not the site's var(--stk-page), and #app has to stay transparent: the app
+   keeps its soft glow in a child that sits behind it with a negative z-index, and
+   an opaque #app paints straight over the glow. */
+html.stk-dark.stk-tagger body{background-color:#191820!important;color:var(--stk-ink)!important}

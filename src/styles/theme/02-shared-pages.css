@@ -1,0 +1,232 @@
+/*
+ * Scryfall Toolkit. Copyright (c) 2026 Scryfall Toolkit contributors.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ *
+ * Third-party data, images and code in this project keep their own licence and
+ * are described in THIRD_PARTY_NOTICES.md. The MPL does not cover them.
+ */
+/* 02-shared-pages.css — rules that reach for more than one page: the deck lists, the jump bar, the marketing pages.
+ *
+ * Part 2 of 7 of the dark theme, in cascade order.
+ * The manifest lists these in this order, and CSS only knows the order a stylesheet
+ * is loaded in: moving a rule from one part to another can change which of two
+ * equally specific rules wins. If a rule has to move, move it and check the page it
+ * was on.
+ */
+html.stk-dark #stores .stk-cardtrader-link img,html.stk-dark #main .stk-ct-price-header img,html.stk-dark #main .stk-cm-price-header img{filter:invert(.73)}
+html.stk-dark #main :is(.deck-list,.deck-list-entry,.deck-view,.deck-builder,.deck-section,.profile,.account,.sidebar,.reference-example-text){background-color:var(--stk-page)!important;color:var(--stk-ink)!important;border-color:var(--stk-border-2)!important}
+html.stk-dark #main :is(.deck-list-entry,.deck-section,.profile,.account) a{color:var(--stk-link)!important}
+html.stk-dark .select2-dropdown,html.stk-dark .select2-results__option{background:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:#57595b!important}
+html.stk-dark .select2-results__option--highlighted{background:#493e53!important}
+/* Authenticated pages use separate white panels from the public pages. */
+html.stk-dark.stk-account-page #main :is(.inner-flex,.inner-flex>*,.account-content,.account-main,.account-panel,.settings-content,.settings-panel,.profile-content,.profile-main,.deck-list,.deck-list-wrapper,.deck-list-main,.deckbuilder,.deckbuilder-main,.deck-view,.deck-view-main,.sidebar,.form-layout,.form-row-content,.box,.panel,.well,form,fieldset){background-color:var(--stk-page)!important;color:var(--stk-ink)!important;border-color:#424447!important}
+html.stk-dark.stk-account-page #main :is(input,select,textarea,.form-input,.button-n){background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:var(--stk-border)!important}
+html.stk-dark.stk-account-page #main :is(a:not(.button-n),.form-row-label,.form-row-tip){color:#cba4e1!important}
+html.stk-dark.stk-account-page #main :is(.box,.panel,.well,.sidebar,.deck-list,.form-layout,.form-row-content){background-color:var(--stk-page)!important}
+html.stk-dark.stk-account-page #main :is(div,section,article)[class*="header"],html.stk-dark.stk-account-page #main :is(.panel-heading,.box-heading,.form-section-heading){background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important}
+html.stk-dark.stk-account-page #main :is(div,section,article)[class*="header"] :is(h1,h2,h3,h4,p,span){color:var(--stk-ink)!important}
+html.stk-dark.stk-account-page #main :is(.panel-heading,.box-heading,.form-section-heading){background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:#424447!important}
+html.stk-dark.stk-account-page #main :is(input[type="file"],[class*="file-upload"]){background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:var(--stk-border)!important}
+/* Scryfall's file-input wrapper is a box the control sits in, not a surface: it
+   paints nothing of its own and no border. The broad [class*="file-input"] match
+   caught it anyway, so the theme filled a box Scryfall left empty, and the fill
+   was wider than the control it holds — a band of dark sticking out from under
+   the button. The wrapper is named here and left alone, and the control inside it
+   is given a surface of its own so it still reads on a dark page. */
+html.stk-dark.stk-account-page #main .form-n-file-input{background-color:transparent!important;border-color:transparent!important}
+html.stk-dark.stk-account-page #main :is(.form-n-file-input-control,.stk-account-upload-button){background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:var(--stk-border)!important}
+html.stk-dark.stk-account-page #main :is(label[for*="avatar"],label[for*="image"]):not(.stk-account-upload-button){background:transparent!important;color:var(--stk-ink)!important}
+html.stk-dark.stk-account-page #main input[type="file"]::file-selector-button{padding:7px;border:1px solid var(--stk-border);border-radius:3px;cursor:pointer}
+html.stk-dark.stk-account-page #main .stk-account-light-bar{background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important}
+html.stk-dark.stk-account-page #main .stk-account-light-bar :is(h1,h2,h3,h4,span,p){color:var(--stk-ink)!important}
+html.stk-dark.stk-account-page #main .stk-account-light-bar::before,html.stk-dark.stk-account-page #main .stk-account-light-bar::after{background-color:var(--stk-panel-2)!important}
+html.stk-dark.stk-account-page #main .stk-account-upload-button,html.stk-dark.stk-account-page #main .stk-account-upload-button :is(span,svg){color:var(--stk-ink)!important;fill:#cba4e1!important}
+html.stk-dark #main :is(.notice,.notice-n,.alert,.alert-n,.message,.flash,.search-notice){background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:#56515d!important}
+html.stk-dark #main :is(.select2-selection,.select2-selection__rendered,.select2-selection__choice,.select2-container--default .select2-selection--multiple){background:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:var(--stk-border)!important}
+html.stk-dark #main :is(.card-grid-header-content,.set-header-controls){background-color:transparent!important;color:var(--stk-ink)!important}
+html.stk-dark #main .search-info,html.stk-dark #main .form-row,html.stk-dark #main .advanced-search-submit-bottom{background-color:var(--stk-page)!important;color:var(--stk-ink)!important;border-color:#424447!important}
+html.stk-dark #main .search-info a{color:#cba4e1!important}
+html.stk-dark select option{background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important}
+html.stk-dark #main input[type="checkbox"]{appearance:none;background:var(--stk-panel-2)!important;border:1px solid #85818a!important;border-radius:3px;vertical-align:middle}
+html.stk-dark #main input[type="checkbox"]:checked{background:#756287 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18'%3E%3Cpath d='m3 9 4 4 8-9' fill='none' stroke='white' stroke-width='2'/%3E%3C/svg%3E") center/80% no-repeat!important}
+html.stk-dark #main input[type="checkbox"]:focus-visible{outline:2px solid #ad92bb;outline-offset:2px}
+html.stk-dark #main .select2-container,html.stk-dark #main .select2-container .selection{background:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:#57595b!important}
+html.stk-dark #main .advanced-search-submit-bottom button.submit-n{background:#493a57!important;border-color:#826e90!important;color:#f3eefa!important}
+html.stk-dark #main .stk-ct-price-cell a{color:#c6a9d2!important}
+/* Deck editor rows are Vue components with their own background and contrast rules. */
+html.stk-dark #main #deckbuilder :is(.deckbuilder-section,.deckbuilder-entry,.deckbuilder-column){background-color:var(--stk-panel)!important;color:var(--stk-ink)!important;border-color:#505254!important}
+html.stk-dark #main #deckbuilder :is(.deckbuilder-section-title-bar,.deckbuilder-toolbar,.deckbuilder-editor-inner){background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:#505254!important}
+html.stk-dark #main #deckbuilder :is(.deckbuilder-section-count,[class*="deckbuilder-entry-"][class*="set"],[class*="deckbuilder-entry-"][class*="collector"],[class*="deckbuilder-entry-"][class*="number"]){color:#bcbac3!important}
+html.stk-dark #main #deckbuilder .deckbuilder-entry :is(.deckbuilder-entry-set,.deckbuilder-entry-set-code,.deckbuilder-entry-collector-number,.deckbuilder-entry-printing){color:var(--stk-ink)!important;background-color:#383a3c!important}
+html.stk-dark #main #deckbuilder :is(.deckbuilder-entry-input,.deckbuilder-entry-menu-select){background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:#5a5d61!important}
+/* Let the deck actions menu extend below the list instead of clipping into a scrolling row. */
+html.stk-dark #main :is(.deck-list,.deck-list-wrapper,.deck-list-main,.deck-list-entry){overflow:visible!important;max-height:none!important}
+html.stk-dark #main .deck-list-entry :is(.dropdown,.dropdown-menu,.menu,.popover){overflow:visible!important;max-height:none!important;background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important}
+/* A "Make a copy" item in the deck menu is a form of its own, and the broad
+   account rule above paints every form, which left a stray band behind that one
+   row. Inside a menu the wrapper stays out of the way. */
+html.stk-dark.stk-account-page #main .dropdown-menu-items form{background-color:transparent!important;border-color:transparent!important;padding:0!important}
+/* The deck editor draws its curve counts in black, which vanished on the dark
+   surface; the labels next to them are Scryfall's own muted grey. */
+html.stk-dark.stk-account-page #deckbuilder :is(.deckbuilder-cmc-stat,.deckbuilder-cmc-stat-number) :is(strong,b){color:var(--stk-ink)!important}
+html.stk-dark.stk-account-page #deckbuilder :is(.deckbuilder-cmc-stat,.deckbuilder-cmc-stat-number) :is(li,span):not(.card-symbol):not(.mana-symbol){color:#bcbac3!important}
+/* A column header sits on its own lighter band, which reads as a second surface
+   in the middle of the column. The band takes the column's own colour. */
+/* The editor stands on the page with a surface one step lighter, so the columns
+   read as a lighter box inside a dark page. The column and its header take the
+   page's own colour; the card rows keep their own step, so the list still reads
+   as rows. */
+html.stk-dark #main #deckbuilder :is(.deckbuilder-section,.deckbuilder-column){background-color:var(--stk-page)!important}
+html.stk-dark #main #deckbuilder :is(.deckbuilder-section-title-bar,.deckbuilder-entry){background-color:var(--stk-panel)!important;border-color:var(--stk-border-2)!important}
+/* The set code and the collector number are Scryfall's own grey badge, which is
+   black ink at a quarter opacity and disappears on the dark row. */
+html.stk-dark.stk-account-page #deckbuilder :is(.deckbuilder-entry-badge,.stk-deck-set-badge){color:#dcd8e2!important;background-color:#383a3c!important;border-color:#4b4d52!important}
+html.stk-dark.stk-account-page #deckbuilder .deckbuilder-entry-badge.red{color:#fff!important;background-color:#a3323c!important}
+/* The form title of an account page is a light title bar of its own. On a dark
+   page it is only a band, so it takes the panel's colour; the text stays light. */
+html.stk-dark.stk-account-page #main .stk-account-light-bar.form-n-title,
+html.stk-dark.stk-account-page #main .form-n-title{background-color:var(--stk-page)!important;border-color:transparent!important;color:var(--stk-ink)!important;text-shadow:none!important}
+/* Set and collector badges in the deck editor inherit near-black ink from Scryfall. */
+html.stk-dark #main #deckbuilder :is(.deckbuilder-entry,.deckbuilder-section) :is([class*="set-code"],[class*="set-name"],[class*="set-number"],[class*="collector"],[class*="printing"]){color:var(--stk-ink)!important;background-color:#383a3c!important}
+html.stk-dark #main #deckbuilder :is(.deckbuilder-section-title-bar,.deckbuilder-section-count,.deckbuilder-section-name,.deckbuilder-entry-menu-visual){color:#d5d1d8!important}
+/* Scryfall renders the backpack tray outside #main, and pagination has its own white buttons. */
+html.stk-dark .left-tray .deck-tray{background:transparent!important;border-color:transparent!important}
+html.stk-dark .left-tray .deck-tray-options{background:#222426!important;color:var(--stk-ink)!important;border-color:#55515a!important}
+html.stk-dark .left-tray :is(.deck-tray-option,.deck-tray-option .button-n){background:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:#59535e!important}
+html.stk-dark .left-tray .deck-tray-option .button-n.primary{background:#554267!important;color:#f4eff7!important}
+html.stk-dark .left-tray .deck-tray-option .button-n.danger{color:#ee9d9d!important;border-color:#915c65!important}
+html.stk-dark .left-tray .deck-tray-option svg,html.stk-dark .left-tray .deck-tray-option svg :is(path,g){fill:currentColor!important}
+html.stk-dark :is(.search-controls-pagination,.pagination) .button-n{background:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:var(--stk-border)!important}
+html.stk-dark :is(.search-controls-pagination,.pagination) .button-n.disabled{color:#99979f!important;background:#252729!important}
+html.stk-dark :is(.search-controls-pagination,.pagination) .button-n svg{fill:currentColor!important}
+/* Contact and suggestion forms have separate white surfaces from card pages. */
+html.stk-dark.stk-account-page #main :is(.contact-form,.contact-panel,.contact-content,.contact-box,.contact-page,.feedback-form,.suggestion-form){background-color:var(--stk-page)!important;color:var(--stk-ink)!important;border-color:#424447!important}
+html.stk-dark :is(.feedback-modal,.suggestion-modal,.contact-modal,.feedback-dialog){background-color:var(--stk-panel)!important;color:var(--stk-ink)!important;border-color:#53525b!important}
+html.stk-dark :is(.feedback-modal,.suggestion-modal,.contact-modal,.feedback-dialog) :is(header,footer,fieldset,form,section){background-color:var(--stk-panel)!important;color:var(--stk-ink)!important;border-color:#53525b!important}
+html.stk-dark :is(.feedback-modal,.suggestion-modal,.contact-modal,.feedback-dialog) :is(input,textarea,select){background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:var(--stk-border)!important}
+html.stk-dark.stk-account-page #main .stk-account-light-bar :is(button,a){color:var(--stk-ink)!important}
+
+/* Keep deck actions outside Scryfall's short, scrolling deck-list viewport. */
+#main.stk-deck-list-expanded,#main .stk-deck-list-expanded{height:auto!important;max-height:none!important;overflow:visible!important;contain:none!important;clip-path:none!important}
+.stk-deck-actions-menu{position:fixed!important;inset:auto!important;top:var(--stk-deck-menu-top)!important;left:var(--stk-deck-menu-left)!important;right:auto!important;bottom:auto!important;min-width:230px!important;width:max-content!important;max-width:min(320px,calc(100vw - 16px))!important;max-height:min(70vh,calc(100vh - var(--stk-deck-menu-top) - 12px))!important;overflow-x:hidden!important;overflow-y:auto!important;z-index:2147483640!important;box-sizing:border-box!important}
+html.stk-dark.stk-account-page #main .stk-deck-more-button{background:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border:1px solid #57595c!important;opacity:1!important}
+html.stk-dark.stk-account-page .stk-deck-actions-menu,html.stk-dark.stk-account-page .stk-deck-actions-menu :is(a,button){background:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:#55575d!important}
+html.stk-dark #main .stk-deck-actions-menu :is(a,button):hover{background:var(--stk-hover)!important;color:#fff!important}
+
+/* Consistent link purple across Scryfall and Tagger, without changing prices. */
+/* One link purple for the whole site. Scryfall's own #634496 is unreadable on a
+   dark surface, and the first replacement was still too close to it, so the
+   pages that carry many links (the search reference, the account pages) read
+   almost black. This is the brighter step, applied everywhere. */
+/* The palette. Every colour here plays one role, and a rule names the role
+   rather than the value: two surfaces meant to look alike can be seen to look
+   alike, and a colour outside this list stands out. Each variable holds the
+   exact colour it replaced, so nothing on screen changed here. */
+html.stk-dark{
+  --stk-page:#1d2021;
+  --stk-panel:#252829;
+  --stk-panel-2:#292b2c;
+  --stk-ink:#e6e3df;
+  --stk-link:#c79ce3;
+  --stk-border:#595c60;
+  --stk-border-2:#414345;
+  --stk-hover:#413949;
+  --stk-link-purple:#c4a7ea
+}
+html.stk-dark #main :is(.reference-block,.reference-jump,.form-row,.search-info,.profile,.account,.deck-list-entry) a:not(.button-n):not([class*="currency-"]),html.stk-dark #main a[href^="/tags/"],html.stk-dark #main a[href^="https://tagger.scryfall.com/"]{color:var(--stk-link-purple)!important}
+html.stk-dark #main #stk-tags a{color:var(--stk-link-purple)!important}
+html.stk-dark #main :is(.reference-block,.reference-block-doc,.reference-block-examples,.reference-jump,h1,h2,h3,h4,h5,h6){text-shadow:none!important;-webkit-text-stroke:0!important}
+html.stk-dark #main ::selection{background:#705488!important;color:#fff!important;text-shadow:none!important}
+html.stk-dark #main :is(mark,.highlight,.search-highlight){background:#59476a!important;color:#fff!important;text-shadow:none!important}
+html.stk-dark.stk-docs-page #main :is(.box,.panel,.well,.bot,.bot-card,.bots-list,.faq,.faq-answer,.faq-question,.reference-example,.reference-block){background:var(--stk-page)!important;color:var(--stk-ink)!important;border-color:var(--stk-border-2)!important}
+html.stk-dark.stk-docs-page #main :is(.box-header,.panel-heading,.reference-title,.faq-heading){background:var(--stk-panel-2)!important;color:var(--stk-ink)!important;text-shadow:none!important}
+/* The background is set on its own, never through the shorthand: a light bar is
+   sometimes a brand band that carries a logo as its background image (the Slack
+   band on the bots page is one), and the shorthand would take the logo with it. */
+html.stk-dark.stk-info-page #main .stk-account-light-bar,html.stk-dark.stk-info-page #main .stk-info-light-surface{background-color:var(--stk-panel)!important;color:var(--stk-ink)!important;border-color:var(--stk-border-2)!important;box-shadow:none!important}
+html.stk-dark.stk-info-page #main :is(.stk-account-light-bar,.stk-info-light-surface) :is(h1,h2,h3,h4,p,span,li){color:var(--stk-ink)!important;text-shadow:none!important}
+html.stk-dark #main :is(.search-results,.search-controls,.set-header-content,.set-header-title,.card-grid-header-content){background:transparent!important}
+html.stk-dark.stk-blog-page #main :is(.blog-content,.blog-index,.blog-category,.blog-articles,.posts){background:var(--stk-page)!important;color:var(--stk-ink)!important}
+html.stk-dark.stk-blog-page #main :is(img,video,picture){filter:none!important;mix-blend-mode:normal!important}
+html.stk-site-ru #caster-tray a.button-n.primary-n::after{content:"Кастер включён"}
+
+/* Deck editor controls and metadata use the same contrast as the card detail. */
+html.stk-dark #main #deckbuilder :is(.deckbuilder-section-title-bar,.deckbuilder-section-title-bar *,[class*="section-name"],[class*="section-count"],[class*="curve"]){color:#dcd8e2!important;text-shadow:none!important}
+html.stk-dark #main #deckbuilder :is(.deckbuilder-entry-set,.deckbuilder-entry-set-code,.deckbuilder-entry-printing,.deckbuilder-entry-collector-number,.stk-deck-set-badge){color:var(--stk-ink)!important;background:#38393e!important;border-color:#505157!important}
+html.stk-dark #main :is(#deckbuilder,.deck-list-entry) :is(.dropdown,.dropdown-menu,[class*="-menu"],[class*="actions"],.button-n){background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:#5b5a62!important}
+html.stk-dark #main :is(#deckbuilder,.deck-list-entry) :is(.dropdown-menu,[class*="-menu"]) :is(a,button,li){color:var(--stk-ink)!important;background-color:var(--stk-panel-2)!important}
+html.stk-dark #main :is(#deckbuilder,.deck-list-entry) :is(.dropdown-menu,[class*="-menu"]) :is(a,button,li):hover{background-color:var(--stk-hover)!important;color:#fff!important}
+html.stk-dark.stk-account-page #main .stk-deck-editor-label{color:#dedbe3!important;text-shadow:none!important}
+html.stk-dark.stk-account-page #main .stk-deck-set-badge{background-color:#3b3c42!important;color:#e2dfe9!important;border:1px solid #57575f!important}
+html.stk-dark.stk-account-page #main :is(.deckbuilder,[class*="deckbuilder"]) :is(.dropdown,.dropdown-menu,[class*="-dropdown"],[class*="-menu"],.button-n){background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:#5b5a62!important}
+html.stk-dark.stk-account-page #main :is(.deckbuilder,[class*="deckbuilder"]) :is(.dropdown-menu,[class*="-dropdown"],[class*="-menu"]) :is(a,button,li){background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important}
+
+/* Some account routes render their two-column shell outside #main. Keep its
+   backdrop dark without applying the same rule to search or set pages. */
+html.stk-dark.stk-account-page #main :is(.inner-flex,.inner-flex>*,.account-layout,.account-layout>*,.settings-layout,.settings-layout>*,.account-content,.account-main,.settings-content,.profile-content,.deck-list-wrapper,.deck-list-main,.stk-account-light-surface){background-color:var(--stk-page)!important;color:var(--stk-ink)!important}
+html.stk-dark.stk-account-page :is(main,#main){background-color:var(--stk-page)!important;color:var(--stk-ink)!important}
+html.stk-dark.stk-account-page :is(main,#main) :is(.deckbuilder-entry,.deckbuilder-section) :is([class*="set-code"],[class*="set-name"],[class*="collector"],[class*="printing"]){color:var(--stk-ink)!important;background-color:#393a3f!important}
+html.stk-dark.stk-account-page :is(main,#main) :is(.deckbuilder-section-title-bar,.deckbuilder-section-title-bar *,[class*="mana-curve"],[class*="curve-label"]){color:var(--stk-ink)!important}
+html.stk-dark.stk-account-page :is(.deckbuilder-entry,.deckbuilder-section) :is([class*="set-code"],[class*="collector"],[class*="printing"],.stk-deck-set-badge){color:var(--stk-ink)!important;background-color:#393a3f!important}
+html.stk-dark.stk-account-page :is(.deckbuilder-section-title-bar,.deckbuilder-section-title-bar *,[class*="mana-curve"],[class*="curve-label"]){color:var(--stk-ink)!important}
+html.stk-dark #main #stk-tags .stk-tags-table td a{color:var(--stk-ink)!important}
+html.stk-dark #main #stk-tags .stk-tags-toggle{color:#cba4e1!important}
+
+/* Keep the original layout and artwork while correcting the actual page surfaces. */
+html.stk-dark #main .stk-brighter-purple{color:var(--stk-link-purple)!important}
+/* The advanced-search checkbox already draws its own checkmark as a "✓"
+   ::before glyph, so the theme only darkens the box and lightens that glyph
+   instead of stacking a second checkmark on top. */
+html.stk-dark #main .advanced-search-checkbox input[type="checkbox"]{background-color:var(--stk-panel-2)!important;border-color:#79757f!important;box-shadow:none!important;color:var(--stk-ink)!important}
+html.stk-dark #main .advanced-search-checkbox input[type="checkbox"]:checked{background-color:#756287!important;background-image:none!important;color:var(--stk-ink)!important}
+/* The label icons and the set symbols Scryfall draws black or in its dark
+   purple are brightened so they stay visible on the dark surface. */
+html.stk-dark #main .form-row-label svg :is(path,g,circle,rect,polygon){fill:#bda1df!important}
+/* The "is"/"not" flags of a type match the legality palette: green for Legal,
+   the banned red for Not, so the two agree across the site. */
+/* Every set symbol in the advanced-search chips and dropdown is black line art:
+   most inherit the default black, the rest spell it out as fill="#000" inside the
+   sprite's <use>, where no fill rule can reach them. A filter repaints the whole
+   rendered symbol, so all of them become readable on the dark surface. */
+html.stk-dark #main :is(.select2-selection__choice,.select2-results__option) svg{filter:invert(1) brightness(.92) saturate(.9)}
+html.stk-dark #main .select2-polarity{background-color:#75986e!important;color:#fff!important}
+html.stk-dark #main .select2-polarity.negative{background-color:#a71f2a!important;color:#fff!important}
+html.stk-dark .select2-container :is(.select2-selection__rendered,.select2-results__options,.select2-results__option,.select2-search,.select2-search__field){background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:#55575d!important;box-shadow:none!important}
+html.stk-dark .select2-container :is(.select2-results__option--highlighted,.select2-results__option[aria-selected="true"]){background-color:#493e53!important;color:#fff!important}
+html.stk-dark #main :is(.form-row-label :is(svg,svg path),.reference-block-icon :is(svg,svg path)){fill:var(--stk-link-purple)!important;color:var(--stk-link-purple)!important}
+/* The docs left column is Scryfall's own purple field, and its expander bar is
+   the same colour. Repainting them flattened the page's purple into grey, so the
+   menu is left exactly as Scryfall paints it — the same call already made on the
+   team page. */
+html.stk-dark.stk-docs-page #main :is(.reference-doc,.reference-doc-content,.prose){background:var(--stk-page)!important;color:var(--stk-ink)!important}
+html.stk-dark.stk-docs-page #main :is(.reference-doc-menu,.reference-doc-menu-expander){background-color:#4f4255!important}
+/* Scryfall highlights a hovered row with a white wash at 8%. On a dark page that
+   wash is the wrong direction, and painting the hover the same as the resting
+   row removed the highlight altogether. Hover is one clear step lighter. */
+html.stk-dark.stk-docs-page #main .faq-link{background:var(--stk-panel-2)!important;color:var(--stk-ink)!important;box-shadow:none!important}
+html.stk-dark.stk-docs-page #main .faq-link:is(:hover,:active,:focus){background:#3a3e40!important}
+html.stk-dark.stk-docs-page #main .faq-link :is(.faq-link-title,.faq-link-subtitle){color:var(--stk-ink)!important;text-shadow:none!important}
+html.stk-dark.stk-bots-page #main :is(.reference-jump,.bot-marketing,.bot-marketing-panel,.bot-marketing-panel-shadow,.marketing-features,.marketing-features-item,.marketing-features-item-content){background-color:var(--stk-page)!important;color:var(--stk-ink)!important;border-color:#45464a!important}
+html.stk-dark.stk-bots-page #main :is(.bot-marketing-panel,.marketing-features-item){background-color:var(--stk-panel)!important}
+html.stk-dark.stk-bots-page #main .bot-marketing{background-image:none!important}
+html.stk-dark.stk-bots-page #main :is(.bot-marketing-panel-desc,.marketing-features-item-content,.marketing-features-item-content p){color:var(--stk-ink)!important}
+/* The text blocks inside a bot panel carry their own light surface, which the
+   panel repaint above does not reach. */
+html.stk-dark.stk-bots-page #main :is(.bot-marketing-panel,.bot-marketing-panel-shadow) :is(p,span,div){background-color:transparent!important}
+html.stk-dark.stk-bots-page #main :is(.bot-marketing-panel,.bot-marketing-panel-shadow) .bot-marketing-panel-footer{background:#2a2c2d!important;color:var(--stk-ink)!important}
+html.stk-dark.stk-bots-page #main :is(.bot-marketing-panel,.bot-marketing-panel-shadow) .bot-marketing-panel-footer .button-n{background:#3a3d40!important;color:var(--stk-link)!important;border-color:var(--stk-border)!important}
+/* The team page is a purple marketing page with a white band laid over its
+   purple field. One earlier rule painted that band a dark grey while a later one
+   dimmed the same band to a translucent white with dark ink on it; the later
+   rule lost the background and won the ink, which is how the title ended up dark
+   grey on dark grey. The dimmed band is the intent, so the earlier rule is gone
+   and only the inner layout of the band is left transparent. */
+html.stk-dark.stk-team-page #main .team-header .inner-flex{background-color:transparent!important;color:inherit}
+html.stk-dark.stk-blog-page #main :is(.blog-post-large,.blog-post-large>.inner-flex,.blog-post-large-header,.blog-post-large-content,.blog-post-content,.blog-post-large-body,.blog-post,.blog-index,.blog-category,.blog-pagination){background-image:none!important;background-color:var(--stk-page)!important;color:var(--stk-ink)!important}
+html.stk-dark.stk-blog-page #main .blog-orbit{background:transparent!important}
+html.stk-dark.stk-blog-page #main .blog-orbit img{filter:none!important}
+html.stk-dark.stk-blog-page #main :is(.blog-post-large,.blog-post) :is(p,li,span,h1,h2,h3,h4){color:var(--stk-ink)!important}
+html.stk-dark.stk-blog-page #main :is(.blog-post-large,.blog-post) a:not(.button-n){color:#bda1df!important}

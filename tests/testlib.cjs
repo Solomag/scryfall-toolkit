@@ -396,6 +396,29 @@ function dataTransferObject() {
   };
 }
 
+// The dark theme as one stylesheet, in the order a browser loads it: the parts
+// the manifest lists, in the order it lists them.
+//
+// It is seven files. A check that read one of them would be checking a page of the
+// theme and calling it the theme, which is the quiet half-check this project has
+// been bitten by more than once — the card page was split into eleven scripts and a
+// test went on loading nine of them.
+//
+// The list comes from the manifest for the same reason cardPage() takes its list
+// from there: a part that is written and not listed loads nothing at all, and
+// nothing anywhere would say so.
+function themeCss() {
+  const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'manifest.json'), 'utf8'));
+  const group = (manifest.content_scripts || []).find(entry =>
+    (entry.css || []).some(file => file.startsWith('src/styles/theme/')));
+  if (!group) throw new Error('the manifest lists no src/styles/theme/ stylesheets');
+  const files = group.css.filter(file => file.startsWith('src/styles/theme/'));
+  return {
+    files,
+    text: files.map(file => fs.readFileSync(path.join(ROOT, file), 'utf8')).join('\n')
+  };
+}
+
 module.exports = {
   ROOT,
   assert,
@@ -405,6 +428,7 @@ module.exports = {
   waitFor,
   createChrome,
   createPage,
+  themeCss,
   click,
   keyDown,
   fireEvent,

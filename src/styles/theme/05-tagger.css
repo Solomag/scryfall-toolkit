@@ -1,0 +1,57 @@
+/*
+ * Scryfall Toolkit. Copyright (c) 2026 Scryfall Toolkit contributors.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ *
+ * Third-party data, images and code in this project keep their own licence and
+ * are described in THIRD_PARTY_NOTICES.md. The MPL does not cover them.
+ */
+/* 05-tagger.css — the MoxTags Tagger site, which brings its own surfaces and its own ink.
+ *
+ * Part 5 of 7 of the dark theme, in cascade order.
+ * The manifest lists these in this order, and CSS only knows the order a stylesheet
+ * is loaded in: moving a rule from one part to another can change which of two
+ * equally specific rules wins. If a rule has to move, move it and check the page it
+ * was on.
+ */
+html.stk-dark.stk-tagger #app{background-color:transparent!important;color:var(--stk-ink)!important}
+html.stk-dark.stk-tagger .app-header{background-color:#2b253a!important;color:#fff!important;border-color:#3a3b3b!important}
+html.stk-dark.stk-tagger .app-footer{background-color:#191820!important;color:#c2c2c2!important;border-color:#3a3b3b!important}
+html.stk-dark.stk-tagger .app-footer :is(a,.footer-link){color:#c2c2c2!important}
+/* Tagger's own glow behind its header. Only the ink is stated here: the field is
+   a pale lilac blur of Tagger's own, and painting over it took the one soft
+   gradient the app had. */
+html.stk-dark.stk-tagger .blurry-background-art{color:var(--stk-ink)!important}
+html.stk-dark.stk-tagger .tag-input-field{background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:#5a5d61!important}
+html.stk-dark.stk-tagger :is(.app-status,.app-viewport,.utilities) :is(a,button){color:var(--stk-link)!important}
+html.stk-dark.stk-tagger .dialog{color:var(--stk-ink)!important}
+html.stk-dark.stk-tagger .dialog :is(h1,p){color:var(--stk-ink)!important}
+html.stk-dark.stk-tagger .suggestion-input-utils{background-color:var(--stk-panel)!important;color:var(--stk-ink)!important;border-color:var(--stk-border-2)!important}
+html.stk-dark.stk-tagger .suggestion-input-utils :is(a,li,span){color:var(--stk-link)!important}
+/* Tagger's own light areas: the sample tag list on the front page, the access
+   banner and the tagging layout on a card page. The panel and every ink inside
+   it are repainted together, because Tagger's own grey would otherwise stay on
+   the dark fill. */
+/* Tagger marks a panel light and paints the light field itself. Two of the nodes
+   it marks are not panels at all. .card-layout is the whole layout: the panel, the
+   card and the empty space under both. .sidebar is the full-width scrim Tagger
+   lays behind the guide and the tag list — a 55% black wash, not a surface.
+   Filling either one replaced Tagger's own wash with a flat field, which took the
+   blurred card art away and flooded the page whenever the guide or the tag list
+   was opened. So the two keep their own, and only the panels are repainted. */
+html.stk-dark.stk-tagger :is(.light-mode:not(.card-layout):not(.sidebar),.sample-tags,.card-layout--tagging){background-color:var(--stk-panel)!important;color:var(--stk-ink)!important;border-color:var(--stk-border-2)!important}
+html.stk-dark.stk-tagger :is(.light-mode,.sample-tags,.card-layout--tagging) :is(a,span,label,li,strong,em,b,i,p,div,section,article,h1,h2,h3,h4,h5,h6,dt,dd,td,th){color:var(--stk-ink)!important}
+html.stk-dark.stk-tagger :is(.light-mode,.sample-tags,.card-layout--tagging) :is(a,.tag-row a,.access-banner a){color:var(--stk-link)!important}
+html.stk-dark.stk-tagger :is(.light-mode,.sample-tags,.card-layout--tagging) :is(.tag-row,.access-banner){background-color:transparent!important}
+/* Tagger marks a panel light and paints the light field itself, but two of the
+   panels it marks carry their own white on top: the tag sidebar and the tab it
+   hangs from. Both are named here together with the list inside them, so a panel
+   Tagger calls light is dark all the way down. */
+html.stk-dark.stk-tagger :is(.sidebar-panel,.tags-menu,.navigation.active){background-color:var(--stk-panel)!important;color:var(--stk-ink)!important}
+html.stk-dark.stk-tagger :is(.sidebar-panel,.tags-menu) :is(a,span,strong,li,div,p,label,input,button,td,th){color:var(--stk-ink)!important}
+html.stk-dark.stk-tagger :is(.sidebar-panel,.tags-menu) :is(a,.tag-row a,.tag-admin){color:var(--stk-link)!important}
+html.stk-dark.stk-tagger :is(.sidebar-panel,.tags-menu) :is(.tag-row,.scrollbar,.tag-name-filter,input,button){background-color:transparent!important;border-color:var(--stk-border-2)!important}
+html.stk-dark.stk-tagger :is(.sidebar-panel,.tags-menu) .tag-row:is(:hover,:focus-within){background-color:#2f3133!important}
+html.stk-dark.stk-tagger .navigation.active{color:var(--stk-ink)!important}

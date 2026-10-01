@@ -236,7 +236,8 @@ function packagedNoticesTest() {
     'manifest.json', 'src/background/worker.js', 'src/card-page/core.js', 'src/card-page/clipboard.js',
     'src/card-page/tags.js', 'src/card-page/legalities.js', 'src/card-page/prints.js', 'src/card-page/edhrec.js',
     'src/card-page/prices.js', 'src/card-page/sets.js', 'src/card-page/card.js', 'src/card-page/deck-lists.js',
-    'src/styles/content.css', 'src/core/theme.js', 'src/styles/theme.css',
+    'src/styles/content.css', 'src/core/theme.js',
+    'src/styles/theme/01-card-page.css', 'src/styles/theme/02-shared-pages.css', 'src/styles/theme/03-account-and-marketing.css', 'src/styles/theme/04-surfaces.css', 'src/styles/theme/05-tagger.css', 'src/styles/theme/06-shared-surfaces.css', 'src/styles/theme/07-our-own-ui.css',
     'src/ui/options.html', 'src/ui/options.js', 'src/ui/options.css', 'src/core/i18n.js', 'src/core/tag-icons.js', 'src/card-page/tagger-clipboard.js',
     'src/core/format-catalog.js', 'src/core/format-overrides.js', 'assets/data/oracle-tags.js', 'assets/data/illustration-tags-1.js',
     'assets/data/illustration-tags-2.js', 'assets/data/shambleshark-nicknames.js', 'assets/data/set-platforms.js',
@@ -321,7 +322,24 @@ function packagedNoticesTest() {
     fs.rmSync(out, { force: true });
 
     const committed = read('docs/scryfall-dom.md');
-    assertEqual(fresh, committed,
+
+    // Reported as the line that differs, not as the two documents. Both are about four
+    // hundred lines, and a failure that prints both of them to say that one row
+    // changed is a failure nobody reads — and a check whose report is unreadable is
+    // a check that gets skipped past.
+    if (fresh !== committed) {
+      const produced = fresh.split(/\r?\n/);
+      const stored = committed.split(/\r?\n/);
+      const first = produced.findIndex((line, i) => line !== stored[i]);
+      const where = first < 0
+        ? 'the committed document has ' + (stored.length - produced.length) + ' extra line(s) at the end'
+        : 'line ' + (first + 1);
+      console.error('  the contract is out of date at ' + where);
+      console.error('    the tool produces: ' + JSON.stringify((produced[first] || '').slice(0, 100)));
+      console.error('    the document has:  ' + JSON.stringify((stored[first] || '').slice(0, 100)));
+      console.error('    fix: node tools/dom-contract.cjs');
+    }
+    assert(fresh === committed,
       'the DOM contract in docs is what the tool produces from the current source');
 
     // And it must describe the card page as it is now, not as it was. A file that
@@ -344,6 +362,49 @@ function packagedNoticesTest() {
       'every shipped feature that queries the page is named in the contract');
     assert(!/(^|[^\w-])content\.js([^\w-]|$)/.test(committed),
       'and the contract does not still describe content.js, which is not a file any more');
+
+    assert(!committed.includes('src/styles/theme.css'),
+      'nor the single stylesheet it replaced, which is seven files now');
+  }
+
+  // The Part column is the answer the split was made for: one class name, one file
+  // to open. Generated is not the same as checked, and an unchecked column is a
+  // column that goes quietly wrong the moment a rule moves between parts.
+  {
+    const contract = read('docs/scryfall-dom.md');
+    const dir = 'src/styles/theme';
+    const parts = fs.readdirSync(path.join(ROOT, dir)).filter(n => n.endsWith('.css')).sort();
+    const names = parts.map(name => name.replace(/\.css$/, ''));
+    const uses = new Map();
+    for (const name of parts) {
+      const text = read(dir + '/' + name).replace(/\/\*[\s\S]*?\*\//g, '');
+      for (const m of text.matchAll(/([^{}]+)\{[^{}]*\}/g)) {
+        for (const c of m[1].matchAll(/\.([a-zA-Z][a-zA-Z0-9_-]*)/g)) {
+          if (c[1].startsWith('stk-')) continue;
+          if (!uses.has(c[1])) uses.set(c[1], new Set());
+          uses.get(c[1]).add(name.replace(/\.css$/, ''));
+        }
+      }
+    }
+    const wrong = [];
+    const unnamed = [];
+    for (const m of contract.matchAll(
+      /^\| `\.([a-zA-Z][a-zA-Z0-9_-]*)` \| \d+ \| (.*?) \|$/gm)) {
+      const [, cls, column] = m;
+      const said = [...column.matchAll(/`([^`]+)`/g)].map(hit => hit[1]).sort();
+      const actual = [...(uses.get(cls) || [])].sort();
+      if (!actual.length) continue;
+      if (!said.length) { unnamed.push(cls + ' names no part'); }
+      else if (said.join() !== actual.join()) {
+        wrong.push(cls + ': the document says ' + said.join(', ') +
+          ' and it is in ' + actual.join(', '));
+      }
+      for (const part of said) {
+        if (!names.includes(part)) unnamed.push(cls + ' names a part that does not exist: ' + part);
+      }
+    }
+    assertEqual(wrong, [], 'the contract names the right part for every class it lists');
+    assertEqual(unnamed, [], 'and every part it names is one of the seven files');
   }
 
   // The card page is a core and nine feature files, and the two things that make

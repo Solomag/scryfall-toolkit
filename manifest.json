@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Scryfall Toolkit",
-  "version": "0.56.0",
+  "version": "0.57.0",
   "homepage_url": "https://github.com/Solomag/scryfall-toolkit",
   "description": "Scryfall clipboard, tags, legality, dark theme, optional CardTrader prices and EDHREC statistics.",
   "permissions": [
@@ -46,7 +46,13 @@
         "src/core/theme.js"
       ],
       "css": [
-        "src/styles/theme.css"
+        "src/styles/theme/01-card-page.css",
+        "src/styles/theme/02-shared-pages.css",
+        "src/styles/theme/03-account-and-marketing.css",
+        "src/styles/theme/04-surfaces.css",
+        "src/styles/theme/05-tagger.css",
+        "src/styles/theme/06-shared-surfaces.css",
+        "src/styles/theme/07-our-own-ui.css"
       ],
       "run_at": "document_start"
     },
@@ -101,7 +107,13 @@
         "src/core/theme.js"
       ],
       "css": [
-        "src/styles/theme.css"
+        "src/styles/theme/01-card-page.css",
+        "src/styles/theme/02-shared-pages.css",
+        "src/styles/theme/03-account-and-marketing.css",
+        "src/styles/theme/04-surfaces.css",
+        "src/styles/theme/05-tagger.css",
+        "src/styles/theme/06-shared-surfaces.css",
+        "src/styles/theme/07-our-own-ui.css"
       ],
       "run_at": "document_start"
     },

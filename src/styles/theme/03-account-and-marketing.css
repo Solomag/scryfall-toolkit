@@ -1,0 +1,130 @@
+/*
+ * Scryfall Toolkit. Copyright (c) 2026 Scryfall Toolkit contributors.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ *
+ * Third-party data, images and code in this project keep their own licence and
+ * are described in THIRD_PARTY_NOTICES.md. The MPL does not cover them.
+ */
+/* 03-account-and-marketing.css — the account pages, and the blog, team and bots pages beside them.
+ *
+ * Part 3 of 7 of the dark theme, in cascade order.
+ * The manifest lists these in this order, and CSS only knows the order a stylesheet
+ * is loaded in: moving a rule from one part to another can change which of two
+ * equally specific rules wins. If a rule has to move, move it and check the page it
+ * was on.
+ */
+html.stk-dark.stk-account-page .stk-deck-actions-menu,html.stk-dark.stk-account-page .stk-deck-actions-menu :is(a,button,li,div){background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:#55575d!important}
+html.stk-dark.stk-account-page .stk-deck-actions-menu :is(a,button,li):hover{background-color:var(--stk-hover)!important;color:#fff!important}
+html.stk-dark.stk-account-page #main :is(.profile,.account) [class*="avatar"]:not(img)::before{background-color:transparent!important}
+html.stk-dark.stk-account-page #main :is(.deck-details,.deck-details-title,.deck-details-subtitle,.deck-details-subtitle abbr){color:var(--stk-ink)!important;text-shadow:none!important}
+html.stk-dark.stk-account-page #main .sidebar :is(.sidebar-toolbox,.sidebar-prices){background-color:var(--stk-page)!important;color:var(--stk-ink)!important}
+/* The native action list has an inner scrolling wrapper which otherwise
+   clips the last actions inside a short, bright rectangle. */
+#main .deck-list-entry :is(.dropdown-menu-items,.dropdown-menu-items ul,.dropdown-menu-items li){height:auto!important;max-height:none!important;overflow:visible!important}
+html.stk-dark.stk-account-page #main .deck-list-entry :is(.dropdown-menu-items,.dropdown-menu-items ul,.dropdown-menu-items li,.dropdown-menu-items a,.dropdown-menu-items button){background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:#55575d!important}
+html.stk-dark.stk-account-page #main .deck-list-entry .dropdown-menu-items :is(a,button):hover{background-color:var(--stk-hover)!important;color:#fff!important}
+
+/* Sets keeps Scryfall's own column width; the wrapper only stops asking for a
+   scroll box until the columns really need one. */
+#main .checklist-wrapper:has(#js-checklist){overflow-x:auto!important}
+
+/* Scryfall can nest its deck menu in more than one scrolling wrapper. */
+#main .stk-deck-list-expanded :is(.dropdown-menu-items,[class*="dropdown-menu"]){max-height:none!important;overflow:visible!important}
+#main .stk-deck-actions-menu{display:block!important;width:min(320px,calc(100vw - 16px))!important;height:auto!important;max-height:calc(100vh - 24px)!important;overflow-y:auto!important;overflow-x:hidden!important;white-space:normal!important}
+#main .stk-deck-actions-menu :is(ul,li,.dropdown-menu-items){position:static!important;max-height:none!important;overflow:visible!important;white-space:normal!important}
+html.stk-dark.stk-account-page #main .stk-deck-actions-menu,html.stk-dark.stk-account-page #main .stk-deck-actions-menu :is(ul,li,.dropdown-menu-items){background:var(--stk-panel-2)!important;color:var(--stk-ink)!important}
+
+/* Editor contents are sometimes mounted outside #main and use bare nested
+   spans for set codes and the mana curve. */
+html.stk-dark.stk-account-page #deckbuilder :is(.deckbuilder-section-title-bar,.deckbuilder-section-title,.deckbuilder-section-count,.deckbuilder-section-curve,.deckbuilder-curve,.deckbuilder-entry-axial-data,.deckbuilder-entry-menu-visual,.deckbuilder-entry-menu-select){color:var(--stk-ink)!important;text-shadow:none!important}
+html.stk-dark.stk-account-page #deckbuilder .deckbuilder-entry :is(.deckbuilder-entry-set,.deckbuilder-entry-set-code,.deckbuilder-entry-collector-number,.deckbuilder-entry-printing,[class*="set-code"],[class*="collector"]){color:var(--stk-ink)!important;background:#383a3c!important;border-color:#55585c!important;opacity:1!important}
+html.stk-dark.stk-account-page #deckbuilder .deckbuilder-entry :is(.deckbuilder-entry-set,.deckbuilder-entry-set-code,.deckbuilder-entry-collector-number,.deckbuilder-entry-printing,[class*="set-code"],[class*="collector"]) :is(span,small){color:var(--stk-ink)!important}
+html.stk-dark.stk-account-page #deckbuilder .stk-deck-editor-label{color:var(--stk-ink)!important;opacity:1!important}
+html.stk-dark.stk-account-page #deckbuilder .deckbuilder-entry-axial-data{color:var(--stk-ink)!important;opacity:1!important}
+html.stk-dark.stk-account-page #deckbuilder :is(.deckbuilder-curve,.deckbuilder-section-curve,[class*="mana-curve"]) :is(li,[class*="curve-label"],[class*="cmc"]):not(.card-symbol):not(.mana-symbol){color:var(--stk-ink)!important;opacity:1!important}
+html.stk-dark.stk-account-page #deckbuilder :is(.deckbuilder-entry-menu,.deckbuilder-entry-menu-select,.deckbuilder-toolbar .dropdown,.deckbuilder-toolbar .dropdown-menu){background:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:var(--stk-border)!important}
+html.stk-dark.stk-account-page #deckbuilder :is(.deckbuilder-toolbar .dropdown-menu,.deckbuilder-entry-menu) :is(a,button,option,li){color:var(--stk-ink)!important;background:var(--stk-panel-2)!important}
+
+/* Keep the footer visually part of the page, including the account layout's
+   broad .inner-flex rule above. Never paint a footer band. */
+/* Scryfall owns the footer surface; account backgrounds stay within #main. */
+
+/* The native deck popup sometimes paints its inner action surface white. */
+html.stk-dark.stk-account-page :is(.deck-list-entry,.deck-list,.checklist-wrapper) :is(.dropdown-menu,.dropdown-menu-items,[role="menu"]),
+html.stk-dark.stk-account-page .stk-deck-actions-menu,
+html.stk-dark.stk-account-page .stk-deck-actions-menu :is(div,ul,li,section,a,button,span){background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:#55575d!important}
+html.stk-dark.stk-account-page .stk-deck-actions-menu::before,html.stk-dark.stk-account-page .stk-deck-actions-menu::after{background-color:var(--stk-panel-2)!important;border-color:#55575d!important}
+html.stk-dark.stk-account-page .stk-deck-actions-menu :is(a,button):hover{background-color:var(--stk-hover)!important;color:#fff!important}
+html.stk-dark.stk-account-page #main .stk-deck-actions-menu,html.stk-dark.stk-account-page #main .stk-deck-actions-menu :is(div,ul,li,section,a,button){background-image:none!important}
+html.stk-dark.stk-account-page .stk-deck-menu-shell,html.stk-dark.stk-account-page .stk-deck-menu-shell::before,html.stk-dark.stk-account-page .stk-deck-menu-shell::after{background:var(--stk-panel-2)!important;color:var(--stk-ink)!important}
+html.stk-dark.stk-account-page #main :is(.dropdown-menu,.dropdown-menu-items,[role="menu"]):has(a[href*="/decks/"]){background:var(--stk-panel-2)!important;color:var(--stk-ink)!important}
+html.stk-dark.stk-account-page :is(#deckbuilder,[class*="deckbuilder"]) .stk-deck-set-badge,
+html.stk-dark.stk-account-page :is(#deckbuilder,[class*="deckbuilder"]) .stk-deck-set-badge *{color:var(--stk-ink)!important;background:#3b3c42!important;opacity:1!important}
+html.stk-dark.stk-account-page :is(#deckbuilder,[class*="deckbuilder"]) .stk-deck-editor-label,
+html.stk-dark.stk-account-page :is(#deckbuilder,[class*="deckbuilder"]) .stk-deck-editor-label *{color:var(--stk-ink)!important;opacity:1!important}
+html.stk-dark .left-tray :is(.deck-tray-option,.deck-tray-option .button-n,[class*="add-to-deck"]){background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:#59535e!important}
+html.stk-dark #main :is(.add-to-deck,.add-to-deck-button,[class*="add-to-deck"]):is(a,button){background-color:var(--stk-hover)!important;color:#f7f2fb!important;border-color:#756782!important}
+
+/* Gaps the dark audit of 0.31 found. Each one is a surface Scryfall paints with
+   its own class that no earlier rule reached, on a page that was otherwise
+   dark. */
+
+/* The "Jump to" menu of a set page: the button already looked right, the menu
+   it opens did not. The account rules above covered the same menu, but only on
+   pages that need a login. The wrapper is left alone on purpose: the button
+   inside it is a translucent pill, and painting the wrapper made it a dark
+   block in the middle of Scryfall's own row. */
+/* The #main prefix keeps these ahead of the runtime purple repair, which marks
+   the same links and would otherwise leave Scryfall's own dark purple on them. */
+html.stk-dark #main :is(.dropdown-menu-items,.dropdown-menu-items ul,.dropdown-menu-items li){background-color:var(--stk-panel-2)!important;color:var(--stk-ink)!important;border-color:var(--stk-border)!important}
+html.stk-dark #main .dropdown-menu-items :is(a,button){background-color:transparent!important;color:var(--stk-link)!important;border-color:transparent!important}
+html.stk-dark #main .dropdown-menu-items :is(a,button):hover,html.stk-dark #main .dropdown-menu-items :is(a,button):focus-visible{background-color:var(--stk-hover)!important;color:#fff!important}
+
+/* The search reference paints its examples in the site link purple, which the
+   variable now carries for every page. */
+html.stk-dark.stk-docs-page #main :is(.reference-block,.reference-jump,.reference-example) a:not(.button-n){color:var(--stk-link-purple)!important}
+/* The jump bar of the search reference: the pills were repainted long ago, but
+   their icons kept Scryfall's black and dark purple, which all but disappears
+   on a dark pill. Stroke-only shapes keep their own paint. */
+html.stk-dark #main .reference-jump :is(svg,g,path,circle,rect):not([fill="none"]){fill:#bfb4c8!important}
+html.stk-dark #main .reference-jump :is(svg,g,path,circle,rect):not([fill="none"]){fill:#bfb4c8!important}
+html.stk-dark #main .reference-jump svg [fill="#000"]{fill:#bfb4c8!important}
+
+/* The blog index keeps its post cards, its embedded deck lists and the pills
+   above them in Scryfall's white. */
+html.stk-dark.stk-blog-page #main :is(.blog-post-small,.blog-post-small-header,.blog-post-small-content,.blog-post-small>.inner-flex){background-image:none!important;background-color:var(--stk-page)!important;color:var(--stk-ink)!important;border-color:var(--stk-border-2)!important}
+html.stk-dark.stk-blog-page #main :is(.blog-post-metadata,.blog-index,.blog-category) :is(.button-n.tiny-n,.tiny-n){background-color:var(--stk-panel)!important;color:var(--stk-link)!important;border-color:var(--stk-border-2)!important}
+html.stk-dark.stk-blog-page #main :is(.blog-post-metadata,.blog-index,.blog-category) :is(.muted-n,.tiny-n.muted-n){color:#a8a2af!important}
+html.stk-dark.stk-blog-page #main :is(.blog-post-small,.blog-post-large) :is(p,strong,span,h1,h2,h3,h4){color:var(--stk-ink)!important}
+/* A post can embed a deck list, which brings its own white panel and its own
+   grey ink with it. */
+html.stk-dark.stk-blog-page #main :is(.scryfall-decklist-embed,.scryfall-decklist-embed-title,.deck-list-section,.deck-list-section-title,.deck-list-entry){background-color:var(--stk-page)!important;color:var(--stk-ink)!important;border-color:var(--stk-border-2)!important}
+html.stk-dark.stk-blog-page #main :is(.scryfall-decklist-embed,.scryfall-decklist-embed-title,.deck-list-section,.deck-list-section-title,.deck-list-entry) :is(h1,h2,h3,h4,h5,h6,p,strong,span){color:var(--stk-ink)!important}
+html.stk-dark.stk-blog-page #main :is(.scryfall-decklist-embed a,.scryfall-decklist-embed-card){color:var(--stk-link)!important}
+
+/* The team page is a purple marketing page: Scryfall lays a white band over a
+   purple field of its own. Flattening the page took that field with it, so the
+   purple field is left alone and the white band is dimmed instead of removed. */
+html.stk-dark.stk-team-page #main .main{background-color:transparent!important}
+html.stk-dark.stk-team-page #main .team-header{background-color:rgba(255,255,255,0.82)!important}
+html.stk-dark.stk-team-page #main .team-header :is(h1,h2,h3,p,span,strong,em,b){color:#16161d!important;text-shadow:none!important}
+html.stk-dark.stk-team-page #main .team-header a{color:#4a2c8c!important}
+html.stk-dark.stk-team-page #main .team-header a:is(:hover,:active,:focus){color:#634496!important}
+html.stk-dark.stk-team-page #main .team-wrapper{color:var(--stk-ink)!important}
+html.stk-dark.stk-team-page #main .team-wrapper :is(.team-member-name,.team-member-role,.team-member-links){color:var(--stk-ink)!important}
+
+/* The bot documentation buttons sit in their own marketing cards. */
+html.stk-dark.stk-bots-page #main :is(.marketing-features-item,.marketing-features-item-content,.bot-marketing-panel) :is(a.button-n,button.button-n){background-color:var(--stk-panel-2)!important;color:var(--stk-link)!important;border-color:var(--stk-border)!important}
+html.stk-dark.stk-bots-page #main :is(.marketing-features-item,.bot-marketing-panel) :is(a.button-n,button.button-n) svg{fill:currentColor!important}
+/* Scryfall fakes the drop shadow of a panel with a second copy of it, laid over
+   the real panel and offset by a few pixels. The copy is what carries the Slack
+   and Discord band, so it cannot be removed; it only has to be painted like the
+   panel it lies on top of, so that it keeps hiding the text underneath instead
+   of doubling it. The brand band stays Scryfall's own colour. */
+html.stk-dark.stk-bots-page #main :is(.bot-marketing-panel,.bot-marketing-panel-shadow){background-color:var(--stk-panel)!important;color:var(--stk-ink)!important;border-color:var(--stk-border-2)!important}
+html.stk-dark.stk-bots-page #main .bot-marketing-panel-shadow :is(.bot-marketing-panel-desc,.bot-marketing-panel-footer){background-color:var(--stk-panel)!important;color:var(--stk-ink)!important}
+html.stk-dark.stk-bots-page #main .bot-marketing-panel-shadow .bot-marketing-panel-footer{background-color:#2a2c2d!important}
+html.stk-dark.stk-bots-page #main .bot-marketing-panel-footer .button-n{background:#3a3d40!important;color:var(--stk-link)!important;border-color:var(--stk-border)!important}
