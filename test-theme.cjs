@@ -51,11 +51,23 @@ async function manifestIntegrity() {
       `content script ${group.js[0]} stays in the isolated world`);
   }
 
-  const readmeFirstLine = read('README.md').split('\n')[0];
-  assertEqual(readmeFirstLine, `# Scryfall Toolkit ${manifest.version}`,
+  // Line endings are stripped before comparing. A checkout on Windows has CRLF
+  // and a checkout on the runner has LF, and a test that forgets that fails on
+  // one of them for a reason that has nothing to do with what it is testing.
+  const firstLine = file => read(file).split(/\r?\n/)[0].trim();
+  assertEqual(firstLine('README.md'), `# Scryfall Toolkit ${manifest.version}`,
     'README version matches manifest, and does not call a released extension a preview');
   const pkg = JSON.parse(read('package.json'));
   assertEqual(pkg.version, manifest.version, 'package.json version matches manifest');
+  // The store listing is what gets pasted into the review form, and it carries
+  // the version in its title. It is not shipped, so nothing else checks it.
+  assertEqual(firstLine('docs/CHROME_WEB_STORE_LISTING.md'),
+    `# Chrome Web Store listing — Scryfall Toolkit ${manifest.version}`,
+    'the store listing carries the same version, so the review form matches the build');
+  const lock = JSON.parse(read('package-lock.json'));
+  assertEqual(lock.version, manifest.version, 'package-lock.json version matches manifest');
+  assertEqual(lock.packages[''].version, manifest.version,
+    'and so does its root entry, because npm ci refuses to install when they differ');
   const taggerGroups = manifest.content_scripts.filter(group => group.matches.some(host => host.includes('tagger.scryfall.com')));
   assert(taggerGroups.length >= 1, 'manifest keeps a Tagger content script');
   assert(taggerGroups.some(group => group.js.includes('theme.js') && group.css.includes('theme.css')),
