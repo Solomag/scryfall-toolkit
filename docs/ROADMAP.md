@@ -26,36 +26,10 @@ editor tools. A listing whose images only show a settings form does not tell a u
 they are installing. At least one shot of a card page in the dark theme with the tag tables
 and the clipboard visible, and one of the deck editor with the three tools in use.
 
-### Split `content.js` and `theme.css`
-
-From an outside review, and the right call: `content.js` is 1814 lines holding clipboard,
-tags, print manipulation, CardTrader, EDHREC, formats, deckbuilder and set filtering;
-`theme.css` is 648 rules with 949 references to Scryfall's own class names.
-
-Suggested shape when the next feature needs it:
-
-```
-features/
-  prints
-  tags
-  edhrec
-  cardtrader
-  deckbuilder
-  sets
-
-scryfall-dom/
-  selectors
-  card-page
-  prints-table
-  deck-page
-```
-
-The second layer matters more than the first: one changed class name in Scryfall's markup
-now breaks whatever rule happened to reach it. If the DOM contract sits in one place, a
-Scryfall change is one file to look at instead of thirty.
-
-Do this before the next feature, not before a release — it is a refactor with no
-user-visible benefit.
+A card may appear in one. What may not: cropping the card so the copyright and artist line
+goes with it, recolouring or rescaling it, or putting anything on top of it. A screenshot
+of the page as the browser drew it complies by construction. The rules are written out in
+section 7 of the store listing.
 
 ## Closed
 
@@ -64,6 +38,7 @@ user-visible benefit.
 | 1 | **Check the deck editor modules in a live deck editor** | Done, 2026-10-01. All three were used in a real commander deck and work there. This took four rounds of fixes, and every one of them was a bug the stand-in could not catch: the permission for `edhrec.com` was never granted because Chrome only answers a request that follows a click; the percentages were a hundred times too large because `score` arrives as a whole number out of 100 and the code treated it as a fraction; there was no art at all, because the endpoint sends no image and no printing; and the art request was refused because a list of suggestions is a hundred cards and Scryfall takes seventy-five identifiers at a time. A stand-in for `window.Scryfall` proves the code runs. It does not prove the response is what you assumed, and here it was not. |
 | 2 | **A fourth Shambleshark module** | Ported and removed. `card-input-modifier` showed a card image on hovering a deck row; Scryfall's own tooltip covered the deck and the site already previews cards on hover, so it made the editor worse and duplicated the site. No code from it is in the package. |
 | 3 | **Rate limits, checked against the page that states them** | Done, 2026-10-01. Reading <https://scryfall.com/docs/api/rate-limits> rather than trusting the number already in the code found that one 130 ms slot for everything was about four times their limit for `/cards/search`, `/cards/named` and `/cards/collection` — the endpoints the finish column, the EDHREC artwork, the deck search and the hover preview all use. There was also no hold-back on a 429, and their page says a 429 means thirty seconds of limitation and then a possible ban. Each class now has its own queue at their published ceiling plus a margin, every call to the host goes through one of them, and a 429 holds all of them. The test that checks this reads the ceilings out of the source, because a `const` in a `vm` script is not reachable from the test context and because the numbers are the thing being asserted. |
+| 4 | **Split `content.js`** | Done, 2026-10-01. `content.js` was 1901 lines in one closure holding the clipboard, tags, print manipulation, CardTrader, EDHREC, formats, the deck page and the set filters. It is now `content-core.js` (the settings, what page this is, the request wrapper, the shared clipboard, the hover preview, and the boot) and nine feature files. Every line of logic was moved as it stands rather than retyped, and a check confirmed it: of 1692 code lines, the only ones absent afterwards are the four `let` declarations that became one `shared` object and the eighteen `if (settings.x) initY();` lines that became the boot list. Nothing else moved. |
 
 ## Considered and rejected
 

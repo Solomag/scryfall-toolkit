@@ -10,6 +10,14 @@ All releases: <https://github.com/Solomag/scryfall-toolkit/releases>
 
 ## Unreleased
 
+The card page is ten files instead of one. `content.js` was 1901 lines in a single closure;
+it is now a core and nine files named for what they draw, and the order the features run in
+is a written-down list rather than the order the manifest happens to list the files in.
+No line of logic changed: a check confirms that of 1692 code lines, the only ones absent
+afterwards are the four declarations that became one shared object and the eighteen `if`
+lines that became the boot list. A feature that throws is now reported instead of taking
+every feature below it down with it.
+
 The documents that describe permissions now match what the manifest asks for. The live
 editor round found three things a stand-in could not catch — a permission Chrome refused to
 grant, a response shape that had been assumed rather than read, and a list of suggestions

@@ -312,6 +312,24 @@ function createPage(options) {
       const code = fs.readFileSync(path.join(ROOT, file), 'utf8');
       return vm.runInContext(code, context, { filename: file });
     },
+    // The card page's own scripts, in the order the manifest lists them, which is
+    // what a browser injects them in.
+    //
+    // These used to be one file called content.js. They are nine now, and a test
+    // that loaded one of them alone would be testing that file in isolation and
+    // calling it the page — which is how a whole class of "works on its own"
+    // passes hides a feature that does not work next to the others. So the list
+    // comes from the manifest: add a file there and every test here runs it.
+    async contentFeatures() {
+      const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'manifest.json'), 'utf8'));
+      const group = (manifest.content_scripts || []).find(entry =>
+        (entry.js || []).some(file => file.startsWith('content-')));
+      if (!group) throw new Error('the manifest lists no content-*.js scripts');
+      for (const file of group.js.filter(file => file.startsWith('content-'))) {
+        await this.script(file);
+      }
+      return group.js.filter(file => file.startsWith('content-'));
+    },
     // Delivers one childList batch to every observer the page registered, which
     // is what a real DOM does after the test changed something.
     flushObservers() {

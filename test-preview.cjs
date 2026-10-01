@@ -9,7 +9,7 @@
  * are described in THIRD_PARTY_NOTICES.md. The MPL does not cover them.
  */
 'use strict';
-// content.js end-to-end: card page and search page over linkedom.
+// The card page end to end: the core and the nine feature files over linkedom.
 const {
   assert, assertEqual, summary, sleep, waitFor, createPage, click, fireEvent
 } = require('./testlib.cjs');
@@ -88,13 +88,13 @@ async function loadCardPage(state, pageRoutes = routes) {
   await page.script('format-catalog.js');
   await page.script('tag-icons.js');
   await page.script('data/shambleshark-nicknames.js');
-  await page.script('content.js');
+  await page.contentFeatures();
   await sleep(60);
   return page;
 }
 
 async function cardPageTest() {
-  console.log('content.js: card page');
+  console.log('content scripts: card page');
   // The Prints group is off by default now, so this test turns it on to check
   // what it does when a user enables it.
   const page = await loadCardPage({
@@ -410,7 +410,7 @@ async function cardPageTest() {
 }
 
 async function searchPageTest() {
-  console.log('content.js: search page');
+  console.log('content scripts: search page');
   const html = `<!DOCTYPE html><html><body><div id="main" class="card-grid">
     <div class="card-grid-item"><a class="card-grid-item-card" href="https://scryfall.com/card/grid/9/grid-card"></a>
       <span class="card-grid-item-invisible-label">Grid Card</span><img alt="Grid Card (GRID) 9"></div>
@@ -422,7 +422,7 @@ async function searchPageTest() {
   await page.script('format-catalog.js');
   await page.script('tag-icons.js');
   await page.script('data/shambleshark-nicknames.js');
-  await page.script('content.js');
+  await page.contentFeatures();
   await sleep(60);
   const { document, mock } = page;
 
@@ -447,7 +447,7 @@ async function searchPageTest() {
 }
 
 async function clipboardDisabledTest() {
-  console.log('content.js: clipboard disabled');
+  console.log('content scripts: clipboard disabled');
   const page = await loadCardPage({ clipboard: false, cards: [] });
   const { document } = page;
   assert(!document.getElementById('scryfall-toolkit-clipboard'), 'no clipboard when disabled');
@@ -456,7 +456,7 @@ async function clipboardDisabledTest() {
 }
 
 async function printsGroupsEdgeTest() {
-  console.log('content.js: print group edge cases');
+  console.log('content scripts: print group edge cases');
   const mkPrint = (set, number) => ({
     id: `e-${set}-${number}`, name: 'Edge Card', uri: `https://scryfall.com/card/${set}/${number}/edge-card`,
     set, setName: `Set ${set.toUpperCase()}`, number, lang: 'en', digital: false, finishes: ['nonfoil'], prices: {}
@@ -487,7 +487,7 @@ async function printsGroupsEdgeTest() {
   await page.script('format-catalog.js');
   await page.script('tag-icons.js');
   await page.script('data/shambleshark-nicknames.js');
-  await page.script('content.js');
+  await page.contentFeatures();
   await sleep(60);
   const { document } = page;
   const printBody = document.querySelector('#main .prints .prints-table tbody');
@@ -538,7 +538,7 @@ async function printsGroupsEdgeTest() {
 }
 
 async function printsSameTabTest() {
-  console.log('content.js: printings link in the same tab');
+  console.log('content scripts: printings link in the same tab');
   const page = await loadCardPage({ cards: [], printGrouping: true, printFoldGroups: true, printFullPageLink: true, printPageSameTab: true });
   const { document } = page;
   const link = document.querySelector('#main .prints .stk-print-new-page');
@@ -548,7 +548,7 @@ async function printsSameTabTest() {
 }
 
 async function promoParentMergeTest() {
-  console.log('content.js: promo set merges into a parent with one native printing');
+  console.log('content scripts: promo set merges into a parent with one native printing');
   // Scryfall lists a single printing of the parent set; the promo set is only
   // known after loading. The parent still has to adopt the promo group.
   const native = `
@@ -573,7 +573,7 @@ async function promoParentMergeTest() {
   await page.script('format-catalog.js');
   await page.script('tag-icons.js');
   await page.script('data/shambleshark-nicknames.js');
-  await page.script('content.js');
+  await page.contentFeatures();
   await sleep(60);
   const { document } = page;
   const printBody = document.querySelector('#main .prints .prints-table tbody');
@@ -589,7 +589,7 @@ async function promoParentMergeTest() {
 }
 
 async function printsOrderTest() {
-  console.log('content.js: printings follow the page order');
+  console.log('content scripts: printings follow the page order');
   const print = (set, setName, number) => ({
     id: `o-${set}-${number}`, name: 'Order Card', uri: `https://scryfall.com/card/${set}/${number}/order-card`,
     set, setName, number, lang: 'en', digital: false, finishes: ['nonfoil'], prices: {}
@@ -618,7 +618,7 @@ async function printsOrderTest() {
     await page.script('format-catalog.js');
     await page.script('tag-icons.js');
     await page.script('data/shambleshark-nicknames.js');
-    await page.script('content.js');
+    await page.contentFeatures();
     await sleep(60);
     return page.document.querySelector('#main .prints .prints-table tbody');
   };
@@ -646,7 +646,7 @@ async function printsOrderTest() {
 }
 
 async function printsWindowTest() {
-  console.log('content.js: the ten-entry window keeps the printing being viewed on screen');
+  console.log('content scripts: the ten-entry window keeps the printing being viewed on screen');
   const print = (set, number) => ({
     id: `w-${set}-${number}`, name: 'Window Card', uri: `https://scryfall.com/card/${set}/${number}/window-card`,
     set, setName: `Set ${set.toUpperCase()}`, number, lang: 'en', digital: false, finishes: ['nonfoil'], prices: {}
@@ -677,7 +677,7 @@ async function printsWindowTest() {
   await page.script('format-catalog.js');
   await page.script('tag-icons.js');
   await page.script('data/shambleshark-nicknames.js');
-  await page.script('content.js');
+  await page.contentFeatures();
   await sleep(60);
   const { document } = page;
   const printBody = document.querySelector('#main .prints .prints-table tbody');
@@ -711,7 +711,7 @@ async function printsWindowTest() {
 }
 
 async function starNumberTest() {
-  console.log('content.js: a foil-only collector number loses its star');
+  console.log('content scripts: a foil-only collector number loses its star');
   const print = (set, setName, number, finishes) => ({
     id: `s-${set}-${number}`, name: 'Star Card', uri: `https://scryfall.com/card/${set}/${encodeURIComponent(number)}/star-card`,
     set, setName, number, lang: 'en', digital: false, finishes, prices: {}
@@ -738,7 +738,7 @@ async function starNumberTest() {
   await page.script('format-catalog.js');
   await page.script('tag-icons.js');
   await page.script('data/shambleshark-nicknames.js');
-  await page.script('content.js');
+  await page.contentFeatures();
   await sleep(60);
   const { document } = page;
   const printBody = document.querySelector('#main .prints .prints-table tbody');
@@ -754,7 +754,7 @@ async function starNumberTest() {
 }
 
 async function singlePrintingTest() {
-  console.log('content.js: a card with one printing needs no groups');
+  console.log('content scripts: a card with one printing needs no groups');
   // Scryfall marks a foil-only printing with a star behind its number.
   const native = `<tr class="current"><td><a data-card-id="u1" href="/card/uni/1/only">Set Uni
           #1 ★</a></td><td>UNI</td><td></td><td></td><td></td></tr>
@@ -773,7 +773,7 @@ async function singlePrintingTest() {
   await page.script('format-catalog.js');
   await page.script('tag-icons.js');
   await page.script('data/shambleshark-nicknames.js');
-  await page.script('content.js');
+  await page.contentFeatures();
   await sleep(60);
   const { document } = page;
   const printBody = document.querySelector('#main .prints .prints-table tbody');
@@ -789,7 +789,7 @@ async function singlePrintingTest() {
 }
 
 async function legacyMigrationTest() {
-  console.log('content.js: legacy cardClipboard migration');
+  console.log('content scripts: legacy cardClipboard migration');
   const page = createPage({
     url: 'https://scryfall.com/search?q=x',
     html: '<!DOCTYPE html><html><body><div id="main"></div></body></html>',
@@ -801,7 +801,7 @@ async function legacyMigrationTest() {
   await page.script('format-catalog.js');
   await page.script('tag-icons.js');
   await page.script('data/shambleshark-nicknames.js');
-  await page.script('content.js');
+  await page.contentFeatures();
   await sleep(60);
   assertEqual(page.mock.state.cards, [
     { name: 'Old Card', url: 'https://scryfall.com/card/lea/1/old', set: '', number: '' }
@@ -809,7 +809,7 @@ async function legacyMigrationTest() {
 }
 
 async function advancedPriceFilterTest() {
-  console.log('content.js: advanced search price filter follows the hidden columns');
+  console.log('content scripts: advanced search price filter follows the hidden columns');
   const html = `<!DOCTYPE html><html><body><div id="main">
     <div class="form-row-content-band">
       <select name="price_1" id="price_1">
@@ -826,7 +826,7 @@ async function advancedPriceFilterTest() {
     await page.script('format-catalog.js');
     await page.script('tag-icons.js');
     await page.script('data/shambleshark-nicknames.js');
-    await page.script('content.js');
+    await page.contentFeatures();
     await sleep(60);
     return page;
   };
@@ -843,14 +843,14 @@ async function advancedPriceFilterTest() {
 }
 
 async function setPlatformTest() {
-  console.log('content.js: platform filter decides which sets are shown');
+  console.log('content scripts: platform filter decides which sets are shown');
   const load = async (state, url, html, pageRoutes = routes) => {
     const page = createPage({ url, html, state, routes: pageRoutes });
     await page.script('i18n.js');
     await page.script('format-catalog.js');
     await page.script('tag-icons.js');
     await page.script('data/shambleshark-nicknames.js');
-    await page.script('content.js');
+    await page.contentFeatures();
     await sleep(80);
     return page;
   };
@@ -910,7 +910,7 @@ async function setPlatformTest() {
 }
 
 async function advancedSetFilterTest() {
-  console.log('content.js: advanced search set field follows Games and the platform filter');
+  console.log('content scripts: advanced search set field follows Games and the platform filter');
   const html = `<!DOCTYPE html><html><body><div id="main"><form class="form-layout">
     <div class="form-row"><div class="form-row-content-band">
       <label><input type="checkbox" name="games[]" value="paper" checked> Paper</label>
@@ -953,7 +953,7 @@ async function advancedSetFilterTest() {
     await page.script('format-catalog.js');
     await page.script('tag-icons.js');
     await page.script('data/shambleshark-nicknames.js');
-    await page.script('content.js');
+    await page.contentFeatures();
     await sleep(80);
     return page;
   };
@@ -1021,14 +1021,14 @@ async function advancedSetFilterTest() {
 }
 
 async function cardNicknameTest() {
-  console.log('content.js: historical card nicknames');
+  console.log('content scripts: historical card nicknames');
   const load = async (url, state) => {
     const page = createPage({ url, html: CARD_HTML, state, routes });
     await page.script('i18n.js');
     await page.script('format-catalog.js');
     await page.script('tag-icons.js');
     await page.script('data/shambleshark-nicknames.js');
-    await page.script('content.js');
+    await page.contentFeatures();
     await sleep(60);
     return page;
   };
@@ -1047,7 +1047,7 @@ async function cardNicknameTest() {
 }
 
 async function printsSettingsTest() {
-  console.log('content.js: grouped prints can be switched off and trimmed');
+  console.log('content scripts: grouped prints can be switched off and trimmed');
   const heads = page => [...page.document.querySelectorAll('.stk-print-group-row')].map(row => row.textContent);
   const foldArrow = page => Boolean(page.document.querySelector('.prints-table.stk-fold-groups'));
 

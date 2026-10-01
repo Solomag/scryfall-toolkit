@@ -1,0 +1,137 @@
+/*
+ * Scryfall Toolkit. Copyright (c) 2026 Scryfall Toolkit contributors.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ *
+ * Third-party data, images and code in this project keep their own licence and
+ * are described in THIRD_PARTY_NOTICES.md. The MPL does not cover them.
+ */
+
+// The deck page: token list, stacked cards, and the No Prices switch.
+// Loaded after content-core.js: everything this file needs is on self.STK_CONTENT, and
+// nothing here is needed by the files around it. What runs, and in which order, is
+// decided in content-core.js — where this file sits in the manifest does not decide it.
+(async () => {
+  // The settings have not been read yet when this file is injected, so the context is
+  // waited for rather than read. Destructuring at load time would give every name
+  // below as undefined, and nothing would say so until a feature asked for a card page
+  // that was not there.
+  const {
+    settings,
+    language,
+    t,
+    cardPath,
+    cardPage,
+    advancedPage,
+    identity,
+    PLATFORM_NAMES,
+    chosenPlatforms,
+    platformFilterOn,
+    setPlatformsOf,
+    platformSetVisible,
+    platformSetRequests,
+    request,
+    button,
+    iconButton,
+    attachPrintButton,
+    printKey,
+    refreshPrintButtons,
+    flashCopied,
+    hidePreview,
+    positionPreview,
+    enablePreview,
+    ctQueuedCells,
+    printButtonRefreshers,
+    shared
+  } = await self.STK_CONTENT.context;
+
+  function initDeckTokens() {
+    if (!/^\/@[^/]+\/decks\//.test(location.pathname)) return;
+    const anchors = [...document.querySelectorAll('.deck-list-entry .deck-list-entry-name a, a.card-grid-item-card[href]')];
+    const entries = [...new Map(anchors.map(a => {
+      const path = new URL(a.href, location.href).pathname.match(/^\/card\/([^/]+)\/([^/]+)/);
+      return path && [path[1] + '/' + path[2], {set:path[1],collector_number:decodeURIComponent(path[2])}];
+    }).filter(Boolean)).values()].slice(0,150);
+    const place = document.querySelector('#main .sidebar') || document.querySelector('#main .deck-list')?.parentElement;
+    if (!entries.length || !place) return;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'button-n stk-token-button';
+    button.textContent = language === 'ru' ? 'Показать токены' : 'Show Tokens';
+    const dialog = document.createElement('dialog');
+    dialog.id = 'stk-deck-tokens';
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'button-n';
+    close.textContent = t('Закрыть');
+    close.addEventListener('click', () => dialog.close());
+    const title = document.createElement('h2');
+    title.textContent = t('Токены колоды');
+    const content = document.createElement('div');
+    content.className = 'stk-token-grid';
+    dialog.append(title, close, content);
+    document.body.append(dialog);
+    let pending;
+    button.addEventListener('click', async () => {
+      dialog.showModal();
+      if (!pending) {
+        content.textContent = t('Загружаю токены…');
+        pending = request({type:'deckTokens',entries}).catch(error => { pending = null; throw error; });
+      }
+      try {
+        const tokens = await pending;
+        content.replaceChildren();
+        if (!tokens.length) { content.textContent = t('Токены не найдены.'); return; }
+        for (const token of tokens) {
+          const link = document.createElement('a');
+          link.href = token.uri;
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          const img = document.createElement('img');
+          img.src = token.image;
+          img.alt = token.name;
+          img.loading = 'lazy';
+          link.append(img);
+          content.append(link);
+        }
+      } catch { content.textContent = t('Не удалось загрузить токены.'); }
+    });
+    place.prepend(button);
+  }
+
+  function initStackedDeckCards() {
+    if (!document.querySelector('.deck-list')) return;
+    const grid = document.querySelector('.card-grid');
+    const cards = [...(grid?.querySelectorAll('.card-grid-item[data-card-id]') || [])];
+    if (!cards.length) return;
+    grid.classList.add('stk-stacked-deck');
+    cards.at(-1).classList.add('stk-stacked-last');
+  }
+
+  function initDeckPriceOption() {
+    const select = document.querySelector('#with');
+    if (!select) return;
+    if (!select.querySelector('[value="no-prices"]')) {
+      const option = document.createElement('option');
+      option.value = 'no-prices';
+      option.textContent = language === 'ru' ? 'Без цен' : 'No Prices';
+      select.append(option);
+    }
+    const apply = () => {
+      const hidden = select.value === 'no-prices';
+      for (const node of document.querySelectorAll('.sidebar-prices,.deck-list-entry-axial-data')) {
+        node.classList.toggle('stk-price-hidden', hidden);
+      }
+    };
+    if (new URL(location.href).searchParams.get('with') === 'no-prices') select.value = 'no-prices';
+    select.addEventListener('change', apply);
+    apply();
+  }
+
+
+  self.STK_CONTENT.on("deckTokens", () => initDeckTokens());
+  self.STK_CONTENT.on("stackedDeckCards", () => initStackedDeckCards());
+  self.STK_CONTENT.on("deckPriceOption", () => initDeckPriceOption());
+})();

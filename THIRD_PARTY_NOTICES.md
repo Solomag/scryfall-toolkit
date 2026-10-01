@@ -377,6 +377,20 @@ No font file is bundled. The stylesheets only name font families: `Lato` (Scryfa
 font, referenced by name and not redistributed here) and `system-ui` / `Helvetica Neue` /
 `Arial` fallbacks.
 
+## 12. The card page after the split
+
+`content.js` was one file: 1901 lines in a single closure holding the clipboard, the tag
+panels, the printings table, CardTrader, EDHREC, the extra formats, the deck page and the
+set filters. It is now `content-core.js` and nine files named for what they draw. The split
+changed no licence and no line of logic: every line was moved as it stands, and a check
+confirmed that the only code absent afterwards was the four declarations that became one
+`shared` object and the eighteen `if (settings.x) initY();` lines that became the boot list.
+
+`tools/content-split.cjs` and `tools/content-core-run.cjs` did the moving, by slicing the old
+file by definition name. They read the old file, so they do not run again once it is gone,
+and they are kept because they are the record of how the split was made and because the next
+split starts from the same place.
+
 ## 12. This project's own artwork
 
 | File | What it is |

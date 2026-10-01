@@ -1,4 +1,4 @@
-# Scryfall Toolkit 0.54.0
+# Scryfall Toolkit 0.55.0
 
 An independent browser extension for **Scryfall** and **Scryfall Tagger**: a shared card clipboard, tag panels on card pages, extra format legalities, a dark theme, and optional EDHREC and CardTrader data.
 
@@ -88,7 +88,7 @@ Material from other projects keeps its own licence and its own notice. The MPL c
 | `icons/clip.svg`, `icons/duplicate.svg`, `icons/trash.svg` | CardClip icons — MIT, © 2022 Jacob Hearst |
 | `icons/edhrec.png`, `icons/cardtrader.svg`, `icons/cardtrader.png` | Third-party brand marks. **Not covered by any licence of this project**, and not cleared: no permission was requested from those services and none was received. |
 | `icons/cardmarket-white.png` | **Cardmarket's symbol**, cropped out of the logo file they publish for download and used on their terms. Drawn as a mask, so the shape is theirs and the colour is the heading's own ink. Their rights stay theirs and the goodwill from use is theirs; `THIRD_PARTY_NOTICES.md` quotes the terms and says what is done to stay inside them. |
-| `manifest.json`, `package.json` and the rest of this project's own files | MPL-2.0 |
+| `manifest.json`, `package.json`, `content-core.js`, `content-*.js` and the rest of this project's own files | MPL-2.0 |
 
 Full detail, source by source: **[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)**. Licence texts are in [`third_party/`](third_party/) and ship inside the extension archive.
 

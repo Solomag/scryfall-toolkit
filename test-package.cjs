@@ -227,7 +227,10 @@ function packagedNoticesTest() {
   console.log('package: third-party notices ship with the extension');
   const manifest = JSON.parse(read('manifest.json'));
   const shipped = [
-    'manifest.json', 'background.js', 'content.js', 'content.css', 'theme.js', 'theme.css',
+    'manifest.json', 'background.js', 'content-core.js', 'content-clipboard.js',
+    'content-tags.js', 'content-legalities.js', 'content-prints.js', 'content-edhrec.js',
+    'content-prices.js', 'content-sets.js', 'content-card.js', 'content-deck.js',
+    'content.css', 'theme.js', 'theme.css',
     'options.html', 'options.js', 'options.css', 'i18n.js', 'tag-icons.js', 'tagger-clipboard.js',
     'format-catalog.js', 'format-overrides.js', 'data/oracle-tags.js', 'data/illustration-tags-1.js',
     'data/illustration-tags-2.js', 'data/shambleshark-nicknames.js', 'data/set-platforms.js',
@@ -287,6 +290,44 @@ function packagedNoticesTest() {
     'the README counts the deck editor tools it actually ships');
   const privacy = read('PRIVACY.md');
   assert(!/\b(five|six|seven) hosts\b/.test(privacy), 'the privacy policy states no host count that can go stale');
+
+  // The card page is a core and nine feature files, and the two things that make
+  // that work are easy to undo by accident: a feature that destructures the
+  // context at load time instead of waiting for it gets undefined for everything,
+  // and a boot that runs before the features have registered silently skips
+  // whichever one had not been given its turn. Neither shows up as an error.
+  {
+    const core = read('content-core.js');
+    assert(core.includes('self.STK_CONTENT = { on, reportFeature, context: arrived }'),
+      'the core publishes its context as a promise, so a feature cannot read it too early');
+    assert(/setTimeout\(\(\) => \{[\s\S]*booted = true/.test(core),
+      'and waits a macrotask before the boot, so every feature file has registered by then');
+    const manifestOrder = JSON.parse(read('manifest.json')).content_scripts
+      .flatMap(entry => entry.js || [])
+      .filter(file => file.startsWith('content-'));
+    assertEqual(manifestOrder[0], 'content-core.js', 'the core is injected before the features that read it');
+    for (const file of manifestOrder.slice(1)) {
+      const text = read(file);
+      assert(text.includes('} = await self.STK_CONTENT.context;'),
+        file + ' waits for the context rather than destructuring it at load time');
+      assert(!/^\s*const \{[^}]*\} = self\.STK_CONTENT;/m.test(text),
+        file + ' has no other, load-time read of the core');
+    }
+    // Every step in the boot is registered, and every registration is in the boot.
+    // The generator checks this too; a test checks it after the files are edited.
+    const bootSteps = [...core.matchAll(/^\s{4}\["([A-Za-z]+)", \(\) =>/gm)].map(m => m[1]);
+    const registered = manifestOrder.slice(1)
+      .flatMap(file => [...read(file).matchAll(/STK_CONTENT\.on\("([A-Za-z]+)"/g)].map(m => m[1]));
+    assert(bootSteps.length >= 15, 'the boot names every feature the old file started (' + bootSteps.length + ')');
+    assertEqual(bootSteps.filter(step => !registered.includes(step)), [],
+      'every step in the boot has a feature file registering for it');
+    assertEqual(registered.filter(step => !bootSteps.includes(step)), [],
+      'and no feature file registers a step the boot does not run');
+    // One feature failing must not stop the ones below it. Before the split a
+    // throw in the boot took every later feature with it.
+    assert(core.includes('.catch(error => reportFeature(step, error))'),
+      'a feature that throws is reported and the rest still run');
+  }
 
   // The licence text of each project whose material is actually in the archive.
   const licences = {

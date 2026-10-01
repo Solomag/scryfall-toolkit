@@ -62,7 +62,10 @@ function licenceAndPrivacyTest() {
   // Every file the project wrote carries the notice; no file copied from another
   // project does, because re-licensing someone else's MIT work would be wrong.
   const ours = [
-    'background.js', 'content.js', 'content.css', 'theme.js', 'theme.css',
+    'background.js', 'content-core.js', 'content-clipboard.js', 'content-tags.js',
+    'content-legalities.js', 'content-prints.js', 'content-edhrec.js', 'content-prices.js',
+    'content-sets.js', 'content-card.js', 'content-deck.js', 'content.css',
+    'theme.js', 'theme.css',
     'options.js', 'options.css', 'options.html', 'i18n.js', 'tag-icons.js',
     'tagger-clipboard.js', 'format-catalog.js', 'format-overrides.js',
     'data/set-platforms.js', 'testlib.cjs', 'test-preview.cjs', 'test-background.cjs',
@@ -152,7 +155,8 @@ function licenceAndPrivacyTest() {
   assert((manifest.optional_host_permissions || []).some(host => host.includes('api.cardtrader.com')),
     'and is asked for when the CardTrader feature is turned on');
   assert(!/analytics|telemetry|gtag|google-analytics|posthog|mixpanel|amplitude|sentry/i.test(
-    [background, read('content.js'), read('options.js'), read('theme.js'), read('tagger-clipboard.js')].join('\n')),
+    [background, read('content-core.js'), read('content-prices.js'),
+   read('options.js'), read('theme.js'), read('tagger-clipboard.js')].join('\n')),
     'the code contains no analytics or telemetry');
   assert(privacy.includes('We have no server'), 'the policy says where data would go if it were collected');
   assert(/cardtraderToken/.test(privacy) || /personal access token/i.test(privacy),

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Scryfall Toolkit",
-  "version": "0.54.0",
+  "version": "0.55.0",
   "homepage_url": "https://github.com/Solomag/scryfall-toolkit",
   "description": "Scryfall clipboard, tags, legality, dark theme, optional CardTrader prices and EDHREC statistics.",
   "permissions": [
@@ -60,7 +60,16 @@
         "format-catalog.js",
         "tag-icons.js",
         "data/shambleshark-nicknames.js",
-        "content.js"
+        "content-core.js",
+        "content-clipboard.js",
+        "content-tags.js",
+        "content-legalities.js",
+        "content-prints.js",
+        "content-edhrec.js",
+        "content-prices.js",
+        "content-sets.js",
+        "content-card.js",
+        "content-deck.js"
       ],
       "css": [
         "content.css"

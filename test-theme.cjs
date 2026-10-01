@@ -78,7 +78,7 @@ async function manifestIntegrity() {
 function syntaxCheck() {
   console.log('static: syntax check');
   const files = [
-    'background.js', 'content.js', 'theme.js', 'i18n.js', 'options.js',
+    'background.js', 'content-core.js', 'content-prices.js', 'theme.js', 'i18n.js', 'options.js',
     'format-catalog.js', 'format-overrides.js', 'tag-icons.js',
     'tagger-clipboard.js',
     'data/oracle-tags.js', 'data/illustration-tags-1.js',
@@ -196,7 +196,8 @@ function cssCheck() {
     'a lone full-page link sits on the right of the line');
   assert(css.includes('.stk-tag-icon.icon-flipped svg{transform:scale(-1,1)}'),
     'flipped tag icons rule exists');
-  const flipLine = read('content.js').split('\n').find(line => line.includes('icon-flipped'));
+  // The tag icons live in their own file now, and this is about their file.
+  const flipLine = read('content-tags.js').split('\n').find(line => line.includes('icon-flipped'));
   assert(flipLine && !flipLine.includes('BETTER_THAN'),
     'BETTER_THAN no longer flips the relation icon');
   assert(flipLine && flipLine.includes('WORSE_THAN'),
@@ -373,7 +374,7 @@ function domContractTest() {
   const ourPrefixes = ['stk-', 'cleanup-improver__', 'modify-cleanup-', 'data-heading-'];
   const isOurs = name => ourPrefixes.some(prefix => name.replace(/^[.#[\]]+/, '').startsWith(prefix));
   const jsUsed = new Set();
-  for (const file of ['content.js', 'deck-clean-up.js', 'deck-edhrec.js', 'deck-results.js', 'deck-search.js', 'theme.js']) {
+  for (const file of ['content-core.js', 'deck-clean-up.js', 'deck-edhrec.js', 'deck-results.js', 'deck-search.js', 'theme.js']) {
     const js = read(file).replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
     for (const m of js.matchAll(/querySelector(?:All)?\(\s*['"`]([^'"`]+)['"`]/g)) {
       for (const c of m[1].matchAll(/\.([a-zA-Z][a-zA-Z0-9_-]*)/g)) jsUsed.add(c[1]);
