@@ -8,7 +8,20 @@ All releases: <https://github.com/Solomag/scryfall-toolkit/releases>
 
 ---
 
-## Unreleased
+## [v1.0.0](https://github.com/Solomag/scryfall-toolkit/releases/tag/v1.0.0) — 2026-10-02
+
+The first version whose behaviour this project calls settled.
+
+That is a promise about the extension, not about Scryfall. From here a change that alters
+what a reader sees is a breaking change and gets a major number; before this, it was a
+patch. Nothing about the dependency on Scryfall's markup is settled by the number — that
+can change under us with no notice, which is why `docs/scryfall-dom.md` is generated from
+the code and the dark theme is the one feature that depends on their class names by name.
+The deck editor modules stay opt-in for the same reason, and saying so here rather than
+only in a settings hint is the point of the version.
+
+Everything below is what the five days before it were about. The store listing is the
+document to read for what the extension asks for and why.
 
 The illustrations in the settings are photographs of the real thing, and they sit behind
 a "?" instead of inside the page.

@@ -124,4 +124,6 @@ Material from other projects keeps its own licence and its own notice. The MPL c
 
 Full detail, source by source: **[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)**. Licence texts are in [`assets/licences/`](assets/licences/) and ship inside the extension archive.
 
+The current version is in the [releases](https://github.com/Solomag/scryfall-toolkit/releases) and in the `manifest.json` inside the archive. The store link's "preview" is that listing's own slug, not a claim about this project.
+
 Limitations and what is still open: **[docs/FEATURES.md](docs/FEATURES.md)** and **[docs/FAQ.md](docs/FAQ.md)**. What is deliberately not being worked on right now: **[docs/ROADMAP.md](docs/ROADMAP.md)**.
