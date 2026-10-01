@@ -166,21 +166,24 @@ const dedupe = rows => {
   });
 };
 
-// Every printing of the card.
+// Every printing of the card — the address the worker builds, exactly.
 //
-// Three of the four obvious addresses do not give the list. /cards/named with
-// all_printings=true answers with one printing — the parameter no longer widens the
-// answer. /cards/collection wants the oracle reference under its own name, and with
-// `id` it means a single printing, so an oracle id there comes back as not found. A
-// search by oracle id on this endpoint indexes one printing as well. What does return
-// the whole run is a name search with unique=prints, which is what the extension's
-// own prints table ends up built from.
-async function allPrintings(name) {
+// It was `name:"X"&unique=prints` here first, and that is a different list: 73
+// printings of Counterspell by name against 88 by oracle id. The picture is meant to be
+// what the extension puts on a screen, and the extension asks Scryfall by oracle id.
+//
+// Three of the four obvious addresses do not give the list at all, which is worth
+// knowing because each of them looks like "this card has one printing": /cards/named
+// with all_printings=true answers with a single printing; /cards/collection with `id`
+// means one printing, so an oracle id in that field comes back as not found; and a
+// search by oracle id *without* unique=prints indexes one printing as well. That last
+// one is what made it look like the extension's own query had stopped working.
+async function allPrintings(oracleId) {
   const list = [];
   let page = null;
-  for (let guard = 0; guard < 4 && (guard === 0 || page); guard++) {
+  for (let guard = 0; guard < 9 && (guard === 0 || page); guard++) {
     const query = 'https://api.scryfall.com/cards/search?q=' +
-      encodeURIComponent('name:"' + name + '"') + '&unique=prints' +
+      encodeURIComponent('oracleid:' + oracleId) + '&unique=prints&order=released&dir=desc' +
       (page ? '&page=' + page : '');
     const answer = await cachedGet(query);
     if (!answer || !Array.isArray(answer.data)) break;
@@ -211,7 +214,7 @@ async function heroCard(printing = null) {
       encodeURIComponent(candidate.name));
     if (!card || !card.oracle_id) continue;
 
-    const list = await allPrintings(card.name);
+    const list = await allPrintings(card.oracle_id);
     if (list.length < 4) continue;
 
     const legalities = card.legalities || {};
@@ -226,7 +229,13 @@ async function heroCard(printing = null) {
       prints: list.map(printing => ({
         id: printing.id,
         name: printing.name,
-        uri: printing.uri,
+        // scryfall_uri, and not the object's own `uri`: the worker's row for a
+        // printing carries the page address, and that is the address the table compares
+        // a printing Scryfall already listed against. An API address here matches no row
+        // on the page, so every printing Scryfall had already drawn is added a second
+        // time — ten duplicated rows in one group, in a picture of a defect the
+        // extension does not have.
+        uri: printing.scryfall_uri,
         set: printing.set,
         setName: printing.set_name,
         number: printing.collector_number,
@@ -260,7 +269,7 @@ async function clipboardCards(count = 3) {
       name: card.name,
       set: card.set,
       number: card.collector_number,
-      uri: card.uri,
+      uri: card.scryfall_uri,
       finishes: card.finishes || []
     });
   }

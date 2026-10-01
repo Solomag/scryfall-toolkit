@@ -145,6 +145,48 @@ const SHOTS = [
   }
 ];
 
+// A printing shown twice in the group it belongs to.
+//
+// This is not a hypothetical. It happened because the fixture sent each printing's API
+// address where the worker sends the address of the card's page — and the table decides
+// whether Scryfall has already drawn a printing by comparing that address with the rows
+// on the page. An API address matches nothing, so every printing Scryfall had already
+// listed was added again: ten duplicated rows, in a picture of a defect the extension
+// does not have, next to a claim that nothing in the pictures was invented.
+//
+// The picture was not wrong about the product and wrong about itself at the same time,
+// which is the worst kind of wrong.
+function assertNoRepeatedPrinting(page, file) {
+  const table = page.document.querySelector('.card-profile .prints > .prints-table');
+  if (!table) return;
+  let group = '(none)';
+  let seen = new Map();
+  const repeated = [];
+  for (const row of table.querySelectorAll('tbody tr')) {
+    const classes = row.className || '';
+    if (/\bstk-print-group-row\b/.test(classes)) {
+      group = (row.textContent || '').trim();
+      seen = new Map();
+      continue;
+    }
+    const link = row.querySelector('a');
+    if (!link) continue;
+    // Keyed on what the reader sees, not on the card id — because the row that was
+    // duplicated had no id to key on, which is why the first version of this check
+    // passed over the very defect it was written for. A printing in another language
+    // reads "#2 · JA", so the same number twice is not the same label twice.
+    const label = link.textContent.trim();
+    if (!label) continue;
+    if (seen.has(label)) repeated.push(group + ' — "' + label + '"');
+    else seen.set(label, true);
+  }
+  if (repeated.length) {
+    throw new Error(file + ': ' + repeated.length + ' printings appear twice, each in its own group (' +
+      repeated.slice(0, 3).join('; ') + '). Either the table is adding what Scryfall already lists, ' +
+      'or the data gives one printing an address the page does not use.');
+  }
+}
+
 async function main() {
   fs.mkdirSync(OUT, { recursive: true });
   fs.mkdirSync(WORK, { recursive: true });
@@ -167,6 +209,7 @@ async function main() {
       if (shot.prepare) await shot.prepare(card);
       await waitForSelector(card, shot.waitFor);
       if (shot.waitCount) await waitForCount(card, shot.waitCount[0], shot.waitCount[1]);
+      assertNoRepeatedPrinting(card, shot.file);
 
       const htmlFile = path.join(WORK, shot.file.replace(/\.png$/, '.html'));
       fs.writeFileSync(htmlFile, renderableHtml(card.document, data, { extraCss: shot.extraCss || STAGE_CSS }),

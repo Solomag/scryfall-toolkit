@@ -143,6 +143,34 @@ Four things that were wrong only because nothing looked at the pictures:
   that meant "something has no size" and the length that means "cut it here" are two
   different checks, and the cut is printed when it happens.
 
+### Two bugs, and both of them were in the tool
+
+Worth stating plainly, because the question is the obvious one: **the extension had no bug
+in any of this.** The pictures disagreed with the product, and the product was right.
+
+One of the two was found by looking at a picture. Ten printings appeared twice in the
+group they belong to — `#7010`, `#1933`, `#1589` and seven more — which reads as a table
+that adds what Scryfall has already drawn. The cause was in the fixture, not the table: it
+sent each printing's API address where the worker sends the address of the card's *page*,
+and the table decides "has Scryfall already listed this?" by comparing that address with
+the rows on the page. An API address matches no row, so every printing already on the
+page was added again. The picture was simultaneously faithful to a defect that did not
+exist and wrong about the product — the worst kind of wrong, and one that no amount of
+checking the *values* would ever have found.
+
+The other was the mirror image: `oracleid:` search appeared to return one printing, which
+would have meant the extension's whole print grouping was broken against the live API. It
+returns 88 printings of Counterspell. The single-printing answer came from asking without
+`unique=prints`, which is what the fixture did and the worker does not. The three
+addresses that genuinely return one printing each are listed in the tool, so the next
+person does not spend an afternoon on them.
+
+And the check that found the first one had to be written twice. It keyed on
+`data-card-id` — which the duplicated row does not have, because that is exactly why it was
+duplicated. It passes over the defect it was written for. It now keys on the label a reader
+sees, and it was verified by breaking the fixture on purpose: the tool fails with the ten
+duplicates named.
+
 Tests: 1637 assertions pass across eight suites.
 
 ### The theme, in seven files
