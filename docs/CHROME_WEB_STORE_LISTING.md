@@ -33,6 +33,10 @@ has a button that asks for whichever a turned-on feature is still missing.
 > independent extension. It is not produced, endorsed, sponsored or approved by Scryfall,
 > Wizards of the Coast, EDHREC or CardTrader.
 >
+> Scryfall Toolkit is unofficial Fan Content permitted under the Wizards of the Coast Fan
+> Content Policy. Not approved or endorsed by Wizards. Portions of the materials shown
+> are property of Wizards of the Coast. ©Wizards of the Coast LLC.
+>
 > **Shared clipboard.** Add any printing to a clipboard that follows you across Scryfall
 > and Scryfall Tagger, with a names-only menu, duplicate and delete controls, and a copy
 > format that includes the printing's set code and collector number. If you used the older
@@ -236,6 +240,28 @@ powershell -File store-assets/make-store-shots.ps1 -Source store-assets/settings
 ```
 
 The store accepts up to 5 screenshots, and five is what covers the whole page.
+
+### Whether a card may appear in one
+
+Yes. A card on a Scryfall page in a screenshot is a card as Scryfall shows it, which is
+what Scryfall's own imagery rules ask for and what the Wizards Fan Content Policy is
+written to allow — Scryfall itself is unofficial Fan Content and displays the same images
+the same way. The conditions are specific and cheap to keep:
+
+- **Do not crop, clip, mask or blur the card.** Their rules call out the copyright and
+  artist line at the bottom of every card by name: it has to stay visible.
+- **Do not recolour, sharpen, desaturate, skew or stretch it.** A screenshot of the page
+  as the browser drew it complies by construction; a re-graded or resized card does not.
+- **Do not put anything on top of it** — no badge, no arrow, no callout box over the art.
+- **Do not imply the card came from anywhere but Magic.** No "our" framing.
+- **The listing carries the fan-content note** (section 1) and does not use any Wizards
+  logo. Our own icon is original artwork and does not resemble theirs.
+
+So the useful screenshots — a card page in the dark theme with the tag tables and the
+clipboard open, and the deck editor with its three tools — are all allowed as long as
+nothing is drawn over the cards. What is not allowed is a cropped card used as a
+decorative element, which is also not something worth doing: it tells a reader less than
+the page does.
 
 ---
 

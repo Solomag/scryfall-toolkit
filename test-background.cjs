@@ -340,6 +340,108 @@ async function edhrecThrottleTest() {
         'each with the art it was asked for');
     }
 
+    console.log('background.js: Scryfall is asked no faster than they publish');
+    // https://scryfall.com/docs/api/rate-limits publishes a different ceiling per
+    // endpoint class, and the card classes are the tight ones:
+    //
+    //   /cards/search, /cards/named, /cards/random, /cards/collection  2/second
+    //   /cards/manifest                                                 10/minute
+    //   everything else                                                 10/second
+    //
+    // This was one queue with a 130 ms slot for everything, taken from the
+    // "ten a second" figure — about four times their limit on exactly the endpoints
+    // the extension leans on hardest — and with no hold-back on a 429 at all. What
+    // follows checks the numbers still match what they publish, that every call goes
+    // through the queue, and that the queue actually holds.
+    {
+      // The numbers are read out of the source rather than off the context: a const in
+      // a vm script is not a property of the context object, and these numbers are the
+      // thing being asserted — they have to keep matching the page quoted above.
+      const source = require('node:fs')
+        .readFileSync(require('node:path').join(__dirname, 'background.js'), 'utf8');
+      const digitsAfter = marker => {
+        const at = source.indexOf(marker);
+        if (at < 0) return 0;
+        // The number is written after a space, so skip anything that is not a digit
+        // first and then take the run of digits.
+        const rest = source.slice(at + marker.length).replace(/^\s+/, '');
+        let n = '';
+        for (const ch of rest) {
+          if (ch < '0' || ch > '9') break;
+          n += ch;
+        }
+        return n ? Number(n) : 0;
+      };
+      assert(digitsAfter('slowCards:') >= 500,
+        'the card endpoints are held to at least the 500ms their 2/second limit means');
+      assert(digitsAfter('manifest:') >= 6000,
+        'the manifest endpoint is held to at least the 6s their 10/minute limit means');
+      assert(digitsAfter('other:') >= 100,
+        'and the rest to at least the 100ms their 10/second limit means');
+      assert(digitsAfter('SCRYFALL_HOLD_MS =') >= 30000,
+        'a 429 holds the queue back for the thirty seconds they say access is limited');
+
+      // Which class a URL lands in. This is where the single-queue version went
+      // wrong: there was nowhere in the code that knew what the limits were.
+      const host = 'https://api.' + 'scryfall.com';
+      assertEqual(ctx.scryfallClass(host + '/cards/search?q=x'), 'slowCards',
+        'a search is one of the two-a-second class');
+      assertEqual(ctx.scryfallClass(host + '/cards/named?exact=x'), 'slowCards',
+        'and so is a named lookup');
+      assertEqual(ctx.scryfallClass(host + '/cards/collection'), 'slowCards',
+        'and so is a collection, which the finish column and the deck art both use');
+      assertEqual(ctx.scryfallClass(host + '/cards/manifest'), 'manifest',
+        'the manifest endpoint is on its own, much slower one');
+      assertEqual(ctx.scryfallClass(host + '/sets'), 'other',
+        'set lists are in the ordinary class');
+
+      // And nothing may reach api.scryfall.com except through the queue. An unpaced
+      // /cards/search is ten a second against a limit of two, which is the whole bug.
+      // A URL built into a variable first is not a call, so those are left alone —
+      // the call that uses it is checked on its own.
+      const notIdentifier = ch => {
+        if (!ch) return true;
+        const c = ch.charCodeAt(0);
+        const letter = (c >= 65 && c <= 90) || (c >= 97 && c <= 122);
+        const digit = c >= 48 && c <= 57;
+        return !(letter || digit || ch === '_' || ch === '$');
+      };
+      const paced = ['scryfallJSON', 'scryfallGet', 'scryfallClass'];
+      const unpaced = [];
+      for (let at = source.indexOf(host); at >= 0; at = source.indexOf(host, at + 1)) {
+        // Walk back over the quote, any space and the opening bracket, then take the
+        // identifier being called with this URL. Reading the whole text rather than
+        // the line matters: several call sites put the URL on a line of its own and
+        // the function name is on the one above — which is exactly how a paced
+        // /cards/search stayed unpaced for a while without showing up here.
+        let end = at;
+        while (end > 0 && (notIdentifier(source[end - 1]) || source[end - 1] === ' ')) end--;
+        let start = end;
+        while (start > 0 && !notIdentifier(source[start - 1])) start--;
+        const name = source.slice(start, end);
+        // Only a call is a problem. `let url = \`...\`` is a variable.
+        const isCall = source[end] === '(';
+        if (name && isCall && !paced.includes(name)) {
+          const lineStart = source.lastIndexOf(String.fromCharCode(10), at) + 1;
+          unpaced.push(name + '() -> ' + source.slice(lineStart, at).trim().slice(0, 60));
+        }
+      }
+      assertEqual(unpaced, [],
+        'nothing reaches api.scryfall.com except through the paced queue');
+    }
+    {
+      // The queue holds, timed for real rather than with a fake clock, so this is the
+      // same thing the extension would actually do.
+      const started = Date.now();
+      await Promise.all([0, 1, 2].map(() => send({
+        type: 'cardImages', oracleIds: ['00000000-0000-4000-8000-000000000001']
+      }).catch(() => null)));
+      const elapsed = Date.now() - started;
+      assert(elapsed >= 2 * 500,
+        'three card requests are spread across their slots, not fired together (' + elapsed + 'ms)');
+    }
+
+
     console.log('background.js: parseTaggerCard classifier direction');
     const forward = ctx.parseTaggerCard({ oracleId: ORACLE_ID, edges: [REL_FORWARD] });
     assertEqual(forward.card[0],

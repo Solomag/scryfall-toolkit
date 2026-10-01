@@ -365,7 +365,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
       const set = String(message.set || "").toLowerCase();
       const number = String(message.number || "").trim();
       if (!/^[a-z0-9_-]{1,16}$/.test(set) || !/^[a-z0-9★-]{1,24}$/.test(number)) throw new Error("Invalid printing");
-      const card = await getJSON(`https://api.scryfall.com/cards/${encodeURIComponent(set)}/${encodeURIComponent(number)}`);
+      const card = await scryfallJSON(`https://api.scryfall.com/cards/${encodeURIComponent(set)}/${encodeURIComponent(number)}`);
       return { id: /^[0-9a-f-]{36}$/.test(card.id || "") ? card.id : "" };
     }
     if (message.type === "cardImages") {
@@ -518,7 +518,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
       // what those are. One lookup, through the same Scryfall queue.
       const name = String(message.name || "").trim();
       if (!name || name.length > 120 || /[<>\u0000-\u001f]/.test(name)) throw new Error("Invalid card name");
-      const card = await getJSON(`https://api.scryfall.com/cards/named?exact=${encodeURIComponent(name)}`);
+      const card = await scryfallJSON(`https://api.scryfall.com/cards/named?exact=${encodeURIComponent(name)}`);
       const identity = Array.isArray(card.color_identity) ? card.color_identity : [];
       return { colorIdentity: identity.filter(c => /^[wubrg]$/.test(c)).join("") };
     }
@@ -529,7 +529,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
       const query = String(message.query || "").trim();
       const page = Math.min(200, Math.max(1, Number(message.page) || 1));
       if (!query || query.length > 300 || /[<>\u0000-\u001f]/.test(query)) throw new Error("Invalid search query");
-      const result = await getJSON(
+      const result = await scryfallJSON(
         `https://api.scryfall.com/cards/search?q=${encodeURIComponent(query)}&unique=cards&page=${page}`
       );
       const cards = (result.data || []).slice(0, 60).map(card => {
@@ -557,7 +557,9 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
       if (!/^(oracleid|illustrationid)$/.test(String(message.kind)) ||
           !/^[0-9a-f-]{36}$/.test(String(message.id))) throw new Error("Invalid preview identity");
       const key = `preview:${message.kind}:${message.id}`;
-      if (!cache.has(key)) cache.set(key, getJSON(
+      // /cards/search, and this one is asked for every card the reader hovers, so
+      // it goes through the paced queue like every other call to that endpoint.
+      if (!cache.has(key)) cache.set(key, scryfallJSON(
         `https://api.scryfall.com/cards/search?q=${encodeURIComponent(`${message.kind}:${message.id}`)}`
       ).then(result => {
         const card = result.data?.[0];
@@ -581,7 +583,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
         let truncated = false;
         for (let page = 0; page < 8 && url; page++) {
           if (page) await new Promise(resolve => setTimeout(resolve, 120));
-          const response = await getJSON(url);
+          const response = await scryfallJSON(url);
           if (!Array.isArray(response.data)) throw new Error('Invalid print list');
           prints.push(...response.data.map(card => ({
             id: card.id, name: card.name, uri: card.scryfall_uri, set: card.set,
@@ -612,10 +614,18 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
         heritage: "(st:core OR st:expansion) AND -atag:external-ip"
       };
       const q = `oracleid:${message.oracleId} AND ${clauses[message.format]}`;
-      const response = await fetch(`https://api.scryfall.com/cards/search?q=${encodeURIComponent(q)}`);
-      if (response.status === 404) return { legality: "not_legal" };
-      if (!response.ok) throw new Error(`Scryfall API: ${response.status}`);
-      const result = await response.json();
+      // /cards/search is one of the endpoints limited to two a second, and this one
+      // is asked once per format the reader turns on, so it goes through the paced
+      // queue like the rest rather than straight to fetch.
+      let result;
+      try {
+        result = await scryfallJSON(
+          `https://api.scryfall.com/cards/search?q=${encodeURIComponent(q)}`);
+      } catch (error) {
+        // No such card is an answer, not a fault: the reader sees "not legal".
+        if (error && error.status === 404) return { legality: "not_legal" };
+        throw error;
+      }
       return { legality: result.total_cards > 0 ? result.data?.[0]?.legalities?.legacy : "not_legal" };
     }
     throw new Error("Unknown request");
@@ -623,22 +633,92 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
   return true;
 });
 
-// Scryfall asks that traffic to api.scryfall.com stay under ten requests a
-// second. The extension reached it from several places and two of them paced
-// themselves while the rest did not, so the pacing is in one place now: a slot
-// every 130 ms, which keeps a burst of card pages well inside that.
-let scryfallNextRequest = 0;
-async function scryfallJSON(url, options = {}) {
-  const wait = Math.max(0, scryfallNextRequest - Date.now());
-  scryfallNextRequest = Date.now() + wait + 130;
-  if (wait) await new Promise(resolve => setTimeout(resolve, wait));
-  return getJSON(url, options);
+// Scryfall publishes its rate limits per endpoint class, and the classes are not
+// the same size:
+//
+//   /cards/search, /cards/named, /cards/random, /cards/collection  2/second (500ms)
+//   /cards/manifest                                                 10/minute
+//   every other method                                              10/second (100ms)
+//
+// This used to be one queue with one 130 ms slot for everything, taken from the
+// "ten a second" figure. That is roughly four times their limit for the card
+// endpoints, and the card endpoints are the ones this extension leans on hardest:
+// the finish column, the EDHREC artwork and the deck search all go through
+// /cards/collection, and a deck of a hundred suggestions is two of those back to
+// back. Scryfall's words for what follows are a thirty-second limitation and then
+// a temporary or permanent ban of the application, so being over by four is not
+// a rounding error.
+//
+// Each class therefore has its own queue, at their ceiling plus a margin, because
+// a ceiling is a ceiling: a timer that wakes a hair early must not turn "two a
+// second" into "just under three".
+const SCRYFALL_LIMITS = {
+  slowCards: 520,   // 2/second, as published. 500 would be exactly at the line.
+  manifest: 6100,   // 10/minute
+  other: 120        // 10/second, as published
+};
+const scryfallQueues = { slowCards: 0, manifest: 0, other: 0 };
+let scryfallHeldUntil = 0;
+
+// Which class a URL is in, decided once here rather than at each of the twelve
+// call sites, which is how the single-queue version came to be wrong in the first
+// place: there was nowhere that knew what the limits actually were.
+function scryfallClass(url) {
+  if (/\/cards\/(search|named|random|collection)(\?|$|\/)/.test(url)) return 'slowCards';
+  if (/\/cards\/manifest(\?|$)/.test(url)) return 'manifest';
+  return 'other';
 }
 
-async function getJSON(url, options = {}) {
+async function scryfallJSON(url, options = {}) {
+  const kind = scryfallClass(String(url));
+  const gap = SCRYFALL_LIMITS[kind];
+  for (;;) {
+    const now = Date.now();
+    const waitUntil = Math.max(scryfallQueues[kind], scryfallHeldUntil);
+    if (waitUntil <= now) break;
+    // Re-read on the way round, so a 429 raised while this one slept holds it
+    // back as well.
+    await new Promise(resolve => setTimeout(resolve, waitUntil - now));
+  }
+  scryfallQueues[kind] = Date.now() + gap;
+  return scryfallGet(url, options);
+}
+
+// Their documentation says a 429 is not something to shrug at: access is limited
+// for thirty seconds, and going on afterwards can get the extension blocked. The
+// EDHREC queue has held back on a 429 since the start; this one did not, so a burst
+// that crossed a limit kept crossing it.
+const SCRYFALL_HOLD_MS = 30000;
+
+// Fetch and give the body back, or the response itself if it is not a success, so
+// the caller can tell a 429 from a 404 — they need different things done about them.
+async function scryfallGetJSON(url, options) {
   // No cookies go out on any of these calls: the extension asks services for
   // data, it does not act as the user on them. Set once here rather than at
   // thirteen call sites, one of which used to forget.
+  const response = await fetch(url, { credentials: 'omit', ...options });
+  if (!response.ok) return { failed: true, status: response.status };
+  return { failed: false, body: await response.json() };
+}
+
+async function scryfallGet(url, options = {}) {
+  let attempt = await scryfallGetJSON(url, options);
+  if (attempt.failed && attempt.status === 429) {
+    scryfallHeldUntil = Date.now() + SCRYFALL_HOLD_MS;
+    for (const key of Object.keys(scryfallQueues)) scryfallQueues[key] = scryfallHeldUntil;
+    attempt = await scryfallGetJSON(url, options);
+  }
+  if (attempt.failed) {
+    // The status rides along on the error because some callers need to tell one
+    // failure from another: a card that does not exist is an answer, not a fault.
+    const error = new Error(`HTTP ${attempt.status}`);
+    error.status = attempt.status;
+    throw error;
+  }
+  return attempt.body;
+}
+
+async function getJSON(url, options = {}) {
   const response = await fetch(url, { credentials: 'omit', ...options });
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   return response.json();
@@ -683,9 +763,8 @@ async function setPlatformGames(code) {
   for (let attempt = 0; attempt < 3; attempt++) {
     // Pacing lives in scryfallJSON now.
     try {
-      const result = await getJSON(
-        `https://api.scryfall.com/cards/search?q=${encodeURIComponent(`e:${code}`)}&unique=cards&page_size=1`,
-        {headers:{Accept:'application/json'},credentials:'omit'});
+      const result = await scryfallJSON(
+        `https://api.scryfall.com/cards/search?q=${encodeURIComponent(`e:${code}`)}&unique=cards&page_size=1`);
       const games = Array.isArray(result?.data?.[0]?.games) ? result.data[0].games : [];
       if (games.length) return games;
     } catch (error) {

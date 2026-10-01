@@ -414,9 +414,27 @@ decision before the archive is published widely.
 5. **CardTrader API terms** — confirm the display rules for a third-party extension
    showing prices with the user's own token.
 6. **Scryfall's acceptable-use rules** — the Terms say "You may not scrape Scryfall" and
-   "You may not place undue burden on Scryfall through the use of automated means". This
-   project reads the page the user is viewing and calls the documented API on a seven-day
-   refresh; confirm that this pattern is acceptable, and keep the request rate low.
+   "You may not place undue burden on Scryfall through the use of automated means", and
+   their API documentation says the same in more detail. This project reads the page the
+   user is viewing and calls the documented API; it does not crawl, and it does not keep
+   a copy of their data. Their published rate limits, from
+   <https://scryfall.com/docs/api/rate-limits>, are per endpoint class and the card
+   classes are the tight ones:
+
+   | Endpoint | Their limit | What this project allows itself |
+   | --- | --- | --- |
+   | `/cards/search`, `/cards/named`, `/cards/random`, `/cards/collection` | 2/second | one every 520 ms |
+   | `/cards/manifest` | 10/minute | one every 6.1 s |
+   | every other method | 10/second | one every 120 ms |
+
+   The margins are deliberate: these are ceilings, and a timer that wakes a hair early
+   must not turn "two a second" into "just under three". A 429 holds every queue for
+   thirty seconds, which is the period their page says access is limited for, and one
+   request is retried after it. That last part was missing until 2026-10-01: the queue
+   had one slot of 130 ms for everything, taken from the "ten a second" figure, which is
+   about four times their limit for the card endpoints — the ones the finish column, the
+   EDHREC artwork, the deck search and the hover preview all use — and a 429 was treated
+   as an ordinary failure, so a burst that crossed a limit kept crossing it.
 7. **Nickname data revision** — `data/shambleshark-nicknames.js` matches Shambleshark's
    `main` branch as read on 2026-09-25, with the `stc` → `snc` set-code difference noted
    above. If Shambleshark publishes a new revision, the bundle should be re-derived and
