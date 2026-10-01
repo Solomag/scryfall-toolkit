@@ -55,8 +55,13 @@ async function manifestIntegrity() {
   // and a checkout on the runner has LF, and a test that forgets that fails on
   // one of them for a reason that has nothing to do with what it is testing.
   const firstLine = file => read(file).split(/\r?\n/)[0].trim();
-  assertEqual(firstLine('README.md'), `# Scryfall Toolkit ${manifest.version}`,
-    'README version matches manifest, and does not call a released extension a preview');
+  // The README carries no version, and the reason is the point of the assertion: a
+  // number in the title of a project page is a claim about the newest release, and the
+  // page said 0.58.0 while the newest release was 0.51.0 — both true, and the pair of
+  // them telling a reader to install something that does not exist. So the title is
+  // checked for the opposite: that a version has not crept back into it.
+  assertEqual(firstLine('README.md'), '# Scryfall Toolkit',
+    'the README title carries no version, and does not call a released extension a preview');
   const pkg = JSON.parse(read('package.json'));
   assertEqual(pkg.version, manifest.version, 'package.json version matches manifest');
   // The store listing is what gets pasted into the review form, and it carries

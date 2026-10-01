@@ -1,12 +1,23 @@
-// One place that knows the version, so the four files that have to agree are
-// updated together and a partial bump cannot happen.
+// One place that knows the version, so the files that have to agree are updated
+// together and a partial bump cannot happen.
 //
 // The version lives in package-lock.json and nowhere else. That is not a choice
 // anyone made: the lock has been the file nobody remembered to touch since the
 // first commit, so the test that compares it to the manifest is the only thing
 // that has ever caught the mismatch — and it caught it by failing, after the
-// push, on the runner, as a red X in a notification. A helper that rewrites all
-// four in one go is a better answer to that than another test.
+// push, on the runner, as a red X in a notification. A helper that rewrites them
+// all in one go is a better answer to that than another test.
+//
+// README.md is deliberately not one of them. Its title carried the number, and a
+// number in a project page's title is a promise the page cannot keep: `main` moves
+// every day, the releases move only when somebody tags, and a reader comparing the two
+// is told a version exists that nobody can install. So the page said 0.58.0 while the
+// newest release was 0.51.0, and both numbers were true. The version belongs in the
+// releases, where it is stamped, and in the manifest inside the archive, where it is what
+// Chrome actually reads.
+//
+// The store listing keeps its number: it is the document a reviewer holds against a
+// submitted archive, so there the two have to match.
 const fs = require('node:fs');
 const path = require('node:path');
 // The repository root, not this file's directory: the script lives in tools/
@@ -20,7 +31,6 @@ const TARGETS = [
   { file: 'package-lock.json', how: 'json' },
   { file: 'package.json', how: 'json' },
   { file: 'manifest.json', how: 'json' },
-  { file: 'README.md', how: 'title' },
   { file: 'docs/CHROME_WEB_STORE_LISTING.md', how: 'title' }
 ];
 

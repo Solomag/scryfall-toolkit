@@ -1,4 +1,4 @@
-# Scryfall Toolkit 0.64.0
+# Scryfall Toolkit
 
 An independent browser extension for **Scryfall** and **Scryfall Tagger**: a shared card clipboard, tag panels on card pages, extra format legalities, a dark theme, and optional EDHREC and CardTrader data.
 
