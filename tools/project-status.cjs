@@ -40,7 +40,12 @@ const FACTS = {
       'docs/ROADMAP.md': ['Shipped, on nominative use']
     },
     forbidden: {
-      'THIRD_PARTY_NOTICES.md': [/^\s*unresolved/im, 'not cleared']
+      'THIRD_PARTY_NOTICES.md': [/^\s*unresolved/im, 'not cleared'],
+      // The README was the last document still carrying the old wording, and it was
+      // found by reading the rendered page after the notices had been fixed — which
+      // is the argument for putting the words in a check rather than in a reviewer's
+      // memory: a table of licences is exactly where a stale sentence hides.
+      'README.md': [/not cleared/i]
     }
   },
   cardTraderMark: {
@@ -50,7 +55,8 @@ const FACTS = {
       'docs/ROADMAP.md': ['nominative use']
     },
     forbidden: {
-      'THIRD_PARTY_NOTICES.md': [/^\s*unresolved/im, 'not cleared']
+      'THIRD_PARTY_NOTICES.md': [/^\s*unresolved/im, 'not cleared'],
+      'README.md': [/not cleared/i]
     }
   },
   cardTraderApi: {

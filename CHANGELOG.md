@@ -277,6 +277,26 @@ extension running — so that finding one during a pass is a decision rather tha
 
 Tests: 1659 assertions pass across eight suites.
 
+### Work that had not been pushed
+
+Six commits from the previous rounds were committed and never pushed. The working tree
+was clean, every suite was green, and the project page was still showing a version from a
+week earlier. Nothing in a test suite can catch this: a test can prove a commit exists and
+has no way of knowing whether it left the machine, and "the tree is clean" reads like
+"the work is done" when it means only the first.
+
+The version came out of the README title for the same reason. A number there is a promise
+the page cannot keep — `main` moves every day and the releases move only when somebody
+tags — so the page said 0.58.0 while the newest release was 0.51.0, and both were true.
+The title is now just the name, the version tool no longer writes it, and the test checks
+for the opposite: that a version has not crept back in. The store listing keeps its number,
+because that is the document a reviewer holds against a submitted archive.
+
+And the seventh defect, found by reading the rendered project page rather than the file:
+the README's licence table still said the two brand marks were "not cleared", which is the
+wording this project left behind five releases ago and which the notices no longer use. It
+is now checked in the README too, and the check was verified by putting the sentence back.
+
 ### The theme, in seven files
 
 The dark theme was one 753-line stylesheet. It is seven files now, under
