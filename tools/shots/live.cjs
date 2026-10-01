@@ -118,7 +118,22 @@ async function taggerEdges({ set, number, name }) {
   const url = 'https://tagger.scryfall.com/graphql/registry?name=shambleshark_card_edges' +
     '&set=' + encodeURIComponent(set) + '&number=' + encodeURIComponent(number);
   const answer = await cachedPost(url, JSON.stringify({ query }));
-  const card = answer && answer.data && answer.data.card;
+  return readEdges(answer);
+}
+
+// The same edges, asked for by oracle id rather than by printing — which is how a
+// picture gets the tags of the card its page is actually showing. The tag names come
+// from here, and a name that belongs to a different card is a picture of a card that
+// does not exist.
+async function taggerEdgesByOracle(oracleId) {
+  const query = '{ cardOracle(oracleId:' + JSON.stringify(oracleId) +
+    '){ name oracleId illustrationId edges { tag { name slug type namespace } } } }';
+  const url = 'https://tagger.scryfall.com/graphql/registry?name=shambleshark_oracle_edges';
+  return readEdges(await cachedPost(url, JSON.stringify({ query })));
+}
+
+function readEdges(answer) {
+  const card = answer && answer.data && (answer.data.card || answer.data.cardOracle);
   if (!card || !Array.isArray(card.edges)) return null;
 
   const tags = { card: [], art: [] };
@@ -176,19 +191,27 @@ async function allPrintings(name) {
 }
 
 // One real card, with everything a shot needs.
-async function heroCard() {
-  for (const candidate of CANDIDATES) {
+//
+// `printing` asks for a particular card, by the set and number of the printing a
+// picture is cut from: the data in the panel has to be that card's data, or the tag
+// panel shows one card's tags beside another card's name. Tagger answers by printing
+// and not by oracle id — it has no query of the kind that takes one — so the page's own
+// printing is the only handle there is, which is also the honest one: it is the
+// printing whose artwork the tags describe.
+async function heroCard(printing = null) {
+  const wanted = printing ? [printing] : CANDIDATES;
+  for (const candidate of wanted) {
     const tags = await taggerEdges(candidate);
     if (!tags || tags.cardTags.length < 2) continue;
 
-    // The oracle id Scryfall itself uses for this card. Tagger's answer carries an
-    // identifier of its own that the card endpoint does not know, so the id comes
-    // from Scryfall, where it is a real, resolvable reference.
+    // The card itself, from Scryfall. Tagger's answer carries an identifier of its own
+    // that the card endpoint does not know, so the id comes from Scryfall, where it is
+    // a real, resolvable reference.
     const card = await cachedGet('https://api.scryfall.com/cards/named?exact=' +
       encodeURIComponent(candidate.name));
     if (!card || !card.oracle_id) continue;
 
-    const list = await allPrintings(candidate.name);
+    const list = await allPrintings(card.name);
     if (list.length < 4) continue;
 
     const legalities = card.legalities || {};
@@ -280,4 +303,5 @@ async function setCategories() {
   return categories;
 }
 
-module.exports = { heroCard, clipboardCards, setCategories, taggerEdges, cachedGet };
+module.exports = { heroCard, clipboardCards, setCategories, taggerEdges, taggerEdgesByOracle,
+  allPrintings, cachedGet };

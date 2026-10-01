@@ -845,6 +845,20 @@ function featureShotsTest() {
   // because their API refuses this machine — the pictures must not claim otherwise.
   assert(/live\.cjs|heroCard/.test(read('tools/shots/cardpage.cjs')),
     'the pictures are filled with fetched data, not typed');
+  // The stage is Scryfall's own page, fetched whole, with their stylesheet inlined.
+  //
+  // It used to be a container of ours, and the panels came out looking like a
+  // different program — oversized serif links, purple underlined tag names, a light
+  // page where the product is dark. Nothing in the panels was wrong; the picture was
+  // taken somewhere the extension never runs. This is the check that says so.
+  const stage = read('tools/shots/cardpage.cjs');
+  assert(/realpage|realPage/.test(stage), 'the pictures are cut out of a real Scryfall page');
+  assert(/card-legality-row|prints-table/.test(read('tools/shots/realpage.cjs')) ||
+    /realPage/.test(stage), 'and the page is Scryfall\'s own document, not a stand-in');
+  assert(/stk-dark/.test(stage), 'in the extension\'s own dark theme');
+  const shotTool = read('tools/make-feature-shots.cjs');
+  assert(/\.card-profile|\.prints/.test(shotTool),
+    'and the crops are Scryfall\'s own elements, where the extension puts them');
   // Comments are stripped first: the fixture explains what it used to contain, and
   // naming that in a check would fail on its own explanation.
   const code = read('tools/shots/cardpage.cjs')

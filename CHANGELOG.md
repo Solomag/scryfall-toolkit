@@ -91,10 +91,7 @@ page and it said so.
 No card art is in any of them, and the extension does not ship card imagery: the panels
 that matter are tables, badges and lists. What the pictures do carry is Scryfall's data —
 its set names, its prices, its legalities — and Tagger's tag names, because those are the
-data the features put on screen, and anything else in a picture would be a fiction. The
-surface a panel sits on is a plain card-page-shaped container of our own, which is also
-why the store listing's question — may a card appear in a screenshot — does not arise for
-the illustrations at all.
+data the features put on screen, and anything else in a picture would be a fiction.
 
 The store screenshots were stale the moment the page changed, and there was no way to
 refresh them: the listing told a reader to rebuild the tiles from a capture, and the
@@ -115,7 +112,41 @@ last one is no, and the reason is the shape of the failure: an indirection layer
 renamed class into a lookup returning undefined, and a null from querySelector is a
 silent no-op.
 
-Tests: 1633 assertions pass across eight suites.
+### On the real page
+
+The stage was the problem, not the panels. They were being built on a card-page-shaped
+container of ours, with our own stylesheets and no Scryfall CSS — which is why the tag
+names came out as giant purple underlined serif links, the panels sat at no proportion to
+anything, and the whole thing was light while the product is dark. A reader who knows the
+extension sees a picture of a different program.
+
+Scryfall serves the whole page as plain HTML with one stylesheet, and both are reachable.
+So the stage is now the page: their markup, their stylesheet inlined, our theme on top, and
+our panels where our own feature files put them — which, checked, is exactly where they
+sit in the reader's own screenshot. Card and tags come from that page's printing, so the
+panel cannot show one card's tags beside another card's name.
+
+Still not the extension running in a browser: Chrome 154 refuses `--load-extension`, so
+nothing here is our service worker talking to a live page. The feature files are the same
+ones the extension loads and the two APIs are the same ones it asks. Scryfall's scripts
+are stripped; their markup and stylesheet are not.
+
+Four things that were wrong only because nothing looked at the pictures:
+
+- the extension's own icons are named `chrome-extension://…`, which resolves to nothing
+  when the page is rendered from disk, so every icon came out as a broken-image box;
+- the clipboard is an aside the height of the page, so cropping it gave a strip of empty
+  page with two rows of interest at the top, floating over the card's own text;
+- the legality block sits beside the artwork, so the ten pixels of slack the crop gives
+  every panel was a strip of somebody's card along the edge;
+- a card's printings table is a hundred rows long, which is not an error — so the length
+  that meant "something has no size" and the length that means "cut it here" are two
+  different checks, and the cut is printed when it happens.
+
+Tests: 1637 assertions pass across eight suites.
+
+### The theme, in seven files
+
 The dark theme was one 753-line stylesheet. It is seven files now, under
 `src/styles/theme/`: the card page, shared pages, the account and marketing pages,
 surfaces, Tagger, more shared surfaces, and our own panels. The manifest lists them in

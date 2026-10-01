@@ -17,7 +17,7 @@ than the answer and is the first thing a reader will otherwise re-litigate.
 | 1 | **The EDHREC and CardTrader marks** | **Shipped, on nominative use.** Neither party answered, and neither was asked a second time. The mark appears only to say whose data is on screen: never altered, never redrawn, never used as our own identity, on a control that already carries the name in words beside it. This is the basis the law offers a project in this position, and it is the *only* basis claimed — `THIRD_PARTY_NOTICES.md` says plainly that no permission was sought and none was granted, rather than writing "unresolved" next to a file we ship. If either party objects, the change is deleting one line of markup. |
 | 2 | **The CardTrader API** | **Kept, and it is narrower than it looked.** Their reference requires `Authorization: Bearer` with a token from a CardTrader account, and an unauthenticated call is refused with 401. So the extension does not redistribute anything: it fetches on the user's own credential, off by default, and stores no token of its own. What was actually open — whether a third party may redistribute their prices — cannot happen under this design, because there is no path to the data that does not start with the user's own account. |
 | 3 | **Aliasing Scryfall's class names in the scripts** | **No indirection layer.** CSS cannot alias a selector and JavaScript in a content script cannot import a table, so the alternative is a build step or a runtime lookup, and both were declined. A runtime lookup is worse than useless here: it turns a renamed class into a lookup that returns `undefined`, and a `null` from `querySelector` is a silent no-op — the exact failure this project has been bitten by more than once. The generated contract in `docs/scryfall-dom.md` is the layer instead: it names every name, the page it belongs to, and every file that reaches for it, and a test fails when a name is used and not written down. |
-| 4 | **Photographing the panels on the real site** | **Not possible with the tools on this machine, and recorded rather than worked around.** A true screenshot means loading the extension into a browser. Stable Chrome 154 refuses `--load-extension`: headless, headful with an offscreen window, with `--enable-unsafe-extension-debugging`, and with the removal feature flag turned off — four attempts, and the extension never appears among the targets. The first attempt "succeeded" visibly: a real Scryfall page loaded and its title was right. What was not checked was whether our worker was among the targets, and it was not. So the panels are attached to a container of our own with real data in them, and the one thing a screenshot cannot get — a picture of Scryfall's own page — is what the panels are not on. |
+| 4 | **Photographing the panels on the real site** | **The page is real; the code that paints it is not, and that is what is left.** Scryfall serves the whole card page as plain HTML with one stylesheet, so the pictures are cut out of their page with our theme on top — that part is closed. Stable Chrome 154 refuses `--load-extension` (headless, headful with an offscreen window, `--enable-unsafe-extension-debugging`, the removal flag), so the panels are placed by the tool rather than by a content script, and no service worker of ours is talking to a live page. The first attempt "succeeded" visibly — a real Scryfall page loaded and its title was right — and the thing that was not checked was whether our worker was among the targets. It was not. |
 | 5 | **Drawing the panels instead of photographing them** | **No, and the first set was the argument.** A drawing drifts from the code with nobody noticing, and a picture of a panel that no longer exists is worse than no picture: a reader cannot tell it apart from a working one. The middle ground — a photograph of real code with invented data in it — is worse than either. It had a card called "Test Card" and a commander figure of 4,823, and nothing in the picture said so. |
 
 ## Waiting on someone else
@@ -31,17 +31,15 @@ than the answer and is the first thing a reader will otherwise re-litigate.
 
 ### Illustrations of the panels, on real data
 
-Done in the sense that matters and worth stating precisely, because the gap is not
-closed by pretending.
+The pictures are now cut out of **Scryfall's own page**: their markup, their stylesheet,
+our theme on top, our panels where the feature files put them. Everything in them is real
+— their set names, prices, legalities, their tag names from Tagger — and the stage is the
+one the extension runs on, so a reader who knows the product sees the product.
 
-The six pictures in the settings carry **real data**: Scryfall's set names, prices,
-collector numbers, finishes and legalities, and Tagger's tag names — the two sources the
-extension itself asks. Nothing in them is typed. What is still not real is the *page*
-around the panels, and it cannot be from here: stable Chrome 154 refuses
-`--load-extension` outright, so the panels hang off a card-page-shaped container of our
-own. What would close the gap is a screenshot taken by hand in a browser with the
-extension loaded — the store's own rule about screenshots already covers a card appearing
-in one.
+What is left is not the stage but the code that painted it: stable Chrome 154 refuses
+`--load-extension`, so the panels are placed by the tool rather than by a content script,
+and no service worker of ours is talking to a live page. A picture taken by hand in a
+browser with the extension loaded would close that, and nothing else would.
 
 ### Store screenshots of Scryfall itself
 
