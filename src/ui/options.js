@@ -149,6 +149,64 @@ chrome.storage.local.get(defaults, values => {
   };
   offerNewTab();
   openOptions.addEventListener('click', () => chrome.runtime.openOptionsPage());
+  // The "?" beside a section heading opens the picture of that feature. The pictures
+  // sit in one dialog rather than in the sections: six large images in the body
+  // pushed the settings they explain off the bottom of the page, and the point of
+  // the settings page is the settings.
+  //
+  // The captions are written in Russian and run through the same translator as the
+  // rest of the page, because this text is created after the page is localized.
+  const SHOTS = {
+    tags: {
+      src: '../../assets/shots/tags.png',
+      caption: 'Так это выглядит на странице карты: таблицы тегов карты и тегов арта.'
+    },
+    cardclip: {
+      src: '../../assets/shots/cardclip.png',
+      caption: 'Буфер в углу страницы: собранные карты, каждую можно скопировать отдельно.'
+    },
+    'hide-extra': {
+      src: '../../assets/shots/hide-extra.png',
+      caption: 'Таблица изданий без цифровых сетов и без цен в валютах, которые вы скрыли.'
+    },
+    additional: {
+      src: '../../assets/shots/additional.png',
+      caption: 'Отдельный столбец отделки у каждого издания: Nonfoil, Foil, Etched.'
+    },
+    legality: {
+      src: '../../assets/shots/legality.png',
+      caption: 'Форматы, которых нет на странице карты Scryfall, добавлены в блок легальности.'
+    },
+    prints: {
+      src: '../../assets/shots/prints.png',
+      caption: 'Все издания собраны в одной таблице и сгруппированы по сетам.'
+    }
+  };
+  const shotDialog = document.getElementById('shotDialog');
+  const shotImage = document.getElementById('shotImage');
+  const shotCaption = document.getElementById('shotCaption');
+  document.querySelectorAll('.shot-button').forEach(button => {
+    // A "?" with no picture behind it is worse than no "?" at all, so a name the
+    // page does not know fails loudly here rather than opening an empty frame.
+    const shot = SHOTS[button.dataset.shot];
+    if (!shot) {
+      console.error('no illustration named ' + button.dataset.shot + '; the button will do nothing');
+      button.disabled = true;
+      return;
+    }
+    button.setAttribute('aria-label', t('Показать, как это выглядит'));
+    button.addEventListener('click', () => {
+      shotImage.src = shot.src;
+      shotImage.alt = t(shot.caption);
+      shotCaption.textContent = t(shot.caption);
+      shotDialog.showModal();
+    });
+  });
+  // Clicking the dimmed page behind the dialog closes it, the way a dialog is
+  // expected to behave; Escape already does, through the form's dialog method.
+  shotDialog.addEventListener('click', event => {
+    if (event.target === shotDialog) shotDialog.close();
+  });
   // The theme choice follows the operating system unless it is set by hand.
   // Installations that predate the choice stored a boolean: true is a dark
   // theme the user asked for, false is the light page they were seeing.

@@ -201,6 +201,17 @@ function createPage(options) {
   const url = options.url;
   const mock = options.mock || createChrome({ state: options.state, routes: options.routes });
   const { window, document } = parseHTML(options.html);
+  // linkedom parses a <dialog> but gives the element no modal behaviour, so a page
+  // that opens one throws a TypeError on the click. Patched here rather than through
+  // the context's HTMLDialogElement, because the element was already built by the
+  // parser and a class in the context does not reach it. The attribute stands in for
+  // the state a browser tracks in the element itself, so `open` reads back.
+  for (const dialog of document.querySelectorAll('dialog')) {
+    if (typeof dialog.showModal === 'function') continue;
+    dialog.showModal = function () { dialog.setAttribute('open', ''); };
+    dialog.close = function () { dialog.removeAttribute('open'); };
+  }
+
   // linkedom has no HTMLSelectElement.value. Every settings handler reads it, so
   // without this a test cannot drive a select at all.
   for (const select of document.querySelectorAll('select')) {

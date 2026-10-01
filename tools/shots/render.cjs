@@ -139,6 +139,16 @@ function copyPage(pageFile, outFile, { stub = STUB, css = [] } = {}) {
 
 // One browser, many pages. Launching per shot costs about a second each and adds
 // up, and the profile is what makes the port discoverable: Chrome writes it there.
+//
+// There is no way to load this extension into this browser, which is worth saying
+// here because it was tried. Stable Chrome 154 refuses --load-extension outright:
+// headless or not, in front of an offscreen window, with --enable-unsafe-extension-
+// debugging or with the removal feature flag turned off. The extension simply never
+// appears among the targets. So a shot cannot be a picture of the extension on
+// scryfall.com from here, and the data in it comes from Scryfall and Tagger instead.
+// An option that accepts an extension path is therefore deliberately absent: it
+// would launch a browser without the extension and photograph our panels anyway,
+// which is the quiet failure this project keeps running into.
 class Session {
   constructor() {
     this.chrome = findChrome();
@@ -279,6 +289,7 @@ class Session {
     const height = await this.fullHeight();
     return this.shoot(outPng, { clip: { x: 0, y: 0, width, height, scale: 1 } });
   }
+
 
   close() {
     try { this.socket && this.socket.close(); } catch (error) { /* already gone */ }

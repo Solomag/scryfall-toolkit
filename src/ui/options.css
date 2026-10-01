@@ -37,12 +37,19 @@ select,input[type=password]{width:100%;padding:8px;margin-top:4px;color:#e9e5ee;
 .salt-thresholds[hidden]{display:none}
 button{background:#473b50;color:#f1e8f3;border:1px solid #88758d;border-radius:4px;cursor:pointer;padding:7px 10px}button:hover{background:#5d4b68}
 .token-row{display:flex;gap:6px;align-items:center}.token-row input{min-width:0;flex:1}.token-row button{white-space:nowrap}
-/* The illustration under a section: what the reader gets if they turn it on. It is
-   a reference and not a banner, so it is capped well short of the column's width
-   and never scales up past the size it was drawn at. */
-.shot{margin:12px 0 16px;padding:0}
-.shot img{display:block;width:100%;max-width:560px;height:auto;border:1px solid #3a3644;border-radius:6px;background:#191820}
-.shot figcaption{margin-top:6px;color:#a49fb0;font-size:12px;line-height:1.45;max-width:560px}
+/* The "?" next to a section heading, and the picture it opens. The illustrations
+   are a reference and not a banner: they open over the settings at a size the panel
+   can actually be read at, and never scale up past the size they were drawn at. */
+.section-head{display:flex;align-items:center;gap:8px}
+.section-head h2{flex:1 1 auto;margin:0}
+.shot-button{flex:0 0 auto;width:22px;height:22px;padding:0;border-radius:50%;border:1px solid #6b6474;background:#24252b;color:#cfc8d8;font:600 13px/1 system-ui,sans-serif;cursor:pointer}
+.shot-button:hover,.shot-button:focus-visible{background:#33313a;color:#fff;border-color:#9b93a8}
+.shot-dialog{width:min(920px,92vw);max-height:88vh;padding:14px 14px 10px;background:#1d1d23;color:#e8e4ee;border:1px solid #55505e;border-radius:8px}
+.shot-dialog::backdrop{background:rgba(8,8,12,.72)}
+.shot-dialog-close{float:right;margin:0}
+.shot-dialog-close button{border:1px solid #6b6474;background:#24252b;color:#cfc8d8;border-radius:4px;font-size:16px;line-height:1;padding:4px 9px;cursor:pointer}
+.shot-dialog img{display:block;max-width:100%;height:auto;margin:0 auto;border:1px solid #3a3644;border-radius:6px;background:#191820}
+.shot-dialog p{margin:9px 0 0;color:#a49fb0;font-size:12px;line-height:1.45}
 .hint{font-size:12px;color:#bdb6c2;margin:12px 0 0}#status{color:#abdfb7;min-height:18px}
 .columns-header{display:grid;grid-template-columns:1fr 1fr;gap:8px;color:#bfb3c5;font-size:12px;margin:3px 0 7px}
 #formatList{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px 10px}

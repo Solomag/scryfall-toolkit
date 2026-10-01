@@ -10,9 +10,64 @@ All releases: <https://github.com/Solomag/scryfall-toolkit/releases>
 
 ## Unreleased
 
-Six sections of the settings page now carry a picture of what they turn on, and the
-brand marks ship with the basis for using them written down rather than a status
-nobody had resolved.
+The illustrations in the settings are photographs of the real thing, and they sit behind
+a "?" instead of inside the page.
+
+**Nothing in a picture is written by hand.** The previous set was full of invented text:
+a card called "Test Card", a set whose printing #6 did not exist, a commander figure of
+4,823. A reader cannot tell any of that from a picture of a working feature, which is
+exactly why it is wrong. Every card name, set name, collector number, price, finish and
+legality in a picture now comes from Scryfall's public API, and every tag name comes from
+Tagger's registry — the two sources the extension itself asks. The card is not chosen by
+hand either: the tool takes the first real card that satisfies what each panel needs, a
+card with tags to show, printings across several sets, and legality somewhere in the four
+formats the extension adds. If none of them qualifies, the tool stops.
+
+**What is still not real, and is written down in the tool that makes the pictures:**
+
+- *The page.* A true screenshot needs this extension loaded into a browser, and stable
+  Chrome 154 refuses `--load-extension` outright — tried headless, tried with an offscreen
+  window, tried with `--enable-unsafe-extension-debugging` and with the removal flag
+  turned off. The extension never appears among the targets. So the panels hang off a
+  reduced card-page container of our own, and everything inside a panel is real.
+- *EDHREC's deck counts.* `json.edhrec.com` answers 403 to anything outside their own
+  site, so a real number cannot be fetched here. Rather than print a plausible four
+  thousand decks, the section that would have shown it now illustrates the column of
+  finish badges — the other thing that section promises, computed from what Scryfall
+  returned.
+
+**Three silent failures, found by looking at the pictures rather than at the code:**
+
+- The finish column had one badge where there should be several. Not a race: a printing
+  with two finishes gets an empty cell on purpose, so the tool now waits for a *number*
+  of badges rather than for one.
+- The legality picture showed Scryfall's own Standard and Modern and none of our work.
+  The block's id lands on whichever row sorts first, and an added format goes into
+  whichever row still has room — so the crop was of the wrong element, and it had been
+  for as long as the picture existed.
+- Two pictures came out identical, showing the same three rows, because the rows on the
+  page are picked by Scryfall and happened to be ones the settings change nothing about.
+  The rows now include a digital set and a non-English printing, so the picture of
+  hiding shows something actually hidden.
+
+**The "?" instead of pictures in the page.** Six large images in the body pushed the
+settings they explain off the bottom of the page; the point of the settings page is the
+settings. Each section heading now carries a "?" that opens the picture over the page, in
+a dialog: Escape closes it, so does a click on the dimmed page behind it, and a name the
+dialog does not know disables the button rather than opening an empty frame.
+
+**And the archive was missing all six pictures.** The build walks the files to find what
+they reference, and it read `<img src>` in the page — which is how the pictures travelled
+before they moved into a dialog. Afterwards the only place a name appeared was a string
+in `options.js`, written `../../assets/shots/x.png`, and the walker resolved strings from
+the root of the extension, so a path that climbs out of its own folder became one starting
+with `..` and was thrown away by the guard that stops a reference escaping the archive.
+The build reported itself complete, at 4.35 MB instead of 4.73 MB. It now resolves a
+climbing path against the file it is written in, and the packaged test resolves the same
+names the same way and asks the archive — the check that the old one was missing.
+
+Also in this release: the brand marks ship with the basis for using them written down
+rather than a status nobody had resolved.
 
 The illustrations are photographs of the real panels, not drawings of them. Each one
 is a crop of markup the actual feature files produced, on the project's own
@@ -25,16 +80,21 @@ That is the only version of this that can be trusted twice. A drawing drifts fro
 code without anybody noticing; a picture of a panel that no longer exists is worse
 than no picture, because a reader cannot tell it apart from a working one. So each
 shot names the element it is about and the tool waits for it: a feature that stops
-rendering is an error, not a small empty rectangle. There is a test that the page, the
-folder and the tool never disagree about which illustrations exist — and it earns its
+rendering is an error, not a small empty rectangle. Waiting for one thing turned out to
+be not enough, though, which is the first bullet above: two of the three failures were a
+picture that was not empty and not wrong in any way a check could see. There is a test
+that the page, the folder and the tool never disagree about which illustrations exist,
+and it now also refuses a fixture that has invented text left in it — and it earns its
 keep, because a `git checkout` during a mutation test took the six figures out of the
 page and it said so.
 
-Nothing from Scryfall or Wizards is in any of them. No card art, no Scryfall markup,
-no branding: the panels that matter are tables, badges and lists, and the extension
-does not ship card imagery. The surface a panel sits on is a plain card-page-shaped
-container, which is also why the store listing's question — may a card appear in a
-screenshot — does not arise for the illustrations at all.
+No card art is in any of them, and the extension does not ship card imagery: the panels
+that matter are tables, badges and lists. What the pictures do carry is Scryfall's data —
+its set names, its prices, its legalities — and Tagger's tag names, because those are the
+data the features put on screen, and anything else in a picture would be a fiction. The
+surface a panel sits on is a plain card-page-shaped container of our own, which is also
+why the store listing's question — may a card appear in a screenshot — does not arise for
+the illustrations at all.
 
 The store screenshots were stale the moment the page changed, and there was no way to
 refresh them: the listing told a reader to rebuild the tiles from a capture, and the
@@ -55,7 +115,7 @@ last one is no, and the reason is the shape of the failure: an indirection layer
 renamed class into a lookup returning undefined, and a null from querySelector is a
 silent no-op.
 
-Tests: 1555 assertions pass across eight suites.
+Tests: 1633 assertions pass across eight suites.
 The dark theme was one 753-line stylesheet. It is seven files now, under
 `src/styles/theme/`: the card page, shared pages, the account and marketing pages,
 surfaces, Tagger, more shared surfaces, and our own panels. The manifest lists them in

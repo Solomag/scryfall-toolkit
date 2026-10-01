@@ -788,30 +788,45 @@ async function discoveredFormatsTest() {
   assert(extra.textContent.includes('My Format'), 'discovered format shows its label');
 }
 
-// The illustrations beside the settings. Photographs of the real panels, and the
-// three ways they can fall out of step with the page.
+// The illustrations behind the "?" beside each section heading. Photographs of the
+// real panels, and the ways they can fall out of step with the page.
 function featureShotsTest() {
   console.log('settings: the illustrations match the page, the folder and the tool');
   const html = read('src/ui/options.html');
+  const script = read('src/ui/options.js');
   const dir = path.join(ROOT, 'assets', 'shots');
   assert(fs.existsSync(dir), 'there is a folder of illustrations');
   const onDisk = fs.readdirSync(dir).filter(name => name.endsWith('.png')).sort();
   assert(onDisk.length >= 6, 'and it holds one per illustrated section (' + onDisk.length + ')');
 
-  // Named by the page, not by a list written here: the page is what a reader sees,
-  // so the page is what decides whether a file is used.
-  const named = [...html.matchAll(/assets\/shots\/([a-z-]+\.png)/g)].map(match => match[1]).sort();
+  // The pictures are opened from a dialog rather than shown in the sections, so the
+  // page carries only the buttons and the script carries the pictures. Named by
+  // the script, because the script is what a reader's click reaches.
+  assert(/<dialog id="shotDialog"/.test(html), 'the page has a dialog to show a picture in');
+  assert(/id="shotImage"/.test(html) && /id="shotCaption"/.test(html), 'with somewhere for the picture and its caption');
+  assert(!/<figure/.test(html) && !/assets\/shots\//.test(html),
+    'and no picture is laid out in the body of the page any more');
+
+  const shots = [...script.matchAll(/^\s{4}'?([a-z-]+)'?:\s*\{\s*$/gm)].map(match => match[1]);
+  const named = [...script.matchAll(/src: '\.\.\/\.\.\/assets\/shots\/([a-z-]+\.png)'/g)]
+    .map(match => match[1]).sort();
+  assertEqual(named.length, shots.length, 'every entry in the list of pictures names a file');
   const missing = named.filter(name => !onDisk.includes(name));
-  assertEqual(missing, [], 'every illustration the page names is on disk');
+  assertEqual(missing, [], 'every illustration the page can open is on disk');
   const unseen = onDisk.filter(name => !named.includes(name));
   assertEqual(unseen, [], 'and no illustration is made and then never shown');
+
+  // Every button has something to open. A "?" with no picture behind it looks like
+  // a feature that does not work.
+  const buttons = [...html.matchAll(/class="shot-button" data-shot="([a-z-]+)"/g)].map(match => match[1]).sort();
+  assertEqual(buttons, shots.slice().sort(), 'every "?" opens a picture that exists');
 
   // The tool has to agree with the page too, or regenerating quietly swaps one set
   // of illustrations for another.
   const tool = read('tools/make-feature-shots.cjs');
   const fromTool = [...tool.matchAll(/file: '([a-z-]+\.png)'/g)].map(match => match[1]).sort();
   assertEqual(fromTool, named,
-    'the tool makes exactly the illustrations the page shows');
+    'the tool makes exactly the illustrations the page can open');
 
   // Each one is a real PNG and none of them is a blank rectangle.
   for (const name of onDisk) {
@@ -825,9 +840,23 @@ function featureShotsTest() {
     assert(buffer.length > 2000, name + ' carries something');
   }
 
-  // The caption beside each one is translated like every other string on the page.
-  const captions = [...html.matchAll(/<figcaption>([^<]+)<\/figcaption>/g)].map(match => match[1]);
-  assertEqual(captions.length, onDisk.length,
+  // Nothing in a picture is written by hand. The tool fills them from Scryfall and
+  // from Tagger, and a caption that promises EDHREC's numbers cannot be shown
+  // because their API refuses this machine — the pictures must not claim otherwise.
+  assert(/live\.cjs|heroCard/.test(read('tools/shots/cardpage.cjs')),
+    'the pictures are filled with fetched data, not typed');
+  // Comments are stripped first: the fixture explains what it used to contain, and
+  // naming that in a check would fail on its own explanation.
+  const code = read('tools/shots/cardpage.cjs')
+    .replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/^\s*\/\/.*$/gm, ' ');
+  assert(!/Test Card|Memory Jar|4,823|Core Set 2019 #6/.test(code),
+    'and none of the invented text from the first version is left in the fixture');
+  assert(!/numDecks:\s*\d+|potentialDecks:\s*\d+/.test(code),
+    'and no deck counts are written down, which are the numbers we cannot fetch');
+
+  // The caption of each picture is translated like every other string on the page.
+  const captions = [...script.matchAll(/caption: '([^']+)'/g)].map(match => match[1]);
+  assertEqual(captions.length, named.length,
     'every illustration has a caption, and every caption has an illustration');
   const i18n = read('src/core/i18n.js');
   const untranslated = captions.filter(text => !i18n.includes(text));

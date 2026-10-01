@@ -17,16 +17,31 @@ than the answer and is the first thing a reader will otherwise re-litigate.
 | 1 | **The EDHREC and CardTrader marks** | **Shipped, on nominative use.** Neither party answered, and neither was asked a second time. The mark appears only to say whose data is on screen: never altered, never redrawn, never used as our own identity, on a control that already carries the name in words beside it. This is the basis the law offers a project in this position, and it is the *only* basis claimed — `THIRD_PARTY_NOTICES.md` says plainly that no permission was sought and none was granted, rather than writing "unresolved" next to a file we ship. If either party objects, the change is deleting one line of markup. |
 | 2 | **The CardTrader API** | **Kept, and it is narrower than it looked.** Their reference requires `Authorization: Bearer` with a token from a CardTrader account, and an unauthenticated call is refused with 401. So the extension does not redistribute anything: it fetches on the user's own credential, off by default, and stores no token of its own. What was actually open — whether a third party may redistribute their prices — cannot happen under this design, because there is no path to the data that does not start with the user's own account. |
 | 3 | **Aliasing Scryfall's class names in the scripts** | **No indirection layer.** CSS cannot alias a selector and JavaScript in a content script cannot import a table, so the alternative is a build step or a runtime lookup, and both were declined. A runtime lookup is worse than useless here: it turns a renamed class into a lookup that returns `undefined`, and a `null` from `querySelector` is a silent no-op — the exact failure this project has been bitten by more than once. The generated contract in `docs/scryfall-dom.md` is the layer instead: it names every name, the page it belongs to, and every file that reaches for it, and a test fails when a name is used and not written down. |
+| 4 | **Photographing the panels on the real site** | **Not possible with the tools on this machine, and recorded rather than worked around.** A true screenshot means loading the extension into a browser. Stable Chrome 154 refuses `--load-extension`: headless, headful with an offscreen window, with `--enable-unsafe-extension-debugging`, and with the removal feature flag turned off — four attempts, and the extension never appears among the targets. The first attempt "succeeded" visibly: a real Scryfall page loaded and its title was right. What was not checked was whether our worker was among the targets, and it was not. So the panels are attached to a container of our own with real data in them, and the one thing a screenshot cannot get — a picture of Scryfall's own page — is what the panels are not on. |
+| 5 | **Drawing the panels instead of photographing them** | **No, and the first set was the argument.** A drawing drifts from the code with nobody noticing, and a picture of a panel that no longer exists is worse than no picture: a reader cannot tell it apart from a working one. The middle ground — a photograph of real code with invented data in it — is worse than either. It had a card called "Test Card" and a commander figure of 4,823, and nothing in the picture said so. |
+
 ## Waiting on someone else
 
 | | What | Where it stands |
 |---|---|---|
 | 3 | **Scryfall's acceptable-use rules** | Their Terms say "You may not scrape Scryfall" and "You may not place undue burden on Scryfall through the use of automated means". This project reads the page being viewed and calls the documented API; it does not crawl and keeps no copy of their data. Their published rate limits are per endpoint class, and the extension was **over the tightest one by about four times** — see the closed item below. That is now fixed and checked by a test. What is still not established is whether they consider this pattern acceptable at all, which is a question for them and not for the repository. |
 | 4 | **Chrome Web Store review** | 0.48.0 went in. Later versions follow once it clears. The store is the only place users get the extension, so nothing is "released" until it is there. |
-| 3 | **Scryfall's acceptable-use rules** | Their Terms say "You may not scrape Scryfall" and "You may not place undue burden on Scryfall through the use of automated means". This project reads the page being viewed and calls the documented API; it does not crawl and keeps no copy of their data. Their published rate limits are per endpoint class, and the extension was **over the tightest one by about four times** — see the closed item below. That is now fixed and checked by a test. What is still not established is whether they consider this pattern acceptable at all, which is a question for them and not for the repository. |
-| 4 | **Chrome Web Store review** | 0.48.0 went in. Later versions follow once it clears. The store is the only place users get the extension, so nothing is "released" until it is there. |
 
 ## To do
+
+### Illustrations of the panels, on real data
+
+Done in the sense that matters and worth stating precisely, because the gap is not
+closed by pretending.
+
+The six pictures in the settings carry **real data**: Scryfall's set names, prices,
+collector numbers, finishes and legalities, and Tagger's tag names — the two sources the
+extension itself asks. Nothing in them is typed. What is still not real is the *page*
+around the panels, and it cannot be from here: stable Chrome 154 refuses
+`--load-extension` outright, so the panels hang off a card-page-shaped container of our
+own. What would close the gap is a screenshot taken by hand in a browser with the
+extension loaded — the store's own rule about screenshots already covers a card appearing
+in one.
 
 ### Store screenshots of Scryfall itself
 

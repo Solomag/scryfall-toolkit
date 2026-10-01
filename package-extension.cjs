@@ -94,8 +94,21 @@ function referencedBy(file) {
     // Files can be named through a map or a variable rather than a literal, as
     // the tag snapshot is. Anything that names a file of this project is a
     // reference to it, and these are written from the root.
-    for (const m of text.matchAll(/["']([^"'\s]+\.(?:js|css|png|svg|json))["']/g)) {
-      if (m[1].includes('/') || fs.existsSync(path.join(ROOT, m[1]))) addRoot(m[1]);
+    //
+    // The pattern covers .png and .svg because the illustrations are named this way.
+    // They were outside the archive until this was widened: the settings page put
+    // every picture in a <figure> with an <img>, and when the pictures moved behind
+    // the "?" and into a dialog, the only place a name appeared was a string in the
+    // script — so the walk found nothing and shipped a settings page whose six "?"
+    // buttons open nothing. The build reported itself complete.
+    for (const m of text.matchAll(/["']([^"'\s]+\.(?:js|css|png|svg|jpg|jpeg|webp|json|woff2?))["']/g)) {
+      // A name that climbs out of its own folder is relative, not from the root:
+      // options.js sits two folders down and reaches its pictures as
+      // "../../assets/shots/x.png". Resolved against the root that becomes a path
+      // starting with "..", which the guard then throws away — and the archive builds
+      // without the pictures while reporting itself complete.
+      if (m[1].startsWith('..')) add(m[1]);
+      else if (m[1].includes('/') || fs.existsSync(path.join(ROOT, m[1]))) addRoot(m[1]);
     }
   }
   return [...found];

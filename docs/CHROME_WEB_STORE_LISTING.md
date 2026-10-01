@@ -1,4 +1,4 @@
-# Chrome Web Store listing — Scryfall Toolkit 0.58.0
+# Chrome Web Store listing — Scryfall Toolkit 0.59.0
 
 Everything here is written from the shipped code, so that the answers given in the store
 console match what the extension actually does. Where a field needs a decision from the
@@ -231,7 +231,7 @@ Ready in `store-assets/`, each exactly **1280×800** (PNG), in English:
 | `store-assets/05-settings-05-of-05.png` | Legality with the format grid, Scryfall Deckbuilder, Experimental, Credits |
 
 All five come from one real capture of the settings page
-(`store-assets/settings-page-full.png`, 1280×6384), so nothing is repeated or cropped
+(`store-assets/settings-page-full.png`, 1280×4896), so nothing is repeated or cropped
 away between them. Each tile is scaled uniformly to 800 rows and the margins continue
 the page's own colour, so no screenshot is stretched.
 
@@ -252,32 +252,53 @@ The first command needs Chrome or Edge on the machine and finds either; set
 because cutting the tiles means resampling an image and this project has no image
 library.
 
-**The page the capture shows** is the one a reader lands on: the illustrations beside
-the sections are part of it, and they are made by `node tools/make-feature-shots.cjs`
-from the feature files themselves — see the note on them below.
+**The page the capture shows** is the one a reader lands on: the "?" beside each section
+is part of it, and the pictures it opens are made by `node tools/make-feature-shots.cjs`
+from the feature files themselves — see the note on them below. The pictures sit behind
+the "?" rather than in the page because six large images in the body pushed the settings
+they explain off the bottom of the page, and the point of the settings page is the
+settings.
 
 The store accepts up to 5 screenshots, and five is what covers the whole page.
 
-### The illustrations on the settings page
+### The illustrations in the settings
 
-Six of them, one under the section whose switch turns the feature on. A reviewer will
-see them in every one of the five screenshots, so what they are matters:
+Six of them, one behind the "?" beside the section whose switch turns the feature on. A
+reviewer sees the "?" in the screenshots and can open each picture, so what is inside
+matters:
 
 - **They are this project's own panels**, rendered from the feature files by
   `node tools/make-feature-shots.cjs` on the project's own stylesheets. Nothing in them
   is drawn, and nothing is a mock-up: they are crops of what the code produced.
+- **Every name, number and price in them is real, and none of it is written by hand.**
+  Card names, set names, collector numbers, prices, finishes and legalities come from
+  Scryfall's public API; tag names come from Tagger's registry — the two sources the
+  extension itself asks. The card is not chosen by hand either: the tool takes the first
+  real card that satisfies what the panels need, and fails if none does. An earlier
+  version of these pictures had invented text in it — a card called "Test Card", a
+  commander figure of 4,823 — which a reader cannot tell from a picture of a working
+  feature. That is why the fixture is now checked for exactly that.
 - **No card image appears in any of them.** The panels that matter are tables, badges
   and lists, and the extension does not ship Wizards' artwork. So the question in the
   next subsection does not arise for them.
 - **No Scryfall branding appears in them either.** They are not photographs of Scryfall
-  pages; the surface around a panel is a plain card-page-shaped container. Nothing in
-  them could be read as Scryfall endorsing this extension.
-- **The only third-party marks in them** are the EDHREC and CardTrader icons on the EDHREC
-  panel, which are shipped in the extension itself. See `THIRD_PARTY_NOTICES.md` for the
-  basis on which those are used.
+  pages; the surface around a panel is a plain card-page-shaped container of ours.
+  Nothing in them could be read as Scryfall endorsing this extension. It is worth being
+  precise about why: a true screenshot needs this extension loaded into a browser, and
+  stable Chrome 154 refuses `--load-extension` outright — tried headless, tried with an
+  offscreen window, tried with `--enable-unsafe-extension-debugging`. So the panels are
+  attached to a reduced container of our own, and everything *inside* a panel is real.
+- **EDHREC's deck counts are in none of them.** `json.edhrec.com` answers 403 to anything
+  outside their own site, so a real count cannot be fetched when the pictures are made.
+  Rather than show a plausible invented number, the Additional info section illustrates
+  the column of finish badges instead — computed from what Scryfall returned.
+- **No third-party marks are in them.** The EDHREC and CardTrader icons are not on any
+  panel these six pictures show, so the basis recorded in `THIRD_PARTY_NOTICES.md` for
+  those marks is not exercised here.
 - They are regenerated by a test-backed tool: if a feature stops rendering, the tool
-  fails rather than producing a picture of an empty panel, and a check fails if the
-  page, the folder and the tool ever disagree about which illustrations exist.
+  fails rather than producing a picture of an empty panel, and a check fails if the page,
+  the folder and the tool ever disagree about which illustrations exist.
+
 ### Whether a card may appear in one
 
 Yes. A card on a Scryfall page in a screenshot is a card as Scryfall shows it, which is

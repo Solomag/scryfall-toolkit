@@ -211,6 +211,36 @@ async function settingsPowerOnTest(dir) {
   // The button that opens a new tab must not sit on a page that is already in one.
   const openOptions = page.document.getElementById('openOptions');
   assert(openOptions, 'the settings page still offers the new-tab button where it helps');
+
+  // The pictures behind the "?" — checked here on the page that ships, not only in the
+  // unit test, because this is the one run against the packaged files. A "?" with no
+  // picture behind it looks to a reader like a feature that does not work, and the
+  // packaged page is what a reviewer opens.
+  const buttons = [...page.document.querySelectorAll('.shot-button')];
+  assert(buttons.length >= 6, `the settings page carries a "?" per illustrated section (${buttons.length})`);
+  const dialog = page.document.getElementById('shotDialog');
+  assert(dialog, 'and a dialog to show the picture in');
+  for (const button of buttons) {
+    const name = button.getAttribute('data-shot');
+    assert(name, 'every "?" names the picture it opens');
+    assert(!button.disabled, `the "?" for ${name} is not disabled`);
+  }
+  if (typeof dialog.showModal === 'function') {
+    buttons[0].click();
+    await tick();
+    const image = page.document.getElementById('shotImage');
+    const caption = page.document.getElementById('shotCaption');
+    assert(/\/assets\/shots\/.+\.png$/.test(image.getAttribute('src') || ''),
+      'and clicking a "?" puts a picture in the dialog');
+    assert((caption.textContent || '').length > 10, 'with its caption');
+  } else {
+    // The harness has no dialog, so the click cannot be exercised here. That is a
+    // fact about the harness and not a pass: without this the strongest check in the
+    // block would be skipped in every run and read as green.
+    assert(!/showModal/.test(fs.readFileSync(path.join(dir, 'src/ui/options.js'), 'utf8')),
+      'the script uses a dialog API the harness does not provide, so this run cannot ' +
+      'test the click — teach testlib showModal rather than leaving this untested');
+  }
 }
 
 // -----------------------------------------------------------------------------
@@ -558,6 +588,27 @@ function packagedArchiveTest() {
       assert(!name.startsWith('..'), `${file} does not reference outside the extension: ${written}`);
       assert(listed.includes(name), `${file} references ${written}, which is ${name} in the archive`);
     }
+  }
+  // The illustrations, and the third way a reference can go missing.
+  //
+  // An <img> in the page brought them along: the walker reads src attributes. Then
+  // the pictures moved behind the "?" and into a dialog, and the only place a name
+  // appeared was a string in options.js — which the walker reads, but only from the
+  // root of the extension, and these are written "../../assets/shots/x.png". The
+  // archive built without all six, reported itself complete, and shipped a settings
+  // page whose buttons open nothing.
+  //
+  // So this reads the names the way the script will hand them to the <img>: out of the
+  // file, resolved against the file's own folder, and then asks the archive.
+  const optionsScript = listed.includes('src/ui/options.js') ? 'src/ui/options.js' : null;
+  assert(optionsScript, 'the settings script is in the archive, or there is nothing to check');
+  const shotsDir = path.posix.dirname(optionsScript.split(path.sep).join('/'));
+  const shotNames = [...read(optionsScript).matchAll(/src:\s*["']([^"']+\.png)["']/g)].map(m => m[1]);
+  assert(shotNames.length >= 6, `the settings script names the illustrations (${shotNames.length})`);
+  for (const written of shotNames) {
+    const name = path.posix.normalize(path.posix.join(shotsDir, written));
+    assert(!name.startsWith('..'), `the illustrations are not named outside the extension: ${written}`);
+    assert(listed.includes(name), `${written}, which is ${name}, is inside the archive`);
   }
   fs.rmSync(out, { recursive: true, force: true });
 }

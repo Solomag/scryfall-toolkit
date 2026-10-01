@@ -1,36 +1,55 @@
-// Building a card page from the real feature files, with the data a reader needs
-// to see a feature rather than an empty shell.
+// Building a card page from the real feature files, filled with real data.
 //
 // It is the same harness the tests use, on purpose. The illustration is a crop of
 // what the code actually produced, so it cannot drift into a picture of a panel
 // that no longer exists — and if a feature stops working, the crop comes out empty
 // rather than stale, which is checked below.
 //
-// Nothing here reaches the network. Card art is deliberately absent: the panels
-// that matter for these illustrations are tables, badges and lists, and shipping
-// Wizards' card images inside a distributed extension is a question this project
-// has no need to answer. A crop that came out empty fails here rather than
-// shipping as an empty picture.
+// Nothing in here is typed. The card, its names, its set names, its collector
+// numbers, its prices, its finishes and its legalities come from Scryfall's API, and
+// its tags come from Tagger's registry — the same two sources the worker uses. The
+// previous version of this file had a card called "Test Card" in a set whose number
+// #6 did not exist and a commander figure of 4,823, and a reader could not tell any
+// of that from a picture of a working feature.
+//
+// Card art is deliberately absent: the panels that matter for these illustrations
+// are tables, badges and lists, and shipping Wizards' card images inside a
+// distributed extension is a question this project has no need to answer. A crop
+// that came out empty fails here rather than shipping as an empty picture.
+//
+// One thing is still not real and cannot be, from here: the page around the panels.
+// A real screenshot needs this extension loaded into a browser, and Chrome 154
+// refuses --load-extension, so the stage is a card-page-shaped container of our own
+// with our own stylesheets on it. What is inside the panel is real.
 const { createPage, sleep, click } = require('../../tests/testlib.cjs');
 const path = require('node:path');
 const { ROOT, fileUrl } = require('./render.cjs');
+const live = require('./live.cjs');
 
 const ORACLE_ID = '00000000-0000-4000-8000-000000000001';
-const REL_ONE = '55555555-5555-4555-8555-555555555555';
-const REL_TWO = '77777777-7777-4777-8777-777777777777';
 
-// The card page a user lands on, reduced to the parts our features read. It is not
-// Scryfall's markup and does not try to be: the illustrations crop our own
-// elements, and the surface around them is a plain card-page-shaped container.
-const CARD_HTML = `<!DOCTYPE html><html><head>
+// The page a user lands on, reduced to the parts our features read. The three rows
+// the table starts with are real printings of the real card — Scryfall renders those
+// rows itself, and the feature adds the rest — because a set header takes its name
+// from the API when the set has any added row and out of the card's own link when
+// it has none. A fixture whose every printing is native therefore produces a group
+// called "<card name> <set name>", which is what the first version did.
+function cardHtml(card, rows, oracleId = ORACLE_ID) {
+  const rowHtml = rows.map((row, index) =>
+    `<tr${index === 0 ? ' class="current"' : ''}><td>` +
+    `<a data-card-id="${row.id}" href="${row.uri}">${row.setName} #${row.number}</a></td>` +
+    `<td>${row.set.toUpperCase()}</td><td></td>` +
+    `<td>${row.prices && row.prices.usd ? `<a class="currency-usd" href="#">$${row.prices.usd}</a>` : ''}</td></tr>`
+  ).join('\n      ');
+  return `<!DOCTYPE html><html><head>
 <meta name="scryfall:card:id" content="11111111-1111-4111-8111-111111111111">
-<meta name="scryfall:oracle:id" content="${ORACLE_ID}">
-<title>Test Card</title></head><body>
+<meta name="scryfall:oracle:id" content="${oracleId}">
+<title>${card.name}</title></head><body>
 <div id="main"><div class="inner-flex">
   <div class="card-image"><img alt=""></div>
   <div class="card-text">
-    <div class="card-text-card-name">Test Card</div>
-    <div class="card-text-type-line">Instant</div>
+    <div class="card-text-card-name">${card.name}</div>
+    <div class="card-text-type-line">${card.typeLine || ''}</div>
     <div class="card-text-box"><div class="card-text-mana-cost"></div><div class="card-text"></div></div>
     <div class="card-legality"><div class="card-legality-row">
       <div class="card-legality-item"><dt>Standard</dt><dd class="legal">Legal</dd></div>
@@ -41,97 +60,116 @@ const CARD_HTML = `<!DOCTYPE html><html><head>
   <div class="prints"><table class="prints-table">
     <thead><tr><th>Name</th><th>Set</th><th>Rarity</th><th><span>USD</span></th></tr>
     <tbody>
-      <tr class="current"><td><a data-card-id="p1" href="https://scryfall.com/card/m19/1/test-card">Core Set 2019 #1</a></td><td>M19</td><td>R</td><td><a class="currency-usd" href="#">$3.41</a></td></tr>
-      <tr><td><a data-card-id="p2" href="https://scryfall.com/card/mh3/2/test-card">Modern Horizons 3 #2</a></td><td>MH3</td><td>U</td><td></td></tr>
-      <tr><td><a data-card-id="p3" href="https://scryfall.com/card/znr/3/test-card">Zendikar Rising #3</a></td><td>ZNR</td><td>M</td><td><a class="currency-usd" href="#">$1.20</a></td></tr>
+      ${rowHtml}
       <tr class="view-all"><td colspan="4"><a class="prints-all" href="https://scryfall.com/search?unique=prints">View all prints</a></td></tr>
     </tbody></table></div>
   <div class="rulings"></div>
 </div></div></body></html>`;
+}
 
-// Eight printings across five sets, one of them digital.
-//
-// Three of them are the rows Scryfall itself renders, and the rest are what the
-// feature fetches and adds. That split is not decoration: a set header takes its
-// name from the API when the set has any added row and out of the card's own link
-// when it has none, so a fixture whose every printing is native produces a group
-// called "Test Card Core Set 2019" — the card name glued to the set name, which is
-// what the first version of this fixture did.
-// The shape the worker sends, which is not the shape Scryfall's API answers in: the
+// The shape the worker sends, which is not the shape Scryfall's API answers in: a
 // printing is normalised to `number`, `setName` and `lang` before it reaches the
 // page. A fixture that sends the API's own field names produces rows labelled
 // "#undefined" and set names read out of the card's link, which looks like a broken
 // feature rather than a wrong fixture.
-const printing = (id, set, setName, number, prices, finishes, extra = {}) =>
-  Object.assign({
-    id,
-    name: 'Test Card',
-    uri: 'https://scryfall.com/card/' + set + '/' + number + '/test-card',
-    set,
-    setName,
-    number,
-    lang: 'en',
-    digital: false,
-    finishes,
-    prices
-  }, extra);
+const normalise = printing => ({
+  id: printing.id,
+  name: printing.name,
+  uri: printing.uri,
+  set: printing.set,
+  setName: printing.setName,
+  number: printing.number,
+  lang: printing.lang || 'en',
+  digital: Boolean(printing.digital),
+  finishes: printing.finishes || [],
+  promoTypes: printing.promoTypes || [],
+  typeLine: printing.typeLine || '',
+  prices: printing.prices || {}
+});
 
-const PRINTS = [
-  printing('p1', 'm19', 'Core Set 2019', '1', { usd: '3.41', eur: '3.02', tix: '2.10' }, ['nonfoil']),
-  printing('p2', 'mh3', 'Modern Horizons 3', '2', {}, ['nonfoil']),
-  printing('p3', 'znr', 'Zendikar Rising', '3', { usd: '1.20' }, ['foil']),
-  printing('p4', 'm19', 'Core Set 2019', '300', { usd: '9.99' }, ['etched']),
-  printing('p5', 'mh3', 'Modern Horizons 3', '150', { usd: '4.10' }, ['nonfoil']),
-  printing('p6', 'znr', 'Zendikar Rising', '201', { usd: '2.30' }, ['nonfoil']),
-  printing('p7', 'ysos', 'Alchemy:Ixalan', '4', {}, ['nonfoil'], { digital: true }),
-  printing('p8', 'dom', 'Dominaria', '5', { usd: '0.89', eur: '0.80' }, ['nonfoil'])
-];
+// Everything a shot needs, gathered once. Fetched rather than written, so a picture
+// that names a set cannot name one that does not exist.
+async function fixture() {
+  const hero = await live.heroCard();
+  const cards = await live.clipboardCards();
+  const categories = await live.setCategories();
 
-const DEFAULT_ROUTES = {
-  tags: () => ({
-    card: [
-      { name: 'Removal', slug: 'removal', tagType: 'ORACLE_CARD_TAG' },
-      { name: 'Instant', slug: 'instant', tagType: 'ORACLE_CARD_TAG' },
-      { name: 'Response', slug: 'response', tagType: 'ORACLE_CARD_TAG' },
-      { name: 'Counterspell', targetId: REL_ONE, tagType: 'BETTER_THAN', relation: true, targetKind: 'card' },
-      { name: 'Memory Jar', targetId: REL_TWO, tagType: 'IN_OTHERS_BCM', relation: true, targetKind: 'card' }
-    ],
-    art: [
-      { name: 'Symbolic art', slug: 'symbolic-art', tagType: 'ORACLE_ART_TAG' },
-      { name: 'Full art', slug: 'full-art', tagType: 'ORACLE_ART_TAG' }
-    ],
-    fallback: false
-  }),
-  // EDHREC's usage and salt, in the fields the card-page feature reads. The names
-  // are the ones the code asks for, not the ones a person would guess: it wants
-  // numDecks against potentialDecks to work out the fraction.
-  edhrec: () => ({
-    name: 'Test Card',
-    numDecks: 4823,
-    potentialDecks: 23140,
-    salt: 0.31,
-    url: 'https://www.edhrec.com/cards/test-card'
-  }),
-  finishes: message => {
-    const byId = {};
-    for (const id of message.ids || []) {
-      const print = PRINTS.find(p => p.id === id);
-      if (print) byId[id] = { finishes: print.finishes, promoTypes: print.promoTypes };
+  // A run of printings with something in it, from one set per group: the tables in
+  // the illustrations are read by eye, and a hundred near-identical rows make a
+  // picture nobody can see. Which sets they are is Scryfall's choice, sorted the way
+  // a reader sees them — latest first — and the digital and non-tournament ones are
+  // kept in, because the "hide the extra" shot needs rows it can actually remove.
+  const prints = hero.prints.map(normalise);
+  const bySet = new Map();
+  for (const printing of prints) {
+    if (!bySet.has(printing.set)) bySet.set(printing.set, []);
+    const rows = bySet.get(printing.set);
+    if (rows.length < 3) rows.push(printing);
+  }
+  const group = [...bySet.entries()].slice(0, 14).flatMap(entry => entry[1]);
+
+  // The rows the page starts with are the ones a reader looks at first, so they are
+  // picked to show what the panels do rather than to be convenient.
+  //
+  // Finish badges are one glyph for one finish: a printing with several finishes
+  // gets an empty cell on purpose, so three rows that all had two finishes would
+  // produce a column of nothing and read as a feature that does not work. One of
+  // each kind of finish is the honest way to show the column — each value still
+  // comes from Scryfall, which is what decides what a printing has.
+  const nativeRows = [];
+  for (const wanted of [['nonfoil'], ['foil'], ['etched'], ['special']]) {
+    const found = group.find(printing => wanted.every(finish =>
+      printing.finishes.includes(finish)) && printing.finishes.length === wanted.length);
+    if (found && !nativeRows.includes(found)) nativeRows.push(found);
+  }
+  // A digital set and a printing in another language, so the "hide the extra"
+  // picture has rows that the settings really do remove. Without one of each it
+  // comes out as the same three rows as the finish picture next to it, which shows
+  // nothing about hiding anything.
+  for (const wanted of [printing => printing.digital, printing => printing.lang !== 'en']) {
+    const found = group.find(wanted);
+    if (found && !nativeRows.includes(found)) nativeRows.push(found);
+  }
+  for (const printing of group) {
+    if (nativeRows.length >= 5) break;
+    if (!nativeRows.includes(printing)) nativeRows.push(printing);
+  }
+
+  return {
+    hero,
+    prints,
+    categories,
+    clipboard: cards,
+    nativeRows: nativeRows.slice(0, 5),
+    card: {
+      name: hero.name,
+      typeLine: (nativeRows[0] && nativeRows[0].typeLine) || ''
     }
-    return byId;
-  },
-  card: () => ({
-    oracle_id: ORACLE_ID,
-    legalities: { premodern: 'legal', legacy: 'banned', commander: 'legal', oath: 'legal' }
-  }),
-  allPrints: () => ({ prints: PRINTS, truncated: false }),
-  cardtrader: () => ({ available: true, url: 'https://www.cardtrader.com/en/cards/test', nonfoil: { cents: 1234, currency: 'EUR' } }),
-  setCategories: () => ({
-    digital: ['ysos'], nonTournament: [], oversized: [], foreignBlackBorder: []
-  }),
-  setPlatforms: () => ({ ysos: ['arena'], mh3: ['mtgo'], m19: ['paper'], znr: ['paper'], dom: ['paper'] }),
-  preview: name => ({ name, image: '', uri: 'https://scryfall.com/card/m19/1/test-card' })
-};
+  };
+}
+
+function routesFor(data) {
+  const byId = {};
+  for (const printing of data.prints) {
+    byId[printing.id] = { finishes: printing.finishes, promoTypes: printing.promoTypes };
+  }
+  return {
+    tags: () => ({
+      card: data.hero.cardTags,
+      art: data.hero.artTags,
+      fallback: false
+    }),
+    finishes: message => {
+      const found = {};
+      for (const id of message.ids || []) if (byId[id]) found[id] = byId[id];
+      return found;
+    },
+    card: () => ({ oracle_id: data.hero.oracleId, legalities: data.hero.legalities || {} }),
+    allPrints: () => ({ prints: data.prints, truncated: false }),
+    setCategories: () => data.categories,
+    preview: name => ({ name, image: '', uri: 'https://scryfall.com/card/' })
+  };
+}
 
 // Runs the real files and hands back the page. `storage` is what the extension
 // would have stored, so a shot can show a feature switched on rather than the
@@ -142,11 +180,12 @@ const DEFAULT_ROUTES = {
 // looks like an empty feature. Naming the element the shot is about means the tool
 // waits for it or fails: an illustration of a panel that did not render should be
 // an error, never a small picture of nothing.
-async function buildCardPage({ storage = {}, routes: overrides = {}, html = CARD_HTML, waitFor = null } = {}) {
-  const routes = { ...DEFAULT_ROUTES, ...overrides };
+async function buildCardPage({ data, storage = {}, routes: overrides = {}, html = null, waitFor = null } = {}) {
+  if (!data) throw new Error('no data was given, so the page would be full of invented text again');
+  const routes = { ...routesFor(data), ...overrides };
   const page = createPage({
-    url: 'https://scryfall.com/card/m19/1/test-card',
-    html,
+    url: 'https://scryfall.com/card/frame/1',
+    html: html || cardHtml(data.card, data.nativeRows, data.hero.oracleId),
     state: { cards: [], ...storage },
     routes
   });
@@ -177,6 +216,26 @@ async function waitForSelector(page, selector) {
   }
   throw new Error('the page never produced ' + selector +
     ', so there is nothing to photograph. The feature is either off, renamed, or broken.');
+}
+
+// Waits for a number of things, not merely for one.
+//
+// This exists because of a picture that was wrong rather than empty. The shot
+// waited for "a finish badge", the current printing already had one, and the
+// photograph was taken while the rest were still on their way round the message
+// round trip. The result looked like a feature that only knows one printing.
+async function waitForCount(page, selector, min) {
+  for (let attempt = 0; attempt < 60; attempt++) {
+    const found = page.document.querySelectorAll(selector);
+    if (found && found.length >= min) {
+      await sleep(80);
+      return page;
+    }
+    await sleep(50);
+  }
+  throw new Error('the page produced ' +
+    (page.document.querySelectorAll(selector) || []).length + ' of ' + min +
+    ' ' + selector + ', so the picture would show a half-built feature');
 }
 
 // A crop of what the code produced, as markup.
@@ -243,5 +302,5 @@ async function fillClipboard(page, count = 3) {
   return page;
 }
 
-module.exports = { buildCardPage, waitForSelector, cropOf, looksEmpty, reveal, fillClipboard,
-  CARD_HTML, PRINTS, ORACLE_ID, REL_ONE, REL_TWO };
+module.exports = { buildCardPage, waitForSelector, waitForCount, cropOf, looksEmpty, reveal,
+  fillClipboard, fixture, cardHtml, routesFor, ORACLE_ID };

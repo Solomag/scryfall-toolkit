@@ -17,22 +17,20 @@
 //   images inside a distributed extension is a question this project has no reason
 //   to take on. Nothing in a shot needs one.
 //
-//   Scryfall's own page. The stage is a card-page-shaped container with our own
-//   stylesheets loaded, not a copy of Scryfall's markup: the shot is about our
-//   panels, and reproducing their page would be a second thing to keep true.
+//   EDHREC's numbers. json.edhrec.com answers 403 to anything outside their own
+//   site, so there is no way to put a real deck count in a picture from a build
+//   machine. Rather than print a plausible four thousand decks, the section it would
+//   have illustrated is shown with what the extension computes itself: the column of
+//   finish badges next to every printing.
+//
+//   Scryfall's own page. A real screenshot needs the extension loaded into a
+//   browser, and Chrome 154 refuses --load-extension, so the stage is a
+//   card-page-shaped container with our own stylesheets loaded. Everything inside the
+//   panels is real; the surface around them is ours.
 const fs = require('node:fs');
 const path = require('node:path');
 const { ROOT, Session, sizeOf, fileUrl } = require('./shots/render.cjs');
-const { buildCardPage, waitForSelector, cropOf, reveal } = require('./shots/cardpage.cjs');
-
-// Three cards in the clipboard, as the feature stores them. Seeded rather than
-// pressed in: pressing the same card three times gives one row with a count of
-// three, which is not what a reader with three cards in the clipboard sees.
-const CLIPBOARD_CARDS = [
-  { name: 'Test Card', set: 'm19', number: '1', uri: 'https://scryfall.com/card/m19/1/test-card' },
-  { name: 'Counterspell', set: 'm21', number: '57', uri: 'https://scryfall.com/card/m21/57/counterspell' },
-  { name: 'Memory Jar', set: 'mh3', number: '42', uri: 'https://scryfall.com/card/mh3/42/memory-jar' }
-];
+const { buildCardPage, waitForSelector, waitForCount, cropOf, reveal, fixture } = require('./shots/cardpage.cjs');
 
 const OUT = path.join(ROOT, 'assets', 'shots');
 const WORK = path.join(ROOT, 'dist', 'feature-shots');
@@ -85,15 +83,18 @@ const SHOTS = [
   {
     file: 'tags.png',
     about: '#stk-tags',
-    storage: { tags: true, cardTags: true, artTags: true, relationships: true },
+    storage: { tags: true, cardTags: true, artTags: true, relationships: false },
     waitFor: '#stk-tags',
     build: html => page('<div class="prints">' + html + '</div>')
   },
   {
     file: 'cardclip.png',
     about: '#scryfall-toolkit-clipboard',
-    storage: { clipboard: true, cards: CLIPBOARD_CARDS, exportFormat: 'moxfield' },
-    prepare: page_ => reveal(page_, '.stk-list'),
+    // Seeded rather than pressed in: pressing the same card three times gives one
+    // row with a count of three, which is not what a reader with three cards in the
+    // clipboard sees. The cards are real ones, looked up by name.
+    storage: { clipboard: true, exportFormat: 'moxfield' },
+    prepare: card => reveal(card, '.stk-list'),
     waitFor: '#scryfall-toolkit-clipboard .stk-list-row',
     // Cropped on the stage, not on the aside. The list is positioned above the
     // toolbar and outside the aside's own box, exactly as it is on the page, so a
@@ -104,21 +105,43 @@ const SHOTS = [
     })
   },
   {
+    // Not EDHREC: their API refuses this machine, and a plausible invented deck
+    // count is exactly what the previous pictures were full of. The column of
+    // finishes is the other thing this section promises, and every value in it is a
+    // value Scryfall returned.
     file: 'additional.png',
-    about: '#stk-edhrec',
-    storage: {
-      edhrecUsage: true, edhrecLink: true, edhrecSalt: true, edhrecUsageDisplay: 'both',
-      usageColorMetric: 'decks', usageMediumDecks: 500, usageHighDecks: 2000,
-      saltMediumThreshold: 0.2, saltHighThreshold: 0.3
-    },
-    waitFor: '#stk-edhrec',
-    build: html => page('<div class="card-text">' + html + '</div>')
+    about: '#main .prints > .prints-table',
+    // Grouping on as well, so this is not the same picture as the hiding one below:
+    // the finish column is the subject here, but the set headers are what make a
+    // table of many printings readable, and the two crops are side by side in the
+    // settings.
+    storage: { finishBadges: true, printGrouping: true, printFoldGroups: false },
+    waitFor: '#main .prints > .prints-table .stk-finish-header',
+    // Every row has to have its badge, not just the first one. Waiting for "a
+    // badge" is satisfied by the current printing and photographs the rest as
+    // missing, which is a picture of a feature that half works. Two is the floor:
+    // a printing with several finishes gets an empty cell on purpose.
+    waitCount: ['#main .prints > .prints-table .stk-finish-badge', 2],
+    waitFor: '.stk-print-group-row',
+    build: html => page('<div class="prints">' + html + '</div>')
   },
   {
     file: 'legality.png',
-    about: '#stk-legalities',
-    storage: { legalities: true },
+    // The whole legality block, not the first row of it. The block gets an id on
+    // whichever row comes first after the sorting, and an added format lands in
+    // whatever row still has room — so cropping the id gives a picture of Scryfall's
+    // own Standard and Modern and none of our work, which is what the previous
+    // version of this shot showed.
+    about: '#main .card-legality',
+    // Premodern on, because that is the one of the four extra formats read off the
+    // card's own Scryfall answer. The other three are asked of Scryfall by oracle id
+    // through a query this build has no answer for, so turning them on would put
+    // "error" in a picture.
+    storage: { legalities: true, premodern: true },
     waitFor: '#stk-legalities',
+    // The added format is the point, so waiting for the block's id is not enough:
+    // that id lands on the first row, which Scryfall's own rows already fill.
+    waitCount: ['#main .card-legality .card-legality-item', 3],
     build: html => page('<div class="card-text"><div class="card-legality">' + html + '</div></div>')
   },
   {
@@ -146,14 +169,21 @@ const SHOTS = [
 
 async function main() {
   fs.mkdirSync(OUT, { recursive: true });
+  const data = await fixture();
+  console.log('card: ' + data.hero.name + ', ' + data.prints.length + ' printings, ' +
+    data.hero.cardTags.length + ' card tags, ' + data.hero.artTags.length + ' art tags');
   const session = new Session();
   const done = [];
   try {
     await session.open();
     for (const shot of SHOTS) {
-      const card = await buildCardPage({ storage: shot.storage });
-      if (shot.prepare) await shot.prepare(card);
+      const storage = shot.file === 'cardclip.png'
+        ? { ...shot.storage, cards: data.clipboard }
+        : shot.storage;
+      const card = await buildCardPage({ data, storage });
+      if (shot.prepare) await shot.prepare(card, data);
       await waitForSelector(card, shot.waitFor);
+      if (shot.waitCount) await waitForCount(card, shot.waitCount[0], shot.waitCount[1]);
       let crop = cropOf(card.document, shot.about);
       if (/^\s*$/.test(crop)) throw new Error(shot.file + ': the crop came out empty');
       const htmlFile = path.join(WORK, shot.file.replace(/\.png$/, '.html'));
