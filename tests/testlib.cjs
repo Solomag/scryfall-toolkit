@@ -17,7 +17,8 @@ const path = require('node:path');
 const vm = require('node:vm');
 const { parseHTML } = require('linkedom');
 
-const ROOT = __dirname;
+// The project root, one folder up. These files used to sit in it.
+const ROOT = path.join(__dirname, '..') + path.sep;
 
 // Surface async failures instead of letting them vanish between polls.
 process.on('unhandledRejection', error => {
@@ -315,20 +316,19 @@ function createPage(options) {
     // The card page's own scripts, in the order the manifest lists them, which is
     // what a browser injects them in.
     //
-    // These used to be one file called content.js. They are nine now, and a test
+    // These used to be one file called content.js. They are eleven now, and a test
     // that loaded one of them alone would be testing that file in isolation and
     // calling it the page — which is how a whole class of "works on its own"
     // passes hides a feature that does not work next to the others. So the list
     // comes from the manifest: add a file there and every test here runs it.
-    async contentFeatures() {
+    async cardPage() {
       const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'manifest.json'), 'utf8'));
       const group = (manifest.content_scripts || []).find(entry =>
-        (entry.js || []).some(file => file.startsWith('content-')));
-      if (!group) throw new Error('the manifest lists no content-*.js scripts');
-      for (const file of group.js.filter(file => file.startsWith('content-'))) {
-        await this.script(file);
-      }
-      return group.js.filter(file => file.startsWith('content-'));
+        (entry.js || []).some(file => file.startsWith('src/card-page/')));
+      if (!group) throw new Error('the manifest lists no src/card-page/ scripts');
+      const files = group.js.filter(file => file.startsWith('src/card-page/'));
+      for (const file of files) await this.script(file);
+      return files;
     },
     // Delivers one childList batch to every observer the page registered, which
     // is what a real DOM does after the test changed something.

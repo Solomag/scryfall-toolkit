@@ -169,16 +169,20 @@ function png(size, pixels) {
 
 const SIZES = [16, 32, 48, 128];
 
-fs.mkdirSync(path.join(ROOT, 'icons'), { recursive: true });
+// The PNGs go where the manifest and web_accessible_resources look for them,
+// which is assets/icons/ alongside the artwork that is not ours. Writing to
+// ROOT/icons would create a folder nothing reads and leave the build pointing at
+// files that were not there.
+fs.mkdirSync(path.join(ROOT, 'assets', 'icons'), { recursive: true });
 fs.mkdirSync(path.join(ROOT, 'icons-src'), { recursive: true });
 
 fs.writeFileSync(path.join(ROOT, 'icons-src', 'scryfall-toolkit-icon.svg'), svg(), 'utf8');
 console.log('wrote icons-src/scryfall-toolkit-icon.svg');
 
 for (const size of SIZES) {
-  const file = path.join(ROOT, 'icons', `icon${size}.png`);
+  const file = path.join(ROOT, 'assets', 'icons', `icon${size}.png`);
   fs.writeFileSync(file, png(size, render(size)));
-  console.log(`wrote icons/icon${size}.png (${fs.statSync(file).size} bytes)`);
+  console.log(`wrote assets/icons/icon${size}.png (${fs.statSync(file).size} bytes)`);
 }
 
 console.log('\nartwork is original; no third-party logo, wordmark or brand colour is used.');

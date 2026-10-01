@@ -10,6 +10,16 @@ All releases: <https://github.com/Solomag/scryfall-toolkit/releases>
 
 ## Unreleased
 
+The repository has folders now. A root of fifty-one files is a root where nobody can find
+anything, and "which file holds the EUR column" had four answers depending on the page.
+`src/background` is the worker, `src/core` what it and the pages share, `src/card-page` the
+content scripts, `src/deck-page` the ones that run in Scryfall's own page world, `src/ui` the
+two extension pages, `src/styles` the stylesheets, `assets` the artwork, the generated tag
+snapshot and the licences, `tests` the suites and `tools` the build.
+
+The prefixes went with the folders: `card-page/edhrec.js` beside `deck-page/edhrec.js` says
+which one it is, where `content-edhrec.js` and `deck-edhrec.js` said it twice and told you
+nothing about where the file lived.
 The card page is ten files instead of one. `content.js` was 1901 lines in a single closure;
 it is now a core and nine files named for what they draw, and the order the features run in
 is a written-down list rather than the order the manifest happens to list the files in.

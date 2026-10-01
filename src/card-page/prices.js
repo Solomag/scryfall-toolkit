@@ -152,7 +152,7 @@
         link.rel = 'noopener noreferrer';
         const text = document.createElement('span');
         const icon = document.createElement('img');
-        icon.src = chrome.runtime.getURL('icons/cardtrader.svg');
+        icon.src = chrome.runtime.getURL('assets/icons/cardtrader.svg');
         icon.alt = '';
         text.append(icon, document.createTextNode(` CardTrader${kind === 'foil' ? ' foil' : ''}`));
         const value = document.createElement('span');
@@ -200,7 +200,7 @@
       wrapper.append(mark);
     } else {
       const icon = document.createElement('img');
-      icon.src = chrome.runtime.getURL(`icons/${provider}.svg`);
+      icon.src = chrome.runtime.getURL(`assets/icons/${provider}.svg`);
       icon.alt = '';
       wrapper.append(icon);
     }
@@ -210,7 +210,7 @@
 
   function brandLogo(provider) {
     if (provider === 'cardmarket') {
-      return { mask: 'icons/cardmarket-white.png', title: 'Cardmarket' };
+      return { mask: 'assets/icons/cardmarket-white.png', title: 'Cardmarket' };
     }
     return null;
   }

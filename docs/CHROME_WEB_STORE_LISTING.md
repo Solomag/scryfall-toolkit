@@ -1,4 +1,4 @@
-# Chrome Web Store listing — Scryfall Toolkit 0.55.0
+# Chrome Web Store listing — Scryfall Toolkit 0.56.0
 
 Everything here is written from the shipped code, so that the answers given in the store
 console match what the extension actually does. Where a field needs a decision from the
@@ -105,15 +105,15 @@ The store asks why each permission is needed. These are the answers, matched to
 
 | Requested | Why the extension needs it | Where the code uses it |
 | --- | --- | --- |
-| `storage` | keep the clipboard and the settings between sessions | `content.js`, `options.js`, `theme.js`, `tagger-clipboard.js` |
-| `unlimitedStorage` | cache the bundled tag indexes locally instead of re-downloading several megabytes on every card page | `background.js` (`tagIndexes`) |
-| `alarms` | refresh the tag data at most once every seven days | `background.js` |
-| `https://api.scryfall.com/*` | card, print, set and search lookups, and the tag bulk files | `background.js` |
-| `https://data.scryfall.io/*` | the tag bulk files Scryfall serves from this host | `background.js` (through the URL Scryfall returns) |
-| `https://tagger.scryfall.com/*` | live tag and related-card data for the card on the page | `background.js` |
-| `https://json.edhrec.com/*` | **optional permission.** Optional EDHREC usage and Salt Meter, off by default. The host is asked for when the user turns EDHREC on, not at install. | `background.js` |
-| `https://edhrec.com/*` | **optional permission.** The deck-specific EDHREC recommendations. Separate host from the one above, and for the same reason. Asked for when the user turns on EDHREC suggestions. | `background.js` |
-| `https://api.cardtrader.com/*` | **optional permission.** Optional CardTrader prices, off by default. The host is asked for when the user turns CardTrader on, not at install. Needs the user's own token as well. | `background.js` |
+| `storage` | keep the clipboard and the settings between sessions | `content.js`, `src/ui/options.js`, `src/core/theme.js`, `src/card-page/tagger-clipboard.js` |
+| `unlimitedStorage` | cache the bundled tag indexes locally instead of re-downloading several megabytes on every card page | `src/background/worker.js` (`tagIndexes`) |
+| `alarms` | refresh the tag data at most once every seven days | `src/background/worker.js` |
+| `https://api.scryfall.com/*` | card, print, set and search lookups, and the tag bulk files | `src/background/worker.js` |
+| `https://data.scryfall.io/*` | the tag bulk files Scryfall serves from this host | `src/background/worker.js` (through the URL Scryfall returns) |
+| `https://tagger.scryfall.com/*` | live tag and related-card data for the card on the page | `src/background/worker.js` |
+| `https://json.edhrec.com/*` | **optional permission.** Optional EDHREC usage and Salt Meter, off by default. The host is asked for when the user turns EDHREC on, not at install. | `src/background/worker.js` |
+| `https://edhrec.com/*` | **optional permission.** The deck-specific EDHREC recommendations. Separate host from the one above, and for the same reason. Asked for when the user turns on EDHREC suggestions. | `src/background/worker.js` |
+| `https://api.cardtrader.com/*` | **optional permission.** Optional CardTrader prices, off by default. The host is asked for when the user turns CardTrader on, not at install. Needs the user's own token as well. | `src/background/worker.js` |
 
 Three of them are **optional permissions**: `json.edhrec.com`, `edhrec.com` and
 `api.cardtrader.com`. Each serves a feature that is off by default, so the browser is
@@ -209,7 +209,7 @@ These cannot be done from here, and each is listed with the exact screen.
    choose `dist/scryfall-toolkit-<version>.zip`.
 3. **Privacy practices tab** — fill in the section 4 answers above.
 4. **Store listing tab** - paste section 1's fields, and upload the screenshots from
-   section 7. The 128x128 icon is already in the ZIP at `icons/icon128.png`; use that
+   section 7. The 128x128 icon is already in the ZIP at `assets/icons/icon128.png`; use that
    same file if the form asks for the icon as a separate upload.
 5. **Distribution tab** — choose visibility (Public) and the regions.
 6. **Review and publish** — the submission is a *review*, not a publication. It becomes

@@ -110,7 +110,7 @@ to and no analytics SDK in the build.
 
 To be exact about what that claim rests on: the extension's only network calls go to the
 four services listed above, and its only persistent storage is `chrome.storage.local`. The
-build ships no analytics, no remote code and no third-party script — `options.html` loads
+build ships no analytics, no remote code and no third-party script — `src/ui/options.html` loads
 only this project's own files.
 
 **A note on how the hosts are asked for.** EDHREC is reached on two of them, and the two are

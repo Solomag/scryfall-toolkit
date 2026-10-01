@@ -9,14 +9,14 @@
  * are described in THIRD_PARTY_NOTICES.md. The MPL does not cover them.
  */
 // Bundled compact tag data originates from MoxTags v1.8.3 (MIT).
-importScripts("data/set-platforms.js");
-importScripts("format-overrides.js");
+importScripts("../../assets/data/set-platforms.js");
+importScripts("../core/format-overrides.js");
 const cache = new Map();
 const traderCache = new Map();
 let digitalSetRequest;
 let setPlatformRequest;
 // The bundled snapshot answers almost every digital set; Scryfall's own index
-// never says which client carries one. See data/set-platforms.js.
+// never says which client carries one. See assets/data/set-platforms.js.
 const bundledSetPlatforms = self.__STK_SET_PLATFORMS || {};
 delete self.__STK_SET_PLATFORMS;
 // Marketplace calls are spaced 1.1s apart by CardTrader's own expectations, and
@@ -279,9 +279,9 @@ async function edhrecRoundTrip(path) {
 // executed -- and rather than being parsed at every worker start through
 // importScripts, which cannot be deferred.
 const BUNDLED_TAG_FILES = {
-  oracle: 'data/oracle-tags.js',
-  art1: 'data/illustration-tags-1.js',
-  art2: 'data/illustration-tags-2.js'
+  oracle: 'assets/data/oracle-tags.js',
+  art1: 'assets/data/illustration-tags-1.js',
+  art2: 'assets/data/illustration-tags-2.js'
 };
 
 async function loadBundledIndex(part) {

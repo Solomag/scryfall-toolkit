@@ -27,7 +27,7 @@ const { execFileSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 const zlib = require('node:zlib');
-const { ROOT } = require('./testlib.cjs');
+const { ROOT } = require('./tests/testlib.cjs');
 const { listZip } = require('./tools/zip.cjs');
 
 const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'manifest.json'), 'utf8'));
@@ -39,9 +39,36 @@ const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'manifest.json'), 'u
 function referencedBy(file) {
   const text = fs.readFileSync(path.join(ROOT, file), 'utf8');
   const found = new Set();
+  // A reference inside a file is relative to that file, not to the archive root.
+  // The extension pages live in src/ui/ and reach up into src/core/ with "../",
+  // and resolving those from the root would either drop them or, worse, add a
+  // path that does not exist and leave the page without its script in the build.
+  //
+  // Not every reference is like that. chrome.runtime.getURL takes a path from the
+  // root of the extension whatever file calls it, so it gets its own way in.
+  const here = path.posix.dirname(file.split(path.sep).join('/'));
+  const clean = value => {
+    const bare = value.split(/[?#]/)[0];
+    if (!bare || bare.includes('${') || bare.startsWith('http') || bare.startsWith('data:')) return '';
+    return bare;
+  };
   const add = value => {
-    const name = value.replace(/^\.\//, '').split(/[?#]/)[0];
-    if (name && !name.includes('${') && !name.startsWith('http') && !name.startsWith('data:')) found.add(name);
+    const name = clean(value);
+    if (!name) return;
+    const resolved = name.startsWith('/') ? name.slice(1) : path.posix.normalize(path.posix.join(here, name));
+    // Never let a reference walk out of the archive.
+    if (!resolved.startsWith('..')) found.add(resolved);
+  };
+  const addRelative = value => {
+    const name = clean(value);
+    if (!name) return;
+    const resolved = name.startsWith('/') ? name.slice(1) : path.posix.normalize(path.posix.join(here, name));
+    if (!resolved.startsWith('..')) found.add(resolved);
+  };
+  // A path from the root of the extension, as getURL and every manifest entry are.
+  const addRoot = value => {
+    const name = clean(value);
+    if (name && !name.startsWith('..')) found.add(name);
   };
 
   if (file.endsWith('.html')) {
@@ -54,16 +81,21 @@ function referencedBy(file) {
     for (const m of text.matchAll(/url\(\s*["']?([^"')]+)["']?\s*\)/g)) add(m[1]);
   }
   if (file.endsWith('.js')) {
+    // importScripts resolves against the worker's own URL, so it is relative to
+    // the file that calls it.
     for (const call of text.matchAll(/importScripts\s*\(([^)]*)\)/g)) {
-      for (const argument of call[1].split(',')) add(argument.trim().replace(/^["']|["']$/g, ''));
+      for (const argument of call[1].split(',')) addRelative(argument.trim().replace(/^["']|["']$/g, ''));
     }
-    for (const m of text.matchAll(/chrome\.runtime\.getURL\s*\(\s*["']([^"'$]+)["']/g)) add(m[1]);
+    // chrome.runtime.getURL takes a path from the root of the extension, not one
+    // relative to the calling file. Resolving it against the file's folder turns
+    // "assets/icons/x.svg" inside src/card-page into src/card-page/assets/... and
+    // the icon goes missing in a build that otherwise looks complete.
+    for (const m of text.matchAll(/chrome\.runtime\.getURL\s*\(\s*["']([^"'$]+)["']/g)) addRoot(m[1]);
     // Files can be named through a map or a variable rather than a literal, as
     // the tag snapshot is. Anything that names a file of this project is a
-    // reference to it.
+    // reference to it, and these are written from the root.
     for (const m of text.matchAll(/["']([^"'\s]+\.(?:js|css|png|svg|json))["']/g)) {
-      const name = m[1].replace(/^\.\//, '');
-      if (name.includes('/') || fs.existsSync(path.join(ROOT, name))) add(name);
+      if (m[1].includes('/') || fs.existsSync(path.join(ROOT, m[1]))) addRoot(m[1]);
     }
   }
   return [...found];
@@ -125,7 +157,7 @@ while (queue.length) {
 
 // What the licence obligations and this audit require alongside the code.
 for (const extra of ['LICENSE', 'README.md', 'THIRD_PARTY_NOTICES.md', 'PRIVACY.md']) files.add(extra);
-for (const dir of ['third_party', 'icons-src']) {
+for (const dir of ['assets/licences', 'icons-src']) {
   const full = path.join(ROOT, dir);
   if (fs.existsSync(full)) for (const name of fs.readdirSync(full)) files.add(`${dir}/${name}`);
 }
@@ -277,8 +309,8 @@ for (const file of listed) {
 for (const required of ['LICENSE', 'THIRD_PARTY_NOTICES.md', 'PRIVACY.md']) {
   if (!listed.includes(required)) { bad++; console.log(`MISSING licence or notice    ${required}`); }
 }
-for (const name of fs.readdirSync(path.join(ROOT, 'third_party'))) {
-  if (!listed.includes(`third_party/${name}`)) { bad++; console.log(`MISSING third-party licence  ${name}`); }
+for (const name of fs.readdirSync(path.join(ROOT, 'assets/licences'))) {
+  if (!listed.includes(`assets/licences/${name}`)) { bad++; console.log(`MISSING third-party licence  ${name}`); }
 }
 
 const stray = listed.filter(name => !files.has(name));

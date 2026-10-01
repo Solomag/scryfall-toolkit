@@ -9,6 +9,9 @@
  * are described in THIRD_PARTY_NOTICES.md. The MPL does not cover them.
  */
 'use strict';
+const fs = require('node:fs');
+const path = require('node:path');
+
 // background.js service-worker tests: message protocol, tag pipeline,
 // set categorisation, legality queries, previews and index refresh.
 const {
@@ -169,9 +172,9 @@ async function fetchMock(url, init) {
     }
     return jsonResponse({ data: [{ name: 'Other Card', image_uris: { normal: 'https://cards.scryfall.io/normal/o.jpg' }, scryfall_uri: 'https://scryfall.com/card/oth/1/other-card' }] });
   }
-  if (target.startsWith('chrome-extension://scryfall-toolkit/data/')) {
+  if (target.startsWith('chrome-extension://scryfall-toolkit/assets/data/')) {
     const name = target.slice(target.lastIndexOf('/') + 1);
-    const fixture = bundledTagFixtures['data/' + name];
+    const fixture = bundledTagFixtures['assets/data/' + name];
     if (!fixture) throw new Error('Unmocked bundled file: ' + name);
     return textResponse('self.__MOXTAGS_FIXTURE = ' + JSON.stringify(fixture) + ';');
   }
@@ -198,24 +201,34 @@ const page = createPage({
   fetch: fetchMock
 });
 page.context.importScripts = (...files) => {
+  // importScripts resolves against the worker's own URL, and the worker is
+  // src/background/worker.js. The test harness is not that directory, so the
+  // path is resolved from the worker's rather than from here — which is the
+  // whole point, and a harness that resolved it from its own folder would accept
+  // a worker that cannot find its own scripts.
+  const workerDir = 'src/background';
   for (const file of files) {
     // The tag data is no longer imported at start-up; the fixtures below stand
     // in for it and are read through getURL instead.
-    if (file.startsWith('data/')) continue;
-    page.script(file);
+    if (file.indexOf('assets/data/') >= 0) continue;
+    const resolved = file.startsWith('/')
+      ? file.slice(1)
+      : path.posix.normalize(path.posix.join(workerDir, file));
+    assert(resolved.startsWith('src/'), `importScripts stays inside the extension: ${resolved}`);
+    page.script(resolved);
   }
 };
 // The worker reads the bundled tag snapshot as text and parses it. The mock
 // serves fixtures in the same shape: a global assignment whose value is JSON.
 const bundledTagFixtures = {
-  'data/oracle-tags.js': { t: ['aggro', 'combo'], d: { [ORACLE_ID]: [0, 1] } },
-  'data/illustration-tags-1.js': { t: ['sky'], d: { [ILLUS_ID]: [0] } },
-  'data/illustration-tags-2.js': { t: [], d: {} }
+  'assets/data/oracle-tags.js': { t: ['aggro', 'combo'], d: { [ORACLE_ID]: [0, 1] } },
+  'assets/data/illustration-tags-1.js': { t: ['sky'], d: { [ILLUS_ID]: [0] } },
+  'assets/data/illustration-tags-2.js': { t: [], d: {} }
 };
 // The platform snapshot is bundled as data; the fixture keeps a few sets and
 // leaves "mtgo" out so the runtime lookup is exercised.
 page.context.__STK_SET_PLATFORMS = { ysos: ['arena'], omb: ['arena', 'mtgo'] };
-page.script('background.js');
+page.script('src/background/worker.js');
 
 const ctx = page.context;
 const listener = mock.messageListeners[0];
@@ -358,7 +371,7 @@ async function edhrecThrottleTest() {
       // a vm script is not a property of the context object, and these numbers are the
       // thing being asserted — they have to keep matching the page quoted above.
       const source = require('node:fs')
-        .readFileSync(require('node:path').join(__dirname, 'background.js'), 'utf8');
+        .readFileSync(require('node:path').join(__dirname, '..', 'src/background/worker.js'), 'utf8');
       const digitsAfter = marker => {
         const at = source.indexOf(marker);
         if (at < 0) return 0;

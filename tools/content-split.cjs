@@ -1,7 +1,9 @@
 // Slice content.js into files by definition name. Nothing is retyped: every line
 // is moved as it stands, so the split cannot quietly change a character of logic.
 const fs = require('node:fs');
-const ROOT = 'H:/Solo/Downloads/scryfall-toolkit/';
+const path = require('node:path');
+// The project root, one folder up. These files used to sit in it.
+const ROOT = path.join(__dirname, '..') + path.sep;
 // Normalised on read. A Windows checkout has CRLF and a Linux one does not, and an
 // anchor written as `$` silently stops matching on whichever has the carriage
 // return — which is how every line of the boot can come back as zero matches with

@@ -9,7 +9,8 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { take, span, lines } = require('./content-split.cjs');
-const ROOT = 'H:/Solo/Downloads/scryfall-toolkit/';
+// The project root, one folder up. These files used to sit in it.
+const ROOT = path.join(__dirname, '..') + path.sep;
 
 const LICENSE = [
   '/*',
@@ -50,7 +51,7 @@ const CONTEXT = [
 // file -> { title, why, blocks: [[definition, bootStep], ...] }
 const FEATURES = [
   {
-    file: 'content-clipboard.js',
+    file: 'src/card-page/clipboard.js',
     title: 'The shared clipboard, and the per-printing + on the card page',
     why: '// The clipboard is read by more features than any other part of this — the price\n' +
          '// columns, the grouped printings and the deck list all read what it holds — so it\n' +
@@ -58,19 +59,19 @@ const FEATURES = [
     blocks: [['initClipboard', 'clipboard'], ['initNativePrintButtons', 'nativePrintButtons']]
   },
   {
-    file: 'content-tags.js',
+    file: 'src/card-page/tags.js',
     title: 'Tag panels, related cards, and the hover preview they share',
     why: '',
     blocks: [['initTags', 'tags'], ['initSearchTaggerLinks', 'searchTaggerLinks']]
   },
   {
-    file: 'content-legalities.js',
+    file: 'src/card-page/legalities.js',
     title: "Scryfall's own legality block, with the extra formats added to it",
     why: '',
     blocks: [['initLegalities', 'legalities']]
   },
   {
-    file: 'content-prints.js',
+    file: 'src/card-page/prints.js',
     title: 'The grouped printings table, and the finish column it counts on',
     why: '// These two are one file because the grouped table waits for the finish column to\n' +
          '// land before it counts columns, and because the rows it creates later reuse the\n' +
@@ -78,32 +79,32 @@ const FEATURES = [
     blocks: [['initPrintFinishes', 'printFinishes'], ['initExpandedPrints', 'expandedPrints']]
   },
   {
-    file: 'content-edhrec.js',
+    file: 'src/card-page/edhrec.js',
     title: "EDHREC's usage and salt, and the panel beside the legalities",
     why: '',
     blocks: [['initEdhrecStats', 'edhrecStats']]
   },
   {
-    file: 'content-prices.js',
+    file: 'src/card-page/prices.js',
     title: 'The EUR column: Cardmarket, CardTrader, and the advanced page filters',
     why: '',
     blocks: [['initCardTrader', 'cardTrader'], ['priceHeading', null], ['brandLogo', null],
              ['initPriceFilter', 'priceFilter'], ['initAdvancedPriceFilter', 'advancedPriceFilter']]
   },
   {
-    file: 'content-sets.js',
+    file: 'src/card-page/sets.js',
     title: 'The set list filters, on /sets and on the advanced search page',
     why: '',
     blocks: [['initSetFilter', 'setFilter'], ['initAdvancedSetFilter', 'advancedSetFilter']]
   },
   {
-    file: 'content-card.js',
+    file: 'src/card-page/card.js',
     title: 'Card nicknames and the type and mana search links',
     why: '',
     blocks: [['initCardNicknames', 'cardNicknames'], ['initCardSearchLinks', 'cardSearchLinks']]
   },
   {
-    file: 'content-deck.js',
+    file: 'src/card-page/deck-lists.js',
     title: 'The deck page: token list, stacked cards, and the No Prices switch',
     why: '',
     blocks: [['initDeckTokens', 'deckTokens'], ['initStackedDeckCards', 'stackedDeckCards'],

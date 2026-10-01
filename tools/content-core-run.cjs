@@ -13,7 +13,8 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { take, bootSteps, stepNameOf } = require('./content-split.cjs');
-const ROOT = 'H:/Solo/Downloads/scryfall-toolkit/';
+// The project root, one folder up. These files used to sit in it.
+const ROOT = path.join(__dirname, '..') + path.sep;
 
 // The four names that are written to after they are made, by different files: the
 // clipboard list, the hook that realigns the stats panel when the legality block
@@ -98,7 +99,7 @@ if (template.includes('@@')) {
   throw new Error('a marker was left unfilled: ' + (template.match(/@@\w+@@/) || [])[0]);
 }
 
-fs.writeFileSync(path.join(ROOT, 'content-core.js'), template);
+fs.writeFileSync(path.join(ROOT, 'src/card-page/core.js'), template);
 fs.rmSync(path.join(ROOT, 'content.js'), { force: true });
 console.log('content-core.js: ' + template.split('\n').length + ' lines, ' + bootSteps().length + ' boot steps');
 console.log('content.js: removed');

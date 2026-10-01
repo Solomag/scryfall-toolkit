@@ -26,7 +26,7 @@ const os = require('node:os');
 const path = require('node:path');
 const vm = require('node:vm');
 const { execFileSync } = require('node:child_process');
-const { extractZip, listZip } = require('./tools/zip.cjs');
+const { extractZip, listZip } = require('../tools/zip.cjs');
 const {
   assert, assertEqual, summary, createPage, ROOT
 } = require('./testlib.cjs');
@@ -101,14 +101,20 @@ function pagesAreCompleteTest(dir) {
   console.log('smoke: every page in the package brings its own files');
   const files = new Set(listFiles(dir));
   const pages = [...files].filter(f => f.endsWith('.html'));
-  assertEqual(pages.sort().join(','), 'options.html,popup.html',
+  assertEqual(pages.sort().join(','), 'src/ui/options.html,src/ui/popup.html',
     'the package ships exactly the two extension pages');
   for (const page of pages) {
     const html = fs.readFileSync(path.join(dir, page), 'utf8');
+    // Relative to the page, not to the archive root. The pages live in src/ui/ and
+    // say "options.css" beside them and "../core/i18n.js" a folder up; comparing
+    // the text as written would look for src/ui/options.css in the root and call a
+    // complete package broken.
+    const here = path.posix.dirname(page.split(path.sep).join('/'));
     for (const m of html.matchAll(/<(?:script|link|img)[^>]+(?:src|href)="([^"]+)"/gi)) {
-      const name = m[1].replace(/^\.\//, '');
-      if (name.startsWith('http') || name.startsWith('data:') || name.startsWith('chrome-extension:')) continue;
-      assert(files.has(name), `${page} brings ${name} with it`);
+      const written = m[1];
+      if (written.startsWith('http') || written.startsWith('data:') || written.startsWith('chrome-extension:')) continue;
+      const name = path.posix.normalize(path.posix.join(here, written));
+      assert(files.has(name), `${page} brings ${written} with it, which is ${name}`);
     }
   }
 }
@@ -132,7 +138,7 @@ async function themeTurnsOnTest(dir) {
     fs.readFileSync(path.join(dir, file), 'utf8'), page.context, { filename: file }
   );
 
-  run('theme.js');
+  run('src/core/theme.js');
   await tick();
   const root = page.document.documentElement;
   assert(root.classList.contains('stk-dark'),
@@ -143,7 +149,7 @@ async function themeTurnsOnTest(dir) {
 
 async function popupPowersOnTest(dir) {
   console.log('smoke: the packaged popup starts and shows its switches');
-  const html = fs.readFileSync(path.join(dir, 'popup.html'), 'utf8');
+  const html = fs.readFileSync(path.join(dir, 'src/ui/popup.html'), 'utf8');
   const page = createPage({
     url: 'chrome-extension://smoke/popup.html',
     html,
@@ -156,9 +162,9 @@ async function popupPowersOnTest(dir) {
     fs.readFileSync(path.join(dir, file), 'utf8'), page.context, { filename: file }
   );
 
-  run('i18n.js');
+  run('src/core/i18n.js');
   await tick();
-  run('popup.js');
+  run('src/ui/popup.js');
   await tick();
 
   const ids = ['darkTheme', 'tags', 'clipboard', 'edhrecUsage', 'cardtraderPrices', 'openAll'];
@@ -181,7 +187,7 @@ async function popupPowersOnTest(dir) {
 
 async function settingsPowerOnTest(dir) {
   console.log('smoke: the packaged settings page starts and fills its list');
-  const html = fs.readFileSync(path.join(dir, 'options.html'), 'utf8');
+  const html = fs.readFileSync(path.join(dir, 'src/ui/options.html'), 'utf8');
   const page = createPage({
     url: 'chrome-extension://smoke/options.html',
     html,
@@ -191,11 +197,11 @@ async function settingsPowerOnTest(dir) {
     fs.readFileSync(path.join(dir, file), 'utf8'), page.context, { filename: file }
   );
 
-  run('i18n.js');
+  run('src/core/i18n.js');
   await tick();
-  run('format-catalog.js');
+  run('src/core/format-catalog.js');
   await tick();
-  run('options.js');
+  run('src/ui/options.js');
   await tick();
 
   const items = page.document.querySelectorAll('#formatList .format-item');
@@ -227,13 +233,13 @@ function packagedNoticesTest() {
   console.log('package: third-party notices ship with the extension');
   const manifest = JSON.parse(read('manifest.json'));
   const shipped = [
-    'manifest.json', 'background.js', 'content-core.js', 'content-clipboard.js',
-    'content-tags.js', 'content-legalities.js', 'content-prints.js', 'content-edhrec.js',
-    'content-prices.js', 'content-sets.js', 'content-card.js', 'content-deck.js',
-    'content.css', 'theme.js', 'theme.css',
-    'options.html', 'options.js', 'options.css', 'i18n.js', 'tag-icons.js', 'tagger-clipboard.js',
-    'format-catalog.js', 'format-overrides.js', 'data/oracle-tags.js', 'data/illustration-tags-1.js',
-    'data/illustration-tags-2.js', 'data/shambleshark-nicknames.js', 'data/set-platforms.js',
+    'manifest.json', 'src/background/worker.js', 'src/card-page/core.js', 'src/card-page/clipboard.js',
+    'src/card-page/tags.js', 'src/card-page/legalities.js', 'src/card-page/prints.js', 'src/card-page/edhrec.js',
+    'src/card-page/prices.js', 'src/card-page/sets.js', 'src/card-page/card.js', 'src/card-page/deck-lists.js',
+    'src/styles/content.css', 'src/core/theme.js', 'src/styles/theme.css',
+    'src/ui/options.html', 'src/ui/options.js', 'src/ui/options.css', 'src/core/i18n.js', 'src/core/tag-icons.js', 'src/card-page/tagger-clipboard.js',
+    'src/core/format-catalog.js', 'src/core/format-overrides.js', 'assets/data/oracle-tags.js', 'assets/data/illustration-tags-1.js',
+    'assets/data/illustration-tags-2.js', 'assets/data/shambleshark-nicknames.js', 'assets/data/set-platforms.js',
     'THIRD_PARTY_NOTICES.md', 'LICENSE', 'README.md', 'PRIVACY.md'
   ];
   for (const file of shipped) {
@@ -346,17 +352,21 @@ function packagedNoticesTest() {
   // and a boot that runs before the features have registered silently skips
   // whichever one had not been given its turn. Neither shows up as an error.
   {
-    const core = read('content-core.js');
+    const core = read('src/card-page/core.js');
     assert(core.includes('self.STK_CONTENT = { on, reportFeature, context: arrived }'),
       'the core publishes its context as a promise, so a feature cannot read it too early');
     assert(/setTimeout\(\(\) => \{[\s\S]*booted = true/.test(core),
       'and waits a macrotask before the boot, so every feature file has registered by then');
     const manifestOrder = JSON.parse(read('manifest.json')).content_scripts
       .flatMap(entry => entry.js || [])
-      .filter(file => file.startsWith('content-'));
-    assertEqual(manifestOrder[0], 'content-core.js', 'the core is injected before the features that read it');
+      .filter(file => file.startsWith('src/card-page/'));
+    assertEqual(manifestOrder[0], 'src/card-page/core.js', 'the core is injected before the features that read it');
+    // Only the files that read the core are bound by this. tagger-clipboard.js is
+    // injected beside i18n.js on the Tagger site and has no part in the card page,
+    // so there is no context for it to wait for.
     for (const file of manifestOrder.slice(1)) {
       const text = read(file);
+      if (text.indexOf('self.STK_CONTENT') < 0) continue;
       assert(text.includes('} = await self.STK_CONTENT.context;'),
         file + ' waits for the context rather than destructuring it at load time');
       assert(!/^\s*const \{[^}]*\} = self\.STK_CONTENT;/m.test(text),
@@ -380,11 +390,11 @@ function packagedNoticesTest() {
 
   // The licence text of each project whose material is actually in the archive.
   const licences = {
-    'third_party/CardClip-LICENSE': 'Copyright (c) 2022 Jacob Hearst',
-    'third_party/Paruhas-CardClip-LICENSE': 'Copyright (c) 2022 Jacob Hearst',
-    'third_party/Shambleshark-LICENSE': 'Copyright (c) 2016 Samuel Simões',
-    'third_party/MoxTags-LICENSE': 'Copyright (c) 2026 Nate Finch',
-    'third_party/MTG-Enhancements-LICENSE': 'Copyright (c) 2026 notsonic'
+    'assets/licences/CardClip-LICENSE': 'Copyright (c) 2022 Jacob Hearst',
+    'assets/licences/Paruhas-CardClip-LICENSE': 'Copyright (c) 2022 Jacob Hearst',
+    'assets/licences/Shambleshark-LICENSE': 'Copyright (c) 2016 Samuel Simões',
+    'assets/licences/MoxTags-LICENSE': 'Copyright (c) 2026 Nate Finch',
+    'assets/licences/MTG-Enhancements-LICENSE': 'Copyright (c) 2026 notsonic'
   };
   for (const [file, noticeLine] of Object.entries(licences)) {
     assert(fs.existsSync(path.join(ROOT, file)), `${file} ships with the extension`);
@@ -395,20 +405,20 @@ function packagedNoticesTest() {
   }
   // Data copied from another project names its source, author, version and licence
   // in the file itself, not only in the notices document.
-  for (const file of ['data/oracle-tags.js', 'data/illustration-tags-1.js', 'data/illustration-tags-2.js']) {
+  for (const file of ['assets/data/oracle-tags.js', 'assets/data/illustration-tags-1.js', 'assets/data/illustration-tags-2.js']) {
     const head = read(file).slice(0, 600);
     for (const statement of ['MoxTags v1.8.3', 'natefinch/moxtags', 'Copyright (c) 2026 Nate Finch', 'MIT']) {
       assert(head.includes(statement), `${file} header states ${statement}`);
     }
   }
-  const nicknames = read('data/shambleshark-nicknames.js').slice(0, 700);
+  const nicknames = read('assets/data/shambleshark-nicknames.js').slice(0, 700);
   for (const statement of [
-    'crookedneighbor/shambleshark', 'Samuel Sim\u00f5es', 'Blade Barringer', 'MIT', 'third_party/Shambleshark-LICENSE'
+    'crookedneighbor/shambleshark', 'Samuel Sim\u00f5es', 'Blade Barringer', 'MIT', 'assets/licences/Shambleshark-LICENSE'
   ]) {
-    assert(nicknames.includes(statement), `data/shambleshark-nicknames.js header states ${statement}`);
+    assert(nicknames.includes(statement), `assets/data/shambleshark-nicknames.js header states ${statement}`);
   }
   // The derived Scryfall snapshot says what it is and when it was taken.
-  const platforms = read('data/set-platforms.js');
+  const platforms = read('assets/data/set-platforms.js');
   assert(/Scryfall/.test(platforms) && /2026-09-25/.test(platforms),
     'the set-platform snapshot names its source and the date it was taken');
   assert(!/oracle_text|printed_type|layout|watermark|image_uris/.test(platforms),
@@ -445,16 +455,16 @@ function packagedArchiveTest() {
   const listed = listZip(zip);
 
   // The exact regression: the settings page must bring its own styles and script.
-  for (const file of ['options.html', 'options.css', 'options.js', 'popup.html', 'popup.css', 'popup.js', 'i18n.js', 'format-catalog.js']) {
+  for (const file of ['src/ui/options.html', 'src/ui/options.css', 'src/ui/options.js', 'src/ui/popup.html', 'src/ui/popup.css', 'src/ui/popup.js', 'src/core/i18n.js', 'src/core/format-catalog.js']) {
     assert(listed.includes(file), `${file} is inside the archive, so no page ships bare`);
   }
   // And the second: the tag snapshot is named through a map in background.js
   // rather than a literal, and a walker that only read literals let it leave the
   // archive -- a 143 KB package with no tags in it.
-  for (const file of ['data/oracle-tags.js', 'data/illustration-tags-1.js', 'data/illustration-tags-2.js']) {
+  for (const file of ['assets/data/oracle-tags.js', 'assets/data/illustration-tags-1.js', 'assets/data/illustration-tags-2.js']) {
     assert(listed.includes(file), `${file} is inside the archive, so the tag panels have data`);
   }
-  const tagBytes = ['data/oracle-tags.js', 'data/illustration-tags-1.js', 'data/illustration-tags-2.js']
+  const tagBytes = ['assets/data/oracle-tags.js', 'assets/data/illustration-tags-1.js', 'assets/data/illustration-tags-2.js']
     .reduce((sum, file) => sum + fs.statSync(path.join(ROOT, file)).size, 0);
   assert(tagBytes > 10 * 1024 * 1024, 'the bundled tag snapshot is the size it should be');
   // Whatever the manifest names has to be in the archive. This is what let the
@@ -473,12 +483,19 @@ function packagedArchiveTest() {
     assert(listed.includes(file), `the manifest names ${file}, which is inside the archive`);
   }
   // Every script and stylesheet a packaged page names must travel with it.
+  //
+  // A page's references are relative to the page, so they are resolved rather
+  // than compared as written: options.html sits in src/ui/ and says "options.css"
+  // where it is beside it, and the archive holds src/ui/options.css.
   for (const file of listed.filter(name => /\.html$/.test(name))) {
     const html = read(file);
+    const dir = path.posix.dirname(file.split(path.sep).join('/'));
     for (const m of html.matchAll(/<(?:script|link)[^>]+(?:src|href)\s*=\s*["']([^"']+)["']/gi)) {
-      const name = m[1].replace(/^\.\//, '');
-      if (name.startsWith('http') || name.startsWith('data:')) continue;
-      assert(listed.includes(name), `${file} references ${name}, which is inside the archive`);
+      const written = m[1];
+      if (written.startsWith('http') || written.startsWith('data:')) continue;
+      const name = path.posix.normalize(path.posix.join(dir, written));
+      assert(!name.startsWith('..'), `${file} does not reference outside the extension: ${written}`);
+      assert(listed.includes(name), `${file} references ${written}, which is ${name} in the archive`);
     }
   }
   fs.rmSync(out, { recursive: true, force: true });

@@ -216,7 +216,7 @@
     control.setAttribute('aria-label', label);
     const icon = document.createElement('img');
     icon.alt = '';
-    icon.src = chrome.runtime.getURL(`icons/${name}.svg`);
+    icon.src = chrome.runtime.getURL(`assets/icons/${name}.svg`);
     control.append(icon);
     return control;
   }

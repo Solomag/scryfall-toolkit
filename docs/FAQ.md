@@ -21,7 +21,7 @@ the folder keeps your clipboard and settings.
 Reload the Scryfall tab. Content scripts do not reach a page that was already open.
 
 **The settings page looks like plain HTML.**
-That means `options.css` did not load. It happened in one release (0.44.0) where the file
+That means `src/ui/options.css` did not load. It happened in one release (0.44.0) where the file
 was missing from the archive. Install a build from 0.45.0 or later; the packaging now
 checks the archive itself and a smoke test runs it.
 

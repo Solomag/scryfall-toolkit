@@ -84,11 +84,11 @@ const routes = {
 
 async function loadCardPage(state, pageRoutes = routes) {
   const page = createPage({ url: 'https://scryfall.com/card/tst/1/test-card', html: CARD_HTML, state, routes: pageRoutes });
-  await page.script('i18n.js');
-  await page.script('format-catalog.js');
-  await page.script('tag-icons.js');
-  await page.script('data/shambleshark-nicknames.js');
-  await page.contentFeatures();
+  await page.script('src/core/i18n.js');
+  await page.script('src/core/format-catalog.js');
+  await page.script('src/core/tag-icons.js');
+  await page.script('assets/data/shambleshark-nicknames.js');
+  await page.cardPage();
   await sleep(60);
   return page;
 }
@@ -418,11 +418,11 @@ async function searchPageTest() {
       <span class="card-grid-item-invisible-label">Hidden Card</span><img alt="Hidden Card"></div>
   </div></body></html>`;
   const page = createPage({ url: 'https://scryfall.com/search?q=grid', html, state: { cards: [] }, routes });
-  await page.script('i18n.js');
-  await page.script('format-catalog.js');
-  await page.script('tag-icons.js');
-  await page.script('data/shambleshark-nicknames.js');
-  await page.contentFeatures();
+  await page.script('src/core/i18n.js');
+  await page.script('src/core/format-catalog.js');
+  await page.script('src/core/tag-icons.js');
+  await page.script('assets/data/shambleshark-nicknames.js');
+  await page.cardPage();
   await sleep(60);
   const { document, mock } = page;
 
@@ -483,11 +483,11 @@ async function printsGroupsEdgeTest() {
     })
   };
   const page = createPage({ url: 'https://scryfall.com/card/aaa/1/edge-card', html, state: { cards: [], printGrouping: true, printFoldGroups: true, printFullPageLink: true }, routes: edgeRoutes });
-  await page.script('i18n.js');
-  await page.script('format-catalog.js');
-  await page.script('tag-icons.js');
-  await page.script('data/shambleshark-nicknames.js');
-  await page.contentFeatures();
+  await page.script('src/core/i18n.js');
+  await page.script('src/core/format-catalog.js');
+  await page.script('src/core/tag-icons.js');
+  await page.script('assets/data/shambleshark-nicknames.js');
+  await page.cardPage();
   await sleep(60);
   const { document } = page;
   const printBody = document.querySelector('#main .prints .prints-table tbody');
@@ -569,11 +569,11 @@ async function promoParentMergeTest() {
     })
   };
   const page = createPage({ url: 'https://scryfall.com/card/abc/7/edge-card', html, state: { cards: [], printGrouping: true, printFoldGroups: true, printFullPageLink: true }, routes: promoRoutes });
-  await page.script('i18n.js');
-  await page.script('format-catalog.js');
-  await page.script('tag-icons.js');
-  await page.script('data/shambleshark-nicknames.js');
-  await page.contentFeatures();
+  await page.script('src/core/i18n.js');
+  await page.script('src/core/format-catalog.js');
+  await page.script('src/core/tag-icons.js');
+  await page.script('assets/data/shambleshark-nicknames.js');
+  await page.cardPage();
   await sleep(60);
   const { document } = page;
   const printBody = document.querySelector('#main .prints .prints-table tbody');
@@ -614,11 +614,11 @@ async function printsOrderTest() {
   };
   const load = async setup => {
     const page = createPage({ url: 'https://scryfall.com/card/old/1/order-card', html: setup.html, state: { cards: [], printGrouping: true, printFoldGroups: true, printFullPageLink: true }, routes: setup.routes });
-    await page.script('i18n.js');
-    await page.script('format-catalog.js');
-    await page.script('tag-icons.js');
-    await page.script('data/shambleshark-nicknames.js');
-    await page.contentFeatures();
+    await page.script('src/core/i18n.js');
+    await page.script('src/core/format-catalog.js');
+    await page.script('src/core/tag-icons.js');
+    await page.script('assets/data/shambleshark-nicknames.js');
+    await page.cardPage();
     await sleep(60);
     return page.document.querySelector('#main .prints .prints-table tbody');
   };
@@ -673,11 +673,11 @@ async function printsWindowTest() {
     url: 'https://scryfall.com/card/n06/1/window-card', html, state: { cards: [], printGrouping: true, printFoldGroups: true, printFullPageLink: true },
     routes: { ...routes, finishes: () => ({}), allPrints: () => ({ prints: apiOrder, truncated: false }) }
   });
-  await page.script('i18n.js');
-  await page.script('format-catalog.js');
-  await page.script('tag-icons.js');
-  await page.script('data/shambleshark-nicknames.js');
-  await page.contentFeatures();
+  await page.script('src/core/i18n.js');
+  await page.script('src/core/format-catalog.js');
+  await page.script('src/core/tag-icons.js');
+  await page.script('assets/data/shambleshark-nicknames.js');
+  await page.cardPage();
   await sleep(60);
   const { document } = page;
   const printBody = document.querySelector('#main .prints .prints-table tbody');
@@ -734,11 +734,11 @@ async function starNumberTest() {
     url: 'https://scryfall.com/card/7ed/67%E2%98%85/star-card', html, state: { cards: [], printGrouping: true, printFoldGroups: true, printFullPageLink: true },
     routes: { ...routes, finishes: () => ({}), allPrints: () => ({ prints, truncated: false }) }
   });
-  await page.script('i18n.js');
-  await page.script('format-catalog.js');
-  await page.script('tag-icons.js');
-  await page.script('data/shambleshark-nicknames.js');
-  await page.contentFeatures();
+  await page.script('src/core/i18n.js');
+  await page.script('src/core/format-catalog.js');
+  await page.script('src/core/tag-icons.js');
+  await page.script('assets/data/shambleshark-nicknames.js');
+  await page.cardPage();
   await sleep(60);
   const { document } = page;
   const printBody = document.querySelector('#main .prints .prints-table tbody');
@@ -769,11 +769,11 @@ async function singlePrintingTest() {
     })
   };
   const page = createPage({ url: 'https://scryfall.com/card/uni/1/only', html, state: { cards: [], printGrouping: true, printFoldGroups: true, printFullPageLink: true }, routes: onlyRoutes });
-  await page.script('i18n.js');
-  await page.script('format-catalog.js');
-  await page.script('tag-icons.js');
-  await page.script('data/shambleshark-nicknames.js');
-  await page.contentFeatures();
+  await page.script('src/core/i18n.js');
+  await page.script('src/core/format-catalog.js');
+  await page.script('src/core/tag-icons.js');
+  await page.script('assets/data/shambleshark-nicknames.js');
+  await page.cardPage();
   await sleep(60);
   const { document } = page;
   const printBody = document.querySelector('#main .prints .prints-table tbody');
@@ -797,11 +797,11 @@ async function legacyMigrationTest() {
     localStorage: { cardClipboard: JSON.stringify([{ cardName: 'Old Card', cardLink: 'https://scryfall.com/card/lea/1/old' }]) },
     routes
   });
-  await page.script('i18n.js');
-  await page.script('format-catalog.js');
-  await page.script('tag-icons.js');
-  await page.script('data/shambleshark-nicknames.js');
-  await page.contentFeatures();
+  await page.script('src/core/i18n.js');
+  await page.script('src/core/format-catalog.js');
+  await page.script('src/core/tag-icons.js');
+  await page.script('assets/data/shambleshark-nicknames.js');
+  await page.cardPage();
   await sleep(60);
   assertEqual(page.mock.state.cards, [
     { name: 'Old Card', url: 'https://scryfall.com/card/lea/1/old', set: '', number: '' }
@@ -822,11 +822,11 @@ async function advancedPriceFilterTest() {
   </div></body></html>`;
   const load = async (state, url) => {
     const page = createPage({ url, html, state, routes });
-    await page.script('i18n.js');
-    await page.script('format-catalog.js');
-    await page.script('tag-icons.js');
-    await page.script('data/shambleshark-nicknames.js');
-    await page.contentFeatures();
+    await page.script('src/core/i18n.js');
+    await page.script('src/core/format-catalog.js');
+    await page.script('src/core/tag-icons.js');
+    await page.script('assets/data/shambleshark-nicknames.js');
+    await page.cardPage();
     await sleep(60);
     return page;
   };
@@ -846,11 +846,11 @@ async function setPlatformTest() {
   console.log('content scripts: platform filter decides which sets are shown');
   const load = async (state, url, html, pageRoutes = routes) => {
     const page = createPage({ url, html, state, routes: pageRoutes });
-    await page.script('i18n.js');
-    await page.script('format-catalog.js');
-    await page.script('tag-icons.js');
-    await page.script('data/shambleshark-nicknames.js');
-    await page.contentFeatures();
+    await page.script('src/core/i18n.js');
+    await page.script('src/core/format-catalog.js');
+    await page.script('src/core/tag-icons.js');
+    await page.script('assets/data/shambleshark-nicknames.js');
+    await page.cardPage();
     await sleep(80);
     return page;
   };
@@ -949,11 +949,11 @@ async function advancedSetFilterTest() {
     for (const box of page.document.querySelectorAll('#main input[name="games[]"]')) {
       box.checked = box.hasAttribute('checked');
     }
-    await page.script('i18n.js');
-    await page.script('format-catalog.js');
-    await page.script('tag-icons.js');
-    await page.script('data/shambleshark-nicknames.js');
-    await page.contentFeatures();
+    await page.script('src/core/i18n.js');
+    await page.script('src/core/format-catalog.js');
+    await page.script('src/core/tag-icons.js');
+    await page.script('assets/data/shambleshark-nicknames.js');
+    await page.cardPage();
     await sleep(80);
     return page;
   };
@@ -1024,11 +1024,11 @@ async function cardNicknameTest() {
   console.log('content scripts: historical card nicknames');
   const load = async (url, state) => {
     const page = createPage({ url, html: CARD_HTML, state, routes });
-    await page.script('i18n.js');
-    await page.script('format-catalog.js');
-    await page.script('tag-icons.js');
-    await page.script('data/shambleshark-nicknames.js');
-    await page.contentFeatures();
+    await page.script('src/core/i18n.js');
+    await page.script('src/core/format-catalog.js');
+    await page.script('src/core/tag-icons.js');
+    await page.script('assets/data/shambleshark-nicknames.js');
+    await page.cardPage();
     await sleep(60);
     return page;
   };

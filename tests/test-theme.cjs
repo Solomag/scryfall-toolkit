@@ -42,7 +42,7 @@ async function manifestIntegrity() {
   const pageWorld = manifest.content_scripts.filter(group => group.world === 'MAIN');
   assertEqual(pageWorld.length, 1, 'exactly one script group runs in the page world');
   assertEqual(pageWorld[0].js,
-    ['deck-tools.js', 'deck-scryfall.js', 'deck-results.js', 'deck-clean-up.js', 'deck-edhrec.js', 'deck-search.js', 'page.js'],
+    ['src/deck-page/tools.js', 'src/deck-page/scryfall.js', 'src/deck-page/results.js', 'src/deck-page/clean-up.js', 'src/deck-page/edhrec.js', 'src/deck-page/search.js', 'src/deck-page/bridge.js'],
     'the page world loads the deck tools, the Scryfall adapter, the shared results area, the features and the bridge');
   assertEqual(pageWorld[0].run_at, 'document_idle', 'and starts once the page is up');
   for (const group of manifest.content_scripts) {
@@ -70,7 +70,7 @@ async function manifestIntegrity() {
     'and so does its root entry, because npm ci refuses to install when they differ');
   const taggerGroups = manifest.content_scripts.filter(group => group.matches.some(host => host.includes('tagger.scryfall.com')));
   assert(taggerGroups.length >= 1, 'manifest keeps a Tagger content script');
-  assert(taggerGroups.some(group => group.js.includes('theme.js') && group.css.includes('theme.css')),
+  assert(taggerGroups.some(group => group.js.includes('src/core/theme.js') && group.css.includes('src/styles/theme.css')),
     'the theme is injected on Tagger as well, so the setting reaches it');
   assert(taggerGroups.some(group => group.run_at === 'document_start'), 'the Tagger theme runs at document_start');
 }
@@ -78,11 +78,11 @@ async function manifestIntegrity() {
 function syntaxCheck() {
   console.log('static: syntax check');
   const files = [
-    'background.js', 'content-core.js', 'content-prices.js', 'theme.js', 'i18n.js', 'options.js',
-    'format-catalog.js', 'format-overrides.js', 'tag-icons.js',
-    'tagger-clipboard.js',
-    'data/oracle-tags.js', 'data/illustration-tags-1.js',
-    'data/illustration-tags-2.js', 'data/shambleshark-nicknames.js'
+    'src/background/worker.js', 'src/card-page/core.js', 'src/card-page/prices.js', 'src/core/theme.js', 'src/core/i18n.js', 'src/ui/options.js',
+    'src/core/format-catalog.js', 'src/core/format-overrides.js', 'src/core/tag-icons.js',
+    'src/card-page/tagger-clipboard.js',
+    'assets/data/oracle-tags.js', 'assets/data/illustration-tags-1.js',
+    'assets/data/illustration-tags-2.js', 'assets/data/shambleshark-nicknames.js'
   ];
   const failures = [];
   for (const file of files) {
@@ -94,39 +94,51 @@ function syntaxCheck() {
 
 function importScriptsCheck() {
   console.log('static: importScripts targets');
-  const background = read('background.js');
+  const background = read('src/background/worker.js');
   const targets = [...background.matchAll(/importScripts\(([^)]*)\)/g)]
     .flatMap(match => [...match[1].matchAll(/"([^"]+)"/g)].map(hit => hit[1]));
   assert(targets.length > 0, 'background declares importScripts');
-  for (const file of targets) assert(exists(file), `importScripts target exists: ${file}`);
+  // importScripts resolves against the worker's own URL, and the worker is
+  // src/background/worker.js. Checking the path as written would look in the
+  // repository root for "../../assets/..." and either pass by accident or fail for
+  // the wrong reason; what matters is the file it lands on.
+  const workerDir = 'src/background';
+  for (const file of targets) {
+    const resolved = file.startsWith('/')
+      ? file.slice(1)
+      : path.posix.normalize(path.posix.join(workerDir, file));
+    assert(!resolved.startsWith('..'),
+      `an importScripts target does not walk out of the extension: ${file} -> ${resolved}`);
+    assert(exists(resolved), `importScripts target exists: ${resolved} (from ${file})`);
+  }
 }
 
 function iconCheck() {
   console.log('static: bundled icons');
   for (const icon of ['clip', 'duplicate', 'trash', 'cardtrader']) {
-    assert(exists(`icons/${icon}.svg`), `icons/${icon}.svg bundled`);
+    assert(exists(`assets/icons/${icon}.svg`), `assets/icons/${icon}.svg bundled`);
   }
-  assert(exists('icons/edhrec.png'), 'icons/edhrec.png bundled');
+  assert(exists('assets/icons/edhrec.png'), 'assets/icons/edhrec.png bundled');
   // Cardmarket's symbol, as they distribute it, from the file they publish for
   // dark backgrounds. Cropped from their horizontal lockup — the wordmark beside
   // it and the empty margin are what is gone, the artwork is theirs untouched.
   // There is one file and not a black one and a white one: the mark is drawn as
   // a mask, so the colour comes from the heading and there is no variant to pick
   // wrongly. Shipping the black one again would put that risk back.
-  assert(exists('icons/cardmarket-white.png'), 'icons/cardmarket-white.png bundled');
-  const cm = fs.readFileSync(path.join(ROOT, 'icons/cardmarket-white.png'));
+  assert(exists('assets/icons/cardmarket-white.png'), 'assets/icons/cardmarket-white.png bundled');
+  const cm = fs.readFileSync(path.join(ROOT, 'assets/icons/cardmarket-white.png'));
   assertEqual([...cm.slice(0, 4)], [0x89, 0x50, 0x4e, 0x47], 'it is a real PNG');
   assertEqual([cm.readUInt32BE(16), cm.readUInt32BE(20)], [89, 93],
     'it is Cardmarket\'s symbol at its own proportions, not a stub');
-  assert(!exists('icons/cardmarket-black.png'),
+  assert(!exists('assets/icons/cardmarket-black.png'),
     'the black variant is not shipped: the mark is a mask and has no variant to choose');
-  assert(!exists('icons/cardmarket.svg'),
+  assert(!exists('assets/icons/cardmarket.svg'),
     'the placeholder glyph is gone now that Cardmarket\'s own mark is used');
 }
 
 function cssCheck() {
   console.log('static: stylesheets');
-  const css = read('content.css');
+  const css = read('src/styles/content.css');
   assert(css.includes('#main .prints > .prints-table .stk-native-print-add{'),
     'native print button styles exist');
   assert(css.includes('tbody tr:hover .stk-native-print-add'),
@@ -197,13 +209,13 @@ function cssCheck() {
   assert(css.includes('.stk-tag-icon.icon-flipped svg{transform:scale(-1,1)}'),
     'flipped tag icons rule exists');
   // The tag icons live in their own file now, and this is about their file.
-  const flipLine = read('content-tags.js').split('\n').find(line => line.includes('icon-flipped'));
+  const flipLine = read('src/card-page/tags.js').split('\n').find(line => line.includes('icon-flipped'));
   assert(flipLine && !flipLine.includes('BETTER_THAN'),
     'BETTER_THAN no longer flips the relation icon');
   assert(flipLine && flipLine.includes('WORSE_THAN'),
     'WORSE_THAN flips the relation icon');
 
-  const theme = read('theme.css');
+  const theme = read('src/styles/theme.css');
   assert(/html\.stk-dark\{[^}]*--stk-link-purple:#c4a7ea/.test(theme),
     'dark theme link purple variable');
   assert(theme.includes('html.stk-dark #main .stk-brighter-purple{color:var(--stk-link-purple)!important}'),
@@ -267,7 +279,7 @@ function cssCheck() {
     'html.stk-dark.stk-tagger .tag-input-field{background-color:var\(--stk-panel-2\)!important',
     'html.stk-dark.stk-tagger .dialog :is(h1,p){color:var\(--stk-ink\)!important'
   ]) assert(theme.includes(rule), `Tagger rule present: ${rule.slice(0, 52)}`);
-  const js = read('theme.js');
+  const js = read('src/core/theme.js');
   assert(js.includes("tagger\\.scryfall\\.com"), 'theme.js marks the Tagger host');
   assert(!/repairSetSymbols|stk-light-set-symbol/.test(js),
     'the set symbols need no per-symbol repair, the stylesheet filter repaints them all');
@@ -308,7 +320,7 @@ function cssCheck() {
 // first on every navigation.
 function firstPaintTest() {
   console.log('static: the dark class is set before the first paint');
-  const js = read('theme.js');
+  const js = read('src/core/theme.js');
   const syncDefault = js.indexOf('themeMode(\'auto\') === \'dark\'');
   const storageCall = js.indexOf('chrome.storage.local.get({ darkTheme');
   assert(syncDefault !== -1,
@@ -327,7 +339,7 @@ function firstPaintTest() {
 // dark grey on dark grey. Only the dimmed band may remain.
 function noDoublePaintingTest() {
   console.log('static: no surface is painted twice with disagreeing colours');
-  const css = read('theme.css').replace(/\/\*[\s\S]*?\*\//g, '');
+  const css = read('src/styles/theme.css').replace(/\/\*[\s\S]*?\*\//g, '');
   const bands = css.match(/[^\n{]*\.team-header[^\n{]*\{[^}]*background[^}]*\}/g) || [];
   const paintsBackground = bands.filter(rule => /background-color:(?!transparent)/.test(rule));
   assertEqual(paintsBackground.length, 1,
@@ -345,7 +357,7 @@ function noDoublePaintingTest() {
 // quietly reach for a class nobody wrote down.
 function domContractTest() {
   console.log('static: the stylesheet stays inside the DOM contract');
-  const css = read('theme.css').replace(/\/\*[\s\S]*?\*\//g, '');
+  const css = read('src/styles/theme.css').replace(/\/\*[\s\S]*?\*\//g, '');
   const contract = read('docs/scryfall-dom.md');
 
   // Class names come out of selectors, not out of rule bodies: a data URI can
@@ -374,7 +386,7 @@ function domContractTest() {
   const ourPrefixes = ['stk-', 'cleanup-improver__', 'modify-cleanup-', 'data-heading-'];
   const isOurs = name => ourPrefixes.some(prefix => name.replace(/^[.#[\]]+/, '').startsWith(prefix));
   const jsUsed = new Set();
-  for (const file of ['content-core.js', 'deck-clean-up.js', 'deck-edhrec.js', 'deck-results.js', 'deck-search.js', 'theme.js']) {
+  for (const file of ['src/card-page/core.js', 'src/deck-page/clean-up.js', 'src/deck-page/edhrec.js', 'src/deck-page/results.js', 'src/deck-page/search.js', 'src/core/theme.js']) {
     const js = read(file).replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
     for (const m of js.matchAll(/querySelector(?:All)?\(\s*['"`]([^'"`]+)['"`]/g)) {
       for (const c of m[1].matchAll(/\.([a-zA-Z][a-zA-Z0-9_-]*)/g)) jsUsed.add(c[1]);
@@ -392,7 +404,7 @@ function domContractTest() {
 
 function paletteTest() {
   console.log('static: the palette holds the colours it replaced');
-  const css = read('theme.css');
+  const css = read('src/styles/theme.css');
   for (const [name, value] of [
     ['--stk-page', '#1d2021'],
     ['--stk-panel', '#252829'],
@@ -416,7 +428,7 @@ function paletteTest() {
 
 function hoverStatesTest() {
   console.log('static: hover states differ from the resting state');
-  const css = read('theme.css').replace(/\/\*[\s\S]*?\*\//g, '');
+  const css = read('src/styles/theme.css').replace(/\/\*[\s\S]*?\*\//g, '');
   const paint = '(#[0-9a-f]{3,8}|var\\(--stk-[a-z0-9-]+\\))';
   const resting = css.match(new RegExp('\\.faq-link\\{background:' + paint));
   const hovered = css.match(new RegExp('\\.faq-link:is\\(:hover,:active,:focus\\)\\{background:' + paint));
@@ -428,8 +440,8 @@ function hoverStatesTest() {
 
 function auditGapCheck() {
   console.log('static: dark theme covers the surfaces the audit found');
-  const theme = read('theme.css');
-  const js = read('theme.js');
+  const theme = read('src/styles/theme.css');
+  const js = read('src/core/theme.js');
   // Each of these was a light surface on a live page with the dark theme on.
   for (const [what, pattern] of [
     ['the "Jump to" menu of a set page', /html\.stk-dark #main :is\(\.dropdown-menu-items,\.dropdown-menu-items ul/],
@@ -571,7 +583,7 @@ async function darkThemeRuntime() {
       </div></body></html>`,
     state: { darkTheme: true, hideCasterIndicator: true, siteLanguage: 'ru' }
   });
-  page.script('theme.js');
+  page.script('src/core/theme.js');
   await sleep(40);
   const { document, mock } = page;
   const root = document.documentElement;
@@ -620,7 +632,7 @@ async function purpleAfterStylesheetTest() {
   assert(!link.classList.contains('stk-brighter-purple'),
     'before the stylesheet arrives there is no dark purple to lift');
 
-  page.script('theme.js');
+  page.script('src/core/theme.js');
   await sleep(30);
   assertEqual(page.windowListenerCount('load'), 1,
     'the repair is waiting for the load event, since no node will be added');
@@ -640,7 +652,7 @@ async function systemThemeTest() {
     state: {},
     mediaDark: false
   });
-  page.script('theme.js');
+  page.script('src/core/theme.js');
   await sleep(30);
   const root = page.document.documentElement;
   assert(!root.classList.contains('stk-dark'), 'a light system leaves Scryfall light while the theme is automatic');
@@ -656,7 +668,7 @@ async function systemThemeTest() {
     state: { darkTheme: 'light' },
     mediaDark: true
   });
-  pinned.script('theme.js');
+  pinned.script('src/core/theme.js');
   await sleep(30);
   assert(!pinned.document.documentElement.classList.contains('stk-dark'),
     'a light theme chosen by hand survives a dark system');
@@ -677,7 +689,7 @@ async function pathClasses() {
       html: '<!DOCTYPE html><html><body><div id="main"></div></body></html>',
       state: {}
     });
-    page.script('theme.js');
+    page.script('src/core/theme.js');
     for (const cls of expected) {
       assert(page.document.documentElement.classList.contains(cls),
         `${pathname} → ${cls}`);
@@ -694,7 +706,7 @@ async function pathClasses() {
     html: '<!DOCTYPE html><html><body><div class="app-wrapper"></div></body></html>',
     state: {}
   });
-  tagger.script('theme.js');
+  tagger.script('src/core/theme.js');
   assert(tagger.document.documentElement.classList.contains('stk-tagger'), 'Tagger host is marked stk-tagger');
   for (const cls of ['stk-account-page', 'stk-info-page', 'stk-team-page', 'stk-bots-page', 'stk-blog-page']) {
     assert(!tagger.document.documentElement.classList.contains(cls), `Tagger avoids ${cls}`);
@@ -704,7 +716,7 @@ async function pathClasses() {
     html: '<!DOCTYPE html><html><body><div id="main"></div></body></html>',
     state: {}
   });
-  mainSite.script('theme.js');
+  mainSite.script('src/core/theme.js');
   assert(!mainSite.document.documentElement.classList.contains('stk-tagger'), 'Scryfall itself is not marked as Tagger');
 }
 

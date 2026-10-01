@@ -17,7 +17,7 @@ terms. "Used" is meant literally:
 No external project contributed code to this repository. What exists here is either data,
 an image, or a behaviour that was followed.
 
-Every licence text quoted below is also stored verbatim as a file in `third_party/`, and
+Every licence text quoted below is also stored verbatim as a file in `assets/licences/`, and
 all of those files are shipped inside the distributed extension archive.
 
 ## The scope of this project's own licence
@@ -28,8 +28,8 @@ document, and it grants no rights in anyone's trademarks, logos, card data or se
 
 In particular, and stated plainly because it is easy to get wrong:
 
-- The MPL-2.0 notice does **not** cover `icons/edhrec.png`, `icons/cardtrader.svg` or
-  `icons/cardtrader.png`. Those are third-party brand marks, and their rights stay with
+- The MPL-2.0 notice does **not** cover `assets/icons/edhrec.png`, `assets/icons/cardtrader.svg` or
+  `assets/icons/cardtrader.png`. Those are third-party brand marks, and their rights stay with
   their owners.
 - **Data access and logos are different questions, and only the first is settled.**
   EDHREC answered with their published data policy and it permits this use, so the data
@@ -56,20 +56,20 @@ endorsed, sponsored or approved by any of them.
   clipboard functionality for Scryfall", last pushed 2023-08-20)
 - Author: Jacob Hearst
 - Licence: MIT, `Copyright (c) 2022 Jacob Hearst` — full text in
-  [`third_party/CardClip-LICENSE`](third_party/CardClip-LICENSE)
+  [`assets/licences/CardClip-LICENSE`](assets/licences/CardClip-LICENSE)
 - Used: **visual asset** (3 files) and one data key name.
 
 | File in this repo | What it is |
 | --- | --- |
-| `icons/clip.svg` | Copied verbatim from CardClip `img/clip.svg` |
-| `icons/duplicate.svg` | Copied verbatim from CardClip `img/duplicate.svg` |
-| `icons/trash.svg` | Copied verbatim from CardClip `img/trash.svg` |
+| `assets/icons/clip.svg` | Copied verbatim from CardClip `img/clip.svg` |
+| `assets/icons/duplicate.svg` | Copied verbatim from CardClip `img/duplicate.svg` |
+| `assets/icons/trash.svg` | Copied verbatim from CardClip `img/trash.svg` |
 
 All three were verified byte-identical to the files in the upstream repository by SHA-256
 on 2026-09-25. Because they are copies, CardClip's MIT notice is retained in
-`third_party/CardClip-LICENSE`.
+`assets/licences/CardClip-LICENSE`.
 
-The clipboard feature itself is **not** a copy: `content.js` and `tagger-clipboard.js`
+The clipboard feature itself is **not** a copy: `content.js` and `src/card-page/tagger-clipboard.js`
 are original implementations, and none of CardClip's function names
 (`showClipboardList`, `loadClipboardFromStorage`, `transformButton`,
 `findExistingButtons`, …) appear in this repository. The one place CardClip's data is
@@ -83,7 +83,7 @@ interface with an existing installation, not copied code.
   JacobHearst/CardClip, created 2025-09-05)
 - Author: the fork's owner; the underlying copyright remains Jacob Hearst, MIT. The fork
   carries the same licence text as its parent, kept here in
-  [`third_party/Paruhas-CardClip-LICENSE`](third_party/Paruhas-CardClip-LICENSE)
+  [`assets/licences/Paruhas-CardClip-LICENSE`](assets/licences/Paruhas-CardClip-LICENSE)
 - Used: **behaviour/idea only** — the export format that appends the printing's set code
   and collector number (`1 Card Name (SET) 123`), exposed as the `moxfield` export option.
 - No file from this repository was copied into this project.
@@ -94,19 +94,19 @@ interface with an existing installation, not copied code.
   extension to add functionality to the Scryfall site. Not affiliated with Scryfall.",
   last pushed 2023-10-07)
 - Authors: Samuel Simões (2016), Blade Barringer (2019)
-- Licence: MIT — full text in [`third_party/Shambleshark-LICENSE`](third_party/Shambleshark-LICENSE)
+- Licence: MIT — full text in [`assets/licences/Shambleshark-LICENSE`](assets/licences/Shambleshark-LICENSE)
 - Used: **data copied** (1 file) and **behaviour ported** (the clean up improver).
 
 | File in this repo | What it is |
 | --- | --- |
-| `data/shambleshark-nicknames.js` | The 396 card-nickname records from upstream's per-set TypeScript modules under `src/js/lib/card-nicknames/`, re-serialised into a single JSON array |
+| `assets/data/shambleshark-nicknames.js` | The 396 card-nickname records from upstream's per-set TypeScript modules under `src/js/lib/card-nicknames/`, re-serialised into a single JSON array |
 
 Upstream's record shape (`realName`, `setCode`, `collectorNumber`, `nickname`, `source`)
 and every nickname string are upstream's. Two differences from upstream's `main` branch
 were introduced here: the records were flattened into one array instead of 22 modules, and
 Streets of New Capenna is keyed `snc` (Scryfall's current set code) where upstream still
 writes `stc`. Both are recorded in the file's own header comment. Shambleshark's MIT
-notice is retained in `third_party/Shambleshark-LICENSE`.
+notice is retained in `assets/licences/Shambleshark-LICENSE`.
 
 The inline card/art tag presentation was **not** copied: none of Shambleshark's
 identifiers (`CardNicknameDisplay`, `createViewMoreTagsRow`, `TaggerIcon`,
@@ -118,7 +118,7 @@ are here: the clean up improver (`scryfall-embed/modify-clean-up`, `lib/card-par
 `lib/deck-parser`), the EDHREC suggestions and the Scryfall search. A fourth,
 `card-input-modifier` with `lib/ui-elements/card-tooltip`, was ported and then removed
 before release — see the note below.
-`deck-scryfall.js` stands in for upstream's `scryfall-globals.ts`, and `page.js` for its
+`src/deck-page/scryfall.js` stands in for upstream's `scryfall-globals.ts`, and `src/deck-page/bridge.js` for its
 `scryfall-embed` entry point and framebus wiring.
 
 Two of the three were written rather than copied, because what upstream does is not
@@ -154,18 +154,18 @@ package.
 - Author: Nate Finch
 - Version used: **v1.8.3** (git tag `v1.8.3`, released 2026-06-08)
 - Licence: MIT, `Copyright (c) 2026 Nate Finch` — full text in
-  [`third_party/MoxTags-LICENSE`](third_party/MoxTags-LICENSE)
+  [`assets/licences/MoxTags-LICENSE`](assets/licences/MoxTags-LICENSE)
 - Used: **data copied** (3 files, byte-identical copies).
 
 | File in this repo | Upstream file (`src/data/`) |
 | --- | --- |
-| `data/oracle-tags.js` | `oracle-tags.js` |
-| `data/illustration-tags-1.js` | `illustration-tags-1.js` |
-| `data/illustration-tags-2.js` | `illustration-tags-2.js` |
+| `assets/data/oracle-tags.js` | `oracle-tags.js` |
+| `assets/data/illustration-tags-1.js` | `illustration-tags-1.js` |
+| `assets/data/illustration-tags-2.js` | `illustration-tags-2.js` |
 
 All three were verified byte-identical to MoxTags v1.8.3 by SHA-256 on 2026-09-25; each
 file now carries a header naming the source, version, author and licence, and MoxTags'
-MIT notice is retained in `third_party/MoxTags-LICENSE`.
+MIT notice is retained in `assets/licences/MoxTags-LICENSE`.
 
 No Moxfield functionality is included. MoxTags continues to work on its own on Moxfield;
 Scryfall Toolkit deliberately never runs there.
@@ -176,13 +176,13 @@ Scryfall Toolkit deliberately never runs there.
   add more stuff to scryfall.com", created 2026-07-16, last pushed 2026-08-13)
 - Author: notsonic
 - Licence: MIT, `Copyright (c) 2026 notsonic` — full text in
-  [`third_party/MTG-Enhancements-LICENSE`](third_party/MTG-Enhancements-LICENSE)
+  [`assets/licences/MTG-Enhancements-LICENSE`](assets/licences/MTG-Enhancements-LICENSE)
 - Used: **behaviour/idea only**, plus the names of three extra formats.
 
-`format-catalog.js` offers `Heritage`, `Classic Legacy` and `Peak Legacy` under exactly
+`src/core/format-catalog.js` offers `Heritage`, `Classic Legacy` and `Peak Legacy` under exactly
 the display names upstream uses for its `heritage`, `classic` and `peak` formats. Nothing
 else was taken: upstream derives those formats with Scryfall search queries, while
-`format-overrides.js` in this project is an original per-card legality map (17 card UUIDs
+`src/core/format-overrides.js` in this project is an original per-card legality map (17 card UUIDs
 with their verdicts) written for this project.
 
 ## 6. Scryfall and Scryfall Tagger — service, not source
@@ -196,7 +196,7 @@ One derived data file is bundled:
 
 | File in this repo | What it is |
 | --- | --- |
-| `data/set-platforms.js` | A snapshot, taken 2026-09-25, mapping 61 digital set codes to the client each was released for |
+| `assets/data/set-platforms.js` | A snapshot, taken 2026-09-25, mapping 61 digital set codes to the client each was released for |
 
 It was produced by reading Scryfall's `/sets` list and the `games` field of one card per
 set. It contains set codes and platform names only — no card names, no card text, no
@@ -253,7 +253,7 @@ The terms they set out, in their words:
   behaviour **at any time and without notice**;
 - the policy **is subject to change** while they re-evaluate it.
 
-**How this project complies.** `background.js` enforces the rate limit rather than
+**How this project complies.** `src/background/worker.js` enforces the rate limit rather than
 leaving it to how fast someone clicks through cards: `edhrecRequest()` spaces requests at
 least one second apart, and a failure holds the next attempt back by at least the two
 seconds they ask for, doubling to a minute so a broken endpoint is not hammered. Responses
@@ -273,7 +273,7 @@ nothing at all when a field is missing, rather than an error or a wrong number.
 
 | File in this repo | Status |
 | --- | --- |
-| `icons/edhrec.png` | **Unresolved.** Appears to be EDHREC's own logo. Their data policy covers data use; it says nothing about the logo, and permission to redistribute it has not been established. |
+| `assets/icons/edhrec.png` | **Unresolved.** Appears to be EDHREC's own logo. Their data policy covers data use; it says nothing about the logo, and permission to redistribute it has not been established. |
 
 ## 8. CardTrader — service, brand marks unresolved
 
@@ -301,8 +301,8 @@ marks or to publish their data.
 
 | File in this repo | Status |
 | --- | --- |
-| `icons/cardtrader.svg` | **Unresolved.** CardTrader's brand mark. Trademarks are not licensed as MIT. |
-| `icons/cardtrader.png` | **Unresolved.** A monochrome version of the same mark. |
+| `assets/icons/cardtrader.svg` | **Unresolved.** CardTrader's brand mark. Trademarks are not licensed as MIT. |
+| `assets/icons/cardtrader.png` | **Unresolved.** A monochrome version of the same mark. |
 
 ## 9. Cardmarket — their published logo, used as they distribute it
 
@@ -351,7 +351,7 @@ Scryfall's and because the mark over a Cardmarket column ought to be Cardmarket'
 
 | File in this repo | What it is | Status |
 | --- | --- | --- |
-| `icons/cardmarket-white.png` | Cardmarket's symbol, white, from the file they publish for dark backgrounds | **Used under their published terms**, quoted above. The artwork itself is unchanged; the wordmark beside it and the empty margin are what is gone. |
+| `assets/icons/cardmarket-white.png` | Cardmarket's symbol, white, from the file they publish for dark backgrounds | **Used under their published terms**, quoted above. The artwork itself is unchanged; the wordmark beside it and the empty margin are what is gone. |
 
 **How it is drawn.** The mark is not shown as an image. It is used as a CSS mask, so the
 shape on screen is the alpha of that file and the colour is `currentColor` — the ink of the
@@ -360,7 +360,7 @@ same outline, and the only thing that varies is the ink it is filled with. This 
 there is one file and not a black one and a white one: a black mark on the dark page
 rendered as a dark shape, and choosing between two files needs to know which theme is on.
 
-`icons/cardmarket-black.png` was shipped until this change and is not shipped now. The
+`assets/icons/cardmarket-black.png` was shipped until this change and is not shipped now. The
 earlier approach picked between their two published files by looking for a class on
 `<html>`, which is not reliable: the class is not guaranteed to be there at the moment the
 heading is built, and when it was missing the black mark went on the dark page.
@@ -381,7 +381,7 @@ font, referenced by name and not redistributed here) and `system-ui` / `Helvetic
 
 `content.js` was one file: 1901 lines in a single closure holding the clipboard, the tag
 panels, the printings table, CardTrader, EDHREC, the extra formats, the deck page and the
-set filters. It is now `content-core.js` and nine files named for what they draw. The split
+set filters. It is now `src/card-page/core.js` and nine files named for what they draw. The split
 changed no licence and no line of logic: every line was moved as it stands, and a check
 confirmed that the only code absent afterwards was the four declarations that became one
 `shared` object and the eighteen `if (settings.x) initY();` lines that became the boot list.
@@ -395,7 +395,7 @@ split starts from the same place.
 
 | File | What it is |
 | --- | --- |
-| `icons/icon16.png`, `icons/icon32.png`, `icons/icon48.png`, `icons/icon128.png` | Original artwork, MPL-2.0 like the rest of this project's own files |
+| `assets/icons/icon16.png`, `assets/icons/icon32.png`, `assets/icons/icon48.png`, `assets/icons/icon128.png` | Original artwork, MPL-2.0 like the rest of this project's own files |
 | `icons-src/scryfall-toolkit-icon.svg` | The vector source of that artwork |
 | `tools/render-icons.cjs` | The generator that draws both, so the PNGs can be reproduced from source |
 
@@ -412,10 +412,10 @@ from anyone. The MPL covers this artwork; it covers no one else's mark.
 These could not be settled from the repository or from public sources, and each needs a
 decision before the archive is published widely.
 
-1. **`icons/edhrec.png`** — establish whether this is EDHREC's own logo, and whether it may
+1. **`assets/icons/edhrec.png`** — establish whether this is EDHREC's own logo, and whether it may
    be redistributed. If not, replace it with a text label such as "EDHREC" (the feature
    already prints the name next to the value).
-2. **`icons/cardtrader.svg` and `icons/cardtrader.png`** — CardTrader's marks. Check
+2. **`assets/icons/cardtrader.svg` and `assets/icons/cardtrader.png`** — CardTrader's marks. Check
    CardTrader's brand/API terms; if redistribution is not permitted, drop the images and
    use the existing text label, which already reads "CardTrader …" beside the price.
 3. **Cardmarket's logo** — **closed.** They publish their brand assets for download with
@@ -449,7 +449,7 @@ decision before the archive is published widely.
    about four times their limit for the card endpoints — the ones the finish column, the
    EDHREC artwork, the deck search and the hover preview all use — and a 429 was treated
    as an ordinary failure, so a burst that crossed a limit kept crossing it.
-7. **Nickname data revision** — `data/shambleshark-nicknames.js` matches Shambleshark's
+7. **Nickname data revision** — `assets/data/shambleshark-nicknames.js` matches Shambleshark's
    `main` branch as read on 2026-09-25, with the `stc` → `snc` set-code difference noted
    above. If Shambleshark publishes a new revision, the bundle should be re-derived and
    this file updated.

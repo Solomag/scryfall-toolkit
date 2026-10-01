@@ -15,7 +15,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { execFileSync } = require('node:child_process');
-const { listZip } = require('./tools/zip.cjs');
+const { listZip } = require('../tools/zip.cjs');
 const {
   assert, assertEqual, summary, createPage, click, keyDown, fireEvent,
   dataTransferObject, ROOT
@@ -62,14 +62,14 @@ function licenceAndPrivacyTest() {
   // Every file the project wrote carries the notice; no file copied from another
   // project does, because re-licensing someone else's MIT work would be wrong.
   const ours = [
-    'background.js', 'content-core.js', 'content-clipboard.js', 'content-tags.js',
-    'content-legalities.js', 'content-prints.js', 'content-edhrec.js', 'content-prices.js',
-    'content-sets.js', 'content-card.js', 'content-deck.js', 'content.css',
-    'theme.js', 'theme.css',
-    'options.js', 'options.css', 'options.html', 'i18n.js', 'tag-icons.js',
-    'tagger-clipboard.js', 'format-catalog.js', 'format-overrides.js',
-    'data/set-platforms.js', 'testlib.cjs', 'test-preview.cjs', 'test-background.cjs',
-    'test-options.cjs', 'test-theme.cjs', 'test-tagger.cjs', 'package-extension.cjs',
+    'src/background/worker.js', 'src/card-page/core.js', 'src/card-page/clipboard.js', 'src/card-page/tags.js',
+    'src/card-page/legalities.js', 'src/card-page/prints.js', 'src/card-page/edhrec.js', 'src/card-page/prices.js',
+    'src/card-page/sets.js', 'src/card-page/card.js', 'src/card-page/deck-lists.js', 'src/styles/content.css',
+    'src/core/theme.js', 'src/styles/theme.css',
+    'src/ui/options.js', 'src/ui/options.css', 'src/ui/options.html', 'src/core/i18n.js', 'src/core/tag-icons.js',
+    'src/card-page/tagger-clipboard.js', 'src/core/format-catalog.js', 'src/core/format-overrides.js',
+    'assets/data/set-platforms.js', 'tests/testlib.cjs', 'tests/test-preview.cjs', 'tests/test-background.cjs',
+    'tests/test-options.cjs', 'tests/test-theme.cjs', 'tests/test-tagger.cjs', 'package-extension.cjs',
     'tools/render-icons.cjs'
   ];
   for (const file of ours) {
@@ -82,8 +82,8 @@ function licenceAndPrivacyTest() {
       `${file} names its copyright holder`);
   }
   const thirdParty = [
-    'data/oracle-tags.js', 'data/illustration-tags-1.js', 'data/illustration-tags-2.js',
-    'data/shambleshark-nicknames.js'
+    'assets/data/oracle-tags.js', 'assets/data/illustration-tags-1.js', 'assets/data/illustration-tags-2.js',
+    'assets/data/shambleshark-nicknames.js'
   ];
   for (const file of thirdParty) {
     assert(!read(file).includes('Mozilla Public License'),
@@ -115,7 +115,7 @@ function licenceAndPrivacyTest() {
   console.log('privacy: the policy describes the behaviour the code actually has');
   const privacy = read('PRIVACY.md');
   // The claims have to match the code, so each one is checked against the call sites.
-  const background = read('background.js');
+  const background = read('src/background/worker.js');
   assert(background.includes('json.edhrec.com/pages/'),
     'the code really does call EDHREC');
   assert(/json\.edhrec\.com/.test(privacy) &&
@@ -155,14 +155,14 @@ function licenceAndPrivacyTest() {
   assert((manifest.optional_host_permissions || []).some(host => host.includes('api.cardtrader.com')),
     'and is asked for when the CardTrader feature is turned on');
   assert(!/analytics|telemetry|gtag|google-analytics|posthog|mixpanel|amplitude|sentry/i.test(
-    [background, read('content-core.js'), read('content-prices.js'),
-   read('options.js'), read('theme.js'), read('tagger-clipboard.js')].join('\n')),
+    [background, read('src/card-page/core.js'), read('src/card-page/prices.js'),
+   read('src/ui/options.js'), read('src/core/theme.js'), read('src/card-page/tagger-clipboard.js')].join('\n')),
     'the code contains no analytics or telemetry');
   assert(privacy.includes('We have no server'), 'the policy says where data would go if it were collected');
   assert(/cardtraderToken/.test(privacy) || /personal access token/i.test(privacy),
     'the policy covers the user token');
   // The extension must not load code from anywhere but itself.
-  const optionsHtml = read('options.html');
+  const optionsHtml = read('src/ui/options.html');
   for (const tag of optionsHtml.matchAll(/<script[^>]*src="([^"]+)"/g)) {
     assert(!/^https?:/.test(tag[1]), `options.html loads only its own file: ${tag[1]}`);
   }
@@ -188,8 +188,12 @@ function iconArtworkTest() {
   // The artwork is this project's own: the store requires an icon, and reaching for
   // a service's logo to fill the gap would be exactly the wrong thing.
   for (const size of ['16', '32', '48', '128']) {
-    assert(/^icons\/icon\d+\.png$/.test(manifest.icons[size]),
+    // Under assets/ with everything else that is not code. The pattern is anchored
+    // so a renamed folder fails here rather than as a missing file in the archive.
+    assert(/^assets\/icons\/icon\d+\.png$/.test(manifest.icons[size]),
       `the ${size}px icon is this project's own file, not a third-party logo`);
+    assert(fs.existsSync(path.join(ROOT, manifest.icons[size])),
+      `and ${manifest.icons[size]} is there`);
   }
   assert(fs.existsSync(path.join(ROOT, 'icons-src', 'scryfall-toolkit-icon.svg')),
     'the vector source of the artwork ships with the extension');
@@ -215,25 +219,39 @@ function iconArtworkTest() {
 function popupTest() {
   console.log('popup: compact controls, and the same settings as the full page');
   const manifest = JSON.parse(read('manifest.json'));
-  assertEqual(manifest.action.default_popup, 'popup.html',
+  assertEqual(manifest.action.default_popup, 'src/ui/popup.html',
     'the toolbar button opens the small popup, not the whole settings page');
   assert(!/\(Preview\)/.test(manifest.name),
     'the name does not call a released extension a preview');
   assert(manifest.homepage_url === 'https://github.com/Solomag/scryfall-toolkit',
     'the manifest links the source repository');
 
-  const html = read('popup.html');
-  for (const file of ['popup.css', 'popup.js', 'i18n.js', 'icons/icon32.png']) {
-    assert(html.includes(file), `popup.html references ${file}`);
+  // A page's references are relative to the page, so the page is src/ui/popup.html
+  // and says "popup.css" where it is beside it and "../core/i18n.js" where it is
+  // one folder up. What matters is where the reference lands, not how it is
+  // written — so it is resolved rather than compared as text.
+  const html = read('src/ui/popup.html');
+  const pageDir = 'src/ui';
+  const resolves = reference => path.posix.normalize(path.posix.join(pageDir, reference));
+  const referenced = [];
+  for (const m of html.matchAll(/(?:src|href)\s*=\s*"([^"]+)"/g)) referenced.push(m[1]);
+  for (const file of ['popup.css', 'popup.js', '../core/i18n.js']) {
+    assert(referenced.includes(file), `popup.html says ${file} directly`);
+    assert(fs.existsSync(path.join(ROOT, resolves(file))), `which is ${resolves(file)}, and it exists`);
   }
+  // Two folders up, because the page is src/ui/popup.html.
+  assert(referenced.includes('../../assets/icons/icon32.png'),
+    'and it points at the toolbar icon, two folders up');
+  assert(fs.existsSync(path.join(ROOT, resolves('../../assets/icons/icon32.png'))),
+    'which is assets/icons/icon32.png, and it exists');
   for (const id of ['darkTheme', 'tags', 'clipboard', 'edhrecUsage', 'cardtraderPrices', 'openAll']) {
     assert(html.includes(`id="${id}"`), `the popup has a control for ${id}`);
   }
   assert(/Открыть все настройки/.test(html),
     'the popup offers the full settings page');
 
-  const popup = read('popup.js');
-  const options = read('options.js');
+  const popup = read('src/ui/popup.js');
+  const options = read('src/ui/options.js');
   // Whatever the popup writes, the full page must write too.
   for (const key of ['darkTheme', 'tags', 'clipboard', 'edhrecUsage', 'cardtraderPrices']) {
     assert(popup.includes(`'${key}'`) || popup.includes(`"${key}"`),
@@ -247,7 +265,7 @@ function popupTest() {
   // The settings page used to offer "open in a new tab" even when it was already
   // in one. Now that the popup is separate the page is always in a tab, and the
   // button hides itself instead of sitting there doing nothing.
-  const page = read('options.js');
+  const page = read('src/ui/options.js');
   assert(/openOptions.*hidden\s*=\s*true|hidden\s*=\s*true.*openOptions/s.test(page),
     'the redundant "open in a new tab" button hides when the page is already in a tab');
   assert(/chrome\.tabs\.getCurrent/.test(page),
@@ -384,7 +402,7 @@ async function optionalHostsTest() {
 function settingsLanguageTest() {
   console.log('settings: the language follows the browser');
   const page = createPage({ url: 'https://scryfall.com/', html: '<!doctype html><html><body></body></html>', state: {} });
-  page.script('i18n.js');
+  page.script('src/core/i18n.js');
   const resolve = page.context.STK_I18N.resolveSettingsLanguage;
   const as = tags => {
     page.context.navigator.languages = tags;
@@ -407,7 +425,7 @@ function settingsLanguageTest() {
 
 function htmlIdCheck() {
   console.log('options.html: element ids');
-  const html = read('options.html');
+  const html = read('src/ui/options.html');
   for (const id of REQUIRED_IDS) {
     assert(html.includes(`id="${id}"`), `options.html has #${id}`);
   }
@@ -415,7 +433,7 @@ function htmlIdCheck() {
 
 function switchStyleTest() {
   console.log('options.css: checkboxes are drawn as switches');
-  const css = read('options.css');
+  const css = read('src/ui/options.css');
   assert(/input\[type=checkbox\]\s*\{[^}]*appearance:\s*none/.test(css), 'the native checkbox look is removed');
   assert(/input\[type=checkbox\]\s*\{[^}]*width:\s*40px[^}]*height:\s*22px/.test(css), 'the control is a pill of a fixed size');
   assert(/input\[type=checkbox\]\s*\{[^}]*background-image:\s*radial-gradient/.test(css),
@@ -428,7 +446,7 @@ function switchStyleTest() {
 
 function sectionOrderTest() {
   console.log('options.html: section order and grouping');
-  const html = read('options.html');
+  const html = read('src/ui/options.html');
   const headings = [...html.matchAll(/<h2>([^<]+)<\/h2>/g)].map(match => match[1]);
   assertEqual(headings, ['Общее', 'Tags', 'CardClip', 'Скрытие лишнего', 'Дополнительная информация',
     'Легальность', 'Scryfall Deckbuilder', 'Издания', 'Экспериментальное', 'Авторы и сторонние проекты'],
@@ -443,7 +461,7 @@ function sectionOrderTest() {
     'Shambleshark (Samuel Simões, Blade Barringer)',
     'MTG Enhancements (notsonic)',
     'THIRD_PARTY_NOTICES.md',
-    'third_party/'
+    'assets/licences/'
   ]) assert(credits.includes(statement), `credits block states: ${statement}`);
   // Every control belongs to the section the user asked for.
   const sectionOf = id => {
@@ -494,7 +512,7 @@ function sectionOrderTest() {
 function loadOptions(state) {
   const page = createPage({
     url: 'chrome-extension://scryfall-toolkit/options.html',
-    html: read('options.html'),
+    html: read('src/ui/options.html'),
     state
   });
   // linkedom does not implement <select>.value; give every select a working
@@ -507,9 +525,9 @@ function loadOptions(state) {
       set: next => { value = String(next); }
     });
   }
-  page.script('i18n.js');
-  page.script('format-catalog.js');
-  page.script('options.js');
+  page.script('src/core/i18n.js');
+  page.script('src/core/format-catalog.js');
+  page.script('src/ui/options.js');
   return page;
 }
 

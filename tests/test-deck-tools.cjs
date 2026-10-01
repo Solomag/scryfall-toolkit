@@ -20,7 +20,7 @@ const vm = require('node:vm');
 const { assert, assertEqual, summary, ROOT } = require('./testlib.cjs');
 
 const context = vm.createContext({ self: {} });
-vm.runInContext(fs.readFileSync(path.join(ROOT, 'deck-tools.js'), 'utf8'), context, { filename: 'deck-tools.js' });
+vm.runInContext(fs.readFileSync(path.join(ROOT, 'src/deck-page/tools.js'), 'utf8'), context, { filename: 'src/deck-page/tools.js' });
 const tools = context.self.STK_DECK_TOOLS;
 
 const card = (name, typeLine) => ({ card_digest: { name, type_line: typeLine } });

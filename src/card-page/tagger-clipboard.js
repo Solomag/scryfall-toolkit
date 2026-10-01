@@ -29,7 +29,7 @@
     button.title = label;
     button.setAttribute('aria-label', label);
     const image = document.createElement('img');
-    image.src = chrome.runtime.getURL(`icons/${icon}.svg`);
+    image.src = chrome.runtime.getURL(`assets/icons/${icon}.svg`);
     image.alt = '';
     button.append(image);
     button.addEventListener('click', click);

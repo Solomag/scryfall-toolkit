@@ -101,7 +101,7 @@ function makeWorld({ withScryfall = true, html = '', deck = null, opts = {} } = 
   // The deck modules load in a fixed order: pure deck data first, then the one
   // file that touches Scryfall, then the features on top of it, then the bridge.
   const boot = () => {
-    for (const file of ['deck-tools.js', 'deck-scryfall.js', 'deck-results.js', 'deck-clean-up.js', 'deck-edhrec.js', 'deck-search.js']) run(file);
+    for (const file of ['src/deck-page/tools.js', 'src/deck-page/scryfall.js', 'src/deck-page/results.js', 'src/deck-page/clean-up.js', 'src/deck-page/edhrec.js', 'src/deck-page/search.js']) run(file);
   };
   // Dispatching to the page side means handing over the identity that side sees
   // as its own window. Across a vm boundary that is not the same object as the
@@ -305,7 +305,7 @@ const card = (name, typeLine, id) => ({
     {
       const w = makeWorld();
       w.boot();
-      w.run('page.js');
+      w.run('src/deck-page/bridge.js');
       assertEqual(w.self.posted.length, 1, 'the page side announces itself');
       assertEqual(w.self.posted[0].type, 'ready', 'with a ready message');
       assertEqual(w.self.posted[0].source, 'page', 'marked as coming from the page');

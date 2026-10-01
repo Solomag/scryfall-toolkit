@@ -69,7 +69,7 @@
         source.rel = 'noopener noreferrer';
         source.className = 'stk-edhrec-source';
         const logo = document.createElement('img');
-        logo.src = chrome.runtime.getURL('icons/edhrec.png');
+        logo.src = chrome.runtime.getURL('assets/icons/edhrec.png');
         logo.alt = 'EDHREC';
         source.append(logo);
         source.title = t('Открыть статистику карты на EDHREC');

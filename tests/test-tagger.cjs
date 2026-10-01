@@ -17,8 +17,8 @@ const {
 
 function loadPage(options) {
   const page = createPage(options);
-  page.script('i18n.js');
-  page.script('tagger-clipboard.js');
+  page.script('src/core/i18n.js');
+  page.script('src/card-page/tagger-clipboard.js');
   return page;
 }
 
