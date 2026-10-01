@@ -37,6 +37,12 @@ select,input[type=password]{width:100%;padding:8px;margin-top:4px;color:#e9e5ee;
 .salt-thresholds[hidden]{display:none}
 button{background:#473b50;color:#f1e8f3;border:1px solid #88758d;border-radius:4px;cursor:pointer;padding:7px 10px}button:hover{background:#5d4b68}
 .token-row{display:flex;gap:6px;align-items:center}.token-row input{min-width:0;flex:1}.token-row button{white-space:nowrap}
+/* The illustration under a section: what the reader gets if they turn it on. It is
+   a reference and not a banner, so it is capped well short of the column's width
+   and never scales up past the size it was drawn at. */
+.shot{margin:12px 0 16px;padding:0}
+.shot img{display:block;width:100%;max-width:560px;height:auto;border:1px solid #3a3644;border-radius:6px;background:#191820}
+.shot figcaption{margin-top:6px;color:#a49fb0;font-size:12px;line-height:1.45;max-width:560px}
 .hint{font-size:12px;color:#bdb6c2;margin:12px 0 0}#status{color:#abdfb7;min-height:18px}
 .columns-header{display:grid;grid-template-columns:1fr 1fr;gap:8px;color:#bfb3c5;font-size:12px;margin:3px 0 7px}
 #formatList{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px 10px}

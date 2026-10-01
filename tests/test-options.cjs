@@ -102,16 +102,25 @@ function licenceAndPrivacyTest() {
   const notices = read('THIRD_PARTY_NOTICES.md');
   assert(/MPL-2\.0 notice does \*{0,2}not\*{0,2}\s+cover[\s\S]{0,160}icons\/edhrec\.png/.test(notices),
     'the notices say the MPL does not cover the EDHREC mark');
-  // EDHREC answered with a data policy that permits this use, so the data side
-  // is settled. The logos are a separate question and nothing claims they are.
-  assert(/Data access and logos are different questions/.test(notices),
-    'the notices separate settled data use from the unsettled marks');
-  assert(/policy says nothing about the logo/.test(notices),
-    'and say plainly that the logos are still not cleared');
+// The marks are shipped, on nominative use, by a recorded decision. So what the
+  // notices have to say is the basis, and what they must not say is that a permission
+  // exists. A notice that says "unresolved" beside a file we ship is a document
+  // telling a reader we use something we have no right to use.
+  for (const mark of ['assets/icons/edhrec.png', 'assets/icons/cardtrader.svg']) {
+    assert(notices.includes(mark), `the notices name ${mark}`);
+  }
+  assert(/have not asked for permission and\s+(?:have been granted|been given)\s+none/i.test(notices),
+    'the notices say plainly that no permission was sought and none was granted');
+  assert(!/permission (?:to redistribute it )?has been established\b/.test(notices),
+    'and do not leave the old half-claim standing');
+  assert(!/(licen[cs]ed|granted|permitted|cleared|approved) by (?:EDHREC|CardTrader)/i.test(notices),
+    'and nowhere say a party granted or licensed the mark');
+  assert(/to say whose data is (?:on screen|in the numbers)/i.test(notices) ||
+         /naming the source of the numbers/i.test(notices) ||
+         /to name the source of the numbers/i.test(notices),
+    'and state the basis: the mark names whose data is on screen');
   assert(/This extension is independent of Scryfall, EDHREC and CardTrader/.test(notices),
     'the notices state independence from Scryfall, EDHREC and CardTrader');
-  assert((notices.match(/Unresolved/g) || []).length >= 3,
-    'the notices keep the unresolved status of the brand marks instead of implying they are cleared');
 
   console.log('privacy: the policy describes the behaviour the code actually has');
   const privacy = read('PRIVACY.md');
@@ -779,6 +788,52 @@ async function discoveredFormatsTest() {
   assert(extra.textContent.includes('My Format'), 'discovered format shows its label');
 }
 
+// The illustrations beside the settings. Photographs of the real panels, and the
+// three ways they can fall out of step with the page.
+function featureShotsTest() {
+  console.log('settings: the illustrations match the page, the folder and the tool');
+  const html = read('src/ui/options.html');
+  const dir = path.join(ROOT, 'assets', 'shots');
+  assert(fs.existsSync(dir), 'there is a folder of illustrations');
+  const onDisk = fs.readdirSync(dir).filter(name => name.endsWith('.png')).sort();
+  assert(onDisk.length >= 6, 'and it holds one per illustrated section (' + onDisk.length + ')');
+
+  // Named by the page, not by a list written here: the page is what a reader sees,
+  // so the page is what decides whether a file is used.
+  const named = [...html.matchAll(/assets\/shots\/([a-z-]+\.png)/g)].map(match => match[1]).sort();
+  const missing = named.filter(name => !onDisk.includes(name));
+  assertEqual(missing, [], 'every illustration the page names is on disk');
+  const unseen = onDisk.filter(name => !named.includes(name));
+  assertEqual(unseen, [], 'and no illustration is made and then never shown');
+
+  // The tool has to agree with the page too, or regenerating quietly swaps one set
+  // of illustrations for another.
+  const tool = read('tools/make-feature-shots.cjs');
+  const fromTool = [...tool.matchAll(/file: '([a-z-]+\.png)'/g)].map(match => match[1]).sort();
+  assertEqual(fromTool, named,
+    'the tool makes exactly the illustrations the page shows');
+
+  // Each one is a real PNG and none of them is a blank rectangle.
+  for (const name of onDisk) {
+    const buffer = fs.readFileSync(path.join(dir, name));
+    assertEqual(buffer.readUInt32BE(0), 0x89504e47, name + ' is a PNG');
+    const width = buffer.readUInt32BE(16);
+    const height = buffer.readUInt32BE(20);
+    assert(width > 200 && height > 80,
+      name + ' is a panel and not a sliver (' + width + 'x' + height + ')');
+    assert(height <= 1400, name + ' is not a page (' + height + ' pixels tall)');
+    assert(buffer.length > 2000, name + ' carries something');
+  }
+
+  // The caption beside each one is translated like every other string on the page.
+  const captions = [...html.matchAll(/<figcaption>([^<]+)<\/figcaption>/g)].map(match => match[1]);
+  assertEqual(captions.length, onDisk.length,
+    'every illustration has a caption, and every caption has an illustration');
+  const i18n = read('src/core/i18n.js');
+  const untranslated = captions.filter(text => !i18n.includes(text));
+  assertEqual(untranslated, [], 'and every caption is in the dictionary, so an English page is not half Russian');
+}
+
 (async () => {
   try {
     htmlIdCheck();
@@ -800,6 +855,7 @@ async function discoveredFormatsTest() {
     await discoveredFormatsTest();
     await deckModuleStatusTest();
     await grantHostsTest();
+    featureShotsTest();
     summary('test-options');
     process.exit(0);
   } catch (error) {

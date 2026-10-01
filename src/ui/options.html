@@ -22,6 +22,10 @@
 <section><h2>Tags</h2>
 <label><input type="checkbox" id="tags"> Теги</label>
 <p class="hint">Таблицы тегов и связанных карт на странице карты. Пока выключено, настройки ниже заблокированы.</p>
+<figure class="shot">
+  <img src="../../assets/shots/tags.png" width="1128" height="632" alt="">
+  <figcaption>Так это выглядит на странице карты: таблицы тегов карты, тегов арта и связанных карт.</figcaption>
+</figure>
 <fieldset><legend>Какие теги показывать</legend>
 <label><input type="checkbox" id="cardTags"> Card Tags</label>
 <label><input type="checkbox" id="artTags"> Art Tags</label>
@@ -33,6 +37,10 @@
 <section><h2>CardClip</h2>
 <label><input type="checkbox" id="clipboard"> CardClip</label>
 <p class="hint">Общий буфер карт на Scryfall и Tagger. Пока выключено, формат копирования и плюс у отдельных изданий заблокированы.</p>
+<figure class="shot">
+  <img src="../../assets/shots/cardclip.png" width="800" height="500" alt="">
+  <figcaption>Буфер в углу страницы: собранные карты, каждую можно скопировать отдельно.</figcaption>
+</figure>
 <label for="exportFormat">Формат копирования</label>
 <select id="exportFormat"><option value="names">1 Название карты</option><option value="moxfield">1 Название карты (SET) номер</option></select>
 <label><input type="checkbox" id="printAddButtons"> Плюс для отдельного издания при наведении в полном списке</label>
@@ -42,6 +50,10 @@
 <label><input type="checkbox" id="hideCasterIndicator"> Скрыть индикатор Caster ON</label>
 <label><input type="checkbox" id="hideDigitalSets"> Скрывать цифровые сеты на странице Sets и в Prints</label>
 <p class="hint">Скрываются цифровые сеты и кубы из списка Scryfall; выбранное издание остаётся видимым на собственной странице карты.</p>
+<figure class="shot">
+  <img src="../../assets/shots/hide-extra.png" width="1128" height="224" alt="">
+  <figcaption>Таблица изданий без цифровых сетов и без цен в валютах, которые вы скрыли.</figcaption>
+</figure>
 <label><input type="checkbox" id="hideNonTournamentSets"> Скрывать нетурнирные сеты (сувениры, официальные прокси, токены)</label>
 <label><input type="checkbox" id="hideOversizedSets"> Скрывать увеличенные карты (oversized) отдельно</label>
 <label><input type="checkbox" id="hideForeignBlackBorder"> Скрывать Foreign Black Border сеты (4BB, FBB, BCHR)</label>
@@ -64,6 +76,10 @@
 <label><input type="checkbox" id="cardSearchLinks"> Поиск по типу и манакосту со страницы карты</label>
 <label><input type="checkbox" id="cardNicknames"> Исторические прозвища карт в предпросмотре Scryfall</label>
 <p class="hint">Прозвище появляется под таблицей изданий, когда карта выходила под другим именем. Например, Lavabrink Venturer (IKO #19) — «Professional Stunt Performer», Barbed Spike (MH2 #5) — «Barbed Flier».</p>
+<figure class="shot">
+  <img src="../../assets/shots/additional.png" width="1128" height="144" alt="">
+  <figcaption>Сколько колод Commander берёт эту карту — по данным EDHREC.</figcaption>
+</figure>
 <fieldset><legend>EDHREC</legend>
 <label><input type="checkbox" id="edhrecUsage"> Показывать использование в колодах Commander</label>
 <label><input type="checkbox" id="edhrecLink"> Показывать значок-ссылку EDHREC</label>
@@ -92,6 +108,10 @@
 <div class="columns-header"><span>Левая колонка</span><span>Правая колонка</span></div>
 <div id="formatList"></div>
 <p class="hint">Перетащи формат в нужную позицию любой колонки; чекбокс скрывает его. Порядок на карте: слева направо, сверху вниз.</p>
+<figure class="shot">
+  <img src="../../assets/shots/legality.png" width="1128" height="144" alt="">
+  <figcaption>Форматы, которых нет на странице карты Scryfall, добавлены в блок легальности.</figcaption>
+</figure>
 </fieldset>
 </section><section><h2>Scryfall Deckbuilder</h2>
 <label><input type="checkbox" id="deckNoPrices"> Режим «No Prices» в выпадающем списке колоды</label>
@@ -123,6 +143,10 @@
 <h2>Издания</h2>
 <label><input type="checkbox" id="printGrouping"> Группировать издания по сетам</label>
 <p class="hint">Собирает все издания карты в нативной таблице и делит их на группы по сетам. Пока выключено, страница остаётся в обычном виде Scryfall.</p>
+<figure class="shot">
+  <img src="../../assets/shots/prints.png" width="1128" height="594" alt="">
+  <figcaption>Все издания собраны в одной таблице и сгруппированы по сетам.</figcaption>
+</figure>
 <label><input type="checkbox" id="printFoldGroups"> Сворачивать группы (Collapse all groups)</label>
 <label><input type="checkbox" id="printFullPageLink"> Ссылка на полный список изданий рядом</label>
 <h2>Экспериментальное</h2>

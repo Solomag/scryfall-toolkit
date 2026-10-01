@@ -10,6 +10,52 @@ All releases: <https://github.com/Solomag/scryfall-toolkit/releases>
 
 ## Unreleased
 
+Six sections of the settings page now carry a picture of what they turn on, and the
+brand marks ship with the basis for using them written down rather than a status
+nobody had resolved.
+
+The illustrations are photographs of the real panels, not drawings of them. Each one
+is a crop of markup the actual feature files produced, on the project's own
+stylesheets, rendered by the browser already installed on the machine — the debugging
+protocol, over Node's own WebSocket, because Chrome's `--screenshot` captures a window
+rather than a page and `--dump-dom`, which would have let a page report its height,
+prints nothing at all in Chrome 154.
+
+That is the only version of this that can be trusted twice. A drawing drifts from the
+code without anybody noticing; a picture of a panel that no longer exists is worse
+than no picture, because a reader cannot tell it apart from a working one. So each
+shot names the element it is about and the tool waits for it: a feature that stops
+rendering is an error, not a small empty rectangle. There is a test that the page, the
+folder and the tool never disagree about which illustrations exist — and it earns its
+keep, because a `git checkout` during a mutation test took the six figures out of the
+page and it said so.
+
+Nothing from Scryfall or Wizards is in any of them. No card art, no Scryfall markup,
+no branding: the panels that matter are tables, badges and lists, and the extension
+does not ship card imagery. The surface a panel sits on is a plain card-page-shaped
+container, which is also why the store listing's question — may a card appear in a
+screenshot — does not arise for the illustrations at all.
+
+The store screenshots were stale the moment the page changed, and there was no way to
+refresh them: the listing told a reader to rebuild the tiles from a capture, and the
+capture could only be taken by hand. Both halves are reproducible now.
+
+The EDHREC and CardTrader marks stay in the release. That decision made the notices
+wrong as they stood — "Unresolved" beside a file we ship is a document telling a
+reader we use something we have no right to use — so what replaced it is the basis we
+actually rely on: the mark names whose data is on screen, is never altered, and sits
+on a control that already carries the name in words. What the notices must not say is
+now checked, and so is what they must.
+
+Three questions moved out of "waiting on someone else" into a decided section with
+their reasoning kept, because the reasoning is worth more than the answer: the two
+marks, the CardTrader API — narrower than it looked, since nothing is fetched without
+the user's own token — and whether to alias Scryfall's class names in the scripts. That
+last one is no, and the reason is the shape of the failure: an indirection layer turns a
+renamed class into a lookup returning undefined, and a null from querySelector is a
+silent no-op.
+
+Tests: 1555 assertions pass across eight suites.
 The dark theme was one 753-line stylesheet. It is seven files now, under
 `src/styles/theme/`: the card page, shared pages, the account and marketing pages,
 surfaces, Tagger, more shared surfaces, and our own panels. The manifest lists them in

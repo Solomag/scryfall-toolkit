@@ -271,11 +271,25 @@ last only as long as a worker does; losing them costs a repeat request, nothing 
 Their warning that they may change the data without notice is why the feature shows
 nothing at all when a field is missing, rather than an error or a wrong number.
 
-| File in this repo | Status |
-| --- | --- |
-| `assets/icons/edhrec.png` | **Unresolved.** Appears to be EDHREC's own logo. Their data policy covers data use; it says nothing about the logo, and permission to redistribute it has not been established. |
+### The mark
 
-## 8. CardTrader — service, brand marks unresolved
+`assets/icons/edhrec.png` is EDHREC's own logo, taken from their site and shipped
+unmodified. **We have not asked for permission and have been given none.** Their data
+policy covers the use of their data and says nothing about their logo, so it is not a
+licence for it.
+
+It is shipped on one basis, which is the one the law actually offers a project in this
+position: **using a mark to say whose data is on screen.** The mark appears only on
+the EDHREC controls and beside EDHREC numbers, it is never altered, never redrawn, and
+never used as decoration or as our own identity. This extension is independent, says so
+in five places including its own settings page, and makes no claim of any relationship
+to EDHREC or Space Cow Media.
+
+**If they object, nothing has to be rebuilt.** The control already reads "EDHREC" in
+words next to the icon; removing the image is deleting one line of markup. That is why
+the fallback exists, and it is why no part of the feature depends on the mark.
+
+## 8. CardTrader — service reached with the user's own token, mark used to name it
 
 - <https://www.cardtrader.com/> and its documented API v2 (`api.cardtrader.com`)
 - Used: **service data fetched at run time only**, using a personal access token the user
@@ -299,10 +313,24 @@ away. Nothing here is a claim that this use is permitted. It has not been establ
 the token in the user's hand is not the same as permission to redistribute a third party's
 marks or to publish their data.
 
-| File in this repo | Status |
-| --- | --- |
-| `assets/icons/cardtrader.svg` | **Unresolved.** CardTrader's brand mark. Trademarks are not licensed as MIT. |
-| `assets/icons/cardtrader.png` | **Unresolved.** A monochrome version of the same mark. |
+### The mark
+
+`assets/icons/cardtrader.svg` is CardTrader's brand mark and `assets/icons/cardtrader.png`
+is a monochrome version of it. **We have not asked for permission and have been granted
+none.** A trademark is not licensed as MIT and nothing here should be read as a licence.
+
+They are used on the same basis as EDHREC's: **to name the source of the numbers on the
+screen.** They appear only on the CardTrader price controls and beside CardTrader prices,
+unmodified and undistorted, and never as our own identity. The settings page states in its
+own words that this extension is not created, endorsed or sponsored by CardTrader.
+
+Note that the mark here is not load-bearing in any way the data is not: the price source
+is off unless the user pastes a token from their own CardTrader account, so the one thing
+that would be wrong to distribute — their prices obtained without their say — cannot
+happen unless the user supplies their own credential to fetch it.
+
+**If they object**, the same single line goes as EDHREC's: the label already reads
+"CardTrader" beside the icon.
 
 ## 9. Cardmarket — their published logo, used as they distribute it
 

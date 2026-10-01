@@ -7,12 +7,22 @@ Last updated 2026-10-01.
 
 ---
 
+## Decided, with the reasoning
+
+Questions this project answered for itself, kept here because the reasoning is worth more
+than the answer and is the first thing a reader will otherwise re-litigate.
+
+| | Question | Decision and why |
+|---|---|---|
+| 1 | **The EDHREC and CardTrader marks** | **Shipped, on nominative use.** Neither party answered, and neither was asked a second time. The mark appears only to say whose data is on screen: never altered, never redrawn, never used as our own identity, on a control that already carries the name in words beside it. This is the basis the law offers a project in this position, and it is the *only* basis claimed — `THIRD_PARTY_NOTICES.md` says plainly that no permission was sought and none was granted, rather than writing "unresolved" next to a file we ship. If either party objects, the change is deleting one line of markup. |
+| 2 | **The CardTrader API** | **Kept, and it is narrower than it looked.** Their reference requires `Authorization: Bearer` with a token from a CardTrader account, and an unauthenticated call is refused with 401. So the extension does not redistribute anything: it fetches on the user's own credential, off by default, and stores no token of its own. What was actually open — whether a third party may redistribute their prices — cannot happen under this design, because there is no path to the data that does not start with the user's own account. |
+| 3 | **Aliasing Scryfall's class names in the scripts** | **No indirection layer.** CSS cannot alias a selector and JavaScript in a content script cannot import a table, so the alternative is a build step or a runtime lookup, and both were declined. A runtime lookup is worse than useless here: it turns a renamed class into a lookup that returns `undefined`, and a `null` from `querySelector` is a silent no-op — the exact failure this project has been bitten by more than once. The generated contract in `docs/scryfall-dom.md` is the layer instead: it names every name, the page it belongs to, and every file that reaches for it, and a test fails when a name is used and not written down. |
 ## Waiting on someone else
 
 | | What | Where it stands |
 |---|---|---|
-| 1 | **Rights for the EDHREC, CardTrader and Cardmarket marks** | Cardmarket answered: they publish their assets for download on terms this project meets, and that item is closed. EDHREC's and CardTrader's marks are still `Unresolved` in `THIRD_PARTY_NOTICES.md`, which is the honest state. If an answer is no, the fallback is text labels — the buttons already say "EDHREC" and "CardTrader" beside the icon, so nothing is lost. |
-| 2 | **CardTrader API terms** | Their reference states every call needs `Authorization: Bearer` with a token from a CardTrader account, and an unauthenticated call is refused with 401. So this is an account-bound API, not a public one. The extension asks for no token and stores none; the price source stays off until the user supplies their own. Whether a third-party extension may show those prices at all is still not established. |
+| 3 | **Scryfall's acceptable-use rules** | Their Terms say "You may not scrape Scryfall" and "You may not place undue burden on Scryfall through the use of automated means". This project reads the page being viewed and calls the documented API; it does not crawl and keeps no copy of their data. Their published rate limits are per endpoint class, and the extension was **over the tightest one by about four times** — see the closed item below. That is now fixed and checked by a test. What is still not established is whether they consider this pattern acceptable at all, which is a question for them and not for the repository. |
+| 4 | **Chrome Web Store review** | 0.48.0 went in. Later versions follow once it clears. The store is the only place users get the extension, so nothing is "released" until it is there. |
 | 3 | **Scryfall's acceptable-use rules** | Their Terms say "You may not scrape Scryfall" and "You may not place undue burden on Scryfall through the use of automated means". This project reads the page being viewed and calls the documented API; it does not crawl and keeps no copy of their data. Their published rate limits are per endpoint class, and the extension was **over the tightest one by about four times** — see the closed item below. That is now fixed and checked by a test. What is still not established is whether they consider this pattern acceptable at all, which is a question for them and not for the repository. |
 | 4 | **Chrome Web Store review** | 0.48.0 went in. Later versions follow once it clears. The store is the only place users get the extension, so nothing is "released" until it is there. |
 

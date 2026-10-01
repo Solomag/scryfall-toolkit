@@ -1,4 +1,4 @@
-# Scryfall Toolkit 0.57.0
+# Scryfall Toolkit 0.58.0
 
 An independent browser extension for **Scryfall** and **Scryfall Tagger**: a shared card clipboard, tag panels on card pages, extra format legalities, a dark theme, and optional EDHREC and CardTrader data.
 
@@ -10,7 +10,9 @@ Not produced, endorsed or approved by Scryfall, Wizards of the Coast, EDHREC, Ca
 
 ## What it looks like
 
-The whole settings page, top to bottom:
+The whole settings page, top to bottom. Each section that changes what a Scryfall page
+shows carries a picture of it, taken from the feature files themselves — so what you see
+beside a switch is the panel the switch turns on, not a drawing of one:
 
 ![Scryfall Toolkit settings page, showing all ten sections from General to Credits](store-assets/settings-page-full.png)
 
