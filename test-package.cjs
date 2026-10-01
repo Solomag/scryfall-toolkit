@@ -210,6 +210,18 @@ async function settingsPowerOnTest(dir) {
 // -----------------------------------------------------------------------------
 
 
+// Every host the manifest asks for, whether required or optional, as a bare
+// hostname. Chrome shows this list to the user and the store asks about it in
+// review, so what the code talks to and what the documents declare have to be the
+// same set.
+function declaredHosts(manifest) {
+  const hosts = new Set();
+  for (const origin of [...(manifest.host_permissions || []), ...(manifest.optional_host_permissions || [])]) {
+    try { hosts.add(new URL(origin).hostname); } catch (e) { /* not an origin: nothing to name */ }
+  }
+  return [...hosts].sort();
+}
+
 // from, and every licence that third-party material requires is kept verbatim.
 function packagedNoticesTest() {
   console.log('package: third-party notices ship with the extension');
@@ -244,6 +256,38 @@ function packagedNoticesTest() {
   ]) assert(notice.includes(source), `notices link ${source}`);
   assert(/not produced, endorsed, sponsored or\s+approved by/i.test(notice),
     'the notices state that nothing here is an official product');
+  // The privacy policy and the store listing are filled in from the manifest, by
+  // hand, and a host added in a later version leaves both quietly wrong. Chrome
+  // shows a user the permission list and the store asks about it in review, so a
+  // host the code talks to but no document mentions is a real problem: it is how
+  // a permission appears that nobody declared.
+  //
+  // The deck suggestions are what made this bite: `edhrec.com` was added to the
+  // manifest, and the listing still said five hosts and offered no text for it.
+  for (const [file, label] of [['PRIVACY.md', 'privacy policy'], ['docs/CHROME_WEB_STORE_LISTING.md', 'store listing']]) {
+    const text = read(file);
+    for (const host of declaredHosts(manifest)) {
+      assert(text.includes(host), `${label} names ${host}, which the manifest asks for`);
+    }
+  }
+  // The counts, which are easy to leave behind when a host is added. The listing
+  // spells the number out, because it is prose the reviewer reads.
+  const words = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+  const count = declaredHosts(manifest).length;
+  const listing = read('docs/CHROME_WEB_STORE_LISTING.md');
+  const readme = read('README.md');
+  assert(listing.includes('limited to ' + words[count] + ' hosts'),
+    `the store listing says how many hosts there are (${words[count]})`);
+
+  // The README lists the tools in the deck editor. The fourth was ported and then
+  // removed, and the count went with it — the table said "four" and then described
+  // three, which is the kind of thing a reader notices.
+  const deckRow = readme.split('\n').find(line => line.includes('In the deck editor'));
+  assert(deckRow && /^\|\s+\*\*In the deck editor\*\*\s+\|\s+Three more tools/.test(deckRow),
+    'the README counts the deck editor tools it actually ships');
+  const privacy = read('PRIVACY.md');
+  assert(!/\b(five|six|seven) hosts\b/.test(privacy), 'the privacy policy states no host count that can go stale');
+
   // The licence text of each project whose material is actually in the archive.
   const licences = {
     'third_party/CardClip-LICENSE': 'Copyright (c) 2022 Jacob Hearst',

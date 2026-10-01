@@ -1,14 +1,20 @@
-# Chrome Web Store listing — Scryfall Toolkit 0.52.0
+# Chrome Web Store listing — Scryfall Toolkit 0.54.0
 
 Everything here is written from the shipped code, so that the answers given in the store
 console match what the extension actually does. Where a field needs a decision from the
 developer account, it says so.
 
-**Before submitting.** The deck editor tools described below have not yet been checked
-in a live deck editor — they run through Scryfall's application internals rather than the
-page markup, and a stand-in cannot prove those internals are still as expected. If they do
-not hold up when tried, cut the "In the deck editor" paragraph and the last row of the data
-table along with the switches; the rest of this document stands either way.
+**Before submitting.** The three deck editor tools described below have been used in a real
+deck editor and work there. They run through Scryfall's application internals rather than
+the page markup, which is why they are opt-in: internals are not a published contract, and
+if a future version of Scryfall changes them these are the features that break first. If
+that happens, cut the "In the deck editor" paragraph and the last row of the data table
+along with the switches; the rest of this document stands either way.
+
+**The EDHREC suggestions need two hosts**, not one. Their published JSON is on
+`json.edhrec.com` and the recommendations for a specific deck are on `edhrec.com` itself.
+Both are optional and both are asked for when the feature is turned on. The settings page
+has a button that asks for whichever a turned-on feature is still missing.
 
 ---
 
@@ -102,12 +108,14 @@ The store asks why each permission is needed. These are the answers, matched to
 | `https://data.scryfall.io/*` | the tag bulk files Scryfall serves from this host | `background.js` (through the URL Scryfall returns) |
 | `https://tagger.scryfall.com/*` | live tag and related-card data for the card on the page | `background.js` |
 | `https://json.edhrec.com/*` | **optional permission.** Optional EDHREC usage and Salt Meter, off by default. The host is asked for when the user turns EDHREC on, not at install. | `background.js` |
+| `https://edhrec.com/*` | **optional permission.** The deck-specific EDHREC recommendations. Separate host from the one above, and for the same reason. Asked for when the user turns on EDHREC suggestions. | `background.js` |
 | `https://api.cardtrader.com/*` | **optional permission.** Optional CardTrader prices, off by default. The host is asked for when the user turns CardTrader on, not at install. Needs the user's own token as well. | `background.js` |
 
-Two of the five are **optional permissions**: `json.edhrec.com` and `api.cardtrader.com`
-serve features that are off by default, so the browser is asked for them when the user
-turns the feature on and not before. Turning a switch off and on again is how access is
-put back if it is ever revoked.
+Three of them are **optional permissions**: `json.edhrec.com`, `edhrec.com` and
+`api.cardtrader.com`. Each serves a feature that is off by default, so the browser is
+asked for it when the user turns the feature on and not before. Turning a switch off and on
+again is how access is put back if it is ever revoked, and the settings page has a button
+that asks for whatever a turned-on feature is still missing.
 
 Content scripts run only on `https://scryfall.com/*`, `https://www.scryfall.com/*` and
 `https://tagger.scryfall.com/*`, to render the extension's own panels on those pages.
@@ -170,7 +178,8 @@ locally; nothing is kept on any server of ours, because there is none.
 Removing the extension deletes all its local storage. There is no account to delete.
 
 **Third parties that receive data:** Scryfall (api.scryfall.com, data.scryfall.io),
-Scryfall Tagger (tagger.scryfall.com), EDHREC (json.edhrec.com), CardTrader
+Scryfall Tagger (tagger.scryfall.com), EDHREC (json.edhrec.com, and - for the deck
+suggestions only - edhrec.com, which receives the whole deck list), CardTrader
 (api.cardtrader.com). Each receives only what is listed above, only when the related
 feature is on.
 
@@ -270,15 +279,17 @@ shipped file, and the manifest declares no CSP override, so the Manifest V3 defa
 **Host permissions** — if the form gives one box, use the block below; if it gives one
 box per host, use the matching line:
 
-> Access is limited to five hosts and every one of them serves a named feature.
+> Access is limited to six hosts and every one of them serves a named feature.
 > api.scryfall.com — card, print, set and search lookups, sending Scryfall card and set
 > identifiers. data.scryfall.io — Scryfall's own published tag bulk files, read into the
 > local cache. tagger.scryfall.com — a POST to graphql/registry with the set code and
 > collector number of the card being viewed, for card/art tags and related cards.
 > json.edhrec.com — optional, off by default; when enabled, the card name is sent as
-> part of a request URL. api.cardtrader.com — optional, off by default; with the user's
-> own token, the exact printing and its cheapest EUR offers. Content scripts run only
-> on scryfall.com, www.scryfall.com and tagger.scryfall.com.
+> part of a request URL. edhrec.com — optional, off by default; used only by the deck
+> editor's suggestion feature, which sends the commander and the whole deck list to
+> EDHREC's own recommendation endpoint. api.cardtrader.com — optional, off by default;
+> with the user's own token, the exact printing and its cheapest EUR offers. Content
+> scripts run only on scryfall.com, www.scryfall.com and tagger.scryfall.com.
 
 Per host, if the form asks separately:
 
@@ -288,6 +299,7 @@ Per host, if the form asks separately:
 | `data.scryfall.io` | Core feature. Downloads Scryfall's published tag bulk files (`oracle_tags`, `art_tags`) into the local cache. The extension only reads them. |
 | `tagger.scryfall.com` | Core feature. A POST to `graphql/registry` carrying the set code and collector number of the card the user is viewing, for card and art tags and related cards. |
 | `json.edhrec.com` | Optional feature, off by default. When the user turns on EDHREC indicators, the card name is sent as part of the request URL to read its public JSON. |
+| `edhrec.com` | Optional feature, off by default, and only the deck editor's EDHREC suggestions use it. That feature sends the commander and the whole deck list — every card with its count — to EDHREC's own recommendation endpoint. No account, no other decks, no collection. |
 | `api.cardtrader.com` | Optional feature, off by default. With the user's own personal access token, looks up the exact printing and its cheapest listed EUR offers. The token is sent only to this host. |
 
 **Remote code — answer "No".** If the form still asks for text:

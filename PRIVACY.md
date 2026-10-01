@@ -108,10 +108,22 @@ deck lists, your Scryfall account, your payment details, your IP address (as dat
 your keystrokes, or anything about how you use the extension. We have no server to send it
 to and no analytics SDK in the build.
 
-To be exact about what that claim rests on: the extension's only network calls are the
+To be exact about what that claim rests on: the extension's only network calls go to the
 four services listed above, and its only persistent storage is `chrome.storage.local`. The
 build ships no analytics, no remote code and no third-party script — `options.html` loads
 only this project's own files.
+
+**A note on how the hosts are asked for.** EDHREC is reached on two of them, and the two are
+not interchangeable. `json.edhrec.com` serves their published card and commander
+JSON; the recommendations for a specific deck live on `edhrec.com` itself, at
+`api/recs/`, which is the endpoint their own site posts to. Both hosts are optional,
+and each is asked for when a feature that needs it is turned on — not at install.
+
+The settings page also has a button that asks for whatever a turned-on feature is still
+missing. That is there because a host added in a later version is not covered by a grant
+the user gave earlier, and a feature running without its host fails quietly: the panel
+falls back to something blander and says nothing. Where a fallback is in use, the panel
+names which of the two it is showing.
 
 ## Permissions this extension asks for
 
@@ -120,7 +132,8 @@ only this project's own files.
 | `storage`, `unlimitedStorage` | your settings, clipboard and the cached tag indexes, which are large |
 | `alarms` | refresh the bundled tag data at most once every seven days |
 | Host access to `api.scryfall.com`, `data.scryfall.io`, `tagger.scryfall.com` | the features above |
-| Host access to `json.edhrec.com` *(asked for when the feature is turned on)* | the optional EDHREC feature |
+| Host access to `json.edhrec.com` *(asked for when the feature is turned on)* | the optional EDHREC usage and salt features |
+| Host access to `edhrec.com` *(asked for when EDHREC suggestions are turned on)* | the deck-specific recommendations, which live on that host — see the note above |
 | Host access to `api.cardtrader.com` *(asked for when the feature is turned on)* | the optional CardTrader price feature |
 
 Content scripts run only on `scryfall.com`, `www.scryfall.com` and `tagger.scryfall.com`.

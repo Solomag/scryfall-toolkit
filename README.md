@@ -1,4 +1,4 @@
-# Scryfall Toolkit 0.53.0
+# Scryfall Toolkit 0.54.0
 
 An independent browser extension for **Scryfall** and **Scryfall Tagger**: a shared card clipboard, tag panels on card pages, extra format legalities, a dark theme, and optional EDHREC and CardTrader data.
 
@@ -33,7 +33,7 @@ To build the archive yourself: `npm run package`. It writes `dist/scryfall-toolk
 | **Extra format legalities** | Heritage, Classic Legacy, Peak Legacy and Premodern in Scryfall's own legality block, in its own badges. Reorder or hide any row. |
 | **Dark theme** | For Scryfall and Tagger. Follows your system until you pick otherwise. |
 | **Optional extras** | EDHREC deck usage and Salt Meter, CardTrader prices for the exact printing, finish badges, card nicknames, type and mana search links, set and printing filters, a No Prices mode, a token list on deck pages. EDHREC and CardTrader are off until you turn them on; the rest have their own defaults and each can be switched off. |
-| **In the deck editor** | Four more tools, **all off by default**: a Clean Up button that sorts the deck and puts lands back in their column, EDHREC's own card lists for your commander, and a Scryfall search that adds cards without leaving the editor. These run through Scryfall's own application state rather than the page markup, which is why they are opt-in and why they are not yet claimed to have been checked against a live deck editor. |
+| **In the deck editor** | Three more tools, **all off by default**: a Clean Up button that sorts the deck and puts lands back in their column, EDHREC's suggestions for this deck and commander, and a Scryfall search that adds cards without leaving the editor. These run through Scryfall's own application state rather than the page markup, which is why they are opt-in. |
 
 Everything each one does, in detail: **[docs/FEATURES.md](docs/FEATURES.md)**.
 
@@ -50,7 +50,7 @@ The toolbar button opens a small popup with the five switches you reach for most
 | **Hide extras** | Caster indicator, set and price filters, the platform filter |
 | **Additional info** | Finish column, type and mana search, nicknames, EDHREC, CardTrader |
 | **Legality** | The extra formats and their order |
-| **Scryfall Deckbuilder** | No Prices, stacked cards, the token list, and the four opt-in tools above |
+| **Scryfall Deckbuilder** | No Prices, stacked cards, the token list, and the three opt-in tools above |
 | **Experimental** | Settings still being worked on |
 
 ## FAQ

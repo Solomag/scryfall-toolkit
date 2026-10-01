@@ -3,7 +3,7 @@
 Things that are known, agreed, and not being worked on right now. Nothing here is a
 defect: each is either a deliberate deferral or work waiting on a decision.
 
-Last updated 2026-09-29.
+Last updated 2026-10-01.
 
 ---
 
@@ -11,42 +11,20 @@ Last updated 2026-09-29.
 
 | | What | Where it stands |
 |---|---|---|
-| 1 | **Rights for the EDHREC, CardTrader and Cardmarket marks** | Requests sent, answers awaited. Until they land, `THIRD_PARTY_NOTICES.md` records the status as `Unresolved`, which is the honest state. If an answer is no, the fallback is text labels — the buttons already say "EDHREC" and "CardTrader" beside the icon, so nothing is lost. |
-| 2 | **Chrome Web Store review** | 0.48.0 is in review. Later versions follow once it clears. The store is the only place users get the extension, so nothing is "released" until it is there. |
-| 3 | **A real end-to-end run as an installed extension** | Waiting on a later version. So far the packaged extension has been checked by unpacking it and turning it on; a friend ran 0.48.0 in daily use and reported it working, which is useful but not systematic. |
+| 1 | **Rights for the EDHREC, CardTrader and Cardmarket marks** | Cardmarket answered: they publish their assets for download on terms this project meets, and that item is closed. EDHREC's and CardTrader's marks are still `Unresolved` in `THIRD_PARTY_NOTICES.md`, which is the honest state. If an answer is no, the fallback is text labels — the buttons already say "EDHREC" and "CardTrader" beside the icon, so nothing is lost. |
+| 2 | **CardTrader API terms** | Their reference states every call needs `Authorization: Bearer` with a token from a CardTrader account, and an unauthenticated call is refused with 401. So this is an account-bound API, not a public one. The extension asks for no token and stores none; the price source stays off until the user supplies their own. Whether a third-party extension may show those prices at all is still not established. |
+| 3 | **Scryfall's acceptable-use rules** | Their Terms say "You may not scrape Scryfall" and "You may not place undue burden on Scryfall through the use of automated means". This project reads the page being viewed and calls the documented API no faster than once every 130 ms, with a seven-day refresh. Confirm that this pattern is acceptable. |
+| 4 | **Chrome Web Store review** | 0.48.0 went in. Later versions follow once it clears. The store is the only place users get the extension, so nothing is "released" until it is there. |
 
 ## To do
 
-### Check the deck editor modules in a live deck editor
-
-Three of the four Shambleshark deck modules are shipped. The fourth, the card preview on
-hover, was ported and then removed: it covered the deck with Scryfall's tooltip and the
-site already shows a card preview on hover, so it made things worse and added nothing.
-The three that remain are tested against a stand-in for `window.Scryfall` and
-`window.ScryfallAPI`. What that cannot cover is whether Scryfall's
-internals are still shaped the way Shambleshark found them in 2023. Until someone opens a
-deck, turns a setting on and uses them, all four stay switched off.
-
-Two of the four were written rather than copied. Shambleshark's EDHREC suggestions embed
-an iframe to edhrec.com, and this project goes to EDHREC's published JSON instead, behind
-a queue and their data policy. Its Scryfall search keeps saved searches and calls the API
-straight from the page; this leaves saved searches out and goes through the extension's
-queue.
-
-The announced sizes were wrong more than once: `clean-up-improver` looked like 82 lines
-and was about a thousand, and `edhrec-suggestions` looks like 58 but is 425 across three
-files. Measure from the real files before trusting any estimate.
-
-If they do not hold up, the answer is to say so and drop them, not to ship something that
-half works.
-
-### Store screenshot of the extension on Scryfall
+### Store screenshots of Scryfall itself
 
 The five screenshots show the settings page. Nothing shows what the extension does to
-Scryfall itself — tags beside the printings, the clipboard, the extra legality rows. A
-listing whose images only show a settings form does not tell a user what they are
-installing. At least one shot of a card page in the dark theme, with the tag tables and
-the clipboard visible.
+Scryfall — tags beside the printings, the clipboard, the extra legality rows, the deck
+editor tools. A listing whose images only show a settings form does not tell a user what
+they are installing. At least one shot of a card page in the dark theme with the tag tables
+and the clipboard visible, and one of the deck editor with the three tools in use.
 
 ### Split `content.js` and `theme.css`
 
@@ -78,6 +56,13 @@ Scryfall change is one file to look at instead of thirty.
 
 Do this before the next feature, not before a release — it is a refactor with no
 user-visible benefit.
+
+## Closed
+
+| | What | Outcome |
+|---|---|---|
+| 1 | **Check the deck editor modules in a live deck editor** | Done, 2026-10-01. All three were used in a real commander deck and work there. This took four rounds of fixes, and every one of them was a bug the stand-in could not catch: the permission for `edhrec.com` was never granted because Chrome only answers a request that follows a click; the percentages were a hundred times too large because `score` arrives as a whole number out of 100 and the code treated it as a fraction; there was no art at all, because the endpoint sends no image and no printing; and the art request was refused because a list of suggestions is a hundred cards and Scryfall takes seventy-five identifiers at a time. A stand-in for `window.Scryfall` proves the code runs. It does not prove the response is what you assumed, and here it was not. |
+| 2 | **A fourth Shambleshark module** | Ported and removed. `card-input-modifier` showed a card image on hovering a deck row; Scryfall's own tooltip covered the deck and the site already previews cards on hover, so it made the editor worse and duplicated the site. No code from it is in the package. |
 
 ## Considered and rejected
 
