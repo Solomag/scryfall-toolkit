@@ -220,6 +220,36 @@ function iconArtworkTest() {
   }
   assert(/EDHREC|CardTrader|Cardmarket/.test(generator) === true,
     'the generator says out loud which marks it deliberately does not use');
+
+  // Now make the guarantee the comment above claims. Re-run the generator into a
+  // scratch folder and compare the bytes with what ships.
+  //
+  // Checking that the generator mentions some words is not the same thing, and it was
+  // the only check there was: the comment promised the PNGs could not drift from the
+  // source, and nothing tested it. A hand-touched PNG, or a geometry change committed
+  // without re-running the tool, leaves the two describing different artwork while
+  // every existing assertion stays green. The icons are the one thing in this project
+  // nobody looks at until it is wrong.
+  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'stk-icons-'));
+  try {
+    execFileSync(process.execPath, [path.join(ROOT, 'tools', 'render-icons.cjs'), scratch, scratch],
+      { stdio: 'ignore' });
+    for (const size of ['16', '32', '48', '128']) {
+      const shipped = fs.readFileSync(path.join(ROOT, 'assets', 'icons', `icon${size}.png`));
+      const rebuilt = fs.readFileSync(path.join(scratch, `icon${size}.png`));
+      assert(shipped.equals(rebuilt),
+        `icon${size}.png is byte for byte what the generator produces from the source`);
+    }
+  } finally {
+    // A scratch folder left behind is a scratch folder nobody will clean up.
+    fs.rmSync(scratch, { recursive: true, force: true });
+  }
+
+  // The ground is Scryfall's darkest background, which is a colour value and not any
+  // artwork of theirs. Said here so the next person editing the palette has to decide
+  // to keep saying it rather than discovering the dependency from this file's palette.
+  assert(/#16161d/.test(generator),
+    'the generator says where the ground colour came from');
 }
 
 // The 0.44.0 archive shipped options.html without options.css and options.js: the

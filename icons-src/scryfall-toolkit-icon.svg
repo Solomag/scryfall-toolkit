@@ -1,7 +1,45 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
   <title>Scryfall Toolkit</title>
-  <desc>Original artwork: a clipboard with a green clip. No third-party mark is used.</desc>
-  <rect x="0" y="0" width="128" height="128" rx="28" ry="28" fill="#23303e"/>
-  <rect x="30" y="30" width="68" height="80" rx="8" ry="8" fill="#eef2f6"/>
-  <rect x="50" y="16" width="28" height="32" rx="8" ry="8" fill="#2f9e44"/>
+  <desc>Original artwork: a hammer above two wheels. No third-party mark is used.</desc>
+  <rect x="0" y="0" width="128" height="128" rx="36" ry="36" fill="#16161d"/>
+  <path d="M 18,86 a 24,24 0 1,0 48,0 a 24,24 0 1,0 -48,0 M 23,86 a 19,19 0 1,0 38,0 a 19,19 0 1,0 -38,0" fill="#a57139" fill-rule="evenodd"/>
+  <circle cx="42" cy="86" r="7" fill="#a57139"/>
+  <polygon points="47.904,90.516 59.332,94.177 60.857,89.415 49.429,85.755" fill="#a57139"/>
+  <polygon points="39.529,93.01 39.579,105.01 44.579,104.989 44.529,92.99" fill="#a57139"/>
+  <polygon points="34.569,85.816 23.172,89.572 24.737,94.321 36.134,90.565" fill="#a57139"/>
+  <polygon points="39.878,78.876 32.785,69.197 28.752,72.153 35.846,81.832" fill="#a57139"/>
+  <polygon points="48.12,81.781 55.133,72.043 51.075,69.121 44.062,78.859" fill="#a57139"/>
+  <polygon points="61,80 74,82.4 74,89.6 61,92" fill="#a57139"/>
+  <circle cx="70.4" cy="86" r="3.6" fill="#a57139"/>
+  <polygon points="59.678,95.192 67.173,106.082 62.082,111.173 51.192,103.678" fill="#a57139"/>
+  <circle cx="62.082" cy="106.082" r="3.6" fill="#a57139"/>
+  <polygon points="48,105 45.6,118 38.4,118 36,105" fill="#a57139"/>
+  <circle cx="42" cy="114.4" r="3.6" fill="#a57139"/>
+  <polygon points="32.808,103.678 21.918,111.173 16.827,106.082 24.322,95.192" fill="#a57139"/>
+  <circle cx="21.918" cy="106.082" r="3.6" fill="#a57139"/>
+  <polygon points="23,92 10,89.6 10,82.4 23,80" fill="#a57139"/>
+  <circle cx="13.6" cy="86" r="3.6" fill="#a57139"/>
+  <polygon points="24.322,76.808 16.827,65.918 21.918,60.827 32.808,68.322" fill="#a57139"/>
+  <circle cx="21.918" cy="65.918" r="3.6" fill="#a57139"/>
+  <polygon points="36,67 38.4,54 45.6,54 48,67" fill="#a57139"/>
+  <circle cx="42" cy="57.6" r="3.6" fill="#a57139"/>
+  <polygon points="51.192,68.322 62.082,60.827 67.173,65.918 59.678,76.808" fill="#a57139"/>
+  <circle cx="62.082" cy="65.918" r="3.6" fill="#a57139"/>
+  <circle cx="97" cy="82" r="15" fill="#8c592d"/>
+  <polygon points="109.642,84.103 116.537,90.162 113.837,94.838 105.142,91.897" fill="#8c592d"/>
+  <circle cx="112.848" cy="91.15" r="2.7" fill="#8c592d"/>
+  <polygon points="101.5,94 99.7,103 94.3,103 92.5,94" fill="#8c592d"/>
+  <circle cx="97" cy="100.3" r="2.7" fill="#8c592d"/>
+  <polygon points="88.858,91.897 80.163,94.838 77.463,90.162 84.358,84.103" fill="#8c592d"/>
+  <circle cx="81.152" cy="91.15" r="2.7" fill="#8c592d"/>
+  <polygon points="84.358,79.897 77.463,73.838 80.163,69.162 88.858,72.103" fill="#8c592d"/>
+  <circle cx="81.152" cy="72.85" r="2.7" fill="#8c592d"/>
+  <polygon points="92.5,70 94.3,61 99.7,61 101.5,70" fill="#8c592d"/>
+  <circle cx="97" cy="63.7" r="2.7" fill="#8c592d"/>
+  <polygon points="105.142,72.103 113.837,69.162 116.537,73.838 109.642,79.897" fill="#8c592d"/>
+  <circle cx="112.848" cy="72.85" r="2.7" fill="#8c592d"/>
+  <path d="M 90,82 a 7,7 0 1,0 14,0 a 7,7 0 1,0 -14,0 M 94,82 a 3,3 0 1,0 6,0 a 3,3 0 1,0 -6,0" fill="#16161d" fill-rule="evenodd"/>
+  <rect x="17" y="26" width="86" height="13" rx="6.5" ry="6.5" fill="#8e5a2c"/>
+  <rect x="94" y="13" width="17" height="39" rx="7.5" ry="7.5" fill="#cfd3d9"/>
+  <rect x="103" y="13" width="8" height="39" rx="7.5" ry="7.5" fill="#979da6"/>
 </svg>

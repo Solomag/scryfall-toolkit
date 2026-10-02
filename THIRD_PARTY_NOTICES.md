@@ -433,11 +433,20 @@ split starts from the same place.
 | `icons-src/scryfall-toolkit-icon.svg` | The vector source of that artwork |
 | `tools/render-icons.cjs` | The generator that draws both, so the PNGs can be reproduced from source |
 
-The design is a clipboard with a green clip on a dark plate, using this project's own
-interface colours. It is **not** a logo, wordmark or brand colour of Scryfall, Wizards of
-the Coast, EDHREC, CardTrader or Cardmarket, and it does not resemble any of them closely
-enough to suggest an association. Nothing in the artwork was traced, copied or adapted
-from anyone. The MPL covers this artwork; it covers no one else's mark.
+The design is a hammer above two wheels, in browns and steel on a dark ground. It is
+**not** a logo, wordmark or brand colour of Scryfall, Wizards of the Coast, EDHREC,
+CardTrader or Cardmarket, and it does not resemble any of them closely enough to suggest
+an association. It is also not any planeswalker symbol. It shares a general idiom with
+one — tools and machinery, drawn plainly — and that idiom belongs to a specific card;
+this drawing is not that emblem, is not traced from it, and reproduces none of its parts.
+Nothing in the artwork was traced, copied or adapted from anyone. The MPL covers this
+artwork; it covers no one else's mark.
+
+The ground is `#16161d`, Scryfall's own darkest background, taken from their published
+stylesheet. That is a colour value, which is a fact rather than artwork, and no part of
+their stylesheet, images or code is bundled here. The three browns and the steel were
+then computed against that ground to clear a 3:1 contrast ratio, because the values that
+looked best on a light background do not survive being moved onto a dark one.
 
 ---
 

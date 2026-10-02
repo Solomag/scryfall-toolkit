@@ -8,6 +8,43 @@ All releases: <https://github.com/Solomag/scryfall-toolkit/releases>
 
 ---
 
+### A new icon, drawn from a source instead of generated
+
+The old one was a clipboard with a green clip. It was drawn by this project's own tool
+and it was never anybody's mark, but it said "one feature" about an extension with
+several, and at sixteen pixels the clip was a green speck on a white rectangle.
+
+What it is now: a hammer above two wheels, in bronze, copper, wood and steel on a dark
+ground. Three materials rather than one, because a mark painted in a single colour has
+nothing for the eye to hold on to, which is exactly what the old one was.
+
+The drawing is still ours and still reproduces no third-party symbol. The ground is
+Scryfall's own `#16161d`, taken from their published stylesheet, and the notices now say
+so in those words rather than claiming the colours came from this project's interface.
+
+**Three of their colours were measured and one was rejected.** Their brand purple
+`#634496` is the one that says "Scryfall" loudest, and it is the wrong ground for this
+drawing: a dark wooden handle has to be lightened to clear 3:1 against it, and at the
+pale tan that lightening arrives at, bronze, copper and wood are all the same colour.
+The bar is met and the drawing is lost. Their deep purple `#551a8b` keeps the materials
+apart; their ink `#16161d` keeps them apart most comfortably of all, and is what shipped.
+
+**The tool had to grow, and it had a bug in it.** A wheel could not be drawn at all,
+because only rounded rectangles existed, so circles, rings, polygons and wheels were
+added, each with a vector form and a coverage test so the SVG and the PNGs still cannot
+disagree. The polygon test turned out to be inverted: it asked for an edge whose ends
+were on the same side of the point rather than opposite sides, so every polygon came out
+backwards and the render was diagonal stripes. Nothing threw. Rounded rectangles were
+the only shapes in use, which is why it survived as long as it did.
+
+**The test suite was claiming a guarantee it did not make.** `iconArtworkTest` said the
+generator must still reproduce what is shipped, and then only checked that the generator
+mentions some words. It now re-runs the generator into a scratch folder and compares the
+bytes. A hand-edited PNG, or a geometry change committed without re-running the tool,
+now fails; both were tried, and both are caught.
+
+---
+
 ### The deck editor's panels, in the light theme
 
 The live pass found one thing wrong, and it was not a small thing.

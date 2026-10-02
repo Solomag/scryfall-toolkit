@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Scryfall Toolkit",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "homepage_url": "https://github.com/Solomag/scryfall-toolkit",
   "description": "Scryfall clipboard, tags, legality, dark theme, optional CardTrader prices and EDHREC statistics.",
   "permissions": [

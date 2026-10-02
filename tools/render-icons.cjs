@@ -30,21 +30,64 @@ const ROOT = path.join(__dirname, '..');
 
 const CANVAS = 128;
 
-// Palette taken from this project's own interface, not from any brand.
-const DARK = '#23303e';   // the clipboard panel's ink
-const PAPER = '#eef2f6';  // the clipboard panel's paper
-const GREEN = '#2f9e44';  // the extension's own "copied" confirmation colour
+// The ground is Scryfall's own darkest background, #16161d, taken from their
+// stylesheet — it is the twenty-fourth most common colour in it and the one their dark
+// theme is built on. It is their colour, and it is also the only one of the three
+// purples they use that a dark wooden handle can sit on: against their brand purple
+// #634496 that handle has to come out at 3.03:1, which in practice means pale tan, and
+// at pale tan the bronze, the copper and the wood are all the same colour. The bar is
+// met and the drawing is lost. That was measured, not guessed, and the losing version is
+// kept at the bottom of this file as the reason.
+const INK_GROUND = '#16161d';
+
+// The mark. Three materials, which is the whole point of it: a mark painted in one
+// colour has nothing for the eye to hold on to, and this one spent its life as a flat
+// clipboard before anyone said so.
+//
+//   the wheels   bronze, the far one a shade darker
+//   the handle   wood
+//   the head     steel, and the only thing in the mark that is not brown
+//
+// Every one of these was computed against the ground above to clear 3:1, which is the
+// WCAG bar for a non-text part, and the steel to clear 4.5. They are not the values that
+// looked best on a light background: those do not survive being moved onto a dark one.
+const BRONZE = '#a57139';
+const COPPER = '#8c592d';
+const WOOD = '#8e5a2c';
+const STEEL = '#cfd3d9';
+const STEEL_DARK = '#979da6';
 
 // What is written into the SVG's own description, so the file says what it is.
-const DESC = 'Original artwork. No third-party mark is used.';
+const DESC = 'Original artwork: a hammer above two wheels. No third-party mark is used.';
 
-// Every shape is [x, y, width, height, cornerRadius, colour]. They are drawn in
-// order, so the clip sits on top of the card exactly as it reads. The clip rises
-// above the card the way a clipboard's clip does; nothing here is a brand mark.
+// A hammer above two wheels. The hammer is square to the canvas, which is the only
+// reason its ends can be rounded at all: a bar turned to an angle cannot have a rounded
+// end without becoming an arc. Square corners on a mark whose other corners are all
+// round are what make it read as cut out rather than drawn.
+//
+// The wheels are two sizes on purpose. One wheel is a gear; two wheels of the same size
+// is a pattern, and a pattern says nothing about a tool that works on cards. The far one
+// has no spokes, because five spokes across thirty pixels is not detail, it is noise,
+// and the difference between them is also what tells them apart.
 const SHAPES = [
-  { name: 'backplate', x: 0, y: 0, w: 128, h: 128, r: 28, fill: DARK },
-  { name: 'card', x: 30, y: 30, w: 68, h: 80, r: 8, fill: PAPER },
-  { name: 'clip', x: 50, y: 16, w: 28, h: 32, r: 8, fill: GREEN }
+  { name: 'ground', x: 0, y: 0, w: 128, h: 128, r: 36, fill: INK_GROUND },
+
+  { name: 'wheel-near', k: 'gear', cx: 42, cy: 86, r: 24, root: 19,
+    count: 8, toothW: 12, toothH: 8, roundTip: true,
+    spokes: 5, hub: 7, spokeW: 5, spokeTilt: 0.31, fill: BRONZE },
+  { name: 'wheel-far', k: 'gear', cx: 97, cy: 82, r: 15, root: 12,
+    count: 6, toothW: 9, toothH: 6, roundTip: true,
+    // Turned against the near wheel, so where the two come close the gaps of one fall
+    // against the teeth of the other. They are not meshing properly and are not meant
+    // to be: what matters is that they do not read as one wheel with a lump on it.
+    twist: Math.PI / 6, fill: COPPER },
+  { name: 'far-bore', k: 'ring', cx: 97, cy: 82, r: 5, w: 4, fill: INK_GROUND },
+
+  { name: 'handle', x: 17, y: 26, w: 86, h: 13, r: 6.5, fill: WOOD },
+  { name: 'head', x: 94, y: 13, w: 17, h: 39, r: 7.5, fill: STEEL },
+  // The striking face, a shade darker. This is the one place two tones on a single
+  // object earn their keep; without it the head reads as a capsule.
+  { name: 'face', x: 103, y: 13, w: 8, h: 39, r: 7.5, fill: STEEL_DARK }
 ];
 
 // --- the vector source -------------------------------------------------------
@@ -57,7 +100,8 @@ const SHAPES = [
 //   circle { cx, cy, r, fill }
 //   ring   { cx, cy, r, w, fill }        a circle of thickness w
 //   poly   { points: [[x, y], …], fill }
-//   gear   { cx, cy, r, root, count, toothW, toothH, twist, roundTip, hollow, fill }
+//   gear   { cx, cy, r, root, count, toothW, toothH, twist, roundTip, hollow,
+//            spokes, hub, spokeW, spokeTilt, fill }
 //
 // The last two exist because a wheel is not a circle: its teeth are what make it read
 // as a wheel, and they are what a shape list of rounded rectangles cannot express.
@@ -115,11 +159,11 @@ function covers(px, py, s) {
     case 'poly':
       return insidePolygon(px, py, s.points);
     case 'gear':
-      // The disc the teeth stand on is part of the wheel. Without it a gear is a
-      // starburst, which is what the first attempt looked like. A hollow wheel is the
-      // one exception: its rim and teeth are meant to be drawn over the ground.
-      if (!s.hollow && (px - s.cx) ** 2 + (py - s.cy) ** 2 <= s.r * s.r) return true;
-      return wheelTeeth(s).some(tooth => covers(px, py, tooth));
+      // Read the wheel's own expansion rather than re-deriving the geometry here. A
+      // second copy of this list is a second answer to where the wheel is, and the
+      // vector and the raster would eventually disagree — which is the one thing this
+      // file is arranged so that they cannot.
+      return wheel(s).some(part => covers(px, py, part));
     default: {
       const x0 = s.x, y0 = s.y, x1 = s.x + s.w, y1 = s.y + s.h;
       if (px < x0 || px > x1 || py < y0 || py > y1) return false;
@@ -148,18 +192,59 @@ function insidePolygon(px, py, points) {
   return inside;
 }
 
-// A wheel: the disc, then the teeth standing on it. One entry in the shape list, two
-// forms in the SVG, because a wheel is a thing rather than a pair of coordinates.
+// A wheel is described once here and expanded once here, and the SVG and the rasteriser
+// both take their geometry from the result. That is the whole reason this file describes
+// shapes instead of drawing them: there is one answer to where a thing is, and both
+// outputs read it.
 //
-// `hollow` leaves out the disc and keeps only the rim and the teeth, so that whatever
-// the wheel is drawn over shows through the middle. That is what a spoke wheel is: a
-// rim, a hub, spokes between them, and the ground in the gaps.
+// The expansion is cached because the rasteriser asks about the same wheel a quarter of
+// a million times, and rebuilding five spokes and eight teeth per sample is the
+// difference between a second and a minute.
+//
+// Three forms, and which one you get is what the fields say:
+//   nothing       a disc and its teeth
+//   hollow        the teeth only, so the ground shows through the middle
+//   spokes: n     a rim, a hub, n spokes, and the ground in the gaps between them
 function wheel(gear) {
-  const disc = gear.hollow
-    ? []
-    : [{ k: 'circle', cx: gear.cx, cy: gear.cy, r: gear.r, fill: gear.fill }];
-  return disc.concat(wheelTeeth(gear));
+  if (expanded.has(gear)) return expanded.get(gear);
+  const parts = [];
+  if (gear.spokes) {
+    // The rim, as a ring between the two radii rather than as a disc with a hole cut
+    // in it: a hole cut in it would need a colour, and a hole is not a colour.
+    parts.push({
+      k: 'ring', cx: gear.cx, cy: gear.cy,
+      r: (gear.root + gear.r) / 2, w: gear.r - gear.root, fill: gear.fill
+    });
+    parts.push({ k: 'circle', cx: gear.cx, cy: gear.cy, r: gear.hub, fill: gear.fill });
+    const step = (Math.PI * 2) / gear.spokes;
+    const tilt = gear.spokeTilt || 0;
+    for (let i = 0; i < gear.spokes; i++) {
+      const a = i * step + tilt;
+      const dx = Math.cos(a);
+      const dy = Math.sin(a);
+      const px = (-dy * gear.spokeW) / 2;
+      const py = (dx * gear.spokeW) / 2;
+      // The ends are square: the hub and the rim are drawn over them.
+      parts.push({
+        k: 'poly',
+        fill: gear.fill,
+        points: [
+          [gear.cx + dx * gear.hub + px, gear.cy + dy * gear.hub + py],
+          [gear.cx + dx * gear.root + px, gear.cy + dy * gear.root + py],
+          [gear.cx + dx * gear.root - px, gear.cy + dy * gear.root - py],
+          [gear.cx + dx * gear.hub - px, gear.cy + dy * gear.hub - py]
+        ]
+      });
+    }
+  } else if (!gear.hollow) {
+    parts.push({ k: 'circle', cx: gear.cx, cy: gear.cy, r: gear.r, fill: gear.fill });
+  }
+  parts.push(...wheelTeeth(gear));
+  expanded.set(gear, parts);
+  return parts;
 }
+
+const expanded = new WeakMap();
 
 // The teeth of a wheel, as trapezoids set at even angles. Flat-topped and slightly
 // tapered: a trapezoid reads as a tooth at 48 pixels, where a rectangle reads as a
@@ -172,7 +257,6 @@ function wheel(gear) {
 // arc. The radius is a half of the tooth's width at the tip, which is what a round end
 // of that width actually is — any more and the teeth swell into blobs.
 //
-// The rotation happens once, in `place`, rather than in every coordinate below.
 // `twist` turns the whole wheel in radians, which is what lets two wheels of different
 // counts sit side by side without their teeth lining up into one lumpy outline. It is
 // an angle and so is never scaled with the rest of the shape.
