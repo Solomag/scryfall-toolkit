@@ -22,16 +22,15 @@
 //
 //   platforms  { paper, arena, mtgo }        which platforms' sets are shown at all
 //   sets       nonTournament, oversized      plain switches
-//              foreignBlackBorder            { mode, which }
-//              nonEnglish                    { mode, which }
+//              foreignBlackBorder            { on, which }
+//              nonEnglish                    { on, which }
 //   prices     { usd, tix, tcg, cardhoarder }
 //   tokens     show the tokens a deck makes
 //   caster     hide the Caster ON marker
 //
-// `mode` is one of 'off', 'prints' or 'sets-prints'. It exists only for the two rules
-// that can reasonably mean either thing. Hiding non-tournament sets and hiding oversized
-// printings are about sets as such, and a checkbox that pretended otherwise would be a
-// control that sometimes does nothing.
+// `which` is the subset of a category the rule applies to: which of 4BB, FBB and BCHR,
+// which of Portal, Secret Lair and the rest. A rule with a category has a switch plus a
+// list underneath it; one without does not. The switch is the whole rule either way.
 //
 // Everything lives under one key rather than as a dozen flat booleans, because the
 // grouping is the point: these are the same decision taken at different depths, and a
@@ -40,7 +39,20 @@
 (function () {
   'use strict';
 
-  const MODES = ['off', 'prints', 'sets-prints'];
+  // There is no mode here, and there was one. 'prints' and 'sets-prints' were meant to
+  // mean "the prints table only" and "both surfaces", the shapes were written, the
+  // migration mapped the old switches onto them — and neither surface acted on the
+  // difference. Two of the places that read them were asking a boolean alias that
+  // collapses both values to one, and the third never asked at all.
+  //
+  // A switch that reads the same whichever way it is set is worse than no switch,
+  // because a reader who sets it cannot tell whether they got what they asked for. So
+  // the distinction came out of the shape entirely rather than being left in it as a
+  // promise. What stays is the grouping, which does work: which platforms, which sets
+  // are junk, which price kinds.
+  //
+  // When the two surfaces are done, this is the field to widen, and widening it will be
+  // a small change precisely because everything else already lives in one place.
 
   const FOREIGN_BLACK_BORDER = {
     // Read off the sets themselves, by code: 4BB is Fourth Edition, FBB is Future Sight,
@@ -75,12 +87,8 @@
     sets: {
       nonTournament: false,
       oversized: false,
-      // 'off' and not 'sets-prints': for these two the mode is the whole switch, so a
-      // default of sets-prints would mean hiding them for everybody out of the box. The
-      // three values are Off, Only Prints, and Sets and Prints, and the first is the
-      // one a fresh install starts on.
-      foreignBlackBorder: { mode: 'off', which: Object.keys(FOREIGN_BLACK_BORDER) },
-      nonEnglish: { mode: 'off', which: Object.keys(NON_ENGLISH) }
+      foreignBlackBorder: { on: false, which: Object.keys(FOREIGN_BLACK_BORDER) },
+      nonEnglish: { on: false, which: Object.keys(NON_ENGLISH) }
     },
     prices: { usd: false, tix: false, tcg: false, cardhoarder: false },
     tokens: true,
@@ -92,10 +100,6 @@
 
   const knownList = (list, table) =>
     Array.isArray(list) ? list.filter(name => Object.prototype.hasOwnProperty.call(table, name)) : null;
-
-  function mode(value) {
-    return MODES.includes(value) ? value : null;
-  }
 
   // Fill in anything missing without touching anything that is there, so a partial
   // object written by an older build is completed rather than replaced.
@@ -110,8 +114,7 @@
     if (typeof input.sets?.oversized === 'boolean') out.sets.oversized = input.sets.oversized;
     for (const [key, table] of [['foreignBlackBorder', FOREIGN_BLACK_BORDER], ['nonEnglish', NON_ENGLISH]]) {
       const given = input.sets?.[key];
-      const kept = mode(given?.mode);
-      if (kept) out.sets[key].mode = kept;
+      if (typeof given?.on === 'boolean') out.sets[key].on = given.on;
       const which = knownList(given?.which, table);
       // An empty list means "nothing in this category is hidden", which is a real
       // choice, so it is kept. An unusable one falls back to all of them.
@@ -128,12 +131,10 @@
 
   // What the flat booleans meant, translated once.
   //
-  // Two of these are not one-to-one, and both differences are behaviour, not tidiness:
-  //
-  // `hideNonEnglishPrints` only ever applied to the Prints table, so it becomes
-  // mode 'prints' rather than 'sets-prints'. Migrating it to the fuller rule would
-  // silently start hiding Portal sets in the Sets index on the next reload, which is a
-  // change nobody asked for.
+  // `hideNonEnglishPrints` only ever applied to the Prints table. It maps to a plain
+  // switch, so it keeps reaching exactly what it reached before: the rule is the whole
+  // rule, and a shape that could promise "Prints only" and quietly not keep that
+  // promise was worse than one that says nothing about surfaces at all.
   //
   // `onlyCardmarket` was one switch that turned all four price kinds off at once, so all
   // four come on together.
@@ -163,8 +164,8 @@
 
     if (stored.hideNonTournamentSets === true) out.sets.nonTournament = true;
     if (stored.hideOversizedSets === true) out.sets.oversized = true;
-    if (stored.hideForeignBlackBorder === true) out.sets.foreignBlackBorder.mode = 'sets-prints';
-    if (stored.hideNonEnglishPrints === true) out.sets.nonEnglish.mode = 'prints';
+    if (stored.hideForeignBlackBorder === true) out.sets.foreignBlackBorder.on = true;
+    if (stored.hideNonEnglishPrints === true) out.sets.nonEnglish.on = true;
 
     if (stored.onlyCardmarket === true) {
       for (const price of Object.keys(out.prices)) out.prices[price] = true;
@@ -216,20 +217,20 @@
       return {
         platforms: { paper: true, arena: true, mtgo: true },
         nonTournament: false, oversized: false,
-        foreignBlackBorder: 'off', nonEnglish: 'off'
+        foreignBlackBorder: false, nonEnglish: false
       };
     }
     return {
       platforms: normalised.platforms,
       nonTournament: normalised.sets.nonTournament,
       oversized: normalised.sets.oversized,
-      foreignBlackBorder: normalised.sets.foreignBlackBorder.mode,
-      nonEnglish: normalised.sets.nonEnglish.mode
+      foreignBlackBorder: normalised.sets.foreignBlackBorder.on,
+      nonEnglish: normalised.sets.nonEnglish.on
     };
   }
 
   window.STK_SET_FILTERS = {
-    MODES, FOREIGN_BLACK_BORDER, NON_ENGLISH, PRICE_KINDS,
-    defaults, normalise, migrate, read, effective, withoutSets, withSets, mode, isPlainObject
+    FOREIGN_BLACK_BORDER, NON_ENGLISH, PRICE_KINDS,
+    defaults, normalise, migrate, read, effective, withoutSets, withSets, isPlainObject
   };
 })();

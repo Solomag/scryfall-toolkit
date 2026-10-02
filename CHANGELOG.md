@@ -8,6 +8,45 @@ All releases: <https://github.com/Solomag/scryfall-toolkit/releases>
 
 ---
 
+### A switch that reads the same either way is worse than no switch
+
+1.1.0 shipped a `mode` on two of the hiding rules, with three values: Off, Only Prints,
+and Sets and Prints. The shape was right, the migration mapped the old switches onto it,
+and **neither surface acted on the difference.** Two of the three places that read it were
+asking a boolean alias that collapses both values into one, and the third never asked at
+all.
+
+So a reader could set "Prints only" for Foreign Black Border and could not tell whether
+they got what they asked for. The rule reached the sets index and the prints table
+identically, and nothing said so.
+
+The distinction has come **out of the shape** rather than being left in it as a promise.
+Both rules are plain switches again, which is what they were before, and they keep
+reaching exactly what they reached before. The grouping stays, because the grouping is
+the part that works and is the reason the rest was worth doing: which platforms, which
+sets are junk, which price kinds, in one place with one migration beside it.
+
+What remains is honest: a rule that has a category under it has a switch plus a list
+beneath it - which of 4BB, FBB and BCHR, which of Portal, Secret Lair and the rest. When
+the two surfaces are done this is the one field to widen, and widening it will be small
+because everything else already lives in one file.
+
+Trying to make it work first found two real bugs on the way, recorded in the file and
+reverted with it.
+
+`needsSetIndex` in `sets.js` and `needsCategories` in `prints.js` both asked the boolean
+alias. With "Prints only" chosen the alias is false, the set index was never fetched, and
+the rule did **nothing at all** on either surface. The version that looked like it worked
+did not work anywhere - the same shape of bug as the oversized one, where a setting
+appeared to work on exactly the cases its author had tried.
+
+Removing the mode found a fourth bug of mine: the aliases in `core.js` still compared
+against the mode strings, and with the mode gone a boolean is never 'off', so the
+non-English rule read as permanently on and a whole set of printings went missing from a
+test that had switched nothing on.
+
+---
+
 ### Oversized printings were found by reading set names
 
 "Hide oversized" did not hide most oversized printings. It was not broken in an obvious
