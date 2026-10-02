@@ -77,7 +77,7 @@ The toolbar button opens a small popup with the five switches you reach for most
 | **Tags** | Card/art tags, related cards, the Tagger link on search results |
 | **CardClip** | The clipboard, the copy format, the per-printing `+` |
 | **Prints** | Grouping printings by set, folding groups, the full-list link |
-| **Hide extras** | Caster indicator, set and price filters, the platform filter |
+| **Hide extras** | one master switch over the set rules and platforms; non-tournament, oversized, Foreign Black Border and non-English with a list under each; the platform filter; four separate price switches; the Caster marker and deck tokens |
 | **Additional info** | Finish column, type and mana search, nicknames, EDHREC, CardTrader |
 | **Legality** | The extra formats and their order |
 | **Scryfall Deckbuilder** | No Prices, stacked cards, the token list, and the three opt-in tools above |

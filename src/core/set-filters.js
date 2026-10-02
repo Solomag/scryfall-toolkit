@@ -72,6 +72,25 @@
     other: { code: 'other', label: 'Другие языки', languages: true }
   };
 
+  // Every storage key the migration has to be able to see.
+  //
+  // It is a list rather than a read of the whole of storage, and it is here rather
+  // than in the file that needs it, because there are now two files that need it: the
+  // card page, which migrates what the reader had chosen, and the settings page, which
+  // has to show the same migrated values or it draws one reader's old switches as
+  // another reader's defaults.
+  //
+  // Two copies of this list would be a place for a key to be added to one and missed
+  // in the other, and the symptom would not be a failure: the migration would quietly
+  // not see a setting it was written for, and the reader's choice would be the
+  // default. This project has been bitten by that shape of thing more than once, and
+  // the fix each time was to move the list somewhere both callers could reach.
+  const LEGACY_KEYS = [
+    'hideDigitalSets', 'hideNonTournamentSets', 'hideOversizedSets',
+    'hideForeignBlackBorder', 'hideNonEnglishPrints', 'setPlatforms', 'onlyCardmarket',
+    'hideCasterIndicator', 'deckTokens', 'setFilters', 'setFiltersMigrated'
+  ];
+
   const PRICE_KINDS = {
     usd: { label: 'USD', selects: ['usd'], links: [] },
     tix: { label: 'TIX', selects: ['tix'], links: [] },
@@ -230,7 +249,7 @@
   }
 
   window.STK_SET_FILTERS = {
-    FOREIGN_BLACK_BORDER, NON_ENGLISH, PRICE_KINDS,
+    FOREIGN_BLACK_BORDER, NON_ENGLISH, PRICE_KINDS, LEGACY_KEYS,
     defaults, normalise, migrate, read, effective, withoutSets, withSets, isPlainObject
   };
 })();

@@ -42,25 +42,49 @@
 
 <section><div class="section-head"><h2>Скрытие лишнего</h2>
 <button type="button" class="shot-button" data-shot="hide-extra" aria-haspopup="dialog" title="Показать, как это выглядит">?</button></div>
-<label><input type="checkbox" id="hideCasterIndicator"> Скрыть индикатор Caster ON</label>
-<label><input type="checkbox" id="hideDigitalSets"> Скрывать цифровые сеты на странице Sets и в Prints</label>
-<p class="hint">Скрываются цифровые сеты и кубы из списка Scryfall; выбранное издание остаётся видимым на собственной странице карты.</p>
-<label><input type="checkbox" id="hideNonTournamentSets"> Скрывать нетурнирные сеты (сувениры, официальные прокси, токены)</label>
-<label><input type="checkbox" id="hideOversizedSets"> Скрывать увеличенные карты (oversized) отдельно</label>
-<label><input type="checkbox" id="hideForeignBlackBorder"> Скрывать Foreign Black Border сеты (4BB, FBB, BCHR)</label>
-<label><input type="checkbox" id="hideNonEnglishPrints"> Скрывать неанглийские издания в Prints (Portal, Secret Lair и другие)</label>
-<p class="hint">Фильтры сетов действуют в Sets и Prints, фильтр языка — только в Prints. Текущее издание остаётся видимым; смешанные сеты с легальными картами сохраняются.</p>
-<label><input type="checkbox" id="onlyCardmarket"> Скрывать цены в USD, TIX, TCGplayer и Cardhoarder</label>
+<!-- The whole group is one setting called setFilters, drawn here as the shape in
+     src/core/set-filters.js. The master switch is a gate rather than a setter: turning
+     it off leaves every switch below it exactly where it was, so the one time in a
+     while the junk is wanted back, one click brings it all without redoing the
+     tidying. It never writes the switches under it, which is checked. -->
+<label><input type="checkbox" id="setFiltersEnabled"> Скрывать лишнее в Sets и Prints</label>
+<p class="hint">Общий переключатель: пока он выключен, платформы и правила ниже не действуют. Выключение не сбрасывает то, что уже выбрано, — включая обратное включение. Цены, токены и индикатор Caster стоят вне этого переключателя и работают всегда.</p>
+<fieldset id="setsGroup"><legend>Что считать лишним</legend>
+<label><input type="checkbox" id="setNonTournament"> Нетурнирные сеты (сувениры, официальные прокси, токены)</label>
+<label><input type="checkbox" id="setOversized"> Увеличенные карты (oversized)</label>
+<p class="hint">Обе галочки независимы: набор может быть увеличенным и одновременно нетурнирным — например, Vintage Championship это сувенирная увеличенная колода. Включение одной не выключает другую.</p>
+<label><input type="checkbox" id="setForeignBlackBorder"> Foreign Black Border</label>
+<fieldset id="setForeignBlackBorderList" class="which-list"><legend>Какие именно</legend>
+<!-- One row per entry in STK_SET_FILTERS.FOREIGN_BLACK_BORDER, written by
+     options.js. They are written rather than laid out here because the list is the
+     model's: a fourth border set has to be one line in set-filters.js and nothing
+     else, or the settings page would be showing a rule it cannot store. -->
+</fieldset>
+<label><input type="checkbox" id="setNonEnglish"> Неанглийские издания в Prints</label>
+<fieldset id="setNonEnglishList" class="which-list"><legend>Какие именно</legend>
+</fieldset>
+<p class="hint">Фильтры сетов действуют в Sets и Prints. Английские издания внутри этих наборов остаются: правило про наборы, а не про язык каждого выпуска. Текущее издание остаётся видимым; смешанные наборы с легальными картами сохраняются.</p>
+</fieldset>
 <fieldset class="experimental-sub"><legend>Экспериментальное</legend>
 <p class="hint">Эта настройка ещё уточняется и может измениться или исчезнуть.</p>
-<fieldset><legend>Платформы: какие сеты показывать</legend>
+<fieldset id="setPlatformsGroup"><legend>Платформы: какие сеты показывать</legend>
 <label><input type="checkbox" id="setPlatformsAll"> Все (Paper, Arena, Magic Online)</label>
 <label><input type="checkbox" id="setPlatformsPaper"> Paper</label>
 <label><input type="checkbox" id="setPlatformsArena"> Arena</label>
 <label><input type="checkbox" id="setPlatformsMtgo"> Magic Online</label>
 <p class="hint" id="setPlatformsHint">Отметьте одну или несколько платформ: показываются только сеты выбранных платформ. Paper — все обычные сеты, Arena и Magic Online — только их цифровые сеты. Фильтр работает в Sets и в Prints, а в поле сетов на странице Advanced search учитываются ещё и галки Games над этим полем.</p>
+<p class="hint">Индекс сетов Scryfall не называет клиент за цифровым набором, поэтому расширение везёт снимок известных наборов и уточняет недостающие через одну карту набора. Набор, который уточнить не удалось, остаётся видимым.</p>
 </fieldset>
 </fieldset>
+<fieldset id="setPrices" class="which-list"><legend>Какие цены скрывать</legend>
+<!-- Four switches, one per entry in STK_SET_FILTERS.PRICE_KINDS, written by
+     options.js. They were one switch before 1.1.2, and a reader who wanted no
+     TCGplayer links but kept the dollar column had no way to say so. -->
+</fieldset>
+<p class="hint">Цены в долларах и билетах — это столбцы чисел, а TCGplayer и Cardhoarder — ссылки на магазины, поэтому они и скрываются по отдельности. Цена в евро и всё, что добавляет само расширение, не скрывается никогда.</p>
+<label><input type="checkbox" id="setCaster"> Скрыть индикатор Caster ON</label>
+<label><input type="checkbox" id="setTokens"> Список токенов, создаваемых картами колоды</label>
+<p class="hint">Токены показываются на странице колоды: кнопка Show Tokens находит токены карт колоды через Scryfall.</p>
 </section>
 <section><div class="section-head"><h2>Дополнительная информация</h2>
 <button type="button" class="shot-button" data-shot="additional" aria-haspopup="dialog" title="Показать, как это выглядит">?</button></div>
@@ -101,7 +125,7 @@
 </section><section><h2>Scryfall Deckbuilder</h2>
 <label><input type="checkbox" id="deckNoPrices"> Режим «No Prices» в выпадающем списке колоды</label>
 <label><input type="checkbox" id="stackedDeckCards"> Карты колоды стопкой вместо развёрнутой сетки</label>
-<label><input type="checkbox" id="deckTokens"> Список токенов, создаваемых картами колоды</label>
+
 <label><input type="checkbox" id="edhrecSuggestions"> Подсказки EDHREC в редакторе командных колод</label>
 <p class="hint">Кнопка EDHREC в панели инструментов открывает списки карт, которые EDHREC показывает для твоего командира, с процентом колод, где они встречаются. Данные берутся из открытого JSON EDHREC по их опубликованной политике — не чаще запроса в секунду и с кешем.</p>
 <label><input type="checkbox" id="deckSearch"> Поиск Scryfall прямо в редакторе колоды</label>
@@ -152,4 +176,4 @@
 <img id="shotImage" alt="">
 <p id="shotCaption"></p>
 </dialog>
-<script src="../core/i18n.js"></script><script src="../core/format-catalog.js"></script><script src="options.js"></script></body></html>
+<script src="../core/set-filters.js"></script><script src="../core/i18n.js"></script><script src="../core/format-catalog.js"></script><script src="options.js"></script></body></html>

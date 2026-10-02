@@ -198,29 +198,43 @@ These affect the **Sets** index and the **Prints** table on a card page. Card se
 individual set pages and decks are not changed, and the currently selected printing
 stays visible.
 
-- **Hide digital-only sets** — Scryfall's digital flag plus the online cubes under
-  `/cubes/`. The set index is cached for one day.
+These are one setting in the interface, grouped the way they are decided: which
+platforms, which sets are junk, which prices. There is a master switch over the set
+rules and the platforms.
+
+**The master switch is a gate, not a shortcut.** Turning it off leaves every switch
+under it exactly where you put it and hides nothing; turning it back on brings your own
+choices back rather than the defaults. It never rewrites them.
+
 - **Hide non-tournament sets** — memorabilia, minigame, Vanguard and token categories,
   plus official proxy set codes (Collector's Edition, 30th Anniversary Edition, World
   Championship Decks). Mixed "funny" sets stay, because some contain tournament-legal
   cards.
-- **Hide oversized sets** — its own toggle. The list comes from Scryfall and not from a
-  guess: oversized is a flag on the printing, not a field on the set, so the sets holding
-  an oversized printing are collected by asking for the printings. A set can be oversized
-  and something else at once — a Vintage Championship is memorabilia too — and turning this
-  on does not stop it from also being hidden as non-tournament.
-- **Hide Foreign Black Border sets** — 4BB, FBB and BCHR.
-- **Hide non-English printings** — language-specific rows in Prints, including Portal and
-  Secret Lair. English printings in those sets stay.
-- **Hide USD, TIX, TCGplayer and Cardhoarder prices** — see the price filter above.
+- **Hide oversized sets** — its own toggle, independent of the one above: a set can be
+  both, a Vintage Championship being memorabilia *and* oversized, and turning one on does
+  not turn the other off. The list comes from Scryfall and not from a guess: oversized is
+  a flag on the printing, not a field on the set, so the sets holding an oversized
+  printing are collected by asking for the printings.
+- **Hide Foreign Black Border sets** — 4BB, FBB and BCHR, each with its own checkbox,
+  so you can hide one border treatment and keep another.
+- **Hide non-English printings** — language-specific rows in Prints, with a checkbox each
+  for Portal, Secret Lair and the rest. English printings inside those sets stay: the
+  rule is about which sets, not about the language of each printing.
+- **Hide USD, TIX, TCGplayer and Cardhoarder prices** — four separate checkboxes, see
+  the price filter above. They sit outside the master switch, because they are not a set
+  rule.
+
+The **set index is cached for one day**, and the Caster marker and the deck token list
+sit in the same section.
 
 **Platforms** (experimental) — All, Paper, Arena, Magic Online. Decides which sets appear
 in `/sets` and in the Prints table. Paper is every set Scryfall does not mark digital;
-Arena and Magic Online are their digital-only sets. Scryfall's index does not name the
-client behind a digital set, so the extension ships a snapshot of every known digital
-set's platform, looks up anything missing through one card of the set, and keeps that
-answer for a month. A set the lookup cannot place stays visible rather than being hidden
-on a guess.
+Arena and Magic Online are their digital-only sets. Taking away the last one falls back
+to All, because a set list with nothing in it is not a choice this setting can hold.
+Scryfall's index does not name the client behind a digital set, so the extension ships a
+snapshot of every known digital set's platform, looks up anything missing through one
+card of the set, and keeps that answer for a month. A set the lookup cannot place stays
+visible rather than being hidden on a guess.
 
 The set field of Advanced search follows the **Games** checkboxes Scryfall already shows
 above it. Hidden sets are marked, never removed, so the field can widen again at any

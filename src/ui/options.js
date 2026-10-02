@@ -10,21 +10,37 @@
  */
 const defaults = {
   settingsLanguage: 'auto', siteLanguage: 'en',
-  clipboard: true, printAddButtons: true, darkTheme: 'auto', hideDigitalSets: false, hideNonTournamentSets: false, hideOversizedSets: false, hideForeignBlackBorder: false, hideNonEnglishPrints: false, tags: true, cardTags: true, artTags: false, relationships: true, onlyCardmarket: false,
+  clipboard: true, printAddButtons: true, darkTheme: 'auto', tags: true, cardTags: true, artTags: false, relationships: true,
   finishBadges: true, cardtraderPrices: false, cardtraderToken: '', euroPriceSources: 'cm',
   edhrecUsage: false, edhrecSalt: false, showSaltScale: false, edhrecLink: false, edhrecUsageDisplay: 'both',
   usageColorMetric: 'decks', usageMediumDecks: 50000, usageHighDecks: 100000,
   usageMediumPercent: 1, usageHighPercent: 2.6, saltMediumThreshold: 1, saltHighThreshold: 2,
-  hideCasterIndicator: false, printPageSameTab: false,
+  printPageSameTab: false,
   printGrouping: false, printFoldGroups: false, printFullPageLink: false,
-  setPlatforms: ['paper', 'arena', 'mtgo'],
-  taggerSearchLinks: false, cardSearchLinks: true, cardNicknames: true, deckNoPrices: true, stackedDeckCards: true, deckTokens: true,
+  // Read with no default, for the reason given in src/core/set-filters.js: a default
+  // here would make every old key look as though it had a value, and the migration
+  // reads those keys to decide what the reader had chosen.
+  setFilters: null, setFiltersMigrated: false,
+  taggerSearchLinks: false, cardSearchLinks: true, cardNicknames: true, deckNoPrices: true, stackedDeckCards: true,
   deckCleanUpImprover: false, cleanUpLandsInSingleton: true, sortEntriesPrimary: 'none', insertSortingHeadings: true,
   edhrecSuggestions: false, deckSearch: false,
   legalities: true, exportFormat: "moxfield", formatOrder: null, formatVisibility: null,
   discoveredFormats: [], premodern: true, heritage: false, classic: false, peak: false
 };
-const basicFields = ["clipboard", "printAddButtons", "printPageSameTab", "hideCasterIndicator", "hideDigitalSets", "hideNonTournamentSets", "hideOversizedSets", "hideForeignBlackBorder", "hideNonEnglishPrints", "tags", "cardTags", "artTags", "relationships", "finishBadges", "onlyCardmarket", "cardtraderPrices", "euroPriceSources", "edhrecUsage", "edhrecSalt", "showSaltScale", "edhrecLink", "edhrecUsageDisplay", "usageColorMetric", "legalities", "exportFormat", "taggerSearchLinks", "cardSearchLinks", "cardNicknames", "deckNoPrices", "stackedDeckCards", "deckTokens", "deckCleanUpImprover", "cleanUpLandsInSingleton", "sortEntriesPrimary", "insertSortingHeadings", "edhrecSuggestions", "deckSearch", "printGrouping", "printFoldGroups", "printFullPageLink"];
+// Two separate things, and one storage key.
+//
+// `setFilters` holds the whole hiding group; the page saves it as one value, so a
+// reader who turns off three prices does not cause three writes and three chances for
+// one of them to land without the others. The old code saved each switch under its own
+// key, which is how a reader could end up with the master saying one thing and the
+// sub-switches saying another — the exact failure the shape was built to prevent.
+//
+// Nothing under the hiding group is in this list. `basicFields` saves one id per key,
+// and the group has controls that do not map to a key at all: the master switch writes
+// one flag, the two category rules carry a list under them, and the four price kinds are
+// told apart by the model rather than by an id. A key-by-key save would have to be kept
+// in step with all three, and there is no test that could tell that it was not.
+const basicFields = ["clipboard", "printAddButtons", "printPageSameTab", "tags", "cardTags", "artTags", "relationships", "finishBadges", "cardtraderPrices", "euroPriceSources", "edhrecUsage", "edhrecSalt", "showSaltScale", "edhrecLink", "edhrecUsageDisplay", "usageColorMetric", "legalities", "exportFormat", "taggerSearchLinks", "cardSearchLinks", "cardNicknames", "deckNoPrices", "stackedDeckCards", "deckCleanUpImprover", "cleanUpLandsInSingleton", "sortEntriesPrimary", "insertSortingHeadings", "edhrecSuggestions", "deckSearch", "printGrouping", "printFoldGroups", "printFullPageLink"];
 // EDHREC and CardTrader are optional features, and so is the access they need.
 // Chrome has a place for exactly this: optional_host_permissions, granted only
 // when the user turns one of them on. Turning a switch off and on again is also
@@ -368,39 +384,174 @@ chrome.storage.local.get(defaults, values => {
       deckStatus.style.whiteSpace = 'pre-wrap';
     }).catch(() => {});
   }
-  // Platform checkboxes behave as one control: "All" mirrors the three
-  // platforms, and unchecking the last one falls back to All so the set lists
-  // never end up empty.
-  const platformBoxes = ['paper', 'arena', 'mtgo'].map(name => ({ name, element: document.getElementById('setPlatforms' + name[0].toUpperCase() + name.slice(1)) }));
-  const platformAll = document.getElementById('setPlatformsAll');
-  function selectedPlatforms() {
-    return platformBoxes.filter(box => box.element.checked).map(box => box.name);
+  // --- the hiding group, drawn from the model -----------------------------------
+  //
+  // Everything in this block is one storage key, and the block is a function because
+  // it needs a second read: the migration has to see the old keys, and a read that asked
+  // only for `setFilters` would hand it an object holding nothing else — quietly showing
+  // a reader who had chosen to hide four kinds of price the defaults instead. The list
+  // of keys to read comes from the model, so the card page and this page cannot be
+  // looking at different sets of them.
+  function drawHidingGroup(stored) {
+  // Everything below is one storage key. The shape is src/core/set-filters.js, and it
+  // is read from there rather than repeated here: the card page reads the same object
+  // to decide what to hide, and a second copy of the shape in this file is a copy that
+  // can be changed on one side only. So this block asks the model what exists and draws
+  // that.
+  //
+  // The migration runs here too, not only on the card page.
+  const FILTERS = window.STK_SET_FILTERS;
+  const filtersRead = FILTERS.read(stored);
+  const filters = filtersRead.filters;
+  if (filtersRead.migrated) {
+    chrome.storage.local.set({ setFilters: filters, setFiltersMigrated: true });
   }
+  const saveFilters = () => chrome.storage.local.set(
+    { setFilters: filters, setFiltersMigrated: true }, () => { status.textContent = t('Сохранено'); });
+
+  // The master switch is a gate, and the one thing it must never do is write the
+  // switches under it. It is going to be "hide everything", which is a different thing:
+  // a switch that writes four others has to be kept in step with them, and when it is
+  // not, the master says one and the page does another. So it stores one flag, and
+  // everything it governs is drawn dimmed while it is off — the reader's choices are
+  // still there, which is the entire point of wanting a gate.
+  const gate = document.getElementById('setFiltersEnabled');
+  const setsGroup = document.getElementById('setsGroup');
+  const platformGroup = document.getElementById('setPlatformsGroup');
+  gate.checked = filters.setsEnabled;
+  function applyGate() {
+    setsGroup.disabled = !gate.checked;
+    platformGroup.disabled = !gate.checked;
+  }
+  gate.addEventListener('change', () => {
+    // One key. The sub-switches are not written, and the model's withoutSets/withSets
+    // are not used either: both of them copy the whole object, which would also be a
+    // way of quietly rewriting sub-switches that were never touched.
+    filters.setsEnabled = gate.checked;
+    applyGate();
+    saveFilters();
+  });
+  applyGate();
+
+  // The two plain rules in the group. They are booleans and stay booleans.
+  for (const [id, key] of [['setNonTournament', 'nonTournament'], ['setOversized', 'oversized']]) {
+    const box = document.getElementById(id);
+    box.checked = filters.sets[key];
+    box.addEventListener('change', () => {
+      filters.sets[key] = box.checked;
+      saveFilters();
+    });
+  }
+
+  // A rule with a category under it: a switch plus a list of which parts of the
+  // category it covers. The list is built from the model's own tables, so a new entry
+  // is one line in set-filters.js and needs nothing here.
+  //
+  // The list is drawn from the model's labels rather than translated in this file,
+  // because STK_I18N already holds the Russian string and the English beside it. A
+  // second dictionary would be a second thing to forget.
+  function buildWhichList(containerId, table, chosen, onChange) {
+    const container = document.getElementById(containerId);
+    const boxes = [];
+    for (const [key, entry] of Object.entries(table)) {
+      const label = document.createElement('label');
+      const box = document.createElement('input');
+      box.type = 'checkbox';
+      box.id = containerId + '-' + key;
+      box.dataset.which = key;
+      box.checked = chosen.includes(key);
+      box.addEventListener('change', onChange);
+      label.append(box, document.createTextNode(' ' + entry.label));
+      container.append(label);
+      boxes.push(box);
+    }
+    return boxes;
+  }
+
+  function whichOf(boxes) {
+    return boxes.filter(box => box.checked).map(box => box.dataset.which);
+  }
+
+  // Both category rules at once, because they are the same shape and writing them
+  // separately is how one of them ends up saving and the other not.
+  for (const [id, listId, key, table] of [
+    ['setForeignBlackBorder', 'setForeignBlackBorderList', 'foreignBlackBorder', FILTERS.FOREIGN_BLACK_BORDER],
+    ['setNonEnglish', 'setNonEnglishList', 'nonEnglish', FILTERS.NON_ENGLISH]
+  ]) {
+    const box = document.getElementById(id);
+    box.checked = filters.sets[key].on;
+    const boxes = buildWhichList(listId, table, filters.sets[key].which, () => {
+      filters.sets[key].which = whichOf(boxes);
+      saveFilters();
+    });
+    box.addEventListener('change', () => {
+      filters.sets[key].on = box.checked;
+      saveFilters();
+    });
+  }
+
+  // Platform checkboxes behave as one control: "All" mirrors the three platforms, and
+  // unchecking the last one falls back to All so the set lists never end up empty.
+  //
+  // The fallback saves what it draws. Drawing all three while storage kept the one that
+  // had just been removed meant a reload brought it straight back — which is how this
+  // test once passed while doing nothing at all.
+  const platformBoxes = ['paper', 'arena', 'mtgo'].map(name => ({
+    name, element: document.getElementById('setPlatforms' + name[0].toUpperCase() + name.slice(1))
+  }));
+  const platformAll = document.getElementById('setPlatformsAll');
   function showPlatforms(chosen) {
     for (const box of platformBoxes) box.element.checked = chosen.includes(box.name);
     platformAll.checked = platformBoxes.every(box => box.element.checked);
   }
   function savePlatforms() {
-    // A list with nothing in it is not a choice this setting can hold, so it
-    // snaps back to all. It has to save that too: drawing all three while
-    // storage kept the one the user had just removed meant a reload brought it
-    // straight back.
-    const chosen = selectedPlatforms();
+    const chosen = platformBoxes.filter(box => box.element.checked).map(box => box.name);
     const next = chosen.length ? chosen : platformBoxes.map(box => box.name);
     showPlatforms(next);
-    chrome.storage.local.set({ setPlatforms: next }, () => { status.textContent = t('Сохранено'); });
+    for (const box of platformBoxes) filters.platforms[box.name] = next.includes(box.name);
+    saveFilters();
   }
-  const storedPlatforms = Array.isArray(values.setPlatforms) ? values.setPlatforms.filter(name => platformBoxes.some(box => box.name === name)) : [];
-  showPlatforms(storedPlatforms.length ? storedPlatforms : platformBoxes.map(box => box.name));
+  showPlatforms(platformBoxes.filter(box => filters.platforms[box.name]).map(box => box.name));
   platformAll.addEventListener('change', () => {
-    if (platformAll.checked) showPlatforms(platformBoxes.map(box => box.name));
-    else showPlatforms([]);
+    showPlatforms(platformAll.checked ? platformBoxes.map(box => box.name) : []);
     savePlatforms();
   });
   for (const box of platformBoxes) box.element.addEventListener('change', () => {
     platformAll.checked = platformBoxes.every(entry => entry.element.checked);
     savePlatforms();
   });
+
+  // The four price kinds, one row each, from the model's own table. Which row is which
+  // is the model's business: prices.js asks `setFilters.prices[kind]` for each of them,
+  // so a fifth kind added there has to appear here or the settings page is a rule it
+  // cannot store.
+  const priceBoxes = buildWhichList('setPrices', FILTERS.PRICE_KINDS,
+    Object.keys(FILTERS.PRICE_KINDS).filter(kind => filters.prices[kind]), () => {
+      const chosen = whichOf(priceBoxes);
+      for (const kind of Object.keys(FILTERS.PRICE_KINDS)) filters.prices[kind] = chosen.includes(kind);
+      saveFilters();
+    });
+
+  // The two that sit outside the gate, because the model does not put them behind it:
+  // effective() returns them whatever setsEnabled says.
+  for (const [id, key] of [['setCaster', 'caster'], ['setTokens', 'tokens']]) {
+    const box = document.getElementById(id);
+    box.checked = filters[key];
+    box.addEventListener('change', () => {
+      filters[key] = box.checked;
+      saveFilters();
+    });
+  }
+  // The rows above were written after the page was localized, so the page is localized
+  // again over them. Their labels are the model's own Russian strings, so this is the
+  // same translation every other label on the page gets — and the language selector
+  // reaches them too, because it localizes the whole body rather than a fixed list.
+  window.STK_I18N.localizeOptions(language);
+  }
+
+  chrome.storage.local.get(
+    Object.fromEntries(window.STK_SET_FILTERS.LEGACY_KEYS.map(key => [key, null])),
+    drawHidingGroup);
 
   const usageMetric = document.getElementById('usageColorMetric');
   function showUsageThresholds() {

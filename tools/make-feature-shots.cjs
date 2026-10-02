@@ -136,9 +136,26 @@ const SHOTS = [
   {
     file: 'hide-extra.png',
     about: '.card-profile .prints > .prints-table',
+    // The hiding group is one storage key now, written the way the card page reads it.
+    // The old flat switches are still read by the migration, so a picture asking for
+    // them is not wrong — but it is not the page either, and two of the five keys it
+    // used to name were element ids rather than storage keys, which meant the picture
+    // was asking for something that could not have worked.
     storage: {
-      hideDigitalSets: true, hideNonTournamentSets: true, hideNonEnglishPrints: true,
-      setPlatformsAll: false, setPlatformsPaper: true
+      setFiltersMigrated: true,
+      setFilters: {
+        setsEnabled: true,
+        platforms: { paper: true, arena: false, mtgo: false },
+        sets: {
+          nonTournament: true,
+          oversized: true,
+          foreignBlackBorder: { on: true, which: ['4bb', 'fbb', 'bchr'] },
+          nonEnglish: { on: true, which: ['portal', 'secret-lair', 'other'] }
+        },
+        prices: { usd: true, tix: true, tcg: true, cardhoarder: true },
+        tokens: true,
+        caster: false
+      }
     },
     waitFor: '.card-profile .prints > .prints-table',
     maxHeight: 460

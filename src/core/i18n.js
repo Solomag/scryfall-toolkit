@@ -28,6 +28,8 @@ const resolveSettingsLanguage = value => {
 
   const en = {
     'Настройки расширения для Scryfall': 'Extension settings for Scryfall',
+    'Как в браузере': 'As in the browser',
+    'Ссылка «Все издания» открывается в этой же вкладке': 'The “View all prints” link opens in this same tab',
     'Язык настроек': 'Settings language',
     'Язык интерфейса Scryfall и Tagger': 'Scryfall and Tagger interface language',
     'Язык добавляемых элементов и основных элементов Scryfall. Тексты карт и статей не переводятся.': 'Language of extension controls and common Scryfall controls. Card text and articles are not translated.',
@@ -48,6 +50,26 @@ const resolveSettingsLanguage = value => {
     'Тема Scryfall и Tagger': 'Scryfall and Tagger theme', 'Как в системе': 'Follow the system', 'Светлая': 'Light', 'Тёмная': 'Dark',
     'По умолчанию тема повторяет системную тему компьютера или телефона и переключается вместе с ней.': 'By default the theme follows the system theme of your computer or phone and switches with it.',
     'Скрытие лишнего': 'Hide extras',
+    // The hiding group, drawn from src/core/set-filters.js. The four category labels
+    // below are the model's own Russian strings and the settings page writes them into
+    // the page at run time, so they cannot be translated at the point of writing — they
+    // are translated the way every other label is, by walking the body afterwards.
+    'Скрывать лишнее в Sets и Prints': 'Hide extras in Sets and Prints',
+    'Общий переключатель: пока он выключен, платформы и правила ниже не действуют. Выключение не сбрасывает то, что уже выбрано, — включая обратное включение. Цены, токены и индикатор Caster стоят вне этого переключателя и работают всегда.': 'One switch over the group: while it is off, the platforms and the rules below have no effect. Turning it off does not reset anything you have chosen, including turning it back on. Prices, tokens and the Caster marker sit outside this switch and always work.',
+    'Что считать лишним': 'What counts as junk',
+    'Нетурнирные сеты (сувениры, официальные прокси, токены)': 'Non-tournament sets (memorabilia, official proxies, tokens)',
+    'Увеличенные карты (oversized)': 'Oversized cards',
+    'Обе галочки независимы: набор может быть увеличенным и одновременно нетурнирным — например, Vintage Championship это сувенирная увеличенная колода. Включение одной не выключает другую.': 'The two switches are independent: a set can be oversized and non-tournament at once — a Vintage Championship is memorabilia and oversized. Turning one on does not turn the other off.',
+    'Foreign Black Border': 'Foreign Black Border',
+    'Какие именно': 'Which ones',
+    'Неанглийские издания в Prints': 'Non-English printings in Prints',
+    'Фильтры сетов действуют в Sets и Prints. Английские издания внутри этих наборов остаются: правило про наборы, а не про язык каждого выпуска. Текущее издание остаётся видимым; смешанные наборы с легальными картами сохраняются.': 'Set filters apply in Sets and Prints. English printings inside those sets stay: the rule is about sets, not about the language of each printing. The current printing stays visible, and mixed sets containing legal cards remain listed.',
+    'Индекс сетов Scryfall не называет клиент за цифровым набором, поэтому расширение везёт снимок известных наборов и уточняет недостающие через одну карту набора. Набор, который уточнить не удалось, остаётся видимым.': 'Scryfall’s set index does not name the client behind a digital set, so the extension ships a snapshot of the known sets and looks up anything missing through one card of the set. A set the lookup cannot place stays visible.',
+    'Какие цены скрывать': 'Which prices to hide',
+    'Цены в долларах и билетах — это столбцы чисел, а TCGplayer и Cardhoarder — ссылки на магазины, поэтому они и скрываются по отдельности. Цена в евро и всё, что добавляет само расширение, не скрывается никогда.': 'Dollar and ticket prices are columns of numbers, while TCGplayer and Cardhoarder are shop links, which is why they are hidden separately. The euro price, and everything this extension adds itself, is never hidden.',
+    'Токены показываются на странице колоды: кнопка Show Tokens находит токены карт колоды через Scryfall.': 'Tokens are shown on the deck page: the Show Tokens button finds the tokens of your deck’s cards through Scryfall.',
+    'Portal и Portal II': 'Portal and Portal II',
+    'Другие языки': 'Other languages',
     'Скрывать цены в USD, TIX, TCGplayer и Cardhoarder': 'Hide USD, TIX, TCGplayer and Cardhoarder prices',
     'Дополнительная информация': 'Additional info',
     'Издания': 'Prints',

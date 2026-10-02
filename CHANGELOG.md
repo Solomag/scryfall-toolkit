@@ -8,6 +8,79 @@ All releases: <https://github.com/Solomag/scryfall-toolkit/releases>
 
 ---
 
+### The hiding settings, drawn as the shape they had become
+
+The model arrived in 1.1.0 and the page never met it. `src/core/set-filters.js` held one
+grouped object, and `options.html` still drew the seven flat switches it had replaced,
+writing storage keys nothing reads any more. A switch that looks on and stores into a
+key that is never looked at is the same defect as 1.1.1's mode: the reader cannot tell
+whether they got what they asked for, and this time it is every switch in the section
+rather than two of them.
+
+So the section is drawn from the model instead. The platforms, the two rules with a
+category list under them, the four price kinds, the tokens and the Caster marker all come
+out of `set-filters.js` — the page asks the model what exists and builds those rows. **A
+fourth border treatment is now one line in the model**, and the settings page is right
+without being told, which is the only arrangement in which that can be true.
+
+**The master switch is a gate, and the test says it must stay one.** It stores one flag
+and writes nothing under it. A master that set its sub-switches would have to be kept in
+step with them, and when it is not, the master says one thing and the page does another
+— so the assertion is not "the gate works" but "the gate does not touch anything below
+it", which is the property that is easy to lose. A mutation that clears every sub-switch
+when the gate closes is caught; so is one that stops dimming the block it governs.
+
+Prices and tokens stay outside the gate, because the model does not put them behind it,
+and a page that dimmed them would be promising something the hiding rules do not do.
+That is asserted against the model rather than against the page.
+
+### The settings page now migrates what the card page would have
+
+The migration used to run only on a card page. **A reader who had chosen to hide all four
+kinds of price and never visited one was shown the defaults** — the page was not reporting
+their choice was never made, it was making it. So the settings page reads the same old
+keys, runs the same migration, and draws the result. The list of keys it reads comes out
+of the model, because the card page and the page that shows the values cannot be looking
+at different sets of them.
+
+The old flat controls are gone from the markup, and that is asserted as well as the new
+ones being present: a control still writing `hideNonTournamentSets` would look identical
+to the new one and quietly stop hiding anything.
+
+### The English settings page had two untranslated sentences, and one was ours
+
+The store screenshots are captured in English, because the listing and the README are in
+English and a machine set to Russian had produced Russian pictures. Re-reading the tiles
+after the rebuild found **a paragraph about how platforms are resolved, sitting in
+Russian, in the middle of an English listing** — the sentence went into the dictionary
+with different wording from the sentence in the markup, and nothing noticed.
+
+It was found by looking at the picture, which is the second time a picture has caught
+something every automated check was green about, and it is the whole reason the check
+that would have caught it now exists: **every Russian sentence the page shows is compared
+against the dictionary**, and the labels the model supplies are compared separately,
+because those appear at run time and nothing in the markup mentions them.
+
+Running that check over the whole page found two more sentences that were never in the
+dictionary at all — the browser-following language choice and the same-tab printings
+link. Both have been in the English listing for some time.
+
+Both checks were verified by removing an entry from the dictionary and watching each one
+fail with the sentence named.
+
+### What else changed
+
+The store screenshots are re-taken: the capture is 1280×5582 rather than 1280×4860, and
+the tile descriptions were re-read off the pictures rather than left describing where the
+sections used to be — they had already gone stale twice for exactly that reason.
+
+The smoke test of the packaged settings page **was loading three scripts by name and
+missing a fourth**, so the one run whose job is to say the page as shipped starts died on
+an undefined property. It now reads the list out of the page's own markup, which is the
+same reason the card page's test list comes out of the manifest.
+
+---
+
 ### A switch that reads the same either way is worse than no switch
 
 1.1.0 shipped a `mode` on two of the hiding rules, with three values: Off, Only Prints,

@@ -90,11 +90,10 @@
   // because the migration has to see them, and a read that asked only for the new pair
   // would hand it an object holding nothing else - quietly resetting everybody's
   // settings to the defaults. That is the worst thing this change could do, so what it
-  // reads is written down here rather than implied.
-  const OLD_FILTER_KEYS = ['hideDigitalSets', 'hideNonTournamentSets', 'hideOversizedSets',
-    'hideForeignBlackBorder', 'hideNonEnglishPrints', 'setPlatforms', 'onlyCardmarket',
-    'hideCasterIndicator', 'deckTokens', 'setFilters', 'setFiltersMigrated'];
-  const stored = await chrome.storage.local.get(Object.fromEntries(OLD_FILTER_KEYS.map(key => [key, null])));
+  // reads is written down in the model rather than implied, because the settings page
+  // has to read the very same keys to draw the very same migrated values.
+  const stored = await chrome.storage.local.get(
+    Object.fromEntries(window.STK_SET_FILTERS.LEGACY_KEYS.map(key => [key, null])));
   const filtersRead = window.STK_SET_FILTERS.read(stored);
   const setFilters = filtersRead.filters;
   const hiding = window.STK_SET_FILTERS.effective(setFilters);

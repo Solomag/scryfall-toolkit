@@ -197,12 +197,24 @@ async function settingsPowerOnTest(dir) {
     fs.readFileSync(path.join(dir, file), 'utf8'), page.context, { filename: file }
   );
 
-  run('src/core/i18n.js');
-  await tick();
-  run('src/core/format-catalog.js');
-  await tick();
-  run('src/ui/options.js');
-  await tick();
+  // The scripts the page itself names, resolved the way a browser would resolve them.
+  //
+  // Listing them here by hand is how this run missed set-filters.js: the page had begun
+  // to load it and the test had not, so the smoke test of the packaged settings page
+  // died on an undefined property — in the one run whose whole job is to say the page
+  // as shipped starts. The list comes from the markup for the same reason the card page's
+  // comes from the manifest.
+  const pageDir = 'src/ui';
+  const scripts = [...html.matchAll(/<script[^>]*src="([^"]+)"/g)].map(match => match[1]);
+  assert(scripts.includes('options.js'), 'the packaged page names its own script');
+  assert(scripts.includes('../core/set-filters.js'),
+    'and the model, which is a separate file the page cannot do without');
+  for (const reference of scripts) {
+    const file = path.posix.normalize(path.posix.join(pageDir, reference));
+    assert(fs.existsSync(path.join(dir, file)), `${reference} is in the archive, as ${file}`);
+    run(file);
+    await tick();
+  }
 
   const items = page.document.querySelectorAll('#formatList .format-item');
   assert(items.length === 18, `the settings page renders its format list (${items.length} of 18)`);
@@ -668,7 +680,7 @@ function packagedArchiveTest() {
   const listed = listZip(zip);
 
   // The exact regression: the settings page must bring its own styles and script.
-  for (const file of ['src/ui/options.html', 'src/ui/options.css', 'src/ui/options.js', 'src/ui/popup.html', 'src/ui/popup.css', 'src/ui/popup.js', 'src/core/i18n.js', 'src/core/format-catalog.js']) {
+  for (const file of ['src/ui/options.html', 'src/ui/options.css', 'src/ui/options.js', 'src/ui/popup.html', 'src/ui/popup.css', 'src/ui/popup.js', 'src/core/i18n.js', 'src/core/format-catalog.js', 'src/core/set-filters.js']) {
     assert(listed.includes(file), `${file} is inside the archive, so no page ships bare`);
   }
   // And the second: the tag snapshot is named through a map in background.js
