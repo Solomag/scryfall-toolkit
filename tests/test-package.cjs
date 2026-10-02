@@ -290,6 +290,69 @@ function documentationTest() {
     'and that picture exists');
 }
 
+// The store listing's screenshots, described against the pictures themselves.
+//
+// The listing says how big the capture is and names the five tiles. Both had gone stale
+// while the capture itself was being kept current: the tiles were correct to the byte and
+// the document said 1280x4896 over a capture that was 1280x4860. Nothing in the suite
+// compared the two, because a document and a picture are different kinds of file and the
+// checks had only ever read documents.
+//
+// What this cannot check is what each tile *shows*. Two rounds of refactoring moved the
+// sections between the tiles and the descriptions went on describing where the sections
+// used to be. That is said out loud, because a check that cannot catch everything about a
+// thing should say so rather than be pointed at as if it could.
+function storeShotsTest() {
+  console.log('store: the listing describes the screenshots that exist');
+  const listing = read('docs/CHROME_WEB_STORE_LISTING.md');
+  const dir = path.join(ROOT, 'store-assets');
+  const size = name => {
+    const buffer = fs.readFileSync(path.join(dir, name));
+    assertEqual(buffer.readUInt32BE(0), 0x89504e47, name + ' is a PNG');
+    return { width: buffer.readUInt32BE(16), height: buffer.readUInt32BE(20) };
+  };
+
+  // The capture, and the height the document claims for it. Read out of the PNG rather
+  // than out of a tool: the document is the thing being checked, so the picture has to be
+  // the source of truth.
+  const capture = size('settings-page-full.png');
+  assertEqual(capture.width, 1280, 'the capture is 1280 wide, which is what the tiles are cut from');
+  const claimed = listing.match(/settings-page-full\.png`?,\s*(\d+)[^\d]+(\d+)/);
+  assert(claimed, "the listing states the capture's size");
+  assertEqual(Number(claimed[1]), capture.width, 'and the width it states is the width it has');
+  assertEqual(Number(claimed[2]), capture.height, 'and the height it states is the height it has');
+
+  // The five tiles: every one named by the listing, and nothing named by it that is
+  // not there. Counting the listing's references was wrong — it also refers to the full
+  // capture, which lives in the same folder and is not a tile.
+  const named = [...new Set([...listing.matchAll(/`(store-assets\/[^`]+\.png)`/g)].map(match => match[1]))];
+  const onDisk = fs.readdirSync(dir).filter(name => name.endsWith('.png'))
+    .map(name => 'store-assets/' + name);
+  const tiles = onDisk.filter(file => /^store-assets\/0\d-/.test(file)).sort();
+  assertEqual(tiles.length, 5, 'there are five store screenshots, which is all the store takes');
+  for (const file of tiles) {
+    assert(named.includes(file), `the listing names ${file}`);
+    assertEqual(size(file.split('/').pop()).width, 1280, `${file} is 1280 wide`);
+    assertEqual(size(file.split('/').pop()).height, 800, `${file} is 800 tall, which is what the store takes`);
+  }
+  for (const file of named) {
+    assert(onDisk.includes(file), `the listing names ${file}, which exists`);
+  }
+
+  // The capture has to cover the page, or a tile is cut away from something.
+  assert(capture.height > 4000,
+    'the capture is the whole page rather than part of it (' + capture.height + ' px)');
+
+  // The README's own picture is a different file for a different reader: one screen of
+  // settings at a width that can be read, not a strip six times taller than it is wide.
+  assert(fs.existsSync(path.join(dir, 'readme-settings.png')), 'the README picture exists');
+  const readmeShot = size('readme-settings.png');
+  assert(readmeShot.height <= 1200,
+    'and the README picture is a screen, not the whole page (' + readmeShot.height + ' px)');
+  assert(readmeShot.height < capture.height,
+    'so the store capture and the README picture are not the same file twice');
+}
+
 // The documents agreeing with each other.
 //
 // This is the one class of check the project did not have, and it is the one that would
@@ -684,6 +747,7 @@ function packagedArchiveTest() {
     scriptsParseTest(dir);
     pagesAreCompleteTest(dir);
     documentationTest();
+    storeShotsTest();
     documentsAgreeTest();
     await themeTurnsOnTest(dir);
     await popupPowersOnTest(dir);

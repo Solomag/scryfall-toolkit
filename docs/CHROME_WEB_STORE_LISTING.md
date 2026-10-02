@@ -224,16 +224,23 @@ Ready in `store-assets/`, each exactly **1280×800** (PNG), in English:
 
 | File | What it shows |
 | --- | --- |
-| `store-assets/01-settings-01-of-05.png` | the header, General (settings language, theme), Tags |
-| `store-assets/02-settings-02-of-05.png` | CardClip, Prints, the top of Hide extras |
-| `store-assets/03-settings-03-of-05.png` | Hide extras with the set filters and the platform block |
-| `store-assets/04-settings-04-of-05.png` | Additional info: EDHREC and CardTrader |
-| `store-assets/05-settings-05-of-05.png` | Legality with the format grid, Scryfall Deckbuilder, Experimental, Credits |
+| `store-assets/01-settings-01-of-05.png` | the header, General (settings language, theme), Tags with its per-tag switches, CardClip |
+| `store-assets/02-settings-02-of-05.png` | Hide extras in full — every set and price filter, and the platform block — then Additional info opening |
+| `store-assets/03-settings-03-of-05.png` | Additional info: EDHREC deck usage and Salt Meter, CardTrader with its token field, then Legality and the format grid |
+| `store-assets/04-settings-04-of-05.png` | the format grid continued, then Scryfall Deckbuilder with the three opt-in tools and the host-access button |
+| `store-assets/05-settings-05-of-05.png` | the deck clean-up block, Prints, Experimental, and Credits and third-party projects |
 
 All five come from one real capture of the settings page
-(`store-assets/settings-page-full.png`, 1280×4896), so nothing is repeated or cropped
+(`store-assets/settings-page-full.png`, 1280×4860), so nothing is repeated or cropped
 away between them. Each tile is scaled uniformly to 800 rows and the margins continue
 the page's own colour, so no screenshot is stretched.
+
+**The row descriptions are read off the pictures, and they go stale the moment the page
+changes.** Two rounds of refactoring moved everything between them — the pictures went from
+the body of the page into the "?" dialogs, which took about a thousand pixels out of it —
+and the descriptions went on describing where the sections used to be. The dimensions and
+the file names are checked by the test suite; what each tile *shows* is not, because
+reading a picture is a job for a person and a regex cannot do it.
 
 The capture is rendered from `src/ui/options.html` by the tool below: the real page,
 with the real stylesheet and the real script, at 1280 pixels wide and as tall as it

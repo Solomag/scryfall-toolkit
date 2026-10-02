@@ -46,7 +46,25 @@ the text: a contrast ratio of one to one, on a broken panel. Both of those were 
 mutating the stylesheet and watching the check not complain, which is the only way a check
 about legibility can be trusted at all.
 
-Tests: 1682 assertions pass across eight suites.
+Tests: 1724 assertions pass across eight suites.
+
+### What the store listing said about the pictures it does not have
+
+The store screenshots were current to the byte and the document describing them was not.
+It gave the capture as 1280×4896 over a capture that was 1280×4860, and its five rows
+described sections where they had not been since two rounds of refactoring: "Prints" in
+the second tile, Prints is in the fifth; "Hide extras with the set filters" in the third,
+that is the second. The illustrations moving behind the "?" took about a thousand pixels
+out of the page, and everything below that point moved up a tile while the descriptions
+stayed where they were.
+
+The dimensions and the file names are now compared against the pictures themselves — read
+out of the PNG's header, because the document is the thing being checked and the picture
+has to be the source. What each tile *shows* cannot be checked that way and is said out
+loud in the listing instead: the descriptions are a person's reading of five pictures, and
+they went stale twice while every automated check in this repository was green.
+
+1724 assertions pass across eight suites.
 
 ## [v1.0.0](https://github.com/Solomag/scryfall-toolkit/releases/tag/v1.0.0) — 2026-10-02
 
