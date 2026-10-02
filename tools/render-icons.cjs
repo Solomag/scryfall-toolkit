@@ -57,7 +57,7 @@ const SHAPES = [
 //   circle { cx, cy, r, fill }
 //   ring   { cx, cy, r, w, fill }        a circle of thickness w
 //   poly   { points: [[x, y], …], fill }
-//   gear   { cx, cy, r, root, count, toothW, toothH, fill }
+//   gear   { cx, cy, r, root, count, toothW, toothH, twist, fill }
 //
 // The last two exist because a wheel is not a circle: its teeth are what make it read
 // as a wheel, and they are what a shape list of rounded rectangles cannot express.
@@ -158,12 +158,16 @@ function wheel(gear) {
 // bump and an involute reads as a smudge.
 //
 // The rotation happens once, in `place`, rather than in every coordinate below.
+// `twist` turns the whole wheel in radians, which is what lets two wheels of different
+// counts sit side by side without their teeth lining up into one lumpy outline. It is
+// an angle and so is never scaled with the rest of the shape.
 function wheelTeeth(gear) {
   const out = [];
   const step = (Math.PI * 2) / gear.count;
+  const twist = gear.twist || 0;
   for (let i = 0; i < gear.count; i++) {
     // One tooth's own frame: radius runs out of the hub, offset runs across the tooth.
-    const angle = i * step;
+    const angle = i * step + twist;
     const place = (radius, offset) => [
       gear.cx + Math.cos(angle) * radius - Math.sin(angle) * offset,
       gear.cy + Math.sin(angle) * radius + Math.cos(angle) * offset
