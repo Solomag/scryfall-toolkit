@@ -907,6 +907,27 @@ async function advancedPriceFilterTest() {
   const off = await load({ onlyCardmarket: false, clipboard: false }, 'https://scryfall.com/advanced');
   assertEqual([...off.document.querySelectorAll('#price_1 option')].map(option => option.value), ['usd', 'eur', 'tix'],
     'with every column visible the currency choices stay as Scryfall made them');
+
+  // The four switches are independent, which is the whole point of having four of them.
+  // `onlyCardmarket` was one switch hiding both currencies and both shops together, so a
+  // reader who wanted no TCGplayer links but kept the dollar column had no way to say so.
+  const withPrices = async prices => {
+    const page = await load({ clipboard: false, setFilters: { prices }, setFiltersMigrated: true },
+      'https://scryfall.com/advanced');
+    return [...page.document.querySelectorAll('#price_1 option')].map(option => option.value);
+  };
+  assertEqual(await withPrices({ tix: true }), ['usd', 'eur'],
+    'hiding only MTGO Tickets leaves the dollar search alone');
+  assertEqual(await withPrices({ usd: true }), ['eur', 'tix'],
+    'and hiding only the dollar column leaves the ticket search alone');
+  assertEqual(await withPrices({}), ['usd', 'eur', 'tix'],
+    'an empty prices object is no prices hidden, not all of them');
+  // Euros is never dropped: it is how a Cardmarket result is filtered on, and Cardmarket
+  // is the one price this extension has a reason to add.
+  for (const prices of [{ usd: true }, { tix: true }, { usd: true, tix: true }]) {
+    assert((await withPrices(prices)).includes('eur'),
+      `the euro option survives with prices ${JSON.stringify(prices)}`);
+  }
 }
 
 async function setPlatformTest() {

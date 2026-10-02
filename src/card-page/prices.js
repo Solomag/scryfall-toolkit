@@ -20,6 +20,7 @@
   // that was not there.
   const {
     settings,
+    setFilters,
     language,
     t,
     cardPath,
@@ -216,20 +217,38 @@
   }
 
   function initPriceFilter() {
+    // Four switches, not one. `onlyCardmarket` was a single switch that turned the
+    // dollars, the tickets and both shops off together, which meant a reader who wanted
+    // no TCGplayer links but kept the dollar column had no way to say so.
+    //
+    // The currencies and the shops are separate kinds because they are separate things on
+    // the page: a column of numbers, and a row of links. The card's own Cardmarket price
+    // is not a switch at all and is never hidden - it is the one price this extension has
+    // a reason to add.
+    const currency = new Map([['USD', 'usd'], ['TIX', 'tix']]);
+    const shops = { tcgplayer: 'tcgplayer', cardhoarder: 'cardhoarder' };
+    const hideCurrency = kind => Boolean(kind && setFilters.prices[kind]);
+    const hiddenShops = Object.keys(shops).filter(shop => setFilters.prices[shop]);
+
     for (const table of document.querySelectorAll('#main .prints-table')) {
       const headers = [...table.querySelectorAll('thead th')];
       for (const [index, header] of headers.entries()) {
-        if (!['USD', 'TIX'].includes(header.textContent.trim().toUpperCase())) continue;
+        const kind = currency.get(header.textContent.trim().toUpperCase());
+        if (!hideCurrency(kind)) continue;
         header.classList.add('stk-price-hidden');
         for (const row of table.querySelectorAll('tbody tr')) row.children[index]?.classList.add('stk-price-hidden');
       }
     }
     const stores = document.querySelector('#stores');
-    for (const link of stores?.querySelectorAll('a[href]') || []) {
-      let host;
-      try { host = new URL(link.href).hostname; } catch { continue; }
-      if (!/(^|\.)(tcgplayer\.com|cardhoarder\.com)$/.test(host)) continue;
-      link.classList.add('stk-price-hidden');
+    if (hiddenShops.length) {
+      for (const link of stores?.querySelectorAll('a[href]') || []) {
+        let host;
+        try { host = new URL(link.href).hostname; } catch { continue; }
+        // Matched against the shop that was asked for, not against a fixed pair, so a
+        // fourth shop added to the settings does not need this line changed as well.
+        if (!hiddenShops.some(shop => new RegExp(`(^|\\.)${shop}\\.com$`).test(host))) continue;
+        link.classList.add('stk-price-hidden');
+      }
     }
     for (const row of stores?.querySelectorAll('.toolbox-links li') || []) {
       const links = [...row.querySelectorAll('a[href]')];
@@ -238,22 +257,26 @@
     stores?.querySelector('.toolbox-disclaimer')?.classList.add('stk-price-hidden');
     if (/^\/(?:@[^/]+\/decks\/|decks\/)/.test(location.pathname)) {
       for (const control of document.querySelectorAll('#main .sidebar-toolbox :is(a,button)')) {
-        if (/^Buy on (?:TCGplayer|Cardhoarder)\b/i.test(control.textContent.trim())) control.classList.add('stk-price-hidden');
+        const shop = hiddenShops.find(name => new RegExp(`^Buy on ${name}\\b`, 'i').test(control.textContent.trim()));
+        if (shop) control.classList.add('stk-price-hidden');
       }
     }
   }
 
   function initAdvancedPriceFilter() {
-    if (!settings.onlyCardmarket) return;
-    // The Prices filter on /advanced offers USD, Euros and MTGO Tickets per row.
-    // With dollar and ticket columns hidden, only the Cardmarket (EUR) search
-    // still makes sense, so the other currencies are dropped and Euros renamed.
+    const prices = setFilters.prices;
+    if (!prices.usd && !prices.tix) return;
+    // The Prices filter on /advanced offers USD, Euros and MTGO Tickets per row. With a
+    // currency hidden its option is dropped, because a filter that searches a currency
+    // you have said you do not want to see is the opposite of hiding it. Euros is
+    // renamed rather than dropped: it is the Cardmarket price, and the euro option is how
+    // a Cardmarket result is filtered on.
     const isCurrency = select => select.name && select.name.startsWith('price_') && !select.name.endsWith('_mode');
     const relabel = select => {
       if (select.dataset.stkPriceFiltered) return;
       select.dataset.stkPriceFiltered = '1';
       for (const option of [...select.querySelectorAll('option')]) {
-        if (option.value === 'usd' || option.value === 'tix') option.remove();
+        if (prices[option.value]) option.remove();
         else if (option.value === 'eur') option.textContent = 'Cardmarket (€)';
       }
     };
