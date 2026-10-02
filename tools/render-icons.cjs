@@ -10,11 +10,12 @@
  */
 
 // Draws the extension icon from one description of its geometry and writes both
-// the vector source and the PNG sizes Chrome needs. The artwork is original: it
-// is deliberately not Scryfall's, EDHREC's or CardTrader's mark, and it borrows
-// nothing from them.
+// the vector source and the PNG sizes Chrome needs. The drawing is original: it is
+// not Scryfall's, EDHREC's, CardTrader's or Wizards' symbol, and it reproduces no
+// third-party mark. Its palette does come from Scryfall's public stylesheet, which is
+// a fact about published colours rather than artwork.
 //
-//   node tools/render-icons.cjs
+//   node tools/render-icons.cjs [iconsDir] [svgDir]
 //
 // The shapes are described once below. The SVG is emitted from that description
 // and the PNGs are rasterised from the same numbers, so the two can never drift.
@@ -34,6 +35,9 @@ const DARK = '#23303e';   // the clipboard panel's ink
 const PAPER = '#eef2f6';  // the clipboard panel's paper
 const GREEN = '#2f9e44';  // the extension's own "copied" confirmation colour
 
+// What is written into the SVG's own description, so the file says what it is.
+const DESC = 'Original artwork. No third-party mark is used.';
+
 // Every shape is [x, y, width, height, cornerRadius, colour]. They are drawn in
 // order, so the clip sits on top of the card exactly as it reads. The clip rises
 // above the card the way a clipboard's clip does; nothing here is a brand mark.
@@ -45,13 +49,43 @@ const SHAPES = [
 
 // --- the vector source -------------------------------------------------------
 
-function svg() {
-  const shapes = SHAPES.map(s =>
-    `  <rect x="${s.x}" y="${s.y}" width="${s.w}" height="${s.h}" rx="${s.r}" ry="${s.r}" fill="${s.fill}"/>`
-  ).join('\n');
+// One shape, two outputs. Every kind below has a vector form and a coverage test, so
+// the SVG and the PNGs cannot disagree about where a thing is — which is the whole
+// reason the artwork is described rather than drawn.
+//
+//   rect   { x, y, w, h, r, fill }
+//   circle { cx, cy, r, fill }
+//   ring   { cx, cy, r, w, fill }        a circle of thickness w
+//   poly   { points: [[x, y], …], fill }
+//   gear   { cx, cy, r, root, count, toothW, toothH, fill }
+//
+// The last two exist because a wheel is not a circle: its teeth are what make it read
+// as a wheel, and they are what a shape list of rounded rectangles cannot express.
+function element(s) {
+  const n = value => Number(value.toFixed(3));
+  switch (s.k) {
+    case 'circle':
+      return `  <circle cx="${n(s.cx)}" cy="${n(s.cy)}" r="${n(s.r)}" fill="${s.fill}"/>`;
+    case 'ring': {
+      const outer = n(s.r + s.w / 2);
+      const inner = n(s.r - s.w / 2);
+      const at = radius => `M ${n(s.cx - radius)},${n(s.cy)} a ${radius},${radius} 0 1,0 ${n(radius * 2)},0 a ${radius},${radius} 0 1,0 ${n(-radius * 2)},0`;
+      return `  <path d="${at(outer)} ${at(inner)}" fill="${s.fill}" fill-rule="evenodd"/>`;
+    }
+    case 'poly':
+      return `  <polygon points="${s.points.map(p => n(p[0]) + ',' + n(p[1])).join(' ')}" fill="${s.fill}"/>`;
+    case 'gear':
+      return wheel(s).map(t => element(t)).join('\n');
+    default:
+      return `  <rect x="${s.x}" y="${s.y}" width="${s.w}" height="${s.h}" rx="${s.r}" ry="${s.r}" fill="${s.fill}"/>`;
+  }
+}
+
+function svg(desc) {
+  const shapes = SHAPES.flatMap(s => (s.k === 'gear' ? wheel(s) : [s])).map(element).join('\n');
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${CANVAS} ${CANVAS}" width="${CANVAS}" height="${CANVAS}">
   <title>Scryfall Toolkit</title>
-  <desc>Original artwork: a clipboard with a green clip. No third-party mark is used.</desc>
+  <desc>${desc}</desc>
 ${shapes}
 </svg>
 `;
@@ -66,14 +100,87 @@ function hexToRgb(hex) {
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
 
-// Coverage of a rounded rectangle at a single point.
-function insideRoundedRect(px, py, s) {
-  const x0 = s.x, y0 = s.y, x1 = s.x + s.w, y1 = s.y + s.h;
-  if (px < x0 || px > x1 || py < y0 || py > y1) return false;
-  const r = Math.min(s.r, s.w / 2, s.h / 2);
-  const cx = Math.min(Math.max(px, x0 + r), x1 - r);
-  const cy = Math.min(Math.max(py, y0 + r), y1 - r);
-  return (px - cx) ** 2 + (py - cy) ** 2 <= r * r;
+// Coverage at a single point: is this sample inside the shape? Each kind below is one
+// test and nothing else. That is what keeps a shape list readable — a wheel is
+// described as a wheel, not as nine polygons somebody worked out by trigonometry at
+// three in the morning.
+function covers(px, py, s) {
+  switch (s.k) {
+    case 'circle':
+      return (px - s.cx) ** 2 + (py - s.cy) ** 2 <= s.r * s.r;
+    case 'ring': {
+      const d = Math.sqrt((px - s.cx) ** 2 + (py - s.cy) ** 2);
+      return Math.abs(d - s.r) <= s.w / 2;
+    }
+    case 'poly':
+      return insidePolygon(px, py, s.points);
+    case 'gear':
+      // The disc the teeth stand on is part of the wheel. Without it a gear is a
+      // starburst, which is what the first attempt looked like.
+      if ((px - s.cx) ** 2 + (py - s.cy) ** 2 <= s.r * s.r) return true;
+      return wheelTeeth(s).some(tooth => covers(px, py, tooth));
+    default: {
+      const x0 = s.x, y0 = s.y, x1 = s.x + s.w, y1 = s.y + s.h;
+      if (px < x0 || px > x1 || py < y0 || py > y1) return false;
+      const r = Math.min(s.r, s.w / 2, s.h / 2);
+      const cx = Math.min(Math.max(px, x0 + r), x1 - r);
+      const cy = Math.min(Math.max(py, y0 + r), y1 - r);
+      return (px - cx) ** 2 + (py - cy) ** 2 <= r * r;
+    }
+  }
+}
+
+// Even-odd crossing count. Convex outlines would take any winding rule; the claw on a
+// hammer is not convex, and even-odd is the rule that holds there too.
+//
+// An edge can only cross the horizontal line through the point when its two ends are
+// on *opposite* sides of it, so the test is `!==` between the two comparisons. Written
+// as `===` it inverts the whole polygon, which is silent: the render comes out as
+// stripes and nothing throws.
+function insidePolygon(px, py, points) {
+  let inside = false;
+  for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+    const [xi, yi] = points[i];
+    const [xj, yj] = points[j];
+    if ((yi > py) !== (yj > py) && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+
+// A wheel: the disc, then the teeth standing on it. One entry in the shape list, two
+// forms in the SVG, because a wheel is a thing rather than a pair of coordinates.
+function wheel(gear) {
+  return [{ k: 'circle', cx: gear.cx, cy: gear.cy, r: gear.r, fill: gear.fill }].concat(wheelTeeth(gear));
+}
+
+// The teeth of a wheel, as trapezoids set at even angles. Flat-topped and slightly
+// tapered: a trapezoid reads as a tooth at 48 pixels, where a rectangle reads as a
+// bump and an involute reads as a smudge.
+//
+// The rotation happens once, in `place`, rather than in every coordinate below.
+function wheelTeeth(gear) {
+  const out = [];
+  const step = (Math.PI * 2) / gear.count;
+  for (let i = 0; i < gear.count; i++) {
+    // One tooth's own frame: radius runs out of the hub, offset runs across the tooth.
+    const angle = i * step;
+    const place = (radius, offset) => [
+      gear.cx + Math.cos(angle) * radius - Math.sin(angle) * offset,
+      gear.cy + Math.sin(angle) * radius + Math.cos(angle) * offset
+    ];
+    const outer = gear.r + gear.toothH;
+    const wRoot = gear.toothW / 2;
+    const wTip = gear.toothW * 0.3;
+    out.push({
+      k: 'poly',
+      fill: gear.fill,
+      points: [
+        place(gear.root, -wRoot), place(outer, -wTip),
+        place(outer, wTip), place(gear.root, wRoot)
+      ]
+    });
+  }
+  return out;
 }
 
 function render(size) {
@@ -88,7 +195,7 @@ function render(size) {
       const uy = (y + 0.5) * (CANVAS / big);
       const at = y * big + x;
       for (const shape of SHAPES) {
-        if (!insideRoundedRect(ux, uy, shape)) continue;
+        if (!covers(ux, uy, shape)) continue;
         const [r, g, b] = hexToRgb(shape.fill);
         rgb[at * 3] = r; rgb[at * 3 + 1] = g; rgb[at * 3 + 2] = b;
         alpha[at] = 1;
@@ -167,22 +274,43 @@ function png(size, pixels) {
 
 // --- write everything --------------------------------------------------------
 
-const SIZES = [16, 32, 48, 128];
+// The sizes Chrome and the store actually ask for, and nothing else by default: the
+// manifest names exactly these four, and a fifth file in this folder is a file nothing
+// reads. STK_ICON_SIZES adds sizes for review renders, where the point is to see the
+// artwork at a size nobody ships, at true size.
+const SIZES = process.env.STK_ICON_SIZES
+  ? process.env.STK_ICON_SIZES.split(',').map(n => Number(n.trim()))
+  : [16, 32, 48, 128];
+for (const size of SIZES) {
+  if (!Number.isInteger(size) || size < 1) {
+    console.error('FAILED: STK_ICON_SIZES must be a list of whole positive numbers.');
+    process.exit(1);
+  }
+}
 
 // The PNGs go where the manifest and web_accessible_resources look for them,
 // which is assets/icons/ alongside the artwork that is not ours. Writing to
 // ROOT/icons would create a folder nothing reads and leave the build pointing at
 // files that were not there.
-fs.mkdirSync(path.join(ROOT, 'assets', 'icons'), { recursive: true });
-fs.mkdirSync(path.join(ROOT, 'icons-src'), { recursive: true });
+//
+// Both destinations can be pointed elsewhere, which is what makes it possible to try
+// artwork out without replacing the artwork that ships. A tool that can only write to
+// the live path is a tool you cannot experiment with.
+const OUT_DIR = process.argv[2] ? path.resolve(process.argv[2]) : path.join(ROOT, 'assets', 'icons');
+const SRC_DIR = process.argv[3] ? path.resolve(process.argv[3]) : path.join(ROOT, 'icons-src');
 
-fs.writeFileSync(path.join(ROOT, 'icons-src', 'scryfall-toolkit-icon.svg'), svg(), 'utf8');
-console.log('wrote icons-src/scryfall-toolkit-icon.svg');
+fs.mkdirSync(OUT_DIR, { recursive: true });
+fs.mkdirSync(SRC_DIR, { recursive: true });
+
+fs.writeFileSync(path.join(SRC_DIR, 'scryfall-toolkit-icon.svg'), svg(DESC), 'utf8');
+console.log('wrote ' + path.join(SRC_DIR, 'scryfall-toolkit-icon.svg'));
 
 for (const size of SIZES) {
-  const file = path.join(ROOT, 'assets', 'icons', `icon${size}.png`);
+  const file = path.join(OUT_DIR, `icon${size}.png`);
   fs.writeFileSync(file, png(size, render(size)));
-  console.log(`wrote assets/icons/icon${size}.png (${fs.statSync(file).size} bytes)`);
+  // The path it actually wrote to, not the one it would have written to by default.
+  // A log that names a file you did not write is worse than no log at all.
+  console.log(`wrote ${file} (${fs.statSync(file).size} bytes)`);
 }
 
-console.log('\nartwork is original; no third-party logo, wordmark or brand colour is used.');
+console.log('\n' + DESC);
