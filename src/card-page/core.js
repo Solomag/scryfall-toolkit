@@ -63,22 +63,65 @@
   const defaults = {
     siteLanguage: 'en',
     clipboard: true, tags: true, cardTags: true, artTags: false, relationships: true,
-    onlyCardmarket: false, printAddButtons: true, printPageSameTab: false, hideDigitalSets: false, hideNonTournamentSets: false, hideOversizedSets: false,
-    hideForeignBlackBorder: false, hideNonEnglishPrints: false, legalities: true, finishBadges: true, cardtraderPrices: false, euroPriceSources: 'cm',
-    setPlatforms: ['paper', 'arena', 'mtgo'],
+    printAddButtons: true, printPageSameTab: false,
+    legalities: true, finishBadges: true, cardtraderPrices: false, euroPriceSources: 'cm',
     printGrouping: false, printFoldGroups: false, printFullPageLink: false,
     edhrecUsage: false, edhrecSalt: false, showSaltScale: false, edhrecLink: false, edhrecUsageDisplay: 'both',
     usageColorMetric: 'decks', usageMediumDecks: 50000, usageHighDecks: 100000,
     usageMediumPercent: 1, usageHighPercent: 2.6, saltMediumThreshold: 1, saltHighThreshold: 2,
-    taggerSearchLinks: false, cardSearchLinks: true, cardNicknames: true, deckNoPrices: true, stackedDeckCards: true, deckTokens: true,
+    taggerSearchLinks: false, cardSearchLinks: true, cardNicknames: true, deckNoPrices: true, stackedDeckCards: true,
     premodern: true, heritage: false, classic: false, peak: false,
     formatOrder: null, formatVisibility: null,
     deckCleanUpImprover: false, cleanUpLandsInSingleton: true,
     sortEntriesPrimary: 'none', insertSortingHeadings: true,
     edhrecSuggestions: false, deckSearch: false, deckResultsView: 'images',
-    exportFormat: "moxfield", cards: null
+    exportFormat: "moxfield", cards: null,
+    // Read with no default, on purpose: passing one here would make every old key look
+    // as though it had a value, and the migration reads those keys to decide what the
+    // reader had chosen. The second read below is the whole of storage.
+    setFilters: null, setFiltersMigrated: false
   };
   const settings = await chrome.storage.local.get(defaults);
+
+  // The hiding settings, and the old flat ones, in one place. See src/core/set-filters.js
+  // for the shape and for what each old key meant.
+  //
+  // The old keys are named explicitly rather than the whole of storage being read,
+  // because the migration has to see them, and a read that asked only for the new pair
+  // would hand it an object holding nothing else - quietly resetting everybody's
+  // settings to the defaults. That is the worst thing this change could do, so what it
+  // reads is written down here rather than implied.
+  const OLD_FILTER_KEYS = ['hideDigitalSets', 'hideNonTournamentSets', 'hideOversizedSets',
+    'hideForeignBlackBorder', 'hideNonEnglishPrints', 'setPlatforms', 'onlyCardmarket',
+    'hideCasterIndicator', 'deckTokens', 'setFilters', 'setFiltersMigrated'];
+  const stored = await chrome.storage.local.get(Object.fromEntries(OLD_FILTER_KEYS.map(key => [key, null])));
+  const filtersRead = window.STK_SET_FILTERS.read(stored);
+  const setFilters = filtersRead.filters;
+  const hiding = window.STK_SET_FILTERS.effective(setFilters);
+  // Written back once, so the migration is not repeated on every page load and a later
+  // build has something to compare against. The old keys are left in place: a reader who
+  // installs an older build again should not find their settings silently reset, and
+  // nothing reads them any more either way.
+  if (filtersRead.migrated) {
+    chrome.storage.local.set({ setFilters, setFiltersMigrated: true });
+  }
+  // What the feature files read. The old names are kept as aliases because three of them
+  // are still asked for by name in places this file does not own; they now answer out of
+  // the gate, so a closed gate reaches all of them at once.
+  settings.hideNonTournamentSets = hiding.nonTournament;
+  settings.hideOversizedSets = hiding.oversized;
+  settings.hideForeignBlackBorder = hiding.foreignBlackBorder === 'sets-prints';
+  settings.hideNonEnglishPrints = hiding.nonEnglish !== 'off';
+  // Deliberately false, not derived. Which platforms are shown and which sets are
+  // digital are the same decision: the platform switches already hide every Arena and
+  // Magic Online set, so deriving this from them hid those sets twice over, and took
+  // Arena sets with it even when Arena was the platform being kept. The first version of
+  // this alias did exactly that.
+  settings.hideDigitalSets = false;
+  settings.setPlatforms = Object.keys(hiding.platforms).filter(name => hiding.platforms[name]);
+  settings.onlyCardmarket = Object.values(setFilters.prices).some(Boolean);
+  settings.deckTokens = setFilters.tokens;
+  settings.hideCasterIndicator = setFilters.caster;
   // --- the page-world bridge -------------------------------------------------
   // The deck features have to run in Scryfall's own page world, because they
   // work through window.Scryfall and window.ScryfallAPI and this script lives
@@ -360,6 +403,12 @@
     setPlatformsOf,
     platformSetVisible,
     platformSetRequests,
+    // The hiding rules as they are actually in force, gate applied. Anything that hides a
+    // set or a printing reads these rather than the settings, so the gate cannot be
+    // honoured in one place and forgotten in another.
+    setFilters,
+    hiding,
+    SET_FILTER_RULES: window.STK_SET_FILTERS,
     request,
     button,
     iconButton,

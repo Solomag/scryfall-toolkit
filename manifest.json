@@ -3,7 +3,7 @@
   "options_page": "src/ui/options.html",
   "manifest_version": 3,
   "name": "Scryfall Toolkit",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "description": "Scryfall clipboard, tags, legality, dark theme, optional CardTrader prices and EDHREC statistics.",
   "icons": {
     "16": "assets/icons/icon16.png",
@@ -65,6 +65,7 @@
       ],
       "js": [
         "src/core/clipboard-format.js",
+        "src/core/set-filters.js",
         "src/core/i18n.js",
         "src/core/format-catalog.js",
         "src/core/tag-icons.js",
@@ -126,6 +127,7 @@
       ],
       "js": [
         "src/core/clipboard-format.js",
+        "src/core/set-filters.js",
         "src/core/i18n.js",
         "src/card-page/tagger-clipboard.js"
       ],

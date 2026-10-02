@@ -1,10 +1,10 @@
 {
   "name": "scryfall-toolkit",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "description": "An independent browser extension for Scryfall. The current preview includes a shared card clipboard on Scryfall and Scryfall Tagger, sidebar Tagger card/art tags on individual Scryfall card pages, and extra format legalities. It never runs on Moxfield; keep the official MoxTags extension installed there.",
   "private": true,
   "scripts": {
-    "test": "node tests/test-preview.cjs && node tests/test-background.cjs && node tests/test-options.cjs && node tests/test-theme.cjs && node tests/test-tagger.cjs && node tests/test-deck-tools.cjs && node tests/test-deck-modules.cjs && node tests/test-package.cjs",
+    "test": "node tests/test-preview.cjs && node tests/test-background.cjs && node tests/test-options.cjs && node tests/test-theme.cjs && node tests/test-set-filters.cjs && node tests/test-tagger.cjs && node tests/test-deck-tools.cjs && node tests/test-deck-modules.cjs && node tests/test-package.cjs",
     "package": "node package-extension.cjs",
     "version": "node tools/set-version.cjs",
     "verify": "node tools/set-version.cjs"
