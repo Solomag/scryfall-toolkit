@@ -57,7 +57,7 @@ const SHAPES = [
 //   circle { cx, cy, r, fill }
 //   ring   { cx, cy, r, w, fill }        a circle of thickness w
 //   poly   { points: [[x, y], …], fill }
-//   gear   { cx, cy, r, root, count, toothW, toothH, twist, roundTip, fill }
+//   gear   { cx, cy, r, root, count, toothW, toothH, twist, roundTip, hollow, fill }
 //
 // The last two exist because a wheel is not a circle: its teeth are what make it read
 // as a wheel, and they are what a shape list of rounded rectangles cannot express.
@@ -116,8 +116,9 @@ function covers(px, py, s) {
       return insidePolygon(px, py, s.points);
     case 'gear':
       // The disc the teeth stand on is part of the wheel. Without it a gear is a
-      // starburst, which is what the first attempt looked like.
-      if ((px - s.cx) ** 2 + (py - s.cy) ** 2 <= s.r * s.r) return true;
+      // starburst, which is what the first attempt looked like. A hollow wheel is the
+      // one exception: its rim and teeth are meant to be drawn over the ground.
+      if (!s.hollow && (px - s.cx) ** 2 + (py - s.cy) ** 2 <= s.r * s.r) return true;
       return wheelTeeth(s).some(tooth => covers(px, py, tooth));
     default: {
       const x0 = s.x, y0 = s.y, x1 = s.x + s.w, y1 = s.y + s.h;
@@ -149,8 +150,15 @@ function insidePolygon(px, py, points) {
 
 // A wheel: the disc, then the teeth standing on it. One entry in the shape list, two
 // forms in the SVG, because a wheel is a thing rather than a pair of coordinates.
+//
+// `hollow` leaves out the disc and keeps only the rim and the teeth, so that whatever
+// the wheel is drawn over shows through the middle. That is what a spoke wheel is: a
+// rim, a hub, spokes between them, and the ground in the gaps.
 function wheel(gear) {
-  return [{ k: 'circle', cx: gear.cx, cy: gear.cy, r: gear.r, fill: gear.fill }].concat(wheelTeeth(gear));
+  const disc = gear.hollow
+    ? []
+    : [{ k: 'circle', cx: gear.cx, cy: gear.cy, r: gear.r, fill: gear.fill }];
+  return disc.concat(wheelTeeth(gear));
 }
 
 // The teeth of a wheel, as trapezoids set at even angles. Flat-topped and slightly
