@@ -724,6 +724,40 @@ async function getJSON(url, options = {}) {
   return response.json();
 }
 
+// Which sets hold an oversized printing.
+//
+// Oversized is not a property of a set. Scryfall's set object has no field for it — the
+// flag is on the printing (`oversized`), and those printings sit inside ordinary sets: a
+// Planechase plane, a Magic Online promo, a Commander release, a promo from 2009. So the
+// list has to come from asking for the printings.
+//
+// The rule this replaces read /oversiz/i in the set name and matched a few code
+// prefixes. Measured against Scryfall on 2026-10-02 it found 14 of the 38 sets that
+// actually hold an oversized printing, and nothing that was not one. So it was too
+// narrow rather than wrong, which is the worst shape of bug to have: the setting looked
+// like it worked, it worked on the sets that had "Oversized" written on them, and the
+// other twenty-four stayed visible with nothing to say why.
+//
+// A set can be oversized and something else at once — a Vintage Championship is both
+// memorabilia and oversized, and Magic Online Promos are digital and oversized — so the
+// categories are collected independently rather than down one chain of else-if.
+async function oversizedSetCodes() {
+  const codes = new Set();
+  // 726 oversized printings at the time of writing, which is five pages. The bound stops
+  // a misbehaving response turning this into an endless walk, and is far above what the
+  // data needs.
+  for (let page = 1; page <= 25; page++) {
+    const result = await scryfallJSON(
+      `https://api.scryfall.com/cards/search?q=${encodeURIComponent('is:oversized')}&unique=prints&page=${page}`);
+    for (const card of result?.data || []) {
+      const code = String(card.set || '').toLowerCase();
+      if (/^[a-z0-9_-]+$/.test(code)) codes.add(code);
+    }
+    if (!result?.has_more) return [...codes];
+  }
+  throw new Error('The oversized printing walk did not finish');
+}
+
 function loadSetCategories() {
   if (!digitalSetRequest) digitalSetRequest = (async () => {
     const { digitalSetIndex } = await chrome.storage.local.get('digitalSetIndex');
@@ -736,15 +770,16 @@ function loadSetCategories() {
       for (const set of result.data) {
         if (!/^[a-z0-9_-]+$/i.test(set.code || '')) continue;
         const code = set.code.toLowerCase();
-        // Oversized memorabilia are a separate preference: they can be
-        // useful as Commander display cards even when not sanctioned.
-        const oversized = /oversiz/i.test(set.name || '') || /^o(?:cmd|cd|pr|pd)/i.test(code);
         if (set.digital === true) categories.digital.push(code);
         if (/foreign black border/i.test(set.name || '')) categories.foreignBlackBorder.push(code);
-        if (oversized) categories.oversized.push(code);
-        else if (['memorabilia','minigame','vanguard','token'].includes(set.set_type) ||
+        if (['memorabilia','minigame','vanguard','token'].includes(set.set_type) ||
           /^(?:30a|cei|ced|wc97|wc98|wc99|wc0[0-4])$/.test(code)) categories.nonTournament.push(code);
       }
+      // Thrown rather than swallowed: an index that came back with an empty oversized
+      // list would hide nothing and look complete, which is the failure being fixed
+      // here. Letting it propagate lands in the catch below, which serves the previous
+      // index whole rather than a partial one.
+      categories.oversized = await oversizedSetCodes();
       await chrome.storage.local.set({ digitalSetIndex:{ categories, expires:Date.now() + 24 * 3600000 } });
       return categories;
     } catch (error) {

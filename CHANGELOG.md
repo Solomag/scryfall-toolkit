@@ -8,6 +8,52 @@ All releases: <https://github.com/Solomag/scryfall-toolkit/releases>
 
 ---
 
+### Oversized printings were found by reading set names
+
+"Hide oversized" did not hide most oversized printings. It was not broken in an obvious
+way: the sets it knew about were the ones that really were oversized, and it marked
+nothing that was not.
+
+The rule looked for the word "Oversized" in a set name and matched a few code prefixes
+like `ocmd`. Measured against Scryfall on 2026-10-02, it found **14 of the 38 sets that
+actually hold an oversized printing**, and nothing it found was wrong. The other
+twenty-four stayed visible, which is what a reader reported as oversized cards showing up
+in the prints table with the switch on.
+
+The reason is that **oversized is not a property of a set.** Scryfall's set object has no
+field for it - checked, the fields are the fourteen a set has - and the flag is on the
+printing. An oversized printing sits inside an ordinary set: a Planechase plane, a Magic
+Online promo, a Commander release, a promo from 2009, a Vintage Championship. There was
+nothing in `Planechase Anthology Planes` to guess from.
+
+So the list is now built by asking Scryfall for the printings - 726 of them, five pages -
+and collecting the sets they are in. The set index is still one request for `/sets` plus
+this walk, still cached for a day.
+
+Two things came out of measuring it rather than fixing it by feel:
+
+**A set can be more than one of these.** The categories were filled down a single chain
+of `else if`, so a set classified as oversized was never classified as non-tournament. A
+Vintage Championship is memorabilia *and* oversized, and Magic Online Promos are digital
+*and* oversized. Turning on "hide oversized" and "hide non-tournament" together used to
+hide such a set once, not twice, and the second switch had nothing to do about it. The
+categories are now independent.
+
+**A failed walk must not look like a short list.** If the request for the printings fails
+and the index is built anyway, the result is an index with no oversized sets in it: it
+hides nothing, it looks complete, and nothing anywhere says the twenty-four are missing.
+That is the original bug with extra steps. So the failure is not swallowed - it falls
+through to the previous index served whole, and with no index to fall back on the request
+fails rather than answering.
+
+Five mutations were applied one at a time: guessing from the names again, guessing while
+still asking (which passes on a small fixture), stopping at the first page, swallowing
+the failure, and putting the categories back down one chain. All five are caught. One
+earlier mutation was discarded because it could not fail - it tested a list inside a loop
+that runs before that list is filled - and it had reported itself as a gap in the tests.
+
+---
+
 ### One name is not one printing
 
 Three defects in the clipboard, found together, because fixing the first one creates the

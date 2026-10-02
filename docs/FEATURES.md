@@ -204,8 +204,11 @@ stays visible.
   plus official proxy set codes (Collector's Edition, 30th Anniversary Edition, World
   Championship Decks). Mixed "funny" sets stay, because some contain tournament-legal
   cards.
-- **Hide oversized sets** — its own toggle. Oversized Commander cards stay unless it is
-  on.
+- **Hide oversized sets** — its own toggle. The list comes from Scryfall and not from a
+  guess: oversized is a flag on the printing, not a field on the set, so the sets holding
+  an oversized printing are collected by asking for the printings. A set can be oversized
+  and something else at once — a Vintage Championship is memorabilia too — and turning this
+  on does not stop it from also being hidden as non-tournament.
 - **Hide Foreign Black Border sets** — 4BB, FBB and BCHR.
 - **Hide non-English printings** — language-specific rows in Prints, including Portal and
   Secret Lair. English printings in those sets stay.

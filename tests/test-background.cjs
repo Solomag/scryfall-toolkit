@@ -97,7 +97,9 @@ const ORACLE_BULK = Array.from({ length: 110 }, (_, i) => ({ slug: `tag-${i}`, o
 const ART_BULK = Array.from({ length: 110 }, (_, i) => ({ slug: `art-${i}`, illustration_ids: [`99999999-9999-4999-8999-${String(i).padStart(12, '0')}`] }));
 
 const fetchLog = [];
+const oversizedPages = [];
 let registryBehavior = 'ok';
+let oversizedBehavior = 'ok';
 
 // The bundled tag snapshot is read as text and parsed, the way upstream ships
 // it: a global assignment whose value is JSON.
@@ -125,6 +127,22 @@ async function fetchMock(url, init) {
   if (target === 'https://data.scryfall.io/bulk/oracle-tags.json') return jsonResponse(ORACLE_BULK);
   if (target === 'https://data.scryfall.io/bulk/art-tags.json') return jsonResponse(ART_BULK);
   if (target === 'https://api.scryfall.com/sets') return jsonResponse(setsResponse);
+  // The oversized walk. OPCA is the point of it: a Planechase plane set whose name has
+  // nothing in it to guess from, and WHO is a Commander release. Neither has "oversized"
+  // written anywhere, so neither could ever have been found by reading set names.
+  if (target.startsWith('https://api.scryfall.com/cards/search?q=is%3Aoversized')) {
+    const page = Number(new URL(target).searchParams.get('page'));
+    oversizedPages.push(page);
+    if (oversizedBehavior === 'fail') return { ok: false, status: 500, json: async () => ({}) };
+    if (page === 1) {
+      return jsonResponse({ has_more: true, data: [
+        { set: 'opca', name: 'Planechase Anthology Planes', oversized: true },
+        { set: 'who', name: 'Doctor Who', oversized: true }
+      ] });
+    }
+    if (page === 2) return jsonResponse({ has_more: false, data: [{ set: 'ocmd', name: 'Commander Oversized Deck', oversized: true }] });
+    return jsonResponse({ has_more: false, data: [] });
+  }
   if (target === 'https://api.scryfall.com/cards/collection') {
     // One endpoint serves two callers: the finish column, which identifies by
     // printing, and EDHREC's suggestions, which identify by oracle id. Answer
@@ -540,18 +558,56 @@ async function edhrecThrottleTest() {
 
     console.log('background.js: setCategories caching');
     const categories = await send({ type: 'setCategories' });
+    // OPCA and WHO come from the printings and have nothing in their names to guess
+    // from; OCMD does have "Oversized" on it, and under the old name rule it was
+    // classified as oversized *instead of* memorabilia, because the two were one chain
+    // of else-if. A set can be both, and hiding it as oversized must not stop it from
+    // being hidden as non-tournament when that switch is on too.
     assertEqual(categories.data, {
-      digital: ['mtgo'], nonTournament: ['token', 'cei'], oversized: ['ocmd'], foreignBlackBorder: ['4bb']
+      digital: ['mtgo'], nonTournament: ['ocmd', 'token', 'cei'],
+      oversized: ['opca', 'who', 'ocmd'], foreignBlackBorder: ['4bb']
     }, 'set categories are classified correctly');
+    assertEqual(oversizedPages, [1, 2], 'the oversized list is walked until Scryfall says there is no more');
     assertEqual(setsFetches(), 1, 'first setCategories call fetched /sets once');
     assert(mock.state.digitalSetIndex && mock.state.digitalSetIndex.expires > Date.now(),
       'set index persisted with a future expiry');
     const cachedCategories = await send({ type: 'setCategories' });
     assertEqual(cachedCategories.data, categories.data, 'second call answers from the stored index');
     assertEqual(setsFetches(), 1, 'second setCategories call performed no fetch');
+    assertEqual(oversizedPages, [1, 2], 'and did not walk the printings again');
     const digitalOnly = await send({ type: 'digitalSets' });
     assertEqual(digitalOnly.data, ['mtgo'], 'digitalSets returns only the digital list');
     assertEqual(setsFetches(), 1, 'digitalSets also answers from cache');
+
+    // When the oversized walk fails there are two things it must not do.
+    //
+    // It must not carry on with an empty list. The index would look complete, hide
+    // nothing, and give no sign that the twenty-four sets it should have found were
+    // missing - which is the failure being fixed here, reproduced.
+    //
+    // And it must not throw away a good previous index in order to complain about a bad
+    // fetch. So with an index in hand the old one is served whole, and with none the
+    // request fails loudly.
+    console.log('background.js: an oversized walk that fails');
+    oversizedBehavior = 'fail';
+    delete mock.state.digitalSetIndex;
+    const walkFailure = await send({ type: 'setCategories' });
+    assertEqual(walkFailure.ok, false,
+      'with no index to fall back on, a failed oversized walk fails the request');
+    assert(walkFailure.error, 'and says so, rather than answering with an empty list');
+    assertEqual(mock.state.digitalSetIndex, undefined,
+      'and does not store an index with an empty oversized list in it');
+
+    // Seeded with the categories themselves, not with the response envelope: send()
+    // wraps what the worker returns, so `categories` is { ok, data }, and storing that
+    // as the index would nest one envelope inside another and hand the fallback's
+    // caller a response where it expected a list.
+    mock.state.digitalSetIndex = { categories: categories.data, expires: Date.now() - 1 };
+    const walkFailureCached = await send({ type: 'setCategories' });
+    assertEqual(walkFailureCached.data, categories.data,
+      'a previous index is served whole rather than half-rebuilt');
+    oversizedBehavior = 'ok';
+    delete mock.state.digitalSetIndex;
 
     console.log('background.js: setPlatforms message');
     const gameSearches = () => fetchLog.filter(url => url.includes('q=e%3Amtgo')).length;
