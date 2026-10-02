@@ -250,6 +250,67 @@ function iconArtworkTest() {
   // to keep saying it rather than discovering the dependency from this file's palette.
   assert(/#16161d/.test(generator),
     'the generator says where the ground colour came from');
+
+  // The mark has to be readable against its own ground, measured rather than looked at.
+  //
+  // These values were computed against the ground to clear 3:1 when they were chosen and
+  // that promise was never checked.
+  //
+  // They are read out of the generator rather than written here, and that is the whole
+  // trick. The first version of this check named the expected colours as literals in the
+  // test, so it compared five constants with five constants, passed, and would have gone
+  // on passing through any change to the palette - somebody could darken the bronze to
+  // near the ground, regenerate the icons, and this test would still be measuring the
+  // colours it had memorised. Six mutations were applied to the generator with the icons
+  // regenerated each time and all six went through it.
+  //
+  // The numbers being asserted are the thing, so they come from the source. The rate
+  // limits are read the same way for the same reason.
+  const toLinear = value => {
+    const channel = value / 255;
+    return channel <= 0.03928 ? channel / 12.92 : Math.pow((channel + 0.055) / 1.055, 2.4);
+  };
+  const luminance = hex => {
+    const n = parseInt(hex.slice(1), 16);
+    return 0.2126 * toLinear((n >> 16) & 255)
+      + 0.7152 * toLinear((n >> 8) & 255)
+      + 0.0722 * toLinear(n & 255);
+  };
+  const contrast = (a, b) => {
+    const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+    return (hi + 0.05) / (lo + 0.05);
+  };
+  const named = constant => {
+    const found = generator.match(new RegExp(`const ${constant} = '(#[0-9a-f]{6})';`, 'i'));
+    assert(found, `the generator names ${constant} as a hex colour, so the palette can be read`);
+    return found[1];
+  };
+  const ground = named('INK_GROUND');
+  assert(luminance(ground) < 0.02, 'the ground is dark, which is what the mark was built for');
+  // The comment at the top of the generator names the same colour in prose. A comment and
+  // the constant beside it can drift apart silently, and a reader who trusts the comment
+  // is then misled about where the colour came from - which is the one thing that comment
+  // is for. So the two are checked against each other.
+  const prose = generator.match(/ground is Scryfall's own darkest background, (#[0-9a-f]{6})/i);
+  assert(prose, 'the generator says in prose which colour the ground is');
+  assertEqual(prose[1], ground,
+    'and the colour it names in prose is the one the artwork uses');
+
+  // 3:1 is the bar, not 4.5: WCAG 1.4.11 asks 3:1 of a non-text part, and this is a
+  // shape rather than text. The steel is held to 4.5 anyway because it is small, it is the
+  // brightest thing in the mark, and it can afford to be pushed further.
+  for (const constant of ['BRONZE', 'COPPER', 'WOOD']) {
+    const colour = named(constant);
+    const ratio = contrast(colour, ground);
+    assert(ratio >= 3,
+      `${constant} ${colour} reads against the ground ${ground} — ${ratio.toFixed(2)}:1, needs 3:1`);
+  }
+  for (const constant of ['STEEL', 'STEEL_DARK']) {
+    const colour = named(constant);
+    const ratio = contrast(colour, ground);
+    assert(ratio >= 4.5,
+      `${constant} ${colour} reads clearly against the ground — ${ratio.toFixed(2)}:1, needs 4.5:1`);
+  }
 }
 
 // The 0.44.0 archive shipped options.html without options.css and options.js: the
