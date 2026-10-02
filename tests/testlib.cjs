@@ -344,6 +344,8 @@ function createPage(options) {
   context.globalThis = context;
   vm.createContext(context);
 
+  const loadedScripts = new Set();
+
   return {
     window: context,
     document,
@@ -351,7 +353,17 @@ function createPage(options) {
     chrome: mock.chrome,
     mock,
     context,
+    // Loading the same file twice is a no-op rather than a second run.
+    //
+    // The callers below load some scripts themselves and then ask cardPage() for the
+    // manifest's list, and the manifest's list is the whole point of cardPage(). Making
+    // this idempotent is what lets it be the whole list instead of a filtered one:
+    // a filter is a place for a newly added file to be left out, and the one time that
+    // happened here a module the card page needed went missing from every test and the
+    // only symptom was a TypeError about an undefined property.
     script(file) {
+      if (loadedScripts.has(file)) return undefined;
+      loadedScripts.add(file);
       const code = fs.readFileSync(path.join(ROOT, file), 'utf8');
       return vm.runInContext(code, context, { filename: file });
     },
@@ -363,14 +375,19 @@ function createPage(options) {
     // calling it the page — which is how a whole class of "works on its own"
     // passes hides a feature that does not work next to the others. So the list
     // comes from the manifest: add a file there and every test here runs it.
+    //
+    // The whole list, not the src/card-page/ part of it. A content-script group mixes
+    // card-page features with shared modules that live in src/core/, and filtering by
+    // prefix is what kept a newly added shared module out of every test.
     async cardPage() {
       const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'manifest.json'), 'utf8'));
       const group = (manifest.content_scripts || []).find(entry =>
         (entry.js || []).some(file => file.startsWith('src/card-page/')));
       if (!group) throw new Error('the manifest lists no src/card-page/ scripts');
-      const files = group.js.filter(file => file.startsWith('src/card-page/'));
-      for (const file of files) await this.script(file);
-      return files;
+      // script() skips what has already run, so the callers that load i18n and the
+      // catalogs themselves first are not run twice and the manifest order still holds.
+      for (const file of group.js) await this.script(file);
+      return group.js;
     },
     // Delivers one childList batch to every observer the page registered, which
     // is what a real DOM does after the test changed something.

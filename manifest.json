@@ -1,41 +1,43 @@
 {
+  "homepage_url": "https://github.com/Solomag/scryfall-toolkit",
+  "options_page": "src/ui/options.html",
   "manifest_version": 3,
   "name": "Scryfall Toolkit",
-  "version": "1.0.1",
-  "homepage_url": "https://github.com/Solomag/scryfall-toolkit",
+  "version": "1.0.2",
   "description": "Scryfall clipboard, tags, legality, dark theme, optional CardTrader prices and EDHREC statistics.",
-  "permissions": [
-    "storage",
-    "unlimitedStorage",
-    "alarms"
-  ],
-  "host_permissions": [
-    "https://api.scryfall.com/*",
-    "https://data.scryfall.io/*",
-    "https://tagger.scryfall.com/*"
-  ],
-  "web_accessible_resources": [
-    {
-      "resources": [
-        "assets/icons/*.svg",
-        "assets/icons/*.png"
-      ],
-      "matches": [
-        "https://scryfall.com/*",
-        "https://www.scryfall.com/*",
-        "https://tagger.scryfall.com/*"
-      ]
-    }
-  ],
-  "background": {
-    "service_worker": "src/background/worker.js"
-  },
   "icons": {
     "16": "assets/icons/icon16.png",
     "32": "assets/icons/icon32.png",
     "48": "assets/icons/icon48.png",
     "128": "assets/icons/icon128.png"
   },
+  "action": {
+    "default_title": "Scryfall Toolkit",
+    "default_popup": "src/ui/popup.html",
+    "default_icon": {
+      "16": "assets/icons/icon16.png",
+      "32": "assets/icons/icon32.png",
+      "48": "assets/icons/icon48.png"
+    }
+  },
+  "background": {
+    "service_worker": "src/background/worker.js"
+  },
+  "permissions": [
+    "storage",
+    "unlimitedStorage",
+    "alarms"
+  ],
+  "optional_host_permissions": [
+    "https://api.cardtrader.com/*",
+    "https://json.edhrec.com/*",
+    "https://edhrec.com/*"
+  ],
+  "host_permissions": [
+    "https://api.scryfall.com/*",
+    "https://data.scryfall.io/*",
+    "https://tagger.scryfall.com/*"
+  ],
   "content_scripts": [
     {
       "matches": [
@@ -62,6 +64,7 @@
         "https://www.scryfall.com/*"
       ],
       "js": [
+        "src/core/clipboard-format.js",
         "src/core/i18n.js",
         "src/core/format-catalog.js",
         "src/core/tag-icons.js",
@@ -122,6 +125,7 @@
         "https://tagger.scryfall.com/*"
       ],
       "js": [
+        "src/core/clipboard-format.js",
         "src/core/i18n.js",
         "src/card-page/tagger-clipboard.js"
       ],
@@ -131,19 +135,17 @@
       "run_at": "document_idle"
     }
   ],
-  "action": {
-    "default_title": "Scryfall Toolkit",
-    "default_popup": "src/ui/popup.html",
-    "default_icon": {
-      "16": "assets/icons/icon16.png",
-      "32": "assets/icons/icon32.png",
-      "48": "assets/icons/icon48.png"
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "assets/icons/*.svg",
+        "assets/icons/*.png"
+      ],
+      "matches": [
+        "https://scryfall.com/*",
+        "https://www.scryfall.com/*",
+        "https://tagger.scryfall.com/*"
+      ]
     }
-  },
-  "options_page": "src/ui/options.html",
-  "optional_host_permissions": [
-    "https://api.cardtrader.com/*",
-    "https://json.edhrec.com/*",
-    "https://edhrec.com/*"
   ]
 }

@@ -51,6 +51,18 @@
   } = await self.STK_CONTENT.context;
 
   async function initClipboard() {
+    // Formatting and identity both come from src/core/clipboard-format.js, which the
+    // Tagger page loads as well. They used to be written out twice here and there, and
+    // the two copies had already disagreed about `forceSet`, so a list built on one site
+    // and copied on the other came out differently depending on which way round you did
+    // it. See that file for why the selection is keyed by printing and not by name.
+    //
+    // Taken first, above the toolbar that uses them. A const read by code that runs
+    // before its own declaration line is a temporal dead zone error, and the toolbar is
+    // built before this used to sit.
+    const { entryKey, formatCard, clipboardText, FORMATS, otherFormat } =
+      window.STK_CLIPBOARD_FORMAT;
+
     let cards = settings.cards;
     if (!Array.isArray(cards)) {
       try {
@@ -74,12 +86,20 @@
     badge.setAttribute('aria-hidden', 'true');
     open.append(badge);
     const writeClipboard = async (format, control, restLabel, stripSets) => {
-      const text = cards.map(c => formatCard(c, format, stripSets)).join("\n");
+      const text = clipboardText(cards, format, stripSets);
       try { await navigator.clipboard.writeText(text); flashCopied(control, restLabel); }
       catch { control.title = t('Ошибка копирования'); }
     };
-    // Copy keeps the export format; hovering it reveals a small menu above with
-    // a one-off "names only" choice, so sets stay the default action.
+
+    // Copy keeps the export format; hovering it reveals a small menu above with a
+    // one-off copy in the *other* format.
+    //
+    // It used to be a fixed "names only, no sets", which meant that whoever had chosen
+    // names in the settings had two buttons that did the same thing and no way to reach
+    // the set format from here at all. With one alternative the item is simply whatever
+    // the settings are not using, so there is nothing to configure and nothing to get
+    // wrong: the main button always does what the settings say, and this one does the
+    // other thing.
     const wrap = document.createElement('span');
     wrap.className = 'stk-copy-wrap';
     const menu = document.createElement('span');
@@ -88,19 +108,48 @@
     const plain = document.createElement('button');
     plain.type = 'button';
     plain.className = 'stk-copy-plain';
-    plain.textContent = t('Только названия без сетов');
     menu.append(plain);
     const copy = iconButton('duplicate', t('Копировать карты'), async () => {
       const format = (await chrome.storage.local.get({ exportFormat: "moxfield" })).exportFormat;
       await writeClipboard(format, copy, t('Копировать карты'));
     });
+    const labelOf = other => {
+      const entry = FORMATS[other] || FORMATS.names;
+      return settings.siteLanguage === 'ru' ? entry.ru : entry.en;
+    };
+    let shownFormat = null;
+    const paintMenu = format => {
+      if (shownFormat === format) return;
+      shownFormat = format;
+      const other = otherFormat(format);
+      plain.textContent = labelOf(other);
+      plain.title = `${t('Скопировать в формате')} ${labelOf(other)}`;
+    };
+    paintMenu('moxfield');
     plain.addEventListener('click', async () => {
+      const format = (await chrome.storage.local.get({ exportFormat: "moxfield" })).exportFormat;
       menu.hidden = true;
-      await writeClipboard('names', plain, t('Только названия без сетов'), true);
+      const other = otherFormat(format);
+      // Copying in the other format is the point of the item, so the set suffix follows
+      // that format rather than being switched off: asked for moxfield, it gets a set
+      // whether or not the settings default is names.
+      await writeClipboard(other, plain, labelOf(other));
+    });
+    chrome.storage.onChanged.addListener(changes => {
+      if (changes.exportFormat) paintMenu(changes.exportFormat.newValue);
     });
     wrap.append(menu, copy);
     let hideMenuTimer;
-    const showMenu = () => { clearTimeout(hideMenuTimer); menu.hidden = false; };
+    // Repaint from the setting at the moment the menu appears, rather than only when a
+    // change event arrives. The item's whole job is to name the format the main button
+    // is not using, so a stale label points the reader at the format they already have.
+    const showMenu = () => {
+      clearTimeout(hideMenuTimer);
+      chrome.storage.local.get({ exportFormat: "moxfield" }).then(({ exportFormat }) => {
+        paintMenu(exportFormat);
+        menu.hidden = false;
+      });
+    };
     const scheduleHideMenu = () => {
       clearTimeout(hideMenuTimer);
       hideMenuTimer = setTimeout(() => { menu.hidden = true; }, 200);
@@ -125,10 +174,8 @@
       scan();
       refreshPrintButtons();
     }
-    function formatCard(card, format, stripSets) {
-      const suffix = !stripSets && (format === 'moxfield' || card.forceSet) && card.set && card.number ? ` (${card.set.toUpperCase()}) ${card.number}` : '';
-      return `1 ${card.name}${suffix}`;
-    }
+    // The formatting and identity rules live in src/core/clipboard-format.js; see the
+    // note where they are taken.
     function render() {
       badge.textContent = String(cards.length);
       badge.hidden = !cards.length;
@@ -175,18 +222,21 @@
           target.querySelector(".card-grid-item-invisible-label")?.textContent.trim()) ||
           target.querySelector("img[alt]")?.getAttribute("alt")?.split(" (")[0];
         if (!name) continue;
+        const set = match[1];
+        const number = decodeURIComponent(match[2]);
+        const key = entryKey({ set, number });
         let add = target.querySelector(":scope > .stk-add");
         if (!add) {
           add = button("+", async () => {
-            const idx = cards.findIndex(c => c.name === name);
+            const idx = cards.findIndex(c => entryKey(c) === key);
             if (idx >= 0) cards.splice(idx, 1);
-            else cards.push({ name, url: link, set: match[1], number: decodeURIComponent(match[2]) });
+            else cards.push({ name, url: link, set, number });
             await persist();
           });
           add.className = "stk-add";
           target.append(add);
         }
-        const selected = cards.some(c => c.name === name);
+        const selected = cards.some(c => entryKey(c) === key);
         add.textContent = selected ? "✓" : "+";
         add.setAttribute("aria-label", `${t(selected ? 'Удалить' : 'Добавить')} ${name}`);
         add.classList.toggle("stk-selected", selected);

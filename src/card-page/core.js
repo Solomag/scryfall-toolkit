@@ -278,7 +278,11 @@
     link.addEventListener('blur', () => hidePreview());
   }
 
-  const printKey = (set, number) => `${String(set || '').toLowerCase()}\u0000${String(number || '').toLowerCase()}`;
+  // Defined once, in src/core/clipboard-format.js, and taken from there. It used to be
+  // written out here as well, which made three copies of one rule: two of them
+  // reachable from the Tagger page, which does not load this file, so those two could
+  // only ever agree by coincidence.
+  const printKey = window.STK_CLIPBOARD_FORMAT.printKey;
   function refreshPrintButtons() { for (const sync of printButtonRefreshers) sync(); }
   function attachPrintButton(cell, key, payload, addTitle) {
     if (!settings.clipboard || !settings.printAddButtons || cell.querySelector('.stk-native-print-add')) return null;

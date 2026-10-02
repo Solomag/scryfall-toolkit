@@ -8,6 +8,55 @@ All releases: <https://github.com/Solomag/scryfall-toolkit/releases>
 
 ---
 
+### One name is not one printing
+
+Three defects in the clipboard, found together, because fixing the first one creates the
+need for the second.
+
+**Pressing `+` on a set page ticked every copy of that card.** A set page legitimately
+shows one card as several printings - an alternate borderless beside a showcase beside
+an autograph - and they all carry the same name. The selection was keyed on the name, so
+adding one printing ticked all of them, and adding a second found the first and removed
+it instead: you could not pick two printings of one card at all. Entries are now keyed
+by set and collector number, which is what a printing actually is. The per-printing
+buttons in the prints table were already keyed that way, which is why this was only ever
+visible on a set page.
+
+**The export format setting did not fully apply.** An entry added one printing at a time
+carried a flag meaning "chosen as a printing", and that flag was enough on its own to put
+a set on the line whatever format was asked for. Choosing "1 Card name" produced a list
+in which some lines had a set and some did not, under a setting whose name promised one
+or the other. The flag is still recorded - it says something true about the entry - but
+the format now decides what is printed.
+
+**Repeat names are counted.** With no set on the line, three printings of Mana Drain were
+three identical lines. They now copy as `3 Mana Drain`. The counting happens only where
+the lines could not be told apart: with a set on each line the printings stay apart and
+the count stays one.
+
+**The alternative button now names the format you are not using.** It was fixed at "names
+only, no sets", so anyone who had chosen names in the settings had two buttons doing the
+same thing and no way to reach the set format from the toolbar at all.
+
+The card page and the Tagger page hold one clipboard between them, and each had its own
+copy of these rules. They had already drifted: the card page honoured the printing flag
+and the Tagger page ignored it, so a list built on one site and copied on the other came
+out differently depending on which way round you did it. There is one file now,
+`src/core/clipboard-format.js`, both pages load it, and it is tested on its own.
+
+That move immediately failed, which is the interesting part. The test harness read the
+script list from the manifest and then threw away everything outside `src/card-page/`, so
+the new shared module was in no test at all and the only symptom was an undefined property
+where a clipboard should have been. The filter is gone, `page.script()` no longer runs a
+file twice, and the Tagger test now reads its list from the manifest too.
+
+Seven mutations of the new rules were applied one at a time and every one was caught. The
+first harness had a mutation that could not fail - it added a parameter and read it
+without passing anything - and reported the gap as a missing test, which was the harness's
+fault rather than the tests'.
+
+---
+
 ### A new icon, drawn from a source instead of generated
 
 The old one was a clipboard with a green clip. It was drawn by this project's own tool

@@ -18,8 +18,18 @@ bottom right. Each row shows the card's set code and collector number beside its
 
 - Copy the whole list from the toolbar, or one card with the small copy button beside
   its name. Both follow the selected export format, which includes set codes by default.
-- Hovering the toolbar copy button reveals a **names only** choice that drops the set
-  codes, for a list of plain card names.
+- Hovering the toolbar copy button reveals the **other** format: with set codes chosen it
+  offers names, and with names chosen it offers set codes. The main button always does
+  what the settings say, so the two can never end up doing the same thing.
+- An entry is a **printing**, not a name. On a set page a card is shown as several
+  printings — an alternate borderless beside a showcase beside an autograph — and each
+  carries its own tick and can be selected alongside the others.
+- Without a set on the line, printings of the same card are **counted**: three of Mana
+  Drain copy as `3 Mana Drain`, not as three identical lines. With a set on the line they
+  stay separate, because that is what tells them apart.
+- The same clipboard, formats and rules appear on Tagger pages. The two pages hold one
+  clipboard between them and used to format it separately; the rules now live in
+  `src/core/clipboard-format.js`, which both load.
 - The same clipboard and add/remove button appear on individual Tagger card pages.
 - An older **CardClip** clipboard is imported once, on the first Scryfall run, if this
   extension has no `cards` value yet. It reads Scryfall's `localStorage.cardClipboard`

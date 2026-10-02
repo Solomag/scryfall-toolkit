@@ -15,10 +15,20 @@ const {
   dataTransferObject, waitFor
 } = require('./testlib.cjs');
 
+// The list comes from the manifest, for the reason cardPage() takes its list from there:
+// a hand-written list is a place for a file to be left out of, and when the shared
+// clipboard rules moved into src/core/clipboard-format.js this list left them behind and
+// the only symptom was an undefined property where a clipboard should have been. A test
+// that does not load what the page loads is testing a different page.
 function loadPage(options) {
   const page = createPage(options);
-  page.script('src/core/i18n.js');
-  page.script('src/card-page/tagger-clipboard.js');
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'manifest.json'), 'utf8'));
+  const group = (manifest.content_scripts || []).find(entry =>
+    (entry.js || []).some(file => file.includes('tagger-clipboard.js')));
+  if (!group) throw new Error('the manifest lists no tagger-clipboard.js');
+  for (const file of group.js) page.script(file);
   return page;
 }
 
@@ -92,7 +102,8 @@ async function detailPageTest() {
   const copyMenu = copyWrap.querySelector('.stk-copy-menu');
   assert(copyMenu.hidden, 'names-only menu starts hidden');
   fireEvent(copyWrap, 'mouseenter');
-  assert(!copyMenu.hidden, 'hovering copy opens the menu above');
+  // The menu reads the setting when it opens, so it appears a turn later than the hover.
+  await waitFor(() => !copyMenu.hidden, 'hovering copy opens the menu above');
   click(copyMenu.querySelector('.stk-copy-plain'));
   await waitFor(() => mock.clipboardWrites.length === 3, 'names-only copy wrote to clipboard');
   assertEqual(mock.clipboardWrites[2], '1 Test Card', 'names-only menu item drops sets');

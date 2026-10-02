@@ -36,13 +36,22 @@
     return button;
   };
   const badge = document.createElement('span');
-  const formatCard = (card, format) => `1 ${card.name}${format === 'moxfield' && card.set && card.number ? ` (${card.set.toUpperCase()}) ${card.number}` : ''}`;
+  // The same rules the card page uses, loaded from the same file. These two held one
+  // clipboard between them and each had its own copy of the formatting, and they had
+  // already drifted: this one ignored `forceSet` and the other honoured it, so a list
+  // built on one site and copied on the other came out differently depending on which
+  // way round you did it.
+  const { entryKey, formatCard, clipboardText, FORMATS, otherFormat } = window.STK_CLIPBOARD_FORMAT;
+  const formatLabel = format => {
+    const entry = FORMATS[format] || FORMATS.names;
+    return settings.siteLanguage === 'ru' ? entry.ru : entry.en;
+  };
   badge.className = 'stk-count';
   badge.setAttribute('aria-hidden', 'true');
   const open = iconButton('clip', t('Показать список карт'), () => { list.hidden = !list.hidden; });
   open.append(badge);
   const writeClipboard = async (format, control, restLabel) => {
-    const value = cards.map(c => formatCard(c, format)).join('\n');
+    const value = clipboardText(cards, format);
     try {
       await navigator.clipboard.writeText(value);
       control.title = t('Скопировано');
@@ -50,8 +59,10 @@
     } catch { control.title = t('Ошибка копирования'); }
     setTimeout(() => { control.title = restLabel; control.classList.remove('stk-copied'); }, 1000);
   };
-  // Same shape as the Scryfall clipboard: sets by default, "names only" in a
-  // small menu revealed above the copy button on hover.
+  // Same shape as the Scryfall clipboard: the settings' format by default, and the
+  // other format in a small menu revealed above the copy button on hover. Whichever one
+  // the menu names is decided by the setting, not written into the page, so the two
+  // buttons cannot end up doing the same thing.
   const wrap = document.createElement('span');
   wrap.className = 'stk-copy-wrap';
   const menu = document.createElement('span');
@@ -60,19 +71,40 @@
   const plain = document.createElement('button');
   plain.type = 'button';
   plain.className = 'stk-copy-plain';
-  plain.textContent = t('Только названия без сетов');
   menu.append(plain);
   const copy = iconButton('duplicate', t('Копировать карты'), async () => {
     const { exportFormat } = await chrome.storage.local.get({ exportFormat: 'moxfield' });
     await writeClipboard(exportFormat, copy, t('Копировать карты'));
   });
+  let shownFormat = null;
+  const paintMenu = format => {
+    if (shownFormat === format) return;
+    shownFormat = format;
+    plain.textContent = formatLabel(otherFormat(format));
+    plain.title = `${t('Скопировать в формате')} ${formatLabel(otherFormat(format))}`;
+  };
+  paintMenu('moxfield');
   plain.addEventListener('click', async () => {
+    const { exportFormat } = await chrome.storage.local.get({ exportFormat: 'moxfield' });
     menu.hidden = true;
-    await writeClipboard('names', plain, t('Только названия без сетов'));
+    const other = otherFormat(exportFormat);
+    await writeClipboard(other, plain, formatLabel(other));
+  });
+  chrome.storage.onChanged.addListener(changes => {
+    if (changes.exportFormat) paintMenu(changes.exportFormat.newValue);
   });
   wrap.append(menu, copy);
   let hideMenuTimer;
-  const showMenu = () => { clearTimeout(hideMenuTimer); menu.hidden = false; };
+  // Repaint from the setting when the menu appears, not only when a change event
+  // arrives: the item names the format the main button is not using, and a stale label
+  // points the reader at the format they already have.
+  const showMenu = () => {
+    clearTimeout(hideMenuTimer);
+    chrome.storage.local.get({ exportFormat: 'moxfield' }).then(({ exportFormat }) => {
+      paintMenu(exportFormat);
+      menu.hidden = false;
+    });
+  };
   const scheduleHideMenu = () => {
     clearTimeout(hideMenuTimer);
     hideMenuTimer = setTimeout(() => { menu.hidden = true; }, 200);
@@ -150,6 +182,13 @@
         : target.querySelector(':scope > a.card img[alt]')?.alt.trim();
       if (!name) continue;
       const canonical = `https://scryfall.com/card/${encodeURIComponent(parts[1])}/${encodeURIComponent(decodeURIComponent(parts[2]))}`;
+      const set = parts[1];
+      const number = decodeURIComponent(parts[2]);
+      // Selection is keyed by printing, not by name, for the same reason as on Scryfall
+      // itself: a Tagger list holds printings, and one name can be in it more than once.
+      // Matching on the name made one + tick all of them and made a second one remove
+      // the first.
+      const key = entryKey({ set, number });
       const existing = target.querySelector(':scope > .stk-add');
       if (existing && existing.dataset.url !== canonical) existing.remove();
       let add = target.querySelector(':scope > .stk-add');
@@ -159,14 +198,14 @@
         add.className = 'stk-add';
         add.dataset.url = canonical;
         add.addEventListener('click', async () => {
-          const index = cards.findIndex(c => c.name === name);
+          const index = cards.findIndex(c => entryKey(c) === key);
           if (index >= 0) cards.splice(index, 1);
-          else cards.push({ name, url: canonical, set: parts[1], number: decodeURIComponent(parts[2]) });
+          else cards.push({ name, url: canonical, set, number });
           await persist();
         });
         target.append(add);
       }
-      const selected = cards.some(c => c.name === name);
+      const selected = cards.some(c => entryKey(c) === key);
       if (add.textContent !== (selected ? '✓' : '+')) add.textContent = selected ? '✓' : '+';
       add.classList.toggle('stk-selected', selected);
       add.setAttribute('aria-label', `${t(selected ? 'Удалить' : 'Добавить')} ${name}`);

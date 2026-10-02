@@ -205,11 +205,13 @@ async function cardPageTest() {
   const setSpans = [...list.querySelectorAll('.stk-list-set')].map(span => span.textContent);
   assertEqual(setSpans, ['(TST) 1', '(TST) 2', '(MH3) 42'], 'buffer rows show set code and number');
 
-  // Copy all: sets by default; the names-only choice lives in the hover menu.
+  // Copy all: the settings' format on a plain click; the other format in the hover
+  // menu. The menu names whichever format the setting is NOT using, so the two buttons
+  // can never do the same thing.
   const copyWrap = aside.querySelector('.stk-copy-wrap');
   assert(copyWrap, 'copy button wrapped in a hover menu');
   const copyMenu = copyWrap.querySelector('.stk-copy-menu');
-  assert(copyMenu.hidden, 'names-only menu starts hidden');
+  assert(copyMenu.hidden, 'alternative-format menu starts hidden');
   const copyAll = copyWrap.querySelector('.stk-icon-duplicate');
   click(copyAll);
   await waitFor(() => mock.clipboardWrites.length === 1, 'copy-all wrote to clipboard');
@@ -217,26 +219,48 @@ async function cardPageTest() {
     '1 Test Card (TST) 1\n1 Test Card (TST) 2\n1 Test Card (MH3) 42',
     'default copy includes set codes');
 
+  // The menu reads the setting when it opens, so it appears a turn later than the hover.
   fireEvent(copyWrap, 'mouseenter');
-  assert(!copyMenu.hidden, 'hovering copy opens the menu above');
+  await waitFor(() => !copyMenu.hidden, 'hovering copy opens the menu above');
   const plain = copyMenu.querySelector('.stk-copy-plain');
-  assertEqual(plain.textContent, 'Names only, no sets', 'menu item translated for English site');
+  // With moxfield chosen, the menu offers the other format, by its own name. It used
+  // to say "Names only, no sets" always, which meant that whoever had chosen names in
+  // the settings had two buttons doing the same thing and could not reach the set
+  // format from here at all.
+  assertEqual(plain.textContent, '1 Card name', 'menu offers the format the setting is not using');
   click(plain);
-  await waitFor(() => mock.clipboardWrites.length === 2, 'names-only copy wrote to clipboard');
-  assertEqual(mock.clipboardWrites[1],
-    '1 Test Card\n1 Test Card\n1 Test Card',
-    'names-only item drops sets everywhere, including forced ones');
+  await waitFor(() => mock.clipboardWrites.length === 2, 'alternative-format copy wrote to clipboard');
+  // Three printings of one card, and no set on any line to tell them apart, so they
+  // are counted instead. Writing "1 Test Card" three times says the same thing more
+  // slowly and pastes into a deck list as three copies.
+  assertEqual(mock.clipboardWrites[1], '3 Test Card',
+    'without a set on the line, repeat names are counted rather than repeated');
   assert(copyMenu.hidden, 'menu closes after choosing');
   fireEvent(copyWrap, 'mouseleave');
   assert(copyMenu.hidden, 'menu stays closed after leaving');
 
-  // The options setting still picks the default for the plain click.
+  // The options setting still picks the default for the plain click. Two of the three
+  // entries carry forceSet, which used to be enough on its own to print a set whatever
+  // format was asked for — so this one line was '1 Test Card' and the next two carried
+  // sets, under a setting whose name promised one or the other.
   mock.state.exportFormat = 'names';
   click(copyAll);
   await waitFor(() => mock.clipboardWrites.length === 3, 'setting-driven copy wrote to clipboard');
-  assertEqual(mock.clipboardWrites[2],
-    '1 Test Card\n1 Test Card (TST) 2\n1 Test Card (MH3) 42',
-    'exportFormat setting still honored for the main click');
+  assertEqual(mock.clipboardWrites[2], '3 Test Card',
+    'the names format means names, including for printings added one by one');
+
+  // And the other way round: with names chosen, the menu offers the set format and
+  // gives the sets, because asked for moxfield is asked for moxfield.
+  fireEvent(copyWrap, 'mouseenter');
+  await waitFor(() => plain.textContent === '1 Card name (SET) number',
+    'the menu follows the setting instead of being fixed');
+  assertEqual(plain.textContent, '1 Card name (SET) number',
+    'the menu follows the setting instead of being fixed');
+  click(plain);
+  await waitFor(() => mock.clipboardWrites.length === 4, 'the set format is reachable from the menu');
+  assertEqual(mock.clipboardWrites[3],
+    '1 Test Card (TST) 1\n1 Test Card (TST) 2\n1 Test Card (MH3) 42',
+    'the alternative is the set format, and it carries sets');
 
   // The prints table is grouped from the complete print list on load.
   const nativeLink = document.querySelector('#main .prints .prints-table .stk-print-new-page-line > a');
@@ -416,6 +440,12 @@ async function searchPageTest() {
       <span class="card-grid-item-invisible-label">Grid Card</span><img alt="Grid Card (GRID) 9"></div>
     <div class="card-grid-item" aria-hidden="true"><a class="card-grid-item-card" href="https://scryfall.com/card/hidden/1/hidden"></a>
       <span class="card-grid-item-invisible-label">Hidden Card</span><img alt="Hidden Card"></div>
+    <div class="card-grid-item"><a class="card-grid-item-card" href="https://scryfall.com/card/trk/14/janeway-borderless"></a>
+      <span class="card-grid-item-invisible-label">Captain Janeway</span></div>
+    <div class="card-grid-item"><a class="card-grid-item-card" href="https://scryfall.com/card/trk/15/janeway-showcase"></a>
+      <span class="card-grid-item-invisible-label">Captain Janeway</span></div>
+    <div class="card-grid-item"><a class="card-grid-item-card" href="https://scryfall.com/card/trk/22/janeway-autograph"></a>
+      <span class="card-grid-item-invisible-label">Captain Janeway</span></div>
   </div></body></html>`;
   const page = createPage({ url: 'https://scryfall.com/search?q=grid', html, state: { cards: [] }, routes });
   await page.script('src/core/i18n.js');
@@ -428,7 +458,7 @@ async function searchPageTest() {
 
   assert(!document.getElementById('stk-tags'), 'search page does not build a tag panel');
   const addButtons = [...document.querySelectorAll('.card-grid-item:not([aria-hidden="true"]) .stk-add')];
-  assertEqual(addButtons.length, 1, 'only visible grid items get add buttons');
+  assertEqual(addButtons.length, 4, 'only visible grid items get add buttons');
   assertEqual(addButtons[0].getAttribute('aria-label'), 'Add Grid Card', 'button label names the card');
 
   click(addButtons[0]);
@@ -444,6 +474,43 @@ async function searchPageTest() {
 
   click(addButtons[0]);
   await waitFor(() => mock.state.cards.length === 0, 'grid card toggled off');
+
+  // One name, three printings. This is the set-page case: a card is legitimately shown
+  // as an alternate borderless, a showcase and an autograph, all three carrying the same
+  // name. The selection used to be keyed on the name, so adding the first ticked all
+  // three, and adding a second removed the first instead of adding it.
+  const janeway = addButtons.slice(1);
+  click(janeway[0]);
+  await waitFor(() => mock.state.cards.length === 1, 'first printing added');
+  assertEqual(janeway[0].textContent, '✓', 'the printing that was clicked is ticked');
+  assertEqual([janeway[1].textContent, janeway[2].textContent], ['+', '+'],
+    'the other printings of the same card are not ticked along with it');
+  assertEqual(mock.state.cards[0].number, '14', 'the set and number name the printing, not the name');
+
+  click(janeway[1]);
+  await waitFor(() => mock.state.cards.length === 2,
+    'a second printing of the same card can be added as well');
+  assertEqual([janeway[0].textContent, janeway[1].textContent, janeway[2].textContent], ['✓', '✓', '+'],
+    'each printing carries its own tick');
+
+  // And removing one leaves the others alone.
+  click(janeway[0]);
+  await waitFor(() => mock.state.cards.length === 1, 'clicking a tick removes only its own printing');
+  assertEqual([janeway[0].textContent, janeway[1].textContent], ['+', '✓'],
+    'the other printing is still selected');
+
+  // Two printings of one card, and no set to tell the lines apart, so the export counts
+  // them rather than writing the name twice.
+  click(copyAll);
+  await waitFor(() => mock.clipboardWrites.length === 2, 'repeat-name copy-all wrote to clipboard');
+  assertEqual(mock.clipboardWrites[1], '1 Captain Janeway (TRK) 15', 'a single printing is still one of it');
+  click(janeway[2]);
+  await waitFor(() => mock.state.cards.length === 2, 'third printing added');
+  mock.state.exportFormat = 'names';
+  click(copyAll);
+  await waitFor(() => mock.clipboardWrites.length === 3, 'names-only copy-all wrote to clipboard');
+  assertEqual(mock.clipboardWrites[2], '2 Captain Janeway',
+    'two printings of one card copy as a count, not as the name twice');
 }
 
 async function clipboardDisabledTest() {
@@ -1089,8 +1156,86 @@ async function printsSettingsTest() {
   assertEqual(on.document.querySelectorAll('.stk-print-new-page').length, 1, 'and the full-page link on the line');
 }
 
+// The clipboard's identity and formatting rules, on their own.
+//
+// They were moved out of the two page scripts precisely so they could be tested without
+// a page, and because the card page and the Tagger page had each grown their own copy of
+// them and the copies had already disagreed. A rule that only has a copy is a rule with
+// no owner; these are checked here so neither page can drift away from them again.
+function clipboardFormatTest() {
+  console.log('clipboard: one set of rules, shared by both pages');
+  const vm = require('node:vm');
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const context = { window: {} };
+  context.globalThis = context;
+  vm.createContext(context);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'src', 'core', 'clipboard-format.js'), 'utf8'), context);
+  const F = context.window.STK_CLIPBOARD_FORMAT;
+
+  assert(F, 'the module publishes its rules on the window the page scripts read');
+  for (const name of ['printKey', 'entryKey', 'formatCard', 'clipboardText', 'otherFormat']) {
+    assert(typeof F[name] === 'function', `${name} is published`);
+  }
+
+  // Identity. Two printings of one card are two entries; the same printing reached by
+  // a differently-cased set code is one.
+  assert(F.printKey('TRK', '14') === F.printKey('trk', '14'), 'a set code is not case sensitive');
+  assert(F.printKey('trk', '14') !== F.printKey('trk', '22'), 'the collector number is part of the identity');
+  assert(F.entryKey({ name: 'Janeway', set: 'trk', number: '14' }) !== F.entryKey({ name: 'Janeway', set: 'trk', number: '22' }),
+    'two printings of one card are two entries');
+  assertEqual(F.entryKey({ name: 'Janeway' }), F.entryKey({ name: 'janeway' }),
+    'an entry with no set falls back to its name, and case does not split it');
+
+  // The format that carries sets. forceSet is no longer a way to force one, which is
+  // what used to make 'names only' produce some lines with a set and some without.
+  const forced = { name: 'Test Card', set: 'tst', number: '2', forceSet: true };
+  assertEqual(F.formatCard(forced, 'names', false), '1 Test Card',
+    'the names format means names, even for a printing added one at a time');
+  assertEqual(F.formatCard(forced, 'moxfield', false), '1 Test Card (TST) 2',
+    'the set format carries the set');
+  assertEqual(F.formatCard(forced, 'moxfield', true), '1 Test Card',
+    'stripping sets still strips them');
+
+  // Grouping, which happens only where the lines could not be told apart.
+  const list = [
+    { name: 'Mana Drain', set: 'dom', number: '15' },
+    { name: 'Mana Drain', set: 'dom', number: '16' },
+    { name: 'Mana Drain', set: 'sta', number: '68' },
+    { name: 'Island', set: 'dom', number: '51' }
+  ];
+  assertEqual(F.clipboardText(list, 'names', false), '3 Mana Drain\n1 Island',
+    'repeat names are counted when there is no set to tell them apart');
+  assertEqual(F.clipboardText(list, 'moxfield', false),
+    '1 Mana Drain (DOM) 15\n1 Mana Drain (DOM) 16\n1 Mana Drain (STA) 68\n1 Island (DOM) 51',
+    'with a set on the line, printings stay apart and the count is one');
+  assertEqual(F.clipboardText(list, 'names', false).split('\n')[0], '3 Mana Drain',
+    'the count leads the name, which is what a deck list wants');
+
+  // Case-insensitive grouping: Magic card names are unique that way, so two spellings
+  // differing only in case are one card and one count. The spelling kept is the one that
+  // arrived first, so the output is not reshuffled into whatever case came last.
+  assertEqual(F.clipboardText([
+    { name: 'mana drain', set: 'dom', number: '15' },
+    { name: 'Mana Drain', set: 'sta', number: '68' }
+  ], 'names', false), '2 mana drain',
+    'two spellings differing only in case are one card and one count, in the first spelling seen');
+
+  assertEqual(F.clipboardText([], 'names', false), '', 'an empty clipboard copies nothing, not a blank line');
+  assertEqual(F.clipboardText(undefined, 'names', false), '', 'a missing clipboard is treated as empty');
+
+  // The alternative button, and the guarantee it rests on: with two formats the
+  // alternative is always the other one, so the two buttons cannot do the same thing.
+  assertEqual(F.otherFormat('moxfield'), 'names', 'the alternative to the set format is names');
+  assertEqual(F.otherFormat('names'), 'moxfield', 'and the other way round');
+  assertEqual(F.otherFormat(F.otherFormat('moxfield')), 'moxfield', 'so there are exactly two');
+  assertEqual(F.FORMATS.names.withSets, false, 'the names format has no set on it');
+  assertEqual(F.FORMATS.moxfield.withSets, true, 'the set format has one');
+}
+
 (async () => {
   try {
+    clipboardFormatTest();
     await cardPageTest();
     await printsGroupsEdgeTest();
     await promoParentMergeTest();
