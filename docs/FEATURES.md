@@ -221,8 +221,12 @@ time.
   a search grid would need a rule for which of a card's thousands of tags to show, and a
   request per card to fetch them. Tags belong on the card that has them.
 - Shambleshark's deckbuilder search, EDHREC suggestions, cleanup and card input editing
-  are not integrated. Its Card Notes and Legality Check modules are empty placeholders
-  upstream.
+  **are** integrated; see the deck page section above. Its Card Notes and Legality Check
+  modules are empty placeholders upstream, so there is nothing there to port. A legality
+  check over the deck is the obvious thing to build next and it is deliberately left out
+  rather than overlooked: the data is already here, but which format a deck is being
+  judged against is a question the deck editor does not answer, and a check that guesses
+  is worse than none.
 - The dark theme is applied over Scryfall's own styles, so it depends on Scryfall's
   markup. A page that changes its markup can come out partly unthemed until this
   extension is updated. Behaviour on private, signed-in pages depends on what that page
