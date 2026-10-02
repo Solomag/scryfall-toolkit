@@ -57,7 +57,7 @@ const SHAPES = [
 //   circle { cx, cy, r, fill }
 //   ring   { cx, cy, r, w, fill }        a circle of thickness w
 //   poly   { points: [[x, y], …], fill }
-//   gear   { cx, cy, r, root, count, toothW, toothH, twist, fill }
+//   gear   { cx, cy, r, root, count, toothW, toothH, twist, roundTip, fill }
 //
 // The last two exist because a wheel is not a circle: its teeth are what make it read
 // as a wheel, and they are what a shape list of rounded rectangles cannot express.
@@ -157,6 +157,13 @@ function wheel(gear) {
 // tapered: a trapezoid reads as a tooth at 48 pixels, where a rectangle reads as a
 // bump and an involute reads as a smudge.
 //
+// With `roundTip`, each tooth also gets a disc at its tip, which turns the flat end
+// into a semicircle of that disc's radius. Rounding is done by adding a shape, never by
+// moving the trapezoid's corners: the shapes are unioned as they are painted, so a disc
+// laid over a flat end is a rounded end, and no arithmetic is needed to describe an
+// arc. The radius is a half of the tooth's width at the tip, which is what a round end
+// of that width actually is — any more and the teeth swell into blobs.
+//
 // The rotation happens once, in `place`, rather than in every coordinate below.
 // `twist` turns the whole wheel in radians, which is what lets two wheels of different
 // counts sit side by side without their teeth lining up into one lumpy outline. It is
@@ -165,6 +172,9 @@ function wheelTeeth(gear) {
   const out = [];
   const step = (Math.PI * 2) / gear.count;
   const twist = gear.twist || 0;
+  const outer = gear.r + gear.toothH;
+  const wRoot = gear.toothW / 2;
+  const wTip = gear.toothW * 0.3;
   for (let i = 0; i < gear.count; i++) {
     // One tooth's own frame: radius runs out of the hub, offset runs across the tooth.
     const angle = i * step + twist;
@@ -172,9 +182,6 @@ function wheelTeeth(gear) {
       gear.cx + Math.cos(angle) * radius - Math.sin(angle) * offset,
       gear.cy + Math.sin(angle) * radius + Math.cos(angle) * offset
     ];
-    const outer = gear.r + gear.toothH;
-    const wRoot = gear.toothW / 2;
-    const wTip = gear.toothW * 0.3;
     out.push({
       k: 'poly',
       fill: gear.fill,
@@ -183,6 +190,10 @@ function wheelTeeth(gear) {
         place(outer, wTip), place(gear.root, wRoot)
       ]
     });
+    if (gear.roundTip) {
+      const tip = place(outer - wTip, 0);
+      out.push({ k: 'circle', cx: tip[0], cy: tip[1], r: wTip, fill: gear.fill });
+    }
   }
   return out;
 }
