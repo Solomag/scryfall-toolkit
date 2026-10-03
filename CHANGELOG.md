@@ -168,6 +168,35 @@ re-checked, and protected by tests that stood in for it.
 
 ---
 
+### The other three data files, checked against the thing they claim to be copies of
+
+The platform snapshot raised the obvious next question about the rest of the package's
+data. Three files, twelve megabytes, and each one says in its own header that it is a
+byte-identical copy of MoxTags v1.8.3, verified by SHA-256 on 2026-09-25. That claim is
+checkable against the upstream tag, and nobody had checked it since.
+
+All three are intact. Compared from `self.` onward — the licence header is ours, so whole
+files cannot be identical — the payloads hash the same as upstream's to the byte:
+3,930,789 / 4,593,598 / 3,754,848 bytes. The data was never the problem.
+
+And yet nothing in the suite could have told us that. Every check on these files read the
+first 600 bytes, so a truncated payload, a re-encoded one or a hand-edited entry passes all
+of them and the tag panels quietly show fewer tags. A header check is a check on the
+comment.
+
+There is now a check on the payload. These are compact indexes — `t` is the list of tag
+names and `d` maps a UUID to positions in it, which is what `lookup` reads — so the
+assertions are the ones that format needs: names present, sorted, unique; entries a real
+number; every position inside the list, or a card's tag reads as `undefined`; and the two
+halves of the art index disjoint, since a card with an art tag has to land in exactly one.
+Three mutations, all caught.
+
+Worth recording what the measurement found that a test could not have: `illustration-tags-1`
+and `-2` carry the **same 11,555 names** and 25,098 / 25,097 entries with no UUID in both.
+That is one list split in two, which is what the split is for and what nobody had checked.
+
+---
+
 ### `lang:!en` is not a negation, and it answered confidently
 
 The same treatment for the two rules left. Both name sets by their names, which is the one

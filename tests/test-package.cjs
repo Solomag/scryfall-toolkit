@@ -636,6 +636,61 @@ function packagedNoticesTest() {
       assert(head.includes(statement), `${file} header states ${statement}`);
     }
   }
+  // The header is not the data. Every check above reads the first 600 bytes, so a truncated
+  // payload, a re-encoded one or a hand-edited entry would pass all of them and the tag
+  // panels would quietly show fewer tags. The platform snapshot was the same shape of hole —
+  // checked by nobody at all — so the payload is checked here on its own terms.
+  //
+  // These files are compact indexes: `t` is the list of tag names and `d` maps a UUID to
+  // positions in it, which is what `lookup` in the worker reads. So the properties worth
+  // asserting are the ones that format needs: names present and sorted, no duplicates, every
+  // position inside the list, and the two halves of the art index disjoint so no card is
+  // found twice or missed once.
+  {
+    const parse = file => {
+      const text = read(file);
+      const at = text.indexOf('self.__');
+      return JSON.parse(text.slice(text.indexOf('=', at) + 1).replace(/;\s*$/, ''));
+    };
+    const indexes = {
+      oracle: parse('assets/data/oracle-tags.js'),
+      art1: parse('assets/data/illustration-tags-1.js'),
+      art2: parse('assets/data/illustration-tags-2.js')
+    };
+    for (const [label, index] of Object.entries(indexes)) {
+      const names = index.t;
+      assert(Array.isArray(names) && names.length > 1000,
+        `${label}: the index carries a real list of tag names (${Array.isArray(names) ? names.length : 'none'})`);
+      assertEqual(names.length - new Set(names).size, 0, `${label}: no tag name appears twice`);
+      assertEqual(JSON.stringify(names), JSON.stringify(names.slice().sort()),
+        `${label}: the names are sorted, so a lookup's order is the file's and not Scryfall's`);
+      const entries = Object.entries(index.d || {});
+      assert(entries.length > 10000, `${label}: the index has a real number of entries (${entries.length})`);
+      assert(entries.every(([, tags]) => Array.isArray(tags)), `${label}: every entry is a list of positions`);
+      let outside = 0;
+      let total = 0;
+      for (const [, tags] of entries) {
+        for (const at of tags) {
+          total += 1;
+          if (!Number.isInteger(at) || at < 0 || at >= names.length) outside += 1;
+        }
+      }
+      assert(total > 10000, `${label}: and a real number of assignments (${total})`);
+      assertEqual(outside, 0,
+        `${label}: every position is inside the name list, or a card's tag reads as undefined`);
+    }
+    // The art index is split in two to keep each file a size Chrome will load. A card with
+    // an art tag must land in exactly one half.
+    const ids1 = Object.keys(indexes.art1.d);
+    const ids2 = new Set(Object.keys(indexes.art2.d));
+    assertEqual(ids1.filter(id => ids2.has(id)).length, 0,
+      'no illustration is in both halves of the art index');
+    assert(ids1.length > 10000 && ids2.size > 10000,
+      `and both halves carry their share (${ids1.length} and ${ids2.size})`);
+    // Both halves name the same tags: they are one list split, not two lists.
+    assertEqual(JSON.stringify(indexes.art1.t), JSON.stringify(indexes.art2.t),
+      'both halves of the art index carry the same tag names');
+  }
   const nicknames = read('assets/data/shambleshark-nicknames.js').slice(0, 700);
   for (const statement of [
     'crookedneighbor/shambleshark', 'Samuel Sim\u00f5es', 'Blade Barringer', 'MIT', 'assets/licences/Shambleshark-LICENSE'
