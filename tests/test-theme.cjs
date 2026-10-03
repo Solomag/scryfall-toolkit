@@ -237,6 +237,20 @@ function cssCheck() {
     '#main .card-text:has(.card-legality #stk-edhrec){padding-bottom:0!important}'
   ]) assert(css.includes(selector), `content.css styles ${selector}`);
   assert(/stk-copied-pop \.15s/.test(css), 'copied pop animation is quick');
+  // The note under the legality list says what the check did not do, and it has to stay
+  // on screen while a hundred rows scroll under it. Rendered in Chrome with a deck of a
+  // hundred cards, the note sat 2,276 pixels down a 1,018-pixel window at the bottom of
+  // the scroll area: the reader who most needed to know what was not checked was the one
+  // least likely to scroll to find out. Pinned to the foot of the scrollport.
+  assert(/\.stk-legality-result>p:last-child\{[^}]*position:sticky[^}]*bottom:0/.test(css),
+    'the note that says what was not checked is pinned to the foot of the scrolling panel');
+  // Opacity on the pinned element would fade its own background as well as its text, and
+  // the rows behind it would show through - which is what it did, in both themes, the
+  // first time this was rendered. The dimming has to be a colour, not an alpha.
+  assert(!/\.stk-legality-result>p:last-child\{[^}]*opacity:/.test(css),
+    'and the note dims its text with a colour, so the rows behind it cannot show through');
+  assert(/html\.stk-dark \.stk-legality-result>p:last-child\{[^}]*background:/.test(css),
+    'the pinned note has an opaque background in the dark theme too, where a faded one would show the page');
   // 22px on a 125% zoom is 17.6 CSS px, which is 12px above the panel plus the
   // 5.6px the legality row itself adds above the border.
   assert(css.includes('margin-top:12px'), 'stats panel leaves 22px above itself at 125% zoom');

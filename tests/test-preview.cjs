@@ -169,6 +169,16 @@ async function deckLegalityTest() {
     'and the limits are named in Russian too, not left in English');
   assert(/одной копии/i.test(ruText), 'all three of them');
 
+  // The note is last on purpose and the stylesheet pins it there: a hundred-card deck
+  // puts it 2,276 pixels down a 1,018-pixel window otherwise. The two halves are one
+  // arrangement, so both are asserted — what the panel builds, and what keeps it there.
+  const result = page.document.querySelector('.stk-legality-result');
+  const last = result.lastElementChild;
+  assert(last && last.className === 'stk-legality-note' && last.parentElement === result,
+    'the note is the last thing in the panel, so a scrollbar has nothing to hide it behind');
+  assert(/hundred-card limit/.test(last.textContent) && /one-copy rule/.test(last.textContent),
+    'and the last thing in it is the paragraph that names the limits, not the line about the cards Scryfall would not answer for');
+
   // The other answers, because a check that only ever has one result is not a check.
   const clean = await loadDeckPage({ deckLegality: true, clipboard: false },
     { ...routes, deckLegality: () => ({ format: 'commander', checked: 3, unknown: 0, notLegal: [] }) }, html);

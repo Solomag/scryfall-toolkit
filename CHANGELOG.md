@@ -50,6 +50,37 @@ shipped in. Verified by the token path being reachable at all.
 
 ---
 
+### The caveat was 2,276 pixels down a 1,018-pixel window
+
+A passing test says the panel builds the right DOM. It says nothing about whether the
+panel is readable, because the harness has no layout and no CSS: linkedom is an HTML
+parser, not a browser. So the new panel was rendered in real Chrome, with Scryfall's own
+stylesheet in front of it, in both themes.
+
+It renders correctly — 560 pixels wide, 283 tall for five cards, the list indented, the
+note under it. And with a hundred cards, which is what a Commander deck actually holds,
+the note that says what was *not* checked sat **2,276 pixels down a 1,018-pixel window**,
+at the bottom of the scroll area.
+
+That is the failure this feature exists to avoid. A legality check that qualifies its
+answer is no use if the qualification is the one part the reader never sees, and the deck
+where they would not see it is the deck where they most needed it.
+
+The note is pinned to the foot of the scrollport. Pinning it turned up a second thing
+immediately: it was dimmed with `opacity`, which fades a background as well as a text, so
+the rows behind it showed straight through the note in both themes. The dimming is a
+colour now.
+
+Both halves are checked. The test asserts the note is the last thing in the panel and is
+the paragraph that names the limits; the stylesheet check asserts it is pinned and that it
+has no `opacity` on it. Both were verified by breaking them.
+
+Worth noting what this cost and what it did not: no new tool ships, and the render was a
+scratch script that is gone. What remains is the finding, the numbers that produced it,
+and two checks that fail if the arrangement is undone.
+
+---
+
 ### The "?" opens the whole column, not a piece of it
 
 Five of the six illustrations behind the "?" were crops of a panel. Now they are the card
