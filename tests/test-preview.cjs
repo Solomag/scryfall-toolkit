@@ -998,6 +998,84 @@ async function setPlatformTest() {
     'the native paper printings are hidden on the card page');
   assert(!arenaPrints.document.querySelector('.prints-table tbody tr.current').classList.contains('stk-digital-set-hidden'),
     'the printing being viewed stays visible even when its platform is not kept');
+
+  // The mode, on the grouped table prints.js builds itself. This is the second prints
+  // surface and it has its own `needsCategories` and its own excluded set, so a check
+  // over the native rows alone passes with every mutation of that path applied.
+  //
+  // Two printings per extra set, and that is not decoration. A set with a single printing
+  // gets no group header at all — the row repeats the set name instead, which is what the
+  // table does on purpose — so a fixture with one printing each measures nothing at all.
+  // The first version of this test asked for groups that can never be there, and spent a
+  // long time failing on a table that was behaving exactly as written.
+  const borderPrinting = {
+    id: 'p4bb', name: 'Test Card', uri: 'https://scryfall.com/card/4bb/1/test-card', set: '4bb',
+    setName: 'Border Set', number: '1', lang: 'en',
+    digital: false, finishes: ['nonfoil'], prices: {}
+  };
+  const secondBorderPrinting = {
+    ...borderPrinting, id: 'p4bb2', number: '2', uri: 'https://scryfall.com/card/4bb/2/test-card'
+  };
+  const japanesePortal = {
+    id: 'ppor', name: 'Test Card', uri: 'https://scryfall.com/card/por/1/test-card', set: 'por',
+    setName: 'Portal', number: '1', lang: 'ja',
+    digital: false, finishes: ['nonfoil'], prices: {}
+  };
+  const englishPortal = {
+    ...japanesePortal, id: 'ppor2', number: '2', lang: 'en',
+    uri: 'https://scryfall.com/card/por/2/test-card'
+  };
+  // Nine units, under the table's cap of ten: past it the table stops placing groups and
+  // offers the rest behind a link, so a test reading group headers would be reading a
+  // rendering rule rather than the filter.
+  const modeRoutes = {
+    ...routes,
+    allPrints: () => ({ prints: [...prints, borderPrinting, secondBorderPrinting, japanesePortal, englishPortal], truncated: false })
+  };
+  const modePage = (surfaces, borderWhich, langWhich) => loadCardPage({
+    cards: [],
+    // Without this flag the migration runs and throws the stored object away, so the two
+    // positions that hide nothing would have passed without ever being set. Which is what
+    // they did, the first time this ran.
+    setFiltersMigrated: true,
+    setFilters: {
+      setsEnabled: true, platforms: { paper: true, arena: true, mtgo: true },
+      sets: {
+        nonTournament: false, oversized: false,
+        foreignBlackBorder: { surfaces, which: borderWhich || ['4bb', 'fbb', 'bchr'] },
+        nonEnglish: { surfaces, which: langWhich || ['portal', 'secret-lair'] }
+      },
+      prices: { usd: false, tix: false, tcg: false, cardhoarder: false },
+      tokens: true, caster: false
+    },
+    printGrouping: true, printFoldGroups: true, printFullPageLink: true
+  }, modeRoutes);
+  const modeGroups = async (surfaces, borderWhich, langWhich, count) => {
+    const page = await modePage(surfaces, borderWhich, langWhich);
+    await waitFor(() => page.document.querySelectorAll('.stk-print-group-row').length === count
+      ? true : null, `${count} print groups`);
+    return groups(page);
+  };
+  const everySetHere = ['Test Set (TST) · 4', 'Modern Horizons 3 (MH3) · 2',
+    'Border Set (4BB) · 2', 'Portal (POR) · 2'];
+
+  assertEqual(await modeGroups('off', null, null, 4), everySetHere,
+    'the grouped table keeps every set while the mode is off');
+  assertEqual(await modeGroups('prints', null, null, 2),
+    ['Test Set (TST) · 4', 'Modern Horizons 3 (MH3) · 2'],
+    '"prints" acts on this table as well — it is a prints table, which is the surface that position was asked for');
+  assertEqual(await modeGroups('sets-prints', null, null, 2),
+    ['Test Set (TST) · 4', 'Modern Horizons 3 (MH3) · 2'],
+    'and so does "sets-prints"; the two only come apart on the Sets index, which is the other half of this test');
+  assertEqual(await modeGroups('sets-prints', null, ['secret-lair'], 3),
+    ['Test Set (TST) · 4', 'Modern Horizons 3 (MH3) · 2', 'Portal (POR) · 2'],
+    'leaving Portal out of the list keeps it whole, English printing and all');
+  // The list narrowed to categories this fixture has no sets for, which is how "nothing
+  // in this category is hidden" is actually stored. An empty list is not that: the model
+  // deliberately refuses to keep one, reading it as a build that never wrote the list,
+  // and this fixture is the proof — `[]` here hides everything.
+  assertEqual(await modeGroups('sets-prints', ['fbb'], ['secret-lair'], 4), everySetHere,
+    'and the list narrowed to categories this card has no sets for hides nothing at all');
 }
 
 // The mode, on both surfaces, in all three positions.
@@ -1097,17 +1175,16 @@ async function setSurfaceModeTest() {
   assertEqual(hiddenPrints(narrow), ['/card/por/1/ja/test-card'],
     'and keeps its printing on the card page too, while Portal goes from both');
 
-  // What is NOT covered here, and it is the second of the two surfaces.
+  // The grouped table — the other prints surface, built by prints.js out of the API's
+// answer with its own needsCategories and its own excluded set — is checked in
+// setPlatformTest, next to the pages that demonstrably render one. Two things about it
+// are worth knowing before writing a check against it, because both cost an afternoon:
 //
-// The grouped table that prints.js builds from the API's answer is a different code path
-// from the native rows above: its own `needsCategories`, its own excluded set, its own
-// match on the printing's language. A check over the native rows passes with every
-// mutation of that path applied, which is the same hole 1.1.0 had. It is not closed yet
-// because the page this harness builds for the purpose does not render the groups, and
-// why it does not is not known — the same call in `setPlatformTest` builds them, and
-// nothing distinguishes the two. Guessing at a fixture until the assertion goes green
-// would be a check that passes for a reason nobody can name, which is the thing this
-// project has been getting wrong all along. It is the next piece of work, not this one.
+//   A set with a single printing gets no group header at all; the row repeats the set
+//   name instead. That is the table behaving as written, not a fault, and a fixture with
+//   one printing per extra set measures nothing.
+//   Past ten units the table stops placing groups and offers the rest behind a link, so
+//   a check reading group headers has to keep the table short.
 }
 
 async function advancedSetFilterTest() {

@@ -8,6 +8,37 @@ All releases: <https://github.com/Solomag/scryfall-toolkit/releases>
 
 ---
 
+### The gap 1.1.5 wrote down, closed
+
+1.1.5 finished with a gap it named rather than papered over: the grouped table
+`prints.js` builds from the API's answer was not covered, because the page that harness
+builds for it does not render the groups and nothing distinguished it from one that does.
+
+**It was never the harness.** It was two things the table does on purpose, which a check
+has to know before it can measure anything:
+
+- **A set with a single printing gets no group header at all.** The row repeats the set
+  name instead. The first fixture had one printing in each extra set and asked for a
+  header, so it was asking for something that can never be there — and it failed for a
+  long time on a table behaving exactly as written.
+- **Past ten units the table stops placing groups** and offers the rest behind a link, so
+  a check reading group headers has to keep the table short or it is reading a rendering
+  rule rather than the filter.
+
+The check now runs in `setPlatformTest`, beside the pages that demonstrably render, and
+covers the mode on the surface it is easy to forget exists: `prints` and `sets-prints`
+**agree** here, because both address this table, and only the Sets index tells them
+apart. Two mutations of `prints.js` are caught by it — asking the wrong surface, and
+ignoring the reader's list.
+
+One more thing the fixture had to learn, and it is in the model rather than in the test:
+**an empty category list is not "hide nothing".** `normalise` deliberately refuses to keep
+one, reading it as a build that never wrote the list, so a fixture that stores `[]` hides
+everything — the opposite of what it meant. "Nothing in this category" is stored as a
+non-empty list naming categories that are not in play.
+
+---
+
 ### The surface mode, back, and this time both surfaces answer it
 
 1.1.0 shipped a mode on the two rules that could have one: Off, Only Prints, or Sets and
@@ -76,14 +107,10 @@ page implying otherwise**.
 
 ### Where this round stopped short, and why
 
+*(Superseded by 1.1.6 below: the gap named here was closed.)*
+
 The grouped table `prints.js` builds from the API's answer — the second Prints surface,
-with its own `needsCategories` and its own excluded set — **is not covered by a check**, and
-the check that was written for it does not work. The page this harness builds for the
-purpose does not render the groups; the same call in `setPlatformTest` builds them, and
-nothing distinguishes the two. Rebuilding the fixture until the assertion went green would
-have produced a check that passes for a reason nobody can name, which is the thing this
-project has been getting wrong all along. It is written down at the end of the test and it
-is the next piece of work.
+with its own `needsCategories` and its own excluded set — **was not covered by a check**.
 
 ---
 
