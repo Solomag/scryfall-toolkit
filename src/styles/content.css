@@ -175,6 +175,16 @@ html.stk-dark #stk-edhrec :is(.stk-stat-badge,.stk-edhrec-value,.stk-salt-meter,
 @media(max-width:550px){#stk-edhrec{grid-template-columns:1fr;row-gap:6px}#stk-edhrec .stk-edhrec-item{grid-template-columns:68px minmax(0,1fr)}#stk-edhrec .stk-edhrec-salt{margin-left:0}}
 .stk-cardtrader-error{font-size:12px;opacity:.75}
 .stk-token-button,.stk-legality-button{margin:8px}
+/* The token panel. Two things about it that are worth knowing before changing either.
+   One: `max-width` is 860px and the panel never reaches it. A dialog is shrink-to-fit,
+   and a grid of `auto-fill minmax(155px,1fr)` cannot decide its own width — the column
+   count is what the width is — so it settles at three columns and 578px however many
+   tokens there are. The `100vw` half is the reachable one and does real work on a phone.
+   Two: stating the 860 as a `width` to make it bind was tried and reverted. It buys one
+   column (four instead of three) and costs a taller panel, because `1fr` widens the cells
+   it already has rather than adding rows — 2,264px of grid became 2,132px, which is not
+   the 40% less scrolling it looks like on paper. A two-token deck gets an 860px dialog
+   with two pictures in it, which is worse than the two it has now. */
 #stk-deck-tokens{max-width:min(860px,calc(100vw - 28px));max-height:85vh;overflow:auto;border:1px solid #71697a;border-radius:8px;padding:16px;background:#f7f6f8;color:#222}
 #stk-deck-tokens::backdrop{background:#101014ac}
 #stk-deck-tokens>button{float:right}

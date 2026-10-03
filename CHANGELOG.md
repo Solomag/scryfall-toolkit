@@ -81,6 +81,30 @@ and two checks that fail if the arrangement is undone.
 
 ---
 
+### The other panel was fine, which is worth writing down too
+
+The token dialog has had no test since it shipped, so it got the same render. Thirty real
+tokens, asked of Scryfall rather than written down, because a grid of grey boxes has the
+layout of a grid of pictures and none of the point.
+
+It is sound: three columns, 578 pixels, names legible because they are printed on the
+cards themselves, the Close button in its own strip to the right of the grid with no cell
+underneath it, scrolling correctly at both ends of the count.
+
+One thing looked wrong and turned out not to be. The stylesheet caps the panel at 860
+pixels and it is never that wide — a dialog is shrink-to-fit, and a grid of `auto-fill`
+columns is exactly the thing that cannot decide its own width, because the column count
+is what the width is. Stating it as a `width` so it would bind was tried: one column
+gained, no scrolling saved, and a two-token deck left with an 860-pixel dialog holding two
+pictures. Reverted, and written into the stylesheet, because it is a plausible thing to
+try and it does not work.
+
+An eyeball said the Close button overlapped the third column. Measuring said it did not:
+the grid is shortened to 488 pixels by the float, and the button sits in the 56 pixels
+beside it. Two of this release's findings were guesses that measurement refused.
+
+---
+
 ### The "?" opens the whole column, not a piece of it
 
 Five of the six illustrations behind the "?" were crops of a panel. Now they are the card
