@@ -644,8 +644,14 @@ function packagedNoticesTest() {
   }
   // The derived Scryfall snapshot says what it is and when it was taken.
   const platforms = read('assets/data/set-platforms.js');
-  assert(/Scryfall/.test(platforms) && /2026-09-25/.test(platforms),
+  // The date is not decorative: the file holds facts about Scryfall's sets as they stood on
+  // that day, and a reader who finds an entry wrong needs to know which measurement to
+  // re-run. It changed from 2026-09-25 to 2026-10-03 when every entry was re-read from a page
+  // of printings instead of a single card, which is what corrected vma.
+  assert(/Scryfall/.test(platforms) && /2026-10-03/.test(platforms),
     'the set-platform snapshot names its source and the date it was taken');
+  assert(/page of the set's printings/.test(platforms),
+    'and says how each entry was read, since reading one card is what got vma wrong');
   assert(!/oracle_text|printed_type|layout|watermark|image_uris/.test(platforms),
     'the bundled set-platform snapshot carries no Wizards card content, only set codes and platform names');
 }

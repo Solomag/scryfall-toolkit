@@ -9,10 +9,16 @@
  * are described in THIRD_PARTY_NOTICES.md. The MPL does not cover them.
  */
 // Scryfall's set index marks a set as digital but never says which client
-// carries it. A single card of the set answers that: its "games" list names
-// every platform the set was released for. This snapshot holds that answer for
-// the digital sets known on 2026-09-25 so the platform filter works on first
-// use; background.js looks up sets missing from it and caches the result.
+// carries it. A page of the set's printings answers that: each one's "games"
+// list names the platform it was released for, and they do not always agree.
+// This snapshot holds that answer for the digital sets known on 2026-10-03 so
+// the platform filter works on first use; background.js looks up sets missing
+// from it and caches the result.
+//
+// Every entry was read off a page of printings, not off one card. vma is why:
+// 320 of its printings say Magic Online and 5 say Arena as well, and nothing
+// marks those five. Read from a single card, this entry said "mtgo" and the
+// filter reported that Vintage Masters had never been on Arena.
 self.__STK_SET_PLATFORMS = {
   aa1: ["arena"],
   aa2: ["arena"],
@@ -56,7 +62,7 @@ self.__STK_SET_PLATFORMS = {
   td0: ["mtgo"],
   td2: ["mtgo"],
   tpr: ["mtgo"],
-  vma: ["mtgo"],
+  vma: ["arena", "mtgo"],
   xana: ["arena"],
   yblb: ["arena"],
   ybro: ["arena"],

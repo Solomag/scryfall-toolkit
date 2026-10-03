@@ -136,6 +136,38 @@ the ones that count were re-run reading the file directly.
 
 ---
 
+### The snapshot repeated the mistake, and nothing could have caught it
+
+Fixing the walk did not fix the answer. `assets/data/set-platforms.js` is the file of
+platform answers the extension ships, so the filter works before it has asked anything; and
+a set already in the snapshot is **never looked up again**. So `vma` kept saying `mtgo`, and
+would have kept saying it for ever, with the walk now correct and no longer involved.
+
+Measured against Scryfall: of the snapshot's 61 entries, one was wrong, and it was the same
+one. Corrected, and all 61 now agree.
+
+Which raised the question of who was checking that file, and the answer was nobody. The
+message tests substitute a two-entry snapshot — `{ysos: arena, omb: both}` — so they can
+exercise the runtime lookup, and every one of them passed with `vma` wrong in the shipped
+file. A test cannot check a file it replaces.
+
+There is now a check that reads `assets/data/set-platforms.js` itself: that it carries a
+snapshot's worth of sets rather than a sample, that every entry names at least one platform
+and lists none twice, that every entry is sorted (the walk now sorts, so the two must agree),
+that the platform names are exactly the four Scryfall states, and that `vma` lists both
+clients. Putting the wrong value back fails it, verified by doing so.
+
+The package check that reads the header wanted the old date, 2026-09-25, which was correct
+while that file held a single-card reading and is not now. It is dated 2026-10-03 and the
+check names how each entry was read, because a reader who finds an entry wrong needs to know
+which measurement to re-run — and "read one card" is the answer that was wrong.
+
+This is the fifth rule measured and the fourth found wrong, and the first one whose error
+was in a file rather than in code. Same shape: something written once by hand, never
+re-checked, and protected by tests that stood in for it.
+
+---
+
 ### `lang:!en` is not a negation, and it answered confidently
 
 The same treatment for the two rules left. Both name sets by their names, which is the one

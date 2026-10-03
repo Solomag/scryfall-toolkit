@@ -302,6 +302,12 @@ const bundledTagFixtures = {
 };
 // The platform snapshot is bundled as data; the fixture keeps a few sets and
 // leaves "mtgo" out so the runtime lookup is exercised.
+//
+// This stub is not the shipped file, and that is why the shipped file needs its own check
+// below: the message tests can only exercise a two-entry snapshot, so an entry in the real
+// one could be wrong for ever and every test would pass. The walk that reads a page fixed
+// that for sets it looks up, and a set already in the snapshot is never looked up — which is
+// how vma kept saying mtgo after the walk was fixed.
 page.context.__STK_SET_PLATFORMS = { ysos: ['arena'], omb: ['arena', 'mtgo'] };
 page.script('src/background/worker.js');
 
@@ -807,6 +813,35 @@ async function edhrecThrottleTest() {
     const cachedPlatforms = await send({ type: 'setPlatforms' }, undefined, 6000);  // same budget, see above
     assertEqual(cachedPlatforms.data, platforms.data, 'the platform index answers from the stored index');
     assertEqual(gameSearches(), 1, 'a stored platform index performs no further search');
+
+    console.log('background.js: the shipped platform snapshot');
+    // The file the extension actually ships, read rather than stubbed. Every answer in it
+    // was measured against Scryfall on 2026-10-03; these are the properties of that
+    // measurement, and they are what keeps a hand-edited file honest between runs.
+    {
+      const fs = require('node:fs');
+      const path = require('node:path');
+      const shipped = { self: {} };
+      new Function('self', fs.readFileSync(
+        path.join(__dirname, '..', 'assets', 'data', 'set-platforms.js'), 'utf8'))(shipped.self);
+      const table = shipped.self.__STK_SET_PLATFORMS;
+      const codes = Object.keys(table);
+      assert(codes.length > 20, 'the snapshot carries a snapshot\'s worth of sets, not a sample (' + codes.length + ')');
+      assertEqual(codes.filter(c => !Array.isArray(table[c]) || !table[c].length), [],
+        'and every entry names at least one platform');
+      assertEqual(codes.filter(c => new Set(table[c]).size !== table[c].length), [],
+        'with no platform listed twice');
+      // The entry that was wrong: vma has 320 printings on Magic Online and 5 on Arena as
+      // well, and the snapshot said mtgo. A set in the snapshot is never looked up again,
+      // so nothing else would have corrected it.
+      assertEqual(table.vma, ['arena', 'mtgo'],
+        'Vintage Masters lists both clients, which is what its printings say');
+      assertEqual(codes.filter(c => JSON.stringify(table[c]) !== JSON.stringify(table[c].slice().sort())), [],
+        'every entry is sorted, because the walk now sorts and the two must agree');
+      assertEqual([...new Set(codes.flatMap(c => table[c]))].sort(),
+        ['arena', 'astral', 'mtgo', 'sega'],
+        'and the platform names are exactly the four Scryfall states');
+    }
 
     console.log('background.js: finishes message');
     const finishes = await send({ type: 'finishes', ids: [FIN_ID_1, FIN_ID_2] });
