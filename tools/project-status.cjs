@@ -177,10 +177,78 @@ function check() {
     }
   }
 
+  // The store screenshots, and the one number the listing quotes about them.
+  //
+  // The listing says the five tiles come from one capture of a stated size. That number
+  // went stale for five settings and nobody noticed, because it was prose: the settings
+  // page grew, the tiles were re-cut, and the document still said the height before. A
+  // reviewer comparing the description against the pictures finds the mismatch, and so
+  // does nobody else, because the number is only ever read when the page changes.
+  //
+  // The height is in the PNG itself — bytes 16 to 23 of any PNG are the width and the
+  // height as two big-endian 32-bit integers — so this does not compare a document with a
+  // document, it compares the document with the artefact it describes. The tile count is
+  // checked the same way, because a fifth tile that stopped being produced would leave a
+  // listing pointing at files that do not exist.
+  {
+    const LISTING = 'docs/CHROME_WEB_STORE_LISTING.md';
+    const listing = read(LISTING);
+    const full = 'store-assets/settings-page-full.png';
+    const size = pngSize(full);
+    if (!size) {
+      problems.push(`${LISTING}: ${full} is missing or is not a PNG, so the height cannot be confirmed`);
+    } else {
+      const quoted = listing.match(/settings-page-full\.png`,\s*(\d+)[×x](\d+)/);
+      if (!quoted) {
+        problems.push(`${LISTING}: no longer states the size of ${full}, and that size is how a reader knows the tiles come from one capture`);
+      } else if (Number(quoted[2]) !== size.height) {
+        problems.push(`${LISTING}: says the capture is ${quoted[1]}x${quoted[2]}, and it is ${size.width}x${size.height}. Re-cut the tiles and fix the row descriptions, because moving one section into the next tile is the whole failure here.`);
+      } else if (Number(quoted[1]) !== size.width) {
+        problems.push(`${LISTING}: says the capture is ${size.height === size.width ? 'a square' : quoted[1]} wide and the PNG is ${size.width}`);
+      }
+    }
+    // Each of the tiles the listing names has to exist, and each has to be the size the
+    // store takes. A listing that points at a file nobody produced is worse than one that
+    // points at an old one: the reviewer finds out at upload.
+    const tiles = [...new Set([...listing.matchAll(/store-assets\/(0\d-settings-0\d-of-\d\d)\.png/g)]
+      .map(m => m[1]))];
+    for (const stem of tiles) {
+      const found = pngSize('store-assets/' + stem + '.png');
+      if (!found) problems.push(`${LISTING}: names ${stem}.png and store-assets/ does not have it`);
+      else if (found.width !== 1280 || found.height !== 800) {
+        problems.push(`${LISTING}: ${stem}.png is ${found.width}x${found.height}; the store takes 1280x800`);
+      }
+    }
+    // The tiles have to be one capture cut into a whole number of pieces. The store takes
+    // at most five screenshots, so a sixth is a submission that cannot be uploaded, and a
+    // denominator that does not match the count means one of them was never named.
+    const totals = new Set(tiles.map(stem => Number(stem.match(/-of-(\d+)$/)[1])));
+    if (totals.size !== 1) {
+      problems.push(`${LISTING}: the tiles are numbered as ${tiles.join(' and ')}, which is not one capture cut into five`);
+    } else if (tiles.length !== [...totals][0]) {
+      problems.push(`${LISTING}: the tiles say "of ${[...totals][0]}" and ${tiles.length} of them are named, so one was never made or never listed`);
+    } else if (tiles.length > 5) {
+      problems.push(`${LISTING}: ${tiles.length} tiles are named and the store takes at most 5 screenshots`);
+    }
+  }
+
   return { problems, notes };
 }
 
-module.exports = { FACTS, CURRENT_STATE, check };
+// The width and height out of a PNG's IHDR chunk, which is fixed at the front of every
+// PNG: 8 signature bytes, then the chunk length and type, then width and height as
+// big-endian 32-bit integers. Returns null when the file is absent or is not a PNG, which
+// the caller reports rather than treats as a size of zero.
+function pngSize(file) {
+  let bytes;
+  try { bytes = fs.readFileSync(path.join(ROOT, file)); } catch (e) { return null; }
+  const signature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  if (bytes.length < 24 || !bytes.subarray(0, 8).equals(signature)) return null;
+  if (bytes.subarray(12, 16).toString('latin1') !== 'IHDR') return null;
+  return { width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) };
+}
+
+module.exports = { FACTS, CURRENT_STATE, check, pngSize };
 
 if (require.main === module) {
   const { problems, notes } = check();

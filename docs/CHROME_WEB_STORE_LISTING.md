@@ -250,16 +250,24 @@ Ready in `store-assets/`, each exactly **1280×800** (PNG), in English:
 
 | File | What it shows |
 | --- | --- |
-| `store-assets/01-settings-01-of-05.png` | the header, General (settings language, theme), Tags with its per-tag switches, CardClip, and the Hide extras heading opening |
-| `store-assets/02-settings-02-of-05.png` | Hide extras in full — the master switch, the junk rules, Foreign Black Border and non-English with their category lists, the platform block, and the four price switches |
-| `store-assets/03-settings-03-of-05.png` | the end of the price switches with the Caster marker and deck tokens, then Additional info: EDHREC deck usage and Salt Meter, CardTrader with its token field |
-| `store-assets/04-settings-04-of-05.png` | Legality and the format grid, then Scryfall Deckbuilder with the opt-in tools and the host-access button |
-| `store-assets/05-settings-05-of-05.png` | the deck clean-up block, Prints, Experimental, and Credits and third-party projects |
+| `store-assets/01-settings-01-of-05.png` | the header, General (settings language, theme), Tags with its per-tag switches, CardClip with its export format, and the Hide extras heading opening with its master switch |
+| `store-assets/02-settings-02-of-05.png` | Hide extras continued — what counts as junk (non-tournament sets, oversized cards), Foreign Black Border and Non-English printings as mode selects over their category lists, the experimental platform block, and the price list starting |
+| `store-assets/03-settings-03-of-05.png` | the end of the price list with the Caster indicator and the deck token switch, then Additional info: EDHREC deck usage and Salt Meter, and CardTrader with its EUR source and token field |
+| `store-assets/04-settings-04-of-05.png` | the end of the CardTrader token field, Legality with the format grid, and Scryfall Deckbuilder with the Commander legality check and the two opt-in deck tools |
+| `store-assets/05-settings-05-of-05.png` | the tail of the deck tools with the host-access button, the deck clean-up block, Prints, Experimental, and Credits and third-party projects |
 
 All five come from one real capture of the settings page
-(`store-assets/settings-page-full.png`, 1280×5712), so nothing is repeated or cropped
+(`store-assets/settings-page-full.png`, 1280×5827), so nothing is repeated or cropped
 away between them. Each tile is scaled uniformly to 800 rows and the margins continue
 the page's own colour, so no screenshot is stretched.
+
+**The heights move together, so a small change moves all five pictures.** The tile height
+is the page height divided by five and rounded up, so the five settings added since the
+pictures were last taken did not push one section down into the next tile — they changed
+the band for every tile, and moved the host-access button out of tile four and into tile
+five without a line of the settings page changing name. The row descriptions above were
+read off the pictures again after 1.2.0 for exactly that reason, and the height quoted in
+this document is checked against the PNG rather than trusted.
 
 **The row descriptions are read off the pictures, and they go stale the moment the page
 changes.** Two rounds of refactoring moved everything between them — the pictures went from
