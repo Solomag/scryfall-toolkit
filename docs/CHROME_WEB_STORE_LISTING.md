@@ -73,6 +73,13 @@ show, and the two had been disagreeing since before the extension had a release.
 > commander's colour identity, the hundred-card limit, or the one-copy rule. Better to
 > have said that than to have written a check that implies it settled those.
 >
+> It also keeps Scryfall's own word for why, because that is not one word: across every
+> format Scryfall says a card is legal, not legal, banned or restricted. A deck with
+> Ancestral Recall in it reads "banned in Commander" rather than a flat "not legal", and
+> banned cards are listed above the ones that are simply outside the format. A card
+> Scryfall has no verdict on is counted apart again, because no verdict is not a verdict of
+> "legal".
+>
 > **In the deck editor.** Three more optional tools, all off by default: a Clean Up button
 > that sorts the deck and puts lands back in their column, EDHREC's own card lists for your
 > commander, and a Scryfall search that adds cards without leaving the editor.

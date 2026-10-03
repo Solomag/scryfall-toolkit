@@ -168,7 +168,15 @@ async function fetchMock(url, init) {
         penny: { commander: 'not_legal', penny: 'legal' },
         // No `commander` key at all: Scryfall said nothing about this one, which is not
         // the same as it being legal, and the check keeps the two apart.
-        por: { penny: 'legal' }
+        por: { penny: 'legal' },
+        // Black Lotus and Ancestral Recall are both banned in Commander. Scryfall uses four
+        // words across all of `legalities` - legal, not_legal, banned, restricted - and
+        // only the first two of them were being acted on, so a banned card was being filed
+        // as a silence. The sets are VMA; the numbers are the two banned printings.
+        vma: { commander: 'banned' },
+        // A verdict outside the four. A value this build has never seen is not one to
+        // invent a meaning for, so it is counted as no answer and nothing else.
+        odd: { commander: 'perhaps' }
       };
       return jsonResponse({ data: identifiers.map(item => ({
         id: 'deck-card-' + item.set + '-' + item.collector_number,
@@ -401,6 +409,47 @@ async function edhrecThrottleTest() {
       assertEqual(verdict.data.unknown, 1, 'and the card it said nothing about is counted apart');
     }
     {
+      // Scryfall does not have two verdicts, it has four: across every format in
+      // `legalities` it uses legal, not_legal, banned and restricted, and for Commander
+      // the two that are not "you may play this" are not_legal and banned. Black Lotus
+      // and Ancestral Recall are both banned in Commander and both say so.
+      //
+      // The first version of the branch acted on legal and not_legal and filed everything
+      // else under "Scryfall said nothing" - which is the one thing a card Scryfall has an
+      // opinion about must never be filed as. A banned card came out as an unknown, and
+      // the two most iconic cards in the format were invisible to the check built to
+      // catch them.
+      const banned = await send({
+        type: 'deckLegality',
+        entries: [{ set: 'vma', collector_number: '4' }, { set: 'vma', collector_number: '1' }]
+      });
+      assertEqual(banned.data.notLegal.length, 2, 'a card Scryfall calls banned is on the list');
+      assertEqual(banned.data.notLegal.map(card => card.verdict), ['banned', 'banned'],
+        'and it keeps the word Scryfall used, which is not "not legal"');
+      assertEqual(banned.data.unknown, 0, 'a banned card is an answer, not a silence');
+      assert(/vma/.test(banned.data.notLegal[0].set), 'with the printing it was found in');
+      // And it comes first: a card you cannot play at all in this format is a harder stop
+      // than one that is simply outside it.
+      const mixedVerdicts = await send({
+        type: 'deckLegality',
+        entries: [
+          { set: 'penny', collector_number: '1' },
+          { set: 'vma', collector_number: '4' },
+          { set: 'mh3', collector_number: '42' }
+        ]
+      });
+      assertEqual(mixedVerdicts.data.notLegal.map(card => card.verdict), ['banned', 'not_legal'],
+        'banned cards sort above not-legal ones whatever their names are');
+      // A verdict this build has never seen is still counted as no answer: a value not
+      // named in the API documentation is not one to invent a meaning for.
+      const odd = await send({
+        type: 'deckLegality',
+        entries: [{ set: 'odd', collector_number: '1' }]
+      });
+      assertEqual(odd.data.notLegal, [], 'a verdict outside Scryfall\'s vocabulary is not acted on');
+      assertEqual(odd.data.unknown, 1, 'and is counted as no answer rather than guessed at');
+    }
+    {
       const mixed = await send({
         type: 'deckLegality',
         entries: [
@@ -420,6 +469,21 @@ async function edhrecThrottleTest() {
       const bad = await send({ type: 'deckLegality', entries: [{ set: 'mh3', collector_number: 'not a number' }] });
       assertEqual(bad, { ok: false, error: 'Invalid deck cards' },
         'a malformed collector number is refused rather than passed on');
+      // Scryfall refuses a set code outside three to six characters, and every one of the
+      // 1,053 codes in /sets is inside that, so anything outside it is a malformed entry
+      // and not a set. The bound used to be one to sixteen, which let those through to a
+      // 400 from the API instead of failing here.
+      for (const set of ['mh', 'mh31234']) {
+        const short = await send({ type: 'deckLegality', entries: [{ set, collector_number: '1' }] });
+        assertEqual(short, { ok: false, error: 'Invalid deck cards' },
+          'a set code Scryfall would refuse (' + set + ') is refused here instead');
+      }
+      for (const set of ['mh3', 'p02', '2xm', 'penn', 'cmr'])
+        assertEqual((await send({ type: 'deckLegality', entries: [{ set, collector_number: '1' }] })).ok, true,
+          'a set code Scryfall accepts (' + set + ') goes through');
+      // The star a card with no printed collector number carries.
+      const starred = await send({ type: 'deckLegality', entries: [{ set: 'mh3', collector_number: '★' }] });
+      assertEqual(starred.ok, true, 'and a card whose collector number is a star is asked about');
       const tooMany = await send({ type: 'deckLegality', entries: Array.from({ length: 151 }, () => ({ set: 'mh3', collector_number: '1' })) });
       assertEqual(tooMany, { ok: false, error: 'Invalid deck cards' },
         'and a deck longer than a hundred and fifty cards is refused');

@@ -200,6 +200,10 @@ html.stk-dark #stk-deck-tokens{background:#242526;color:#e6e3df}
 #stk-deck-legality::backdrop{background:#101014ac}
 #stk-deck-legality>button{float:right}
 #stk-deck-legality h2{margin:0 80px 14px 0}
+/* Scryfall's own verdict, where it is not simply "outside this format". Dimmed rather than
+   bold: the card name is the thing being read and the verdict is a qualifier on it, and a
+   badge loud enough to compete with the name would be a badge about the wrong thing. */
+.stk-legality-verdict{opacity:.72;font-size:12px}
 .stk-legality-note{margin:0 0 9px;font-size:13px;line-height:1.45}
 .stk-legality-list{margin:0 0 12px;padding-left:22px}
 .stk-legality-list li{margin:3px 0}

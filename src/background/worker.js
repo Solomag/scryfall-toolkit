@@ -442,8 +442,14 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
     // carries everything both of them need: `all_parts` for the tokens, `legalities` for
     // the check. The check needs no endpoint this project did not already call.
     async function deckCards(entries) {
+      // A set code of three to six characters, which is what Scryfall says it accepts - it
+      // refused a two-letter code with "a `set` identifier must be between 3-6 characters" -
+      // and also what all 1,053 codes in /sets are. The bound used to be one to sixteen, so
+      // it accepted values Scryfall rejects and the failure arrived as a 400 from the API
+      // rather than as this error. The collector number keeps the star, because cards with
+      // no printed number have one.
       if (!Array.isArray(entries) || entries.length > 150 || entries.some(item =>
-        !/^[a-z0-9_-]{1,16}$/i.test(item?.set || '') ||
+        !/^[a-z0-9_-]{3,6}$/i.test(item?.set || '') ||
         !/^[a-z0-9★-]{1,24}$/i.test(item?.collector_number || ''))) throw new Error('Invalid deck cards');
       const collect = async identifiers => {
         const output = [];
@@ -488,19 +494,36 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
     if (message.type === 'deckLegality') {
       const FORMAT = 'commander';
       const { cards } = await deckCards(message.entries);
-      // A card Scryfall says nothing about is not a card it calls legal. Kept apart from
-      // the rest rather than folded into either list, because "not_legal" and "no answer"
-      // are different findings and a reader acting on them does different things.
+      // Scryfall's whole vocabulary for one format, read off live answers rather than
+      // assumed: `legal`, `not_legal`, `banned` and `restricted` are the four values that
+      // come back across every format in `legalities`, and for Commander the two that are
+      // not "you may play this" are `not_legal` and `banned` - Black Lotus and Ancestral
+      // Recall are both banned in Commander and both say so.
+      //
+      // The first version of this branch acted on `legal` and `not_legal` and filed
+      // everything else under "Scryfall said nothing". That is the one thing a card Scryfall
+      // has an opinion about must never be filed as: a banned card came out as an
+      // unknown, and a reader with Ancestral Recall in the deck was told Scryfall had no
+      // answer about it, which is the opposite of the answer Scryfall gave. Two of the most
+      // iconic cards in the format were invisible to the check built to catch them.
+      //
+      // Anything outside this set is still counted as no answer, because a value this
+      // build has never seen is not one to invent a meaning for.
+      const REFUSED = new Set(['not_legal', 'banned', 'restricted']);
+      // Kept apart from the rest rather than folded into either list, because "refused" and
+      // "no answer" are different findings and a reader acting on them does different
+      // things: one replaces a card, the other is a card Scryfall has no verdict on.
       const notLegal = [];
       let unknown = 0;
       for (const card of cards) {
         const verdict = card.legalities?.[FORMAT];
         if (verdict === 'legal') continue;
-        if (verdict !== 'not_legal') { unknown += 1; continue; }
+        if (!REFUSED.has(verdict)) { unknown += 1; continue; }
         notLegal.push({
           name: card.name,
           set: card.set,
           collector_number: card.collector_number,
+          verdict,
           uri: card.scryfall_uri
         });
       }
@@ -510,7 +533,12 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
         unknown,
         notLegal: notLegal
           .filter(card => /^https:\/\/scryfall\.com\//.test(card.uri || ''))
-          .sort((a, b) => a.name.localeCompare(b.name))
+          // Banned first, then not legal: a card you cannot play at all in this format is
+          // a harder stop than one that is simply outside it, and the list is sorted by
+          // name inside each so the reader can find their own card either way.
+          .sort((a, b) => (a.verdict === b.verdict
+            ? a.name.localeCompare(b.name)
+            : (a.verdict === 'banned' ? -1 : 1)))
       };
     }
     if (message.type === 'edhrecRecs') {

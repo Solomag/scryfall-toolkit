@@ -165,6 +165,11 @@ trusting it — so the panel reports one thing well and prints its own boundary 
 A card Scryfall says nothing about is counted apart from a card it calls illegal, because
 the two call for different actions.
 
+Scryfall's own word is kept, because it is not one word: across every format it says
+`legal`, `not_legal`, `banned` or `restricted`. A deck with Ancestral Recall in it reads
+"banned in Commander" rather than a paraphrase, and banned cards are listed above the ones
+that are merely outside the format.
+
 **Clean up improver** *(off by default)*. The first Shambleshark deck module to be
 ported. When a deck is cleaned up it moves lands out of the nonland column and nonlands
 out of the land one, and it can sort every column by card type or by name and head each

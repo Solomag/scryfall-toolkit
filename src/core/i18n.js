@@ -148,6 +148,8 @@ const resolveSettingsLanguage = value => {
     'Scryfall не ответил ни по одной карте.': 'Scryfall did not answer about a single card.',
     'Все карты колоды Scryfall считает легальными в Commander.': 'Scryfall counts every card in the deck as legal in Commander.',
     'Scryfall считает эти карты нелегальными в Commander:': 'Scryfall counts these cards as not legal in Commander:',
+    'запрещена в Commander': 'banned in Commander',
+    'ограничена в Commander': 'restricted in Commander',
     'Про %s карт Scryfall не сказал ничего; это не то же самое, что «легально».': 'Scryfall said nothing about %s cards; that is not the same as “legal”.',
     'Проверена только легальность каждой карты отдельно. Цветовая идентичность командира, ограничение в 100 карт и правило одной копии для карт с надписью «только Commander» не проверялись.': 'Only each card’s legality on its own was checked. The commander’s colour identity, the hundred-card limit and the one-copy rule for cards marked “Commander only” were not.',
     'Не удалось проверить легальность.': 'Could not check legality.',

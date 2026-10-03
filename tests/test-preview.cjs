@@ -121,7 +121,12 @@ async function deckLegalityTest() {
   </div></body></html>`;
   const answer = {
     format: 'commander', checked: 3, unknown: 1,
-    notLegal: [{ name: 'Nineteen Dollar Card', set: 'penny', collector_number: '1', uri: 'https://scryfall.com/card/penny/1/nineteen-dollar-card' }]
+    notLegal: [
+      { name: 'Nineteen Dollar Card', set: 'penny', collector_number: '1', verdict: 'not_legal',
+        uri: 'https://scryfall.com/card/penny/1/nineteen-dollar-card' },
+      { name: 'Ancestral Recall', set: 'vma', collector_number: '1', verdict: 'banned',
+        uri: 'https://scryfall.com/card/vma/1/ancestral-recall' }
+    ]
   };
   const sent = [];
   const page = await loadDeckPage({ deckLegality: true, clipboard: false },
@@ -146,6 +151,18 @@ async function deckLegalityTest() {
   const text = dialog.textContent;
   assert(/Nineteen Dollar Card/.test(text), 'the card Scryfall calls not legal is named');
   assert(/PENNY #1/.test(text), 'with its set and number, so two printings of one name are told apart');
+  // Scryfall has four verdicts, not two, and a banned card is a different problem from a
+  // card that was simply never legal here. Paraphrasing both as "not legal" would throw
+  // away a distinction Scryfall took the trouble to make - and a reader who was told only
+  // "not legal" about Ancestral Recall would go looking for a different printing of it.
+  assert(/Ancestral Recall/.test(text) && /VMA #1/.test(text), 'a banned card is named too');
+  assert(/banned in Commander/.test(text), 'and says Scryfall called it banned, in the reader\'s words');
+  // Per row, not across the dialog: the two cards are both on the list and one row after
+  // another, so a whole-dialog match would pair every card with every verdict.
+  const rows = [...page.document.querySelectorAll('.stk-legality-list li')];
+  const rowFor = needle => rows.find(row => row.textContent.includes(needle));
+  assert(!/banned/.test(rowFor('Nineteen Dollar Card').textContent),
+    'and a card that is merely not legal is not given the banned wording');
   assert(!/Test Card(?![^\n]*#42)|Test Card —/.test(text.replace(/\s+/g, ' ')) || /mh3|MH3/.test(text),
     'and a card Scryfall calls legal is not on the list');
   // The limits, which is the half a list of card names cannot give. In the page's own

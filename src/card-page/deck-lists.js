@@ -147,6 +147,16 @@
   // card in turn is the check that guesses, which is the thing this project has declined
   // to ship three times; so the panel names the rules it did not apply, where it can be
   // read before the reader acts on a list.
+  // Scryfall's other verdicts, in the reader's words rather than the API's. Read off
+  // live answers: Black Lotus and Ancestral Recall both say `banned` for Commander, and a
+  // card restricted in a format says `restricted` - Scryfall uses four words across all of
+  // `legalities`, and a panel that called all three of them "not legal" would be
+  // paraphrasing a distinction Scryfall took the trouble to make.
+  const VERDICT_TEXT = {
+    banned: t => t('запрещена в Commander'),
+    restricted: t => t('ограничена в Commander')
+  };
+
   function initDeckLegality() {
     const entries = deckEntries();
     const place = document.querySelector('#main .sidebar') || document.querySelector('#main .deck-list')?.parentElement;
@@ -205,6 +215,16 @@
             link.textContent = card.name;
             item.append(link, document.createTextNode(
               ' — ' + (card.set || '').toUpperCase() + ' #' + card.collector_number));
+            // Scryfall's own word for why, when it is not simply "outside this format".
+            // A banned card is a different problem from a card that was never legal here,
+            // and "not legal" alone would say so misleadingly about both.
+            const why = VERDICT_TEXT[card.verdict];
+            if (why) {
+              const mark = document.createElement('span');
+              mark.className = 'stk-legality-verdict';
+              mark.textContent = ' · ' + why(t);
+              item.append(mark);
+            }
             list.append(item);
           }
           content.append(line(t('Scryfall считает эти карты нелегальными в Commander:')));

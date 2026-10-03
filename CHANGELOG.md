@@ -37,6 +37,45 @@ A card Scryfall says nothing about is counted **apart** from a card it calls ill
 "No answer" is not "legal", and a reader who acted on the difference would swap a card
 that was fine.
 
+---
+
+### Scryfall has four verdicts, and the check was written for two
+
+Every test of this feature so far answered the worker's question with a fixture that
+answers it, which proves the branch parses the shape it was written for and nothing about
+whether that shape is the one Scryfall sends. So the branch was run against Scryfall for
+real, with a deck read out of a search rather than written down.
+
+The vocabulary came back at once: Black Lotus is **`banned`** in Commander. Not
+`not_legal` — banned. Across every format in `legalities`, Scryfall uses four words:
+`legal`, `not_legal`, `banned` and `restricted`. The branch acted on the first two and
+filed everything else under "Scryfall said nothing".
+
+Which means **the two most iconic cards in the format were invisible to the check built to
+catch them**, and a reader with Ancestral Recall in their deck was told Scryfall had no
+answer about it — the opposite of the answer Scryfall gave, arrived at by having a
+dictionary with two entries instead of four.
+
+Fixed, and the panel now says which: `banned in Commander`, `restricted in Commander`.
+Paraphrasing all three refusals as "not legal" would throw away a distinction Scryfall took
+the trouble to make, and a reader told only "not legal" about Ancestral Recall would go
+looking for a different printing of it. Banned cards sort above not-legal ones, because a
+card you cannot play at all in this format is a harder stop than one that is simply outside
+it. A verdict outside Scryfall's four is still counted as no answer: a value this build has
+never seen is not one to invent a meaning for.
+
+**The set-code bound was looser than Scryfall's own.** Scryfall refused a two-letter set
+code with "a `set` identifier must be between 3-6 characters". The worker was accepting one
+to sixteen, so a malformed entry got through the check that exists to catch malformed
+entries and failed later as a 400 from the API. All 1,053 set codes in `/sets` are three to
+six characters, so the bound is now what Scryfall says it is.
+
+And the fixture for this test was written from memory: it listed Force of Will and Dark
+Ritual as not legal in Commander, and both are legal. Which is why the live script prints
+its verdicts rather than asserting them — a fixture written from memory about the format is
+a fixture that is wrong about the format, and it was wrong in the direction that would have
+hidden the bug.
+
 ### The token dialog had no test and could not have had one
 
 Writing the first test for the new deck panel failed on `showModal is not a function`, and
