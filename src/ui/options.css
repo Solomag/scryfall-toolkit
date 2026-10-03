@@ -48,7 +48,12 @@ button{background:#473b50;color:#f1e8f3;border:1px solid #88758d;border-radius:4
    reader who is told which hosts are missing is told where to press. */
 #grantDeckHosts.stk-needs-grant{border-color:#c9a227;color:#ffd76a;background:#2e2a1c}
 .shot-button:hover,.shot-button:focus-visible{background:#33313a;color:#fff;border-color:#9b93a8}
-.shot-dialog{width:min(920px,92vw);max-height:88vh;padding:14px 14px 10px;background:#1d1d23;color:#e8e4ee;border:1px solid #55505e;border-radius:8px}
+/* The dialog scrolls. An illustration can be taller than the window — a card page's
+   right column with a card that has printings in four dozen sets is several thousand
+   pixels — and without this the image simply runs off the bottom of the dialog with no
+   way to reach the rest of it. The bottom padding is kept off the scroll so the caption
+   ends flush, and the caption itself is outside the scroller so it stays put. */
+.shot-dialog{width:min(920px,92vw);max-height:88vh;overflow:auto;padding:14px 14px 10px;background:#1d1d23;color:#e8e4ee;border:1px solid #55505e;border-radius:8px}
 .shot-dialog::backdrop{background:rgba(8,8,12,.72)}
 .shot-dialog-close{float:right;margin:0}
 .shot-dialog-close button{border:1px solid #6b6474;background:#24252b;color:#cfc8d8;border-radius:4px;font-size:16px;line-height:1;padding:4px 9px;cursor:pointer}

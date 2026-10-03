@@ -8,6 +8,51 @@ All releases: <https://github.com/Solomag/scryfall-toolkit/releases>
 
 ---
 
+### The "?" opens the whole column, not a piece of it
+
+Five of the six illustrations behind the "?" were crops of a panel. Now they are the card
+page's whole right-hand column: the printing's banner, the prints table with its price
+columns, and the tag tables underneath it.
+
+A crop says what a panel looks like and nothing about where it goes. It cannot show that
+the tag tables sit under the prints, that a panel is a panel and not part of Scryfall's own
+page, or what the column looks like once a rule has taken rows out of it — which is the
+question the "Hide extras" picture exists to answer. The arrangement is the thing a reader
+is trying to picture, and a crop is not it.
+
+**Two things had to be in the crop that a first guess leaves out, and both were found by
+looking at the pictures.** Scryfall gives `.prints-current` a negative top margin, so the
+printing's name hangs twenty pixels above its own parent and cropping the parent's box
+slices that name in half across the top. And `.prints` is capped at 400px by their CSS
+while its table is wider, so cropping the container cuts the last price column in half —
+a price with one digit, which reads as a broken table rather than as a crop.
+
+**And the column is `.prints`, not `.card-text`.** The first guess was the element whose
+class name mentions the card; `.card-text` is the card's rules and its legality block,
+which is the *other* column. Naming both gives a picture of the whole top of the page with
+a strip of the artwork down its left edge, which is the crop problem again.
+
+### The dialog could not show a tall picture, which is why these were crops
+
+Reading the stylesheet while working on the above turned up a plain defect: `.shot-dialog`
+carried `max-height: 88vh` and nothing else, so a picture taller than the window simply
+ran off the bottom of the dialog with no way to reach the rest of it. No picture was tall
+enough to show it, because every one of them was a crop.
+
+That is a check of its own now. The six pictures are between three hundred and seventeen
+hundred pixels tall, and the bound that says "this is not a page" is now read out of the
+tool that takes them rather than written beside them, so the two cannot drift apart.
+
+### One fixture was still writing a shape the settings page stopped writing
+
+`hide-extra.png` was still asking for `foreignBlackBorder: { on: true }`, the boolean that
+1.1.5 replaced with a surface. It worked — `normalise` maps the old boolean onto
+'sets-prints' — so the picture was right while the tool described a shape nothing produces
+any more. A fixture that only works through the compatibility path is a fixture that stops
+working the day that path goes, and it is now written the way the card page reads it.
+
+---
+
 ### The gap 1.1.5 wrote down, closed
 
 1.1.5 finished with a gap it named rather than papered over: the grouped table

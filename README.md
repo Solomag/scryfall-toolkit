@@ -38,9 +38,10 @@ No card artwork appears in any of these pictures, and none ships inside the exte
 ## The settings page
 
 The settings page, top to bottom. Every section that changes what a Scryfall page shows
-carries a **?** beside its heading: press it and the panel that switch turns on opens over
-the page. The pictures are cut from a real card page, so what you see behind the "?" is
-the panel the switch turns on.
+carries a **?** beside its heading: press it and a real Scryfall card page opens over the
+settings, with the panel that switch turns on where it sits on the page. Five of the six
+are the whole right-hand column — the prints table and the tag tables under it — because
+a cut-out of one panel says what it looks like and nothing about where it goes.
 
 ![Scryfall Toolkit settings page: General, Tags, CardClip, and the "?" beside each heading](store-assets/readme-settings.png)
 

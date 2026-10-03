@@ -209,12 +209,18 @@ chrome.storage.local.get(defaults, values => {
   // pushed the settings they explain off the bottom of the page, and the point of
   // the settings page is the settings.
   //
+  // Five of the six are the card page's whole right-hand column rather than a panel cut
+  // out of it. A crop says what a panel looks like and nothing about where it goes; the
+  // column says where the tags sit relative to the prints, what the page looks like once
+  // a rule has taken rows out of it, and that the panel is a panel and not part of
+  // Scryfall's own page. They are taller than a window, which is why the dialog scrolls.
+  //
   // The captions are written in Russian and run through the same translator as the
   // rest of the page, because this text is created after the page is localized.
   const SHOTS = {
     tags: {
       src: '../../assets/shots/tags.png',
-      caption: 'Так это выглядит на странице карты: таблицы тегов карты и тегов арта.'
+      caption: 'Вся правая колонка страницы карты: таблица изданий, под ней таблицы тегов карты и тегов арта.'
     },
     cardclip: {
       src: '../../assets/shots/cardclip.png',
@@ -222,19 +228,19 @@ chrome.storage.local.get(defaults, values => {
     },
     'hide-extra': {
       src: '../../assets/shots/hide-extra.png',
-      caption: 'Таблица изданий без цифровых сетов и без цен в валютах, которые вы скрыли.'
+      caption: 'Та же колонка без цифровых наборов и без цен в долларах и билетах: остались бумажные наборы и цена в евро.'
     },
     additional: {
       src: '../../assets/shots/additional.png',
-      caption: 'Отдельный столбец отделки у каждого издания: Nonfoil, Foil, Etched.'
+      caption: 'В той же колонке у каждого издания появляется свой столбец отделки: Nonfoil, Foil, Etched.'
     },
     legality: {
       src: '../../assets/shots/legality.png',
-      caption: 'Форматы, которых нет на странице карты Scryfall, добавлены в блок легальности.'
+      caption: 'Колонка страницы карты, у которой добавлены форматы, которых нет у Scryfall.'
     },
     prints: {
       src: '../../assets/shots/prints.png',
-      caption: 'Все издания собраны в одной таблице и сгруппированы по сетам.'
+      caption: 'Вся колонка: все издания собраны в одной таблице и сгруппированы по сетам.'
     }
   };
   const shotDialog = document.getElementById('shotDialog');

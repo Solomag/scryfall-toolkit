@@ -53,6 +53,38 @@ const STAGE_CSS = `
   #stk-tags .stk-tag-icon svg { width: 16px; height: 16px; }
 `;
 
+// The card page's right-hand column: the prints table with its price columns, and every
+// panel this extension adds under it — the tag tables go inside `.prints` on Scryfall's
+// own page, so they come with it. A shot may name this instead of a panel, and the
+// picture is then the column as the reader sees it rather than one piece of it.
+//
+// The reason to prefer it is the one the crop gave away. A crop of a panel is a panel
+// floating with nothing around it: you cannot tell whether the tags sit above the prints
+// or below them, where the extension puts its panel at all, or what the column looks like
+// when a rule has taken rows out of it. The column is the arrangement, and the arrangement
+// is the thing a reader is trying to picture.
+//
+// It is `.prints` and not `.card-text`, and getting that wrong is instructive: `.card-text`
+// is the card's name, its rules and the legality block, which is the *other* column, and
+// the first guess at "the right-hand column" is the element whose class name mentions the
+// card rather than the column. `.card-text` and `.prints` are siblings under
+// `.inner-flex`; naming both gives a picture of the whole top of the page with a strip of
+// the artwork down its left edge, which is the crop problem all over again.
+// `.prints-current` is in the union because Scryfall gives it `margin-top: -20px`: it
+// deliberately hangs above its own parent, so cropping the parent's border box cuts the
+// printing's name in half across the top of the picture. A picture whose first line of
+// text is sliced is a picture of a mistake, and the mistake would be in the tool rather
+// than on the page.
+// The table is in the union for the same reason the banner is: `.prints` is capped at
+// 400px by Scryfall's own CSS while its table is wider than that, so cropping the
+// container slices the last price column in half — a picture of a price half a digit
+// wide, which reads as a broken table rather than as a crop.
+const RIGHT_COLUMN = [
+  '.card-profile .prints',
+  '.card-profile .prints-current',
+  '.card-profile .prints .prints-table'
+];
+
 // --- the six shots ------------------------------------------------------------
 //
 // Each one: the storage that has the feature on, the element the shot is about, and
@@ -65,11 +97,10 @@ const SHOTS = [
     file: 'tags.png',
     // The tag tables themselves, not the prints column they sit under. The column is
     // Scryfall's, and a picture of it says nothing about the switch beside the heading.
-    about: '#stk-tags',
+    column: true,
     storage: { tags: true, cardTags: true, artTags: true, relationships: false },
     waitFor: '#stk-tags',
     waitCount: ['#stk-tags .prints-table tbody tr', 3],
-    maxHeight: 620
   },
   {
     file: 'cardclip.png',
@@ -95,7 +126,7 @@ const SHOTS = [
     // the other thing this section promises, and every value in it is one Scryfall
     // returned.
     file: 'additional.png',
-    about: '.card-profile .prints > .prints-table',
+    column: true,
     storage: { finishBadges: true, printGrouping: true, printFoldGroups: false },
     waitFor: '.stk-finish-header',
     // Every row has to have its badge, not just the first. Waiting for "a badge" is
@@ -103,7 +134,6 @@ const SHOTS = [
     // picture of a feature that half works. Two is the floor: a printing with several
     // finishes gets an empty cell on purpose.
     waitCount: ['.stk-finish-badge', 2],
-    maxHeight: 460
   },
   {
     file: 'legality.png',
@@ -111,7 +141,7 @@ const SHOTS = [
     // whichever row sorts first, and an added format lands in whichever row still has
     // room — so cropping the id gives a picture of Scryfall's own Standard and Modern
     // and none of our work, which is what the previous version of this shot showed.
-    about: '.card-profile .card-legality',
+    column: true,
     // Premodern on, because that is the one of the four extra formats read off the
     // card's own Scryfall answer. The other three are asked of Scryfall by oracle id
     // through a query this build has no answer for, so turning them on would put
@@ -128,19 +158,19 @@ const SHOTS = [
     // The prints column with every printing the card has, grouped by set — which is
     // what a reader with the switch on is looking at, and what the reader cannot get
     // from Scryfall's own page, which shows ten.
-    about: '.card-profile .prints > .prints-table',
+    column: true,
     storage: { printGrouping: true, printFoldGroups: false, printFullPageLink: true },
     waitFor: '.stk-print-group-row',
-    maxHeight: 620
   },
   {
     file: 'hide-extra.png',
-    about: '.card-profile .prints > .prints-table',
-    // The hiding group is one storage key now, written the way the card page reads it.
-    // The old flat switches are still read by the migration, so a picture asking for
-    // them is not wrong — but it is not the page either, and two of the five keys it
-    // used to name were element ids rather than storage keys, which meant the picture
-    // was asking for something that could not have worked.
+    column: true,
+    // The hiding group is one storage key, written the way the card page reads it and in
+    // the shape the model has now. It was still writing `on: true` after the mode came
+    // back, which still worked — normalise maps the old boolean onto 'sets-prints' — so
+    // the picture was right while the tool was describing a shape the settings page no
+    // longer writes. A fixture that only works through the compatibility path is a
+    // fixture that stops working the day that path goes.
     storage: {
       setFiltersMigrated: true,
       setFilters: {
@@ -149,16 +179,15 @@ const SHOTS = [
         sets: {
           nonTournament: true,
           oversized: true,
-          foreignBlackBorder: { on: true, which: ['4bb', 'fbb', 'bchr'] },
-          nonEnglish: { on: true, which: ['portal', 'secret-lair', 'other'] }
+          foreignBlackBorder: { surfaces: 'sets-prints', which: ['4bb', 'fbb', 'bchr'] },
+          nonEnglish: { surfaces: 'sets-prints', which: ['portal', 'secret-lair', 'other'] }
         },
         prices: { usd: true, tix: true, tcg: true, cardhoarder: true },
         tokens: true,
         caster: false
       }
     },
-    waitFor: '.card-profile .prints > .prints-table',
-    maxHeight: 460
+    waitFor: '.card-profile .prints > .prints-table'
   }
 ];
 
@@ -236,7 +265,11 @@ async function main() {
       // One selector, or several: a shot about a toolbar and the panel it opens has to
       // be the two of them, and cropping the element that owns both gives a strip of
       // empty page between them.
-      const wanted_by = Array.isArray(shot.about) ? shot.about : [shot.about];
+      // `column` names the whole right-hand column and `about` names a panel inside it. A shot
+      // that wants the column says so rather than repeating the selector, so the two are
+      // different properties and not one string that happens to be long.
+      const target = shot.column ? RIGHT_COLUMN : shot.about;
+      const wanted_by = Array.isArray(target) ? target : [target];
       const boxes = [];
       for (const selector of wanted_by) {
         const box = await session.boxOf(selector);
@@ -262,11 +295,22 @@ async function main() {
       // cut off at the top of the shot instead, and the cut is said out loud: a picture
       // that silently stops halfway down a table is a picture of a table that ends
       // there.
-      const wanted = shot.maxHeight || 1000;
-      if (box.height > 4000) {
+      //
+      // The whole column is the other case: it is legitimately tall, because it holds a
+      // card's rules text, its legality block and a prints table. A shot that asked for
+      // it says so, and is then held to a larger bound rather than waved through — a
+      // column that grows past nine thousand pixels is something unbounded again, and
+      // this is the one place that would catch it.
+      const wholeColumn = Boolean(shot.column);
+      const bound = wholeColumn ? 9000 : 4000;
+      if (box.height > bound) {
         throw new Error(shot.file + ': the crop is ' + Math.round(box.height) +
-          ' pixels tall, which is not a panel. Something in the stage has no size.');
+          ' pixels tall' + (wholeColumn ? ', and it is the whole right-hand column' : ', which is not a panel') +
+          '. Something in the stage has no size.');
       }
+      // The column is taken whole. Cropping it at a thousand pixels would be the crop the
+      // column was meant to replace, only higher up.
+      const wanted = shot.maxHeight || (wholeColumn ? bound : 1000);
       const cut = box.height > wanted;
 
       // The crop is the element plus a little room. A panel's own left edge is not the

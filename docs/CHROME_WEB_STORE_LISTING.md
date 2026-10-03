@@ -1,4 +1,4 @@
-# Chrome Web Store listing — Scryfall Toolkit 1.1.6
+# Chrome Web Store listing — Scryfall Toolkit 1.1.7
 
 Everything here is written from the shipped code, so that the answers given in the store
 console match what the extension actually does. Where a field needs a decision from the
@@ -277,8 +277,18 @@ matters:
 - **They are cut out of a real Scryfall card page** — their markup, their stylesheet,
   this project's theme on top of it, and our panels where our own feature files put
   them. `node tools/make-feature-shots.cjs` fetches the page, runs the feature files
-  over it in the same harness the tests use, and crops the panels out of the rendered
-  result. Nothing in them is drawn, and nothing is a mock-up.
+  over it in the same harness the tests use, and takes the card page's whole right-hand
+  column out of the rendered result — the printing's banner, the prints table with its
+  price columns, and the tag tables underneath. Nothing in them is drawn, and nothing is a
+  mock-up. The sixth is the clipboard, which is a panel floating over the page rather than
+  part of any column.
+
+  They were crops of a single panel until 1.1.7, which says what a panel looks like and
+  nothing about where it goes: not that the tag tables sit under the prints, not that a
+  panel is a panel rather than part of Scryfall's own page, and not what the column looks
+  like once a rule has taken rows out of it. They are between 1,200 and 1,800 pixels tall
+  now, and the settings dialog scrolls, because a picture taller than the window that
+  cannot be scrolled is a picture with its bottom cut off.
 
   An earlier version built them on a container of our own, and they read as a different
   program: oversized serif links, purple underlined tag names, panels at no proportion to
@@ -292,8 +302,10 @@ matters:
   a reader cannot tell from a picture of a working feature; the fixture is now checked
   for exactly that.
 - **No card image appears in any of them.** Every crop is a table, a badge or a list —
-  none includes the artwork, and the extension ships no card imagery. So the conditions
-  in the next subsection are not engaged by the illustrations, though they are by the
+  none includes the artwork, and the extension ships no card imagery. The column's left
+  edge is the column's own, so no strip of the card beside it comes along either. So the
+  conditions in the next subsection are not engaged by the illustrations, though they are
+  by the
   store screenshots below.
 - **They are not photographs taken by the extension running in a browser**, and it is
   worth being exact about why: stable Chrome 154 refuses `--load-extension` outright —
@@ -315,6 +327,12 @@ matters:
   the folder and the tool ever disagree about which illustrations exist. A picture cut
   off part-way down a long table says so when it is made, rather than quietly ending
   where the crop ended.
+- The column is taken whole and nothing in it is sliced. Two elements have to be in the
+  crop that a first guess leaves out, and both were found by looking at the pictures:
+  Scryfall's `.prints-current` hangs 20px above its own parent on a negative margin, and
+  `.prints` is capped at 400px by their CSS while its table is wider. Cropping either one
+  alone cuts a printing's name or a price column in half. The tool's own bound on height
+  is the number a check compares the pictures against, so the two cannot drift apart.
 
 ### Whether a card may appear in one
 
