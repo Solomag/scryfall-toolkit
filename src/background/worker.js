@@ -851,6 +851,13 @@ async function oversizedSetCodes() {
 // Sight, which is fut and has no border edition — and "Chronicles Foreign Black Border"
 // is bchr. Matched as prefixes rather than whole strings so a set Scryfall renames into
 // the same family is still found.
+//
+// And unlike the non-English names below, this rule was checked against Scryfall rather
+// than only read off it. "Foreign black border" is a claim that can be falsified: such a
+// set has no English printing at all, and asking `e:<code> lang:en` settles it. Measured
+// on 2026-10-03, all three sets the patterns name have no English printing, and they are
+// the only three sets Scryfall names Foreign Black Border — so the rule is complete for the
+// families it claims, which is not something reading the names could have told us.
 const BORDER_SET_NAMES = {
   '4bb': /^Fourth Edition Foreign Black Border/i,
   fbb: /^Foreign Black Border/i,
@@ -864,6 +871,16 @@ const BORDER_SET_NAMES = {
 // reading each one's language — the oversized walk, repeated — so this list does not
 // contain it and the rule reaches that category on the Prints table only, where a
 // printing says which language it is.
+//
+// Which walk is not obvious, and getting it wrong is quiet. Measured on 2026-10-03:
+// `lang:!en` is not a negation Scryfall honours. On m21, which has no foreign printing in
+// its own sets, `e:m21 lang:!en` returns all 397 printings — the same as no term at all —
+// so a rule built on it would call every set a foreign-language set and find nothing
+// wrong with the answer. `lang:en` is honoured, and is refused outright when nothing
+// matches, which is what makes it usable: `e:4bb lang:en` is refused because the border
+// sets have no English printing at all, and that refusal is the answer rather than a
+// failure. Written here because the first attempt at this measurement used `lang:!en` and
+// got a confident number out of a term that was not doing the job.
 const NON_ENGLISH_SET_NAMES = {
   portal: /^Portal\b/i,
   'secret-lair': /^Secret Lair/i

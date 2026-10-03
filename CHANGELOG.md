@@ -103,6 +103,53 @@ Scryfall does not give it. Under that fiction the code list was load-bearing. Wi
 type it is not, and the fixture now also carries a set whose name reads like a product and
 whose type is `commander`, so the rule is held to the type rather than to how a name sounds.
 
+---
+
+### `lang:!en` is not a negation, and it answered confidently
+
+The same treatment for the two rules left. Both name sets by their names, which is the one
+thing Scryfall cannot be asked about directly — a set object has no field saying whether it
+is a border release or a Portal. So the question became: **can either rule be checked at
+all?**
+
+The border rule can, and the reason is that its name is falsifiable. A foreign black border
+set has no English printing anywhere in it, so `e:<code> lang:en` settles it — and it is
+refused outright when nothing matches, which is the answer rather than a failure. Measured
+on 2026-10-03: all three sets the patterns name have **zero** English printings, and they
+are the only three sets Scryfall calls Foreign Black Border. Complete for what it claims,
+which is not something reading names off `/sets` could have established.
+
+The non-English rule cannot be checked, and that is now said in the code rather than left
+as a shrug. Portal and Secret Lair both have English printings in every one of their sets —
+`ptk` is 180 of 180, `p02` 165 of 165, `sld` 2,793 of 2,821. They are English sets that
+happened to be released abroad; only the border sets have no English at all. So the two
+families are not two instances of one property, and a property-based rule would not
+reproduce them.
+
+**And the term that nearly produced a wrong answer.** `lang:!en` reads as a negation. It is
+not one: on m21, which has no foreign printing in its own sets, `e:m21 lang:!en` returns
+all 397 printings — the same as no term at all. A rule built on it would call every set a
+foreign-language set, and would report a confident number while doing it. `lang:en` is
+honoured; `NOT lang:en` is refused outright. That is written into the comment above the
+rule, because the first attempt at this measurement used `lang:!en` and got a number out of
+a term that was not doing the job.
+
+### The sweep that produced 35 sets, and why the number was dropped
+
+The first pass asked which sets have no English printing and found 35, against 3 from the
+rule — a gap big enough to be worth chasing. It was an artefact, three times over.
+
+`/sets/<code>/cards` does not exist; it is a 404 on every set, and an empty card list from
+it means nothing. `search e:psal` was read as "unsearchable" when it in fact returns 720 —
+the script was reading a refused response as an empty one. And a sweep over all 1,052 sets
+one request at a time answered "no such set" for 147 of them, then 904 on a rerun, which
+is Scryfall's rate limit being mistaken for a fact about the data.
+
+So 35 is not reported. The three-request measurement above replaces it, and it was run with
+a 429 treated as a retry rather than an answer, because the failure that produced all three
+artefacts is the same one in each case: **a request that did not succeed, read as a request
+that succeeded with nothing in it.** That is worth more than the number was.
+
 ### The token dialog had no test and could not have had one
 
 Writing the first test for the new deck panel failed on `showModal is not a function`, and
