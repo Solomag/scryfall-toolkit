@@ -68,6 +68,7 @@ const setsResponse = {
   data: [
     { code: 'MH3', set_type: 'expansion', name: 'Modern Horizons 3' },
     { code: 'mtgo', digital: true, set_type: 'online', name: 'MTGO Sets' },
+    { code: 'VMA', digital: true, set_type: 'draft_innovation', name: 'Vintage Masters' },
     { code: 'OCMD', set_type: 'memorabilia', name: 'Commander Oversized Deck' },
     { code: 'token', set_type: 'token', name: 'Tokens' },
     // `cei` is a `memorabilia` set on Scryfall, not an expansion. It used to be spelled
@@ -222,6 +223,23 @@ async function fetchMock(url, init) {
         return jsonResponse({ data: [PRINT_A], has_more: true, next_page: 'https://evil.example/steal' });
       }
       return jsonResponse({ data: [PRINT_A, PRINT_B], has_more: false });
+    }
+    // vma is the real case: of Scryfall's 61 digital sets, its printings disagree, and the
+    // minority says `arena` as well as `mtgo`. A walk that reads one card reports mtgo and
+    // tells the reader Vintage Masters was never on Arena.
+    if (q === 'e:vma') {
+      // Scryfall honours page_size, and this stub has to or it is not testing the walk: a
+      // stub that returns twenty rows to a request for one cannot tell "read a page" apart
+      // from "read a card", which is the whole difference the fix turns on.
+      const wanted = Number(new URL(target).searchParams.get('page_size') || 175);
+      const cards = Array.from({ length: Math.min(20, wanted) }, (_, i) => ({
+        name: 'Vintage Card ' + i, games: ['mtgo']
+      }));
+      if (wanted > 7) {
+        cards[7].name = 'Library of Alexandria';
+        cards[7].games = ['arena', 'mtgo'];
+      }
+      return jsonResponse({ data: cards, has_more: false });
     }
     if (q === 'e:mtgo') return jsonResponse({ data: [{ name: 'Online Card', games: ['mtgo'] }] });
     if (q.includes(PREVIEW_BAD_ID)) {
@@ -702,7 +720,7 @@ async function edhrecThrottleTest() {
     // of else-if. A set can be both, and hiding it as oversized must not stop it from
     // being hidden as non-tournament when that switch is on too.
     assertEqual(categories.data, {
-      digital: ['mtgo'], nonTournament: ['ocmd', 'token', 'cei'],
+      digital: ['mtgo', 'vma'], nonTournament: ['ocmd', 'token', 'cei'],
       oversized: ['opca', 'who', 'ocmd'],
       // Non-tournament is decided by `set_type` and nothing else, which is what the
       // measurement supports: on 2026-10-03 the four types in the rule were the only four
@@ -728,7 +746,7 @@ async function edhrecThrottleTest() {
     assertEqual(setsFetches(), 1, 'second setCategories call performed no fetch');
     assertEqual(oversizedPages, [1, 2], 'and did not walk the printings again');
     const digitalOnly = await send({ type: 'digitalSets' });
-    assertEqual(digitalOnly.data, ['mtgo'], 'digitalSets returns only the digital list');
+    assertEqual(digitalOnly.data, ['mtgo', 'vma'], 'digitalSets returns only the digital list');
     assertEqual(setsFetches(), 1, 'digitalSets also answers from cache');
 
     // When the oversized walk fails there are two things it must not do.
@@ -763,14 +781,30 @@ async function edhrecThrottleTest() {
 
     console.log('background.js: setPlatforms message');
     const gameSearches = () => fetchLog.filter(url => url.includes('q=e%3Amtgo')).length;
-    const platforms = await send({ type: 'setPlatforms' });
+    // A longer budget than the default two seconds, for a reason. This call now reads a page of
+    // printings per set instead of one card, and it asks about the two sets the snapshot does
+    // not already cover — Scryfall's pacing makes the second one land after two seconds, so
+    // the default reported "no response" for a call that answers. The test that catches the
+    // real defect is the one that says vma is the union of its printings, and it has to run.
+    const platforms = await send({ type: 'setPlatforms' }, undefined, 6000);
     assertEqual(platforms.data.ysos, ['arena'], 'the bundled snapshot answers for a known Arena set');
     assertEqual(platforms.data.omb, ['arena', 'mtgo'], 'a set released for both clients keeps both platforms');
     assertEqual(platforms.data.mtgo, ['mtgo'], 'a digital set missing from the snapshot is looked up');
     assertEqual(gameSearches(), 1, 'only sets missing from the snapshot are searched');
+    // The bug this catches: a set whose printings do not all name the same clients. Of
+    // Scryfall's 61 digital sets, vma has 320 printings saying mtgo and 5 saying arena and
+    // mtgo, and the five look like any other — not a promo, not a border printing. Reading
+    // one card reported mtgo and told the reader Vintage Masters was never on Arena.
+    assertEqual(platforms.data.vma, ['arena', 'mtgo'],
+      'a set whose printings disagree about their clients is the union of them, not the first card');
+    const vmaSearches = () => fetchLog.filter(url => url.includes('q=e%3Avma')).length;
+    assertEqual(vmaSearches(), 1, 'and it took one request for the whole set');
+    const vmaCall = fetchLog.find(url => url.includes('q=e%3Avma'));
+    assert(/[?&]page_size=175/.test(vmaCall),
+      'that request asks for a page rather than one card, which is the whole fix');
     assert(mock.state.setPlatformIndex && mock.state.setPlatformIndex.expires > Date.now(),
       'platform index persisted with a future expiry');
-    const cachedPlatforms = await send({ type: 'setPlatforms' });
+    const cachedPlatforms = await send({ type: 'setPlatforms' }, undefined, 6000);  // same budget, see above
     assertEqual(cachedPlatforms.data, platforms.data, 'the platform index answers from the stored index');
     assertEqual(gameSearches(), 1, 'a stored platform index performs no further search');
 

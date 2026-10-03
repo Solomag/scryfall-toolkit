@@ -261,9 +261,14 @@ in `/sets` and in the Prints table. Paper is every set Scryfall does not mark di
 Arena and Magic Online are their digital-only sets. Taking away the last one falls back
 to All, because a set list with nothing in it is not a choice this setting can hold.
 Scryfall's index does not name the client behind a digital set, so the extension ships a
-snapshot of every known digital set's platform, looks up anything missing through one
-card of the set, and keeps that answer for a month. A set the lookup cannot place stays
+snapshot of every known digital set's platform, looks up anything missing through a page of
+the set's printings, and keeps that answer for a month. A set the lookup cannot place stays
 visible rather than being hidden on a guess.
+
+The lookup takes every printing's answer rather than one printing's, because they do not
+always agree: Vintage Masters has 320 printings marked Magic Online and 5 marked for Arena
+as well, with nothing about those five to tell them apart. Reading one card reported a set
+that had been on Arena as never having been there.
 
 The set field of Advanced search follows the **Games** checkboxes Scryfall already shows
 above it. Hidden sets are marked, never removed, so the field can widen again at any

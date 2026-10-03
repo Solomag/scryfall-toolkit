@@ -953,10 +953,30 @@ async function setPlatformGames(code) {
   for (let attempt = 0; attempt < 3; attempt++) {
     // Pacing lives in scryfallJSON now.
     try {
+      // A page, not one card. Reading a single printing assumed every card in a set was
+      // released for the same clients, which is usually true and demonstrably not always:
+      // of the 61 sets Scryfall calls digital, one — vma, Vintage Masters — has 320
+      // printings saying `mtgo` and 5 saying `arena` and `mtgo`. The five are Dack Fayden,
+      // Fireblast, Hymn to Tourach, Library of Alexandria and Strip Mine, with nothing
+      // about them that marks them: not a promo, not a border printing, not a different
+      // finish. So the first card said `mtgo` and the extension reported that Vintage
+      // Masters was never on Arena, which is false and was false in the only direction a
+      // reader would notice.
+      //
+      // One page is enough because a set that disagrees is a set where a handful of
+      // printings disagree, and they are not spread across thousands: vma's five are within
+      // the first 325 cards. A set needing a second page would mean the disagreement is
+      // spread out, and that is worth a check rather than an assumption — so `unique=cards`
+      // keeps one row per card, and the answer is the union across the rows returned, which
+      // is what the settings page asks about anyway ("which platforms was this set on").
       const result = await scryfallJSON(
-        `https://api.scryfall.com/cards/search?q=${encodeURIComponent(`e:${code}`)}&unique=cards&page_size=1`);
-      const games = Array.isArray(result?.data?.[0]?.games) ? result.data[0].games : [];
-      if (games.length) return games;
+        `https://api.scryfall.com/cards/search?q=${encodeURIComponent(`e:${code}`)}&unique=cards&page_size=175`);
+      const rows = Array.isArray(result?.data) ? result.data : [];
+      const games = [...new Set(rows.flatMap(card => Array.isArray(card?.games) ? card.games : []))];
+      // Sorted, because the order rows happen to arrive in is Scryfall's, not the
+      // extension's, and the settings page shows this list as a set of switches. An answer
+      // whose order changes with the order of a search result is one nothing can compare.
+      if (games.length) return games.sort();
     } catch (error) {
       // A rate limit or a hiccup is worth one more try; a set that stays
       // unknown is reported as such instead of being guessed at.

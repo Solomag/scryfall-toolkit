@@ -105,6 +105,37 @@ whose type is `commander`, so the rule is held to the type rather than to how a 
 
 ---
 
+### Vintage Masters was never on Arena, as far as the platform filter could tell
+
+The last of the rules, and the one whose mistake would have been a fact rather than a name.
+
+It reads `games` off a single card of a set — `page_size=1` — on the reasonable assumption
+that a set was released for the same clients throughout. Asked of all 61 digital sets, with
+each card compared against the union of its set: **one set disagrees.** `vma`, Vintage
+Masters, has 320 printings saying `mtgo` and 5 saying `arena` and `mtgo`.
+
+The five are Dack Fayden, Fireblast, Hymn to Tourach, Library of Alexandria and Strip
+Mine, and nothing about them marks them: not a promo, not a border printing, not a
+different finish. So the first card said `mtgo` and the extension reported that Vintage
+Masters was never on Arena. False, in the one direction a reader would act on — unticking
+Arena would not hide a single Vintage Masters card.
+
+It now reads a page and takes the union, sorted, because the order rows arrive in is
+Scryfall's and the settings page shows this as a set of switches.
+
+The oversize walk was checked at the same time and is exact: 726 printings in five pages,
+every one with `oversized=true`, 38 sets — the comment's numbers, unchanged.
+
+Two notes on how the checks went, because both are the failure this project keeps meeting.
+The fixture for `vma` originally ignored `page_size` and returned twenty rows to a request
+for one, so **a mutation that put the bug back did not fail the suite** — the stub could not
+tell "read a page" from "read a card", which is the entire difference. It honours `page_size`
+now, and both mutations are caught. And two mutations run through a PowerShell string replace
+were reported as passing because the shell ate a backtick and the replacement never happened;
+the ones that count were re-run reading the file directly.
+
+---
+
 ### `lang:!en` is not a negation, and it answered confidently
 
 The same treatment for the two rules left. Both name sets by their names, which is the one
