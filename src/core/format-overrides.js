@@ -8,6 +8,29 @@
  * Third-party data, images and code in this project keep their own licence and
  * are described in THIRD_PARTY_NOTICES.md. The MPL does not cover them.
  */
+// The three formats Scryfall does not have: Classic Legacy, Peak Legacy and Heritage.
+//
+// Each is a definition this project wrote, not Scryfall's, and the worker answers it with a
+// search clause — `legal:legacy AND date<=roe` for Classic, `date<=emn` for Peak, a set-type
+// test for Heritage. Those clauses use Scryfall's *current* Legacy verdict, and "current" is
+// the whole problem: a card banned from Legacy in 2016 is `legal:legacy` false today, so the
+// clause reports it as never having been in the format at all.
+//
+// This table is the correction, one card at a time. Every entry is a card the clause gets
+// wrong and a maintainer has decided by hand. Measured on 2026-10-03: 29 entries over 17
+// distinct cards, every id still naming a card Scryfall has, no duplicates within a format,
+// and every entry disagreeing with what its clause would have said — so none of them is dead
+// weight that reads like a decision. The ones marked `legal` are cards Scryfall has banned
+// that the old formats did contain; the ones marked `banned` are the other way round, cards
+// Scryfall has as legal that those old formats never had.
+//
+// What this file cannot say is whether it is complete, and that is not something a live API
+// can answer: Scryfall states each card's present verdict and never says what a format
+// contained in 2010. So completeness is a judgement call, made here by a person, and a card
+// added to a Legacy ban list after the fact is invisible to every check above. Time Walk is
+// the obvious question and is deliberately absent — it is not in this table because nobody
+// has decided it here from a source, and a decision taken from memory is the one thing this
+// file exists to avoid.
 self.STK_FORMAT_OVERRIDES = {
   "classic": {
     "c7c7bffa-442d-4ba5-b778-ad394c192f27": "legal",

@@ -197,6 +197,38 @@ That is one list split in two, which is what the split is for and what nobody ha
 
 ---
 
+### The table of hand-made format decisions had no header
+
+Three formats Scryfall does not have — Classic Legacy, Peak Legacy, Heritage — are answered
+by search clauses written here. Checked on 2026-10-03: the syntax works, `date<=` with a set
+code filters as intended, and the answers for the cards I could check are right.
+
+The clauses use Scryfall's **current** Legacy verdict, and that is the whole problem. A card
+banned from Legacy in 2016 is `legal:legacy` false today, so the clause reports it as never
+having been in the format at all. `STK_FORMAT_OVERRIDES` is the correction, one card at a
+time — 29 entries over 17 cards, and it works: every id still names a card Scryfall has, no
+duplicates within a format, and every entry disagrees with what its clause would have said,
+so none of it is dead weight that reads like a decision.
+
+And it had **no header at all**. Twenty-nine hand-made verdicts about Magic formats, in a
+file whose first line after the licence was `self.STK_FORMAT_OVERRIDES = {`. What the entries
+are, why they exist, and what they are for is written down now, including the part that
+matters: completeness is a judgement call a person made, Scryfall states only present
+verdicts and never says what a format contained in 2010, and a card added to a Legacy ban
+list after the fact is invisible to every check that exists.
+
+Time Walk is named there as the obvious open question and is deliberately **not** answered.
+It is not in the table because nobody has decided it here from a source, and a verdict taken
+from memory is the one thing that file exists to avoid.
+
+Three of my own readings in this thread were wrong, all three the same mistake: an
+`oracleid:` uuid asked for as a printing id, a `d` index compared against a tag name, and a
+column of "what the clause should say" invented from memory of the format rather than read
+from anything. The first two produced confident numbers about data that was perfectly fine.
+The third would have become a 170-card finding and was worth nothing.
+
+---
+
 ### `lang:!en` is not a negation, and it answered confidently
 
 The same treatment for the two rules left. Both name sets by their names, which is the one
