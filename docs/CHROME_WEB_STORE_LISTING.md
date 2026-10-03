@@ -20,7 +20,13 @@ has a button that asks for whichever a turned-on feature is still missing.
 
 ## 1. Store listing
 
-**Item name:** Scryfall Toolkit (Preview)
+**Item name:** Scryfall Toolkit
+
+That is the name in `manifest.json` and it is what Chrome shows on the listing, so the
+form should say the same. It used to read "Scryfall Toolkit (Preview)" here, and a check
+in the suite has been asserting since 0.46.0 that the manifest does **not** call itself a
+preview — so the document was telling a reviewer to type something the extension does not
+show, and the two had been disagreeing since before the extension had a release.
 
 **Summary** (single purpose, one sentence, shown in search results):
 
@@ -54,11 +60,18 @@ has a button that asks for whichever a turned-on feature is still missing.
 > **Dark theme.** A dark theme for Scryfall and Scryfall Tagger that follows your system
 > until you pick otherwise.
 >
-> **Optional extras.** EDHREC and CardTrader are off until you turn them on; the rest have their own defaults and each can be switched off. EDHREC deck usage and Salt Meter
+> **Optional extras.** EDHREC and CardTrader are off until you turn them on; the rest have
+> their own defaults and each can be switched off. EDHREC deck usage and Salt Meter
 > inside the legality block. CardTrader prices for the exact printing, using your own
 > personal access token. Finish badges, card nicknames, type and mana search links, set and
 > printing filters, a No Prices mode, a token list and a Commander legality check on deck
 > pages.
+>
+> The legality check is the one of these whose answer is partial by construction: it asks
+> Scryfall about each card on its own and lists the ones Scryfall counts as not legal in
+> Commander. It says on the panel, next to the answer, that it has not checked the
+> commander's colour identity, the hundred-card limit, or the one-copy rule. Better to
+> have said that than to have written a check that implies it settled those.
 >
 > **In the deck editor.** Three more optional tools, all off by default: a Clean Up button
 > that sorts the deck and puts lands back in their column, EDHREC's own card lists for your
@@ -77,6 +90,18 @@ has a button that asks for whichever a turned-on feature is still missing.
 > It paints over Scryfall's own styles rather than replacing them, so it depends on
 > Scryfall's markup: a page that changes can come out partly unthemed until this
 > extension is updated.
+
+**A tag is a store release, not a commit.** The tags are `v0.51.0`, `v1.0.0` and `v1.0.1`,
+and `v1.0.1` is the version the store currently serves: each version in the store has a tag
+naming the commit it was built from, and nothing else has one. The versions between them —
+1.1.2 through 1.2.0 — were never submitted, so they were never tagged, and tagging them
+now would publish releases for builds nobody is running and put version numbers in a second
+public record that do not appear in the first. When the version below is submitted, the
+tag goes with it, and that is what makes the claim on the store's source line true of the
+build the reviewer is looking at.
+
+**Version to submit:** 1.2.0 (`manifest.json`, `package.json`, `package-lock.json` and the
+title of this file all say so, and a check fails if they ever say different things).
 
 **Category:** Tools
 
@@ -271,9 +296,12 @@ The store accepts up to 5 screenshots, and five is what covers the whole page.
 
 ### The illustrations in the settings
 
-Six of them, one behind the "?" beside the section whose switch turns the feature on. A
-reviewer sees the "?" in the screenshots and can open each picture, so what is inside
-matters:
+Six of them, one behind the "?" in the heading of the section the feature belongs to. It
+used to read "beside the section whose switch turns the feature on", which stopped being
+true once the hiding rules became a group under one heading and the format and legalities
+settings became selects rather than switches: the six questions did not move, but what sits
+next to them did. A reviewer sees the "?" in the screenshots and can open each picture, so
+what is inside matters:
 
 - **They are cut out of a real Scryfall card page** — their markup, their stylesheet,
   this project's theme on top of it, and our panels where our own feature files put
@@ -302,12 +330,11 @@ matters:
   invented text in it, a card called "Test Card" and a commander figure of 4,823, which
   a reader cannot tell from a picture of a working feature; the fixture is now checked
   for exactly that.
-- **No card image appears in any of them.** Every crop is a table, a badge or a list —
-  none includes the artwork, and the extension ships no card imagery. The column's left
-  edge is the column's own, so no strip of the card beside it comes along either. So the
-  conditions in the next subsection are not engaged by the illustrations, though they are
-  by the
-  store screenshots below.
+- **No card image appears in any of them.** Each is a table, a badge, a list, or a column of
+  them — none includes the artwork, and the extension ships no card imagery. The column's
+  left edge is the column's own, so no strip of the card beside it comes along either. So
+  the conditions in the next subsection are not engaged by the illustrations, though they
+  are by the store screenshots below.
 - **They are not photographs taken by the extension running in a browser**, and it is
   worth being exact about why: stable Chrome 154 refuses `--load-extension` outright —
   tried headless, tried with an offscreen window, tried with
@@ -329,11 +356,12 @@ matters:
   off part-way down a long table says so when it is made, rather than quietly ending
   where the crop ended.
 - The column is taken whole and nothing in it is sliced. Two elements have to be in the
-  crop that a first guess leaves out, and both were found by looking at the pictures:
+  picture that a first guess leaves out, and both were found by looking at the pictures:
   Scryfall's `.prints-current` hangs 20px above its own parent on a negative margin, and
-  `.prints` is capped at 400px by their CSS while its table is wider. Cropping either one
-  alone cuts a printing's name or a price column in half. The tool's own bound on height
-  is the number a check compares the pictures against, so the two cannot drift apart.
+  `.prints` is capped at 400px by their CSS while its table is wider. Slicing out either
+  one alone cuts a printing's name or a price column in half. The tool's own bound on
+  height is the number a check compares the pictures against, so the two cannot drift
+  apart.
 
 ### Whether a card may appear in one
 

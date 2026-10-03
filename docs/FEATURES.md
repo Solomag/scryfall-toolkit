@@ -200,10 +200,14 @@ through the extension's Scryfall queue rather than firing out of the page.
 Upstream's version also keeps saved searches; theirs describes that as not finished, and
 this leaves it out rather than shipping something half done.
 
-All four Shambleshark deck modules are now ported. Three of them run through Scryfall's
-application internals rather than the page markup, which is why the extension has a script
-in the page's own world, one adapter over those internals, and a bridge back to the
-content script for settings and for the two data requests.
+**Three** Shambleshark deck modules are here. A fourth was ported and taken back out:
+`card-input-modifier` showed a card image when the cursor was over a deck row, which
+Scryfall's own tooltip covers, and the site already previews cards on hover — so it made
+the editor worse and duplicated what was already there. No code from it is in the package.
+The three that remain run through Scryfall's application internals rather than the page
+markup, which is why the extension has a script in the page's own world, one adapter over
+those internals, and a bridge back to the content script for settings and for the two data
+requests.
 
 ## Hiding and filtering
 

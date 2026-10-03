@@ -106,7 +106,29 @@ const CURRENT_STATE = {
     { forbidden: [/Extension version \d+\.\d+\.\d+/], why: 'the version was stale four releases running; the policy changes with the code, not the number' }
   ],
   'docs/CHROME_WEB_STORE_LISTING.md': [
-    { forbidden: ['`content.js`'], why: 'one file that no longer exists' }
+    { forbidden: ['`content.js`'], why: 'one file that no longer exists' },
+    {
+      forbidden: [/Item name:\*\* Scryfall Toolkit \(Preview\)/],
+      why: 'the manifest has not called itself a preview since 0.46.0, so the form would ask a reviewer ' +
+        'to type a name Chrome never shows. The two said different things about one fact for four releases.'
+    }
+  ],
+  // Two documents, one fact, and they had been saying different things: FEATURES said
+  // four deck modules were ported, the road map said the fourth was taken back out and no
+  // code from it is in the package. Nothing here could see it, because each document was
+  // checked on its own.
+  //
+  // So the pairing is asserted from both sides: the count and the taking-back-out have to
+  // appear together, and neither document may be edited to claim four.
+  'docs/FEATURES.md': [
+    {
+      forbidden: [/All four Shambleshark deck modules/],
+      why: 'the fourth was ported and removed; see the road map'
+    },
+    { required: [/Three\*\* Shambleshark deck modules are here/], why: 'the count is three, and it is stated' }
+  ],
+  'docs/ROADMAP.md': [
+    { required: ['A fourth Shambleshark module'], why: 'the record of taking it back out stays' }
   ]
 };
 
@@ -137,9 +159,20 @@ function check() {
   for (const [file, rules] of Object.entries(CURRENT_STATE)) {
     const text = read(file);
     for (const rule of rules) {
-      for (const phrase of rule.forbidden) {
+      for (const phrase of rule.forbidden || []) {
         const pattern = phrase instanceof RegExp ? phrase : new RegExp(phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
         if (pattern.test(text)) problems.push(`${file}: ${rule.why}`);
+      }
+      // `required` is the other half and it is the half that catches a document quietly
+      // dropping a fact rather than asserting a wrong one. Two documents once disagreed
+      // about how many deck modules there are, and neither was wrong on its own terms:
+      // one said four were ported, the other said the fourth had been taken back out.
+      // A forbidden phrase finds the first. It cannot find the second, because the second
+      // document never made the claim — so the claim has to be required somewhere, in the
+      // document that does make it.
+      for (const phrase of rule.required || []) {
+        const pattern = phrase instanceof RegExp ? phrase : new RegExp(phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+        if (!pattern.test(text)) problems.push(`${file}: ${rule.why}`);
       }
     }
   }
