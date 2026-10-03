@@ -69,16 +69,19 @@ const routes = {
     art: [],
     fallback: false
   }),
-  finishes: message => ({
-    [message.ids[0]]: { finishes: ['nonfoil'], promoTypes: [] },
-    [message.ids[1]]: { finishes: ['foil'], promoTypes: [] },
-    [message.ids[2]]: { finishes: ['etched'], promoTypes: [] }
-  }),
+  finishes: message => Object.fromEntries(message.ids.map((id, index) =>
+    [id, { finishes: [['nonfoil'], ['foil'], ['etched']][index % 3], promoTypes: [] }])),
   card: () => ({ oracle_id: ORACLE_ID, legalities: { premodern: 'legal', legacy: 'banned' } }),
   allPrints: () => ({ prints, truncated: false }),
   cardtrader: () => ({ available: true, url: 'https://www.cardtrader.com/en/cards/test', nonfoil: { cents: 1234, currency: 'EUR' } }),
   preview: () => ({ name: 'Other Card', image: 'https://cards.scryfall.io/normal/o.jpg', uri: 'https://scryfall.com/card/oth/1/other-card' }),
-  setCategories: () => ({ digital: ['ysos', 'me2'], nonTournament: [], oversized: [], foreignBlackBorder: [] }),
+  // Per category, as the worker answers it now: the settings page has a list under each
+  // of the two rules and a flat list of codes cannot be narrowed by one.
+  setCategories: () => ({
+    digital: ['ysos', 'me2'], nonTournament: [], oversized: [],
+    foreignBlackBorder: { '4bb': ['4bb'], fbb: ['fbb'], bchr: ['bchr'] },
+    nonEnglish: { portal: ['por', 'p02', 'ptk'], 'secret-lair': ['sld'] }
+  }),
   setPlatforms: () => ({ ysos: ['arena'], me2: ['mtgo'] })
 };
 
@@ -997,6 +1000,116 @@ async function setPlatformTest() {
     'the printing being viewed stays visible even when its platform is not kept');
 }
 
+// The mode, on both surfaces, in all three positions.
+//
+// This is the test 1.1.0 needed and did not have. The mode shipped, the migration
+// mapped onto it, and no check ever asked what 'prints' did as opposed to 'sets-prints' —
+// so a version that looked like it worked did not work anywhere: `needsSetIndex` and
+// `needsCategories` both read a boolean alias that was false for 'prints', so the set
+// index was never fetched and the rule did nothing on either surface.
+//
+// So each position is asked of each surface separately, and the two surfaces are told
+// apart: a set row in the index, and a printing row in a prints table on the same page.
+async function setSurfaceModeTest() {
+  console.log('set filters: the mode decides per surface, and each surface decides for itself');
+  const html = `<!DOCTYPE html><html><body><div id="main">
+    <div class="search-controls"><label for="order">0 of 0 sets in</label><select id="order"><option>Name</option></select></div>
+    <table id="js-checklist"><tbody>
+      <tr><td><a href="https://scryfall.com/sets/mh3">Modern Horizons 3</a></td><td>MH3</td></tr>
+      <tr><td><a href="https://scryfall.com/sets/4bb">Fourth Edition Foreign Black Border</a></td><td>4BB</td></tr>
+      <tr><td><a href="https://scryfall.com/sets/por">Portal</a></td><td>POR</td></tr>
+    </tbody></table>
+    <table class="prints-table"><tbody>
+      <tr><td><a href="/card/mh3/1/test-card">Test Card</a></td><td>MH3</td></tr>
+      <tr><td><a href="/card/4bb/1/test-card">Test Card</a></td><td>4BB</td></tr>
+      <tr><td><a href="/card/por/1/ja/test-card">Test Card</a></td><td>POR</td><td>JA</td></tr>
+    </tbody></table>
+  </div></body></html>`;
+  const hiddenSets = page => [...page.document.querySelectorAll('#js-checklist tbody tr')]
+    .filter(row => row.classList.contains('stk-digital-set-hidden'))
+    .map(row => row.querySelector('a').textContent);
+  const hiddenPrints = page => [...page.document.querySelectorAll('.prints-table tbody tr')]
+    .filter(row => row.classList.contains('stk-digital-set-hidden'))
+    .map(row => row.querySelector('a').getAttribute('href'));
+  const load = surfaces => {
+    const state = {
+      clipboard: false, setFiltersMigrated: true,
+      setFilters: {
+        setsEnabled: true,
+        platforms: { paper: true, arena: true, mtgo: true },
+        sets: {
+          nonTournament: false, oversized: false,
+          foreignBlackBorder: { surfaces, which: ['4bb', 'fbb', 'bchr'] },
+          nonEnglish: { surfaces, which: ['portal', 'secret-lair', 'other'] }
+        },
+        prices: { usd: false, tix: false, tcg: false, cardhoarder: false },
+        tokens: true, caster: false
+      }
+    };
+    return (async () => {
+      const page = createPage({ url: 'https://scryfall.com/sets', html, state, routes });
+      await page.cardPage();
+      await sleep(80);
+      return page;
+    })();
+  };
+
+  const off = await load('off');
+  assertEqual(hiddenSets(off), [], 'with the mode off nothing is hidden from the sets index');
+  assertEqual(hiddenPrints(off), [], 'nor from the prints table on the same page');
+
+  const prints = await load('prints');
+  // The whole point: 'prints' hides on one surface and not on the other, which is the
+  // difference 1.1.0 could not express and 1.1.1 removed rather than ship broken.
+  assertEqual(hiddenSets(prints), [], '"prints" leaves the sets index alone');
+  assertEqual(hiddenPrints(prints), ['/card/4bb/1/test-card', '/card/por/1/ja/test-card'],
+    'and hides the border printing and the non-English one from the prints table');
+
+  const both = await load('sets-prints');
+  assertEqual(hiddenSets(both), ['Fourth Edition Foreign Black Border', 'Portal'],
+    '"sets-prints" also hides those two sets from the index');
+  assertEqual(hiddenPrints(both), ['/card/4bb/1/test-card', '/card/por/1/ja/test-card'],
+    'and the same two printings from the prints table');
+
+  // Narrowing the list, on the surface where the list means something. Portal and Secret
+  // Lair are hidden by set code; the third category is not, because no set name says a
+  // set prints another language.
+  const narrow = await (async () => {
+    const state = {
+      clipboard: false, setFiltersMigrated: true,
+      setFilters: {
+        setsEnabled: true, platforms: { paper: true, arena: true, mtgo: true },
+        sets: {
+          nonTournament: false, oversized: false,
+          foreignBlackBorder: { surfaces: 'sets-prints', which: ['fbb'] },
+          nonEnglish: { surfaces: 'sets-prints', which: ['portal'] }
+        },
+        prices: { usd: false, tix: false, tcg: false, cardhoarder: false },
+        tokens: true, caster: false
+      }
+    };
+    const page = createPage({ url: 'https://scryfall.com/sets', html, state, routes });
+    await page.cardPage();
+    await sleep(80);
+    return page;
+  })();
+  assertEqual(hiddenSets(narrow), ['Portal'], 'unticking 4BB keeps it in the sets index');
+  assertEqual(hiddenPrints(narrow), ['/card/por/1/ja/test-card'],
+    'and keeps its printing on the card page too, while Portal goes from both');
+
+  // What is NOT covered here, and it is the second of the two surfaces.
+//
+// The grouped table that prints.js builds from the API's answer is a different code path
+// from the native rows above: its own `needsCategories`, its own excluded set, its own
+// match on the printing's language. A check over the native rows passes with every
+// mutation of that path applied, which is the same hole 1.1.0 had. It is not closed yet
+// because the page this harness builds for the purpose does not render the groups, and
+// why it does not is not known — the same call in `setPlatformTest` builds them, and
+// nothing distinguishes the two. Guessing at a fixture until the assertion goes green
+// would be a check that passes for a reason nobody can name, which is the thing this
+// project has been getting wrong all along. It is the next piece of work, not this one.
+}
+
 async function advancedSetFilterTest() {
   console.log('content scripts: advanced search set field follows Games and the platform filter');
   const html = `<!DOCTYPE html><html><body><div id="main"><form class="form-layout">
@@ -1269,8 +1382,9 @@ function clipboardFormatTest() {
     await clipboardDisabledTest();
     await legacyMigrationTest();
     await advancedPriceFilterTest();
+    await setSurfaceModeTest();
     await setPlatformTest();
-    await advancedSetFilterTest();
+await advancedSetFilterTest();
     await cardNicknameTest();
     await printsSettingsTest();
     summary('test-preview');

@@ -472,20 +472,26 @@ chrome.storage.local.get(defaults, values => {
     return boxes.filter(box => box.checked).map(box => box.dataset.which);
   }
 
-  // Both category rules at once, because they are the same shape and writing them
-  // separately is how one of them ends up saving and the other not.
+  // The two rules that carry a surface, at once, because they are the same shape and
+  // writing them separately is how one of them ends up saving and the other not.
+  //
+  // A select rather than a switch, because the value is the surface and not a yes. The
+  // list underneath stays usable in all three positions: picking which of 4BB, FBB and
+  // BCHR while the rule is off is how a reader sets it up before switching it on, and
+  // hiding the list would throw that away.
   for (const [id, listId, key, table] of [
     ['setForeignBlackBorder', 'setForeignBlackBorderList', 'foreignBlackBorder', FILTERS.FOREIGN_BLACK_BORDER],
     ['setNonEnglish', 'setNonEnglishList', 'nonEnglish', FILTERS.NON_ENGLISH]
   ]) {
-    const box = document.getElementById(id);
-    box.checked = filters.sets[key].on;
-    const boxes = buildWhichList(listId, table, filters.sets[key].which, () => {
-      filters.sets[key].which = whichOf(boxes);
+    const select = document.getElementById(id);
+    const rule = filters.sets[key];
+    select.value = FILTERS.SURFACE_NAMES.includes(rule.surfaces) ? rule.surfaces : FILTERS.SURFACES.off;
+    const boxes = buildWhichList(listId, table, rule.which, () => {
+      rule.which = whichOf(boxes);
       saveFilters();
     });
-    box.addEventListener('change', () => {
-      filters.sets[key].on = box.checked;
+    select.addEventListener('change', () => {
+      rule.surfaces = FILTERS.SURFACE_NAMES.includes(select.value) ? select.value : FILTERS.SURFACES.off;
       saveFilters();
     });
   }

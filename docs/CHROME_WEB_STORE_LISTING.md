@@ -1,4 +1,4 @@
-# Chrome Web Store listing — Scryfall Toolkit 1.1.4
+# Chrome Web Store listing — Scryfall Toolkit 1.1.5
 
 Everything here is written from the shipped code, so that the answers given in the store
 console match what the extension actually does. Where a field needs a decision from the
@@ -231,7 +231,7 @@ Ready in `store-assets/`, each exactly **1280×800** (PNG), in English:
 | `store-assets/05-settings-05-of-05.png` | the deck clean-up block, Prints, Experimental, and Credits and third-party projects |
 
 All five come from one real capture of the settings page
-(`store-assets/settings-page-full.png`, 1280×5582), so nothing is repeated or cropped
+(`store-assets/settings-page-full.png`, 1280×5712), so nothing is repeated or cropped
 away between them. Each tile is scaled uniformly to 800 rows and the margins continue
 the page's own colour, so no screenshot is stretched.
 

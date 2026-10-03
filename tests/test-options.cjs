@@ -982,8 +982,8 @@ async function hidingGroupTest() {
   await tick();
   assertEqual(mock.state.setFilters.sets.foreignBlackBorder.which, ['4bb', 'bchr'],
     'unticking one entry stores the rest of the category');
-  assertEqual(mock.state.setFilters.sets.foreignBlackBorder.on, false,
-    'and choosing entries does not turn the rule on: the switch is the whole rule');
+  assertEqual(mock.state.setFilters.sets.foreignBlackBorder.surfaces, 'off',
+    'and choosing entries does not turn the rule on: the surface is the whole rule');
 
   // The master switch is a gate, and the one thing it must never be is a setter.
   const gate = document.getElementById('setFiltersEnabled');
@@ -1016,9 +1016,9 @@ async function hidingGroupTest() {
   // What is outside the gate stays outside it: the model does not put the prices or the
   // tokens behind it, so a page that dimmed them would be promising something the
   // hiding rules do not do.
-  assertEqual(F.effective(closed).nonEnglish, false, 'the category rules are behind the gate');
+  assertEqual(F.effective(closed).nonEnglish, 'off', 'the category rules are behind the gate');
   const withGate = F.normalise({ ...before, setsEnabled: false, prices: { usd: true, tix: false, tcg: false, cardhoarder: false }, tokens: false });
-  assertEqual(F.effective(withGate).nonEnglish, false, 'the non-English rule answers the gate');
+  assertEqual(F.effective(withGate).nonEnglish, 'off', 'the non-English rule answers the gate');
   assertEqual(withGate.prices.usd, true, 'while the price switches keep their own values behind it');
   assertEqual(withGate.tokens, false, 'and so do the tokens');
 
@@ -1053,8 +1053,8 @@ async function hidingGroupTest() {
   const portalLabel = [...document.getElementById('setNonEnglishList').querySelectorAll('label')]
     .find(label => label.textContent.includes('Portal'));
   assert(portalLabel, 'the Portal row is there');
-  assert(/Portal and Portal II/.test(portalLabel.textContent),
-    'and an English page calls it Portal and Portal II, not Portal и Portal II (' +
+  assert(/Portal, Portal Second Age and Portal Three Kingdoms/.test(portalLabel.textContent),
+    'and an English page calls it by Scryfall\'s own set names, not Portal и Portal II (' +
       portalLabel.textContent.trim() + ')');
 
   // The old flat keys are gone from the page. A control that still wrote one of them
@@ -1094,9 +1094,9 @@ async function hidingMigrationTest() {
   assertEqual(mock.state.setFiltersMigrated, true, 'and the flag is written, so it is not done twice');
 
   assertEqual([document.getElementById('setNonTournament').checked,
-    document.getElementById('setForeignBlackBorder').checked,
-    document.getElementById('setNonEnglish').checked,
-    document.getElementById('setCaster').checked], [true, true, true, true],
+    document.getElementById('setForeignBlackBorder').value,
+    document.getElementById('setNonEnglish').value,
+    document.getElementById('setCaster').checked], [true, 'sets-prints', 'sets-prints', true],
     'and every one of them is drawn as the reader left it');
   assertEqual([...document.getElementById('setPrices').querySelectorAll('input')].map(box => box.checked),
     [true, true, true, true], 'including four price kinds from the one switch that used to hide them');

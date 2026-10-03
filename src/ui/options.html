@@ -53,17 +53,24 @@
 <label><input type="checkbox" id="setNonTournament"> Нетурнирные сеты (сувениры, официальные прокси, токены)</label>
 <label><input type="checkbox" id="setOversized"> Увеличенные карты (oversized)</label>
 <p class="hint">Обе галочки независимы: набор может быть увеличенным и одновременно нетурнирным — например, Vintage Championship это сувенирная увеличенная колода. Включение одной не выключает другую.</p>
-<label><input type="checkbox" id="setForeignBlackBorder"> Foreign Black Border</label>
+<!-- Two rules, and each has three positions rather than a switch, because they can
+     reach the Sets index or the Prints table or both and the difference is real:
+     a reader who wants Portal gone from the prints table does not necessarily want
+     the whole set unlisted. It is one field, not a switch plus a scope — a switch that
+     reads the same whichever way it is set is worse than no switch. -->
+<label for="setForeignBlackBorder">Foreign Black Border</label>
+<select id="setForeignBlackBorder"><option value="off">Не скрывать</option><option value="prints">Только в таблице изданий</option><option value="sets-prints">В Sets и в таблице изданий</option></select>
 <fieldset id="setForeignBlackBorderList" class="which-list"><legend>Какие именно</legend>
 <!-- One row per entry in STK_SET_FILTERS.FOREIGN_BLACK_BORDER, written by
      options.js. They are written rather than laid out here because the list is the
      model's: a fourth border set has to be one line in set-filters.js and nothing
      else, or the settings page would be showing a rule it cannot store. -->
 </fieldset>
-<label><input type="checkbox" id="setNonEnglish"> Неанглийские издания в Prints</label>
+<label for="setNonEnglish">Неанглийские издания</label>
+<select id="setNonEnglish"><option value="off">Не скрывать</option><option value="prints">Только в таблице изданий</option><option value="sets-prints">В Sets и в таблице изданий</option></select>
 <fieldset id="setNonEnglishList" class="which-list"><legend>Какие именно</legend>
 </fieldset>
-<p class="hint">Фильтры сетов действуют в Sets и Prints. Английские издания внутри этих наборов остаются: правило про наборы, а не про язык каждого выпуска. Текущее издание остаётся видимым; смешанные наборы с легальными картами сохраняются.</p>
+<p class="hint">Две поверхности — это список сетов Scryfall и таблица изданий карты, и правило может действовать на одну или на обе. Разница не косметическая: набор скрывается из списка целиком вместе с английскими изданиями внутри него, а в таблице изданий каждое издание скрывается по своему языку, поэтому английские остаются. В списке сетов правило «Неанглийские издания» узнаёт только Portal и Secret Lair по названию набора — остальные языки не названы ни в одном наборе, и в Prints они скрываются по языку самого выпуска.</p>
 </fieldset>
 <fieldset class="experimental-sub"><legend>Экспериментальное</legend>
 <p class="hint">Эта настройка ещё уточняется и может измениться или исчезнуть.</p>

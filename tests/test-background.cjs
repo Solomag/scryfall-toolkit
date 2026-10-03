@@ -565,7 +565,13 @@ async function edhrecThrottleTest() {
     // being hidden as non-tournament when that switch is on too.
     assertEqual(categories.data, {
       digital: ['mtgo'], nonTournament: ['ocmd', 'token', 'cei'],
-      oversized: ['opca', 'who', 'ocmd'], foreignBlackBorder: ['4bb']
+      oversized: ['opca', 'who', 'ocmd'],
+      // Per category, not one flat list: the settings page has a list under this rule
+      // and a list cannot narrow a single answer. `4bb` is under its own category and
+      // nowhere else, which is what makes unticking it on the settings page mean
+      // anything at all.
+      foreignBlackBorder: { '4bb': ['4bb'] },
+      nonEnglish: {}
     }, 'set categories are classified correctly');
     assertEqual(oversizedPages, [1, 2], 'the oversized list is walked until Scryfall says there is no more');
     assertEqual(setsFetches(), 1, 'first setCategories call fetched /sets once');

@@ -8,6 +8,85 @@ All releases: <https://github.com/Solomag/scryfall-toolkit/releases>
 
 ---
 
+### The surface mode, back, and this time both surfaces answer it
+
+1.1.0 shipped a mode on the two rules that could have one: Off, Only Prints, or Sets and
+Prints. 1.1.1 took it out again because nothing acted on it. **It is in the shape now**,
+and the reason it could not be before is the reason it works now.
+
+The two surfaces are different code. `sets.js` hides rows in a list keyed by set code.
+`prints.js` drops entries out of the API's answer, where each printing carries its own
+language. **A non-English printing cannot be reached from a set code at all**, so "Prints
+only" was never one click away for that rule — the surface that could see the language
+was the one being asked, and it was being asked a yes/no question.
+
+So each surface asks whether it is the one being addressed, through two separate functions
+rather than one boolean. `reachesSets` is true only for `sets-prints`; `reachesPrints` is
+true for `prints` and `sets-prints`. Asking "is anything on" collapses both values into
+one and is exactly what 1.1.0 did.
+
+There is no `settings.hideForeignBlackBorder` any more. A boolean alias cannot be asked
+which surface without a comparison that collapses the two modes, and that collapse is
+what made `prints` do nothing at all. A feature file that wants the old name back gets a
+missing property, which fails, rather than a boolean that is quietly wrong for one of the
+three values.
+
+**The test 1.1.0 needed and did not have.** Every one of the three positions is now asked
+of each surface separately, on a page carrying both a set list and a prints table. Six
+mutations were applied to `sets.js` and two to the model; four are caught and **two are
+not, because they are equivalent** — for the Prints table, "is anything on" and "does
+this reach the prints table" are the same question, so replacing one with the other
+changes nothing and a test that "passed" would have passed for the wrong reason.
+
+### What the mode exposed: two sets of names that were never Scryfall's
+
+The category tables in the model carried a `code` and a `setName` per entry that nothing
+had ever read, and both were wrong. Read from `https://api.scryfall.com/sets` on
+2026-10-03:
+
+- **`fbb` was labelled "Future Sight (FBB)".** `fbb` is a real set — a set called
+  *Foreign Black Border*, 307 cards, released 1994-04-11. Future Sight is `fut`, an
+  ordinary set with no border edition at all.
+- **`/fourth edition/i` and `/chronicles/i` would have hidden the wrong sets.** Both match
+  the ordinary `4ed` and `chr` as readily as `4bb` and `bchr`.
+- **`portal` and `secret-lair` were not set codes.** Portal is `por`, and Secret Lair is a
+  family: `sld`, `slc`, `slu`, `slp`, `pssc`.
+
+The codes and the patterns are deleted rather than corrected. The worker finds these sets
+by name off the same index, so a table keeping a copy of them is a copy that can disagree
+with the API, and the labels now say what Scryfall says.
+
+### And the sub-lists finally do something
+
+The settings page has drawn a list under each of these two rules since 1.1.4 — which of
+4BB, FBB and BCHR, which of Portal, Secret Lair and the rest. **Nothing in the extension
+read that list.** The checkboxes were decorative, which is the same defect as a switch
+that writes a key nothing reads, one level down.
+
+The worker now answers **per category** rather than as one flat list of codes, because a
+list cannot narrow a flat answer. Unticking a category now removes its sets from both
+surfaces, and a test asserts it.
+
+The one thing the Sets index cannot do is the third non-English category: every other set
+that prints a language besides English is not named anywhere, and finding them means
+walking their printings and reading each one's language — the oversized walk, repeated. So
+the index recognises Portal and Secret Lair by name, the Prints table recognises all of
+them by the printing's own language, and **the settings page says so rather than the
+page implying otherwise**.
+
+### Where this round stopped short, and why
+
+The grouped table `prints.js` builds from the API's answer — the second Prints surface,
+with its own `needsCategories` and its own excluded set — **is not covered by a check**, and
+the check that was written for it does not work. The page this harness builds for the
+purpose does not render the groups; the same call in `setPlatformTest` builds them, and
+nothing distinguishes the two. Rebuilding the fixture until the assertion went green would
+have produced a check that passes for a reason nobody can name, which is the thing this
+project has been getting wrong all along. It is written down at the end of the test and it
+is the next piece of work.
+
+---
+
 ### The hiding settings, drawn as the shape they had become
 
 The model arrived in 1.1.0 and the page never met it. `src/core/set-filters.js` held one

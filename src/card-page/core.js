@@ -113,8 +113,16 @@
   // strings, and with the mode gone a boolean is never 'off', so the non-English rule
   // read as permanently on - which is how a whole set of printings went missing from a
   // test with nothing switched on.
-  settings.hideForeignBlackBorder = hiding.foreignBlackBorder;
-  settings.hideNonEnglishPrints = hiding.nonEnglish;
+  //
+  // Now that the modes are back they are carried through as modes, under names that say
+  // so. There is deliberately no `settings.hideForeignBlackBorder` any more: a boolean
+  // alias cannot be asked "does this reach the sets index" without a comparison that
+  // collapses 'prints' and 'sets-prints' into one, and that collapse is what made
+  // 'prints' do nothing at all in 1.1.0. A feature file that wants the old name back
+  // gets a missing property, which fails, rather than a boolean that is quietly wrong
+  // for one of the three values.
+  settings.foreignBlackBorderSurfaces = hiding.foreignBlackBorder;
+  settings.nonEnglishSurfaces = hiding.nonEnglish;
   // Deliberately false, not derived. Which platforms are shown and which sets are
   // digital are the same decision: the platform switches already hide every Arena and
   // Magic Online set, so deriving this from them hid those sets twice over, and took
@@ -440,9 +448,25 @@
   // The conditions are functions rather than strings. A Manifest V3 content script
   // runs under a policy that forbids eval, so a condition kept as text would break
   // the extension rather than the test.
+  // Whether anything in the hiding group is in force for a surface, which is what decides
+  // if the set filter runs at all. The mode rules are asked per surface rather than
+  // collapsed to a boolean, because this one line is the third of the three places that
+  // read the mode and it is where 1.1.0 went wrong: `settings.hideForeignBlackBorder`
+  // there was the collapsed alias, so with 'prints' chosen it was false and the whole
+  // feature did not run — on either surface, including the one it had been asked for.
+  const setFilterNeeded = (() => {
+    const rules = window.STK_SET_FILTERS;
+    const onSets = rules.reachesSets(settings.foreignBlackBorderSurfaces) ||
+      rules.reachesSets(settings.nonEnglishSurfaces);
+    const onPrints = rules.reachesPrints(settings.foreignBlackBorderSurfaces) ||
+      rules.reachesPrints(settings.nonEnglishSurfaces);
+    return (platformFilterOn || settings.hideDigitalSets || settings.hideNonTournamentSets ||
+      settings.hideOversizedSets || onSets || onPrints);
+  })();
+  const setFilterPage = /^\/sets\/?$/.test(location.pathname) || cardPage;
   const BOOT = [
     ["clipboard", () => settings.clipboard, true],
-    ["setFilter", () => (platformFilterOn || settings.hideDigitalSets || settings.hideNonTournamentSets || settings.hideOversizedSets || settings.hideForeignBlackBorder || settings.hideNonEnglishPrints) && (/^\/sets\/?$/.test(location.pathname) || cardPage), false],
+    ["setFilter", () => setFilterNeeded && setFilterPage, false],
     ["tags", () => cardPage && settings.tags, false],
     ["legalities", () => cardPage, false],
     ["printFinishes", () => cardPage && settings.finishBadges, false],

@@ -758,20 +758,63 @@ async function oversizedSetCodes() {
   throw new Error('The oversized printing walk did not finish');
 }
 
+// Which sets carry which name, split by the categories the settings page offers.
+//
+// The settings page has a list under each of these two rules — which of 4BB, FBB and
+// BCHR, which of Portal, Secret Lair and the rest — and a list cannot narrow a single
+// flat answer. So the index answers per category and the page's list picks which of them
+// to merge. A flat list here would have made the sub-lists decorative.
+//
+// The names are Scryfall's own, read off /sets on 2026-10-03: "Fourth Edition Foreign
+// Black Border" is 4bb, "Foreign Black Border" is fbb — a set of its own, not Future
+// Sight, which is fut and has no border edition — and "Chronicles Foreign Black Border"
+// is bchr. Matched as prefixes rather than whole strings so a set Scryfall renames into
+// the same family is still found.
+const BORDER_SET_NAMES = {
+  '4bb': /^Fourth Edition Foreign Black Border/i,
+  fbb: /^Foreign Black Border/i,
+  bchr: /^Chronicles Foreign Black Border/i
+};
+// Portal, Portal Second Age, Portal Three Kingdoms and Portal Three Kingdoms Promos;
+// every Secret Lair set (Drop, Countdown, Ultimate Edition, Promo, Showcase Planes).
+//
+// There is no name for the third non-English category, which is every other set that
+// prints a language besides English. Finding those means walking their printings and
+// reading each one's language — the oversized walk, repeated — so this list does not
+// contain it and the rule reaches that category on the Prints table only, where a
+// printing says which language it is.
+const NON_ENGLISH_SET_NAMES = {
+  portal: /^Portal\b/i,
+  'secret-lair': /^Secret Lair/i
+};
+
 function loadSetCategories() {
   if (!digitalSetRequest) digitalSetRequest = (async () => {
     const { digitalSetIndex } = await chrome.storage.local.get('digitalSetIndex');
-    if (digitalSetIndex?.categories?.foreignBlackBorder && digitalSetIndex.expires > Date.now()) return digitalSetIndex.categories;
+    // The shape is part of the key. A flat border list was cached by an earlier build and
+    // it is still there for a day after an update; serving it would hand the page an array
+    // where it expects per-category answers, and every sub-list would come back empty
+    // without anything failing.
+    const cached = digitalSetIndex?.categories;
+    if (cached && !Array.isArray(cached.foreignBlackBorder) && digitalSetIndex.expires > Date.now()) {
+      return cached;
+    }
     try {
       const result = await scryfallJSON('https://api.scryfall.com/sets',
         {headers:{Accept:'application/json'},credentials:'omit'});
       if (!Array.isArray(result?.data) || result.has_more) throw new Error('Incomplete set index');
-      const categories = {digital:[],nonTournament:[],oversized:[],foreignBlackBorder:[]};
+      const categories = {digital:[],nonTournament:[],oversized:[],foreignBlackBorder:{},nonEnglish:{}};
       for (const set of result.data) {
         if (!/^[a-z0-9_-]+$/i.test(set.code || '')) continue;
         const code = set.code.toLowerCase();
+        const name = set.name || '';
         if (set.digital === true) categories.digital.push(code);
-        if (/foreign black border/i.test(set.name || '')) categories.foreignBlackBorder.push(code);
+        for (const [key, pattern] of Object.entries(BORDER_SET_NAMES)) {
+          if (pattern.test(name)) (categories.foreignBlackBorder[key] ||= []).push(code);
+        }
+        for (const [key, pattern] of Object.entries(NON_ENGLISH_SET_NAMES)) {
+          if (pattern.test(name)) (categories.nonEnglish[key] ||= []).push(code);
+        }
         if (['memorabilia','minigame','vanguard','token'].includes(set.set_type) ||
           /^(?:30a|cei|ced|wc97|wc98|wc99|wc0[0-4])$/.test(code)) categories.nonTournament.push(code);
       }

@@ -22,15 +22,20 @@
 //
 //   platforms  { paper, arena, mtgo }        which platforms' sets are shown at all
 //   sets       nonTournament, oversized      plain switches
-//              foreignBlackBorder            { on, which }
-//              nonEnglish                    { on, which }
+//              foreignBlackBorder            { surfaces, which }
+//              nonEnglish                    { surfaces, which }
 //   prices     { usd, tix, tcg, cardhoarder }
 //   tokens     show the tokens a deck makes
 //   caster     hide the Caster ON marker
 //
 // `which` is the subset of a category the rule applies to: which of 4BB, FBB and BCHR,
-// which of Portal, Secret Lair and the rest. A rule with a category has a switch plus a
-// list underneath it; one without does not. The switch is the whole rule either way.
+// which of Portal, Secret Lair and the rest.
+//
+// `surfaces` is where the rule applies, and there are two surfaces: the Sets index and
+// the Prints table. Three values — 'off', 'prints', 'sets-prints' — because the two
+// rules that carry it genuinely differ between them, and a reader who hides Portal
+// wants it gone from the prints table and gone from the list of sets alike, while one
+// who hides 4BB may want the sets listed and only the printings gone.
 //
 // Everything lives under one key rather than as a dozen flat booleans, because the
 // grouping is the point: these are the same decision taken at different depths, and a
@@ -39,37 +44,79 @@
 (function () {
   'use strict';
 
-  // There is no mode here, and there was one. 'prints' and 'sets-prints' were meant to
-  // mean "the prints table only" and "both surfaces", the shapes were written, the
-  // migration mapped the old switches onto them — and neither surface acted on the
-  // difference. Two of the places that read them were asking a boolean alias that
-  // collapses both values to one, and the third never asked at all.
+  // The mode is back, and this time both surfaces act on it.
   //
-  // A switch that reads the same whichever way it is set is worse than no switch,
-  // because a reader who sets it cannot tell whether they got what they asked for. So
-  // the distinction came out of the shape entirely rather than being left in it as a
-  // promise. What stays is the grouping, which does work: which platforms, which sets
-  // are junk, which price kinds.
+  // 1.1.0 shipped `on` as a mode with three values. The shape was right and the
+  // migration mapped the old switches onto it, and neither surface acted on the
+  // difference: two of the three places that read it asked a boolean alias that
+  // collapses both values into one, and the third never asked at all. With "Prints
+  // only" chosen, `needsSetIndex` in sets.js and `needsCategories` in prints.js both
+  // read the alias, the alias was false, the set index was never fetched, and the rule
+  // did nothing at all anywhere. So 1.1.1 took it out of the shape rather than leaving
+  // it in as a promise.
   //
-  // When the two surfaces are done, this is the field to widen, and widening it will be
-  // a small change precisely because everything else already lives in one place.
+  // What changed since is that the two surfaces are written, and they are different:
+  // sets.js hides rows in a list keyed by set code, prints.js drops entries out of the
+  // API's answer keyed by set *and* by the printing's language. That second one cannot
+  // be reached at all from a set code, which is why "Prints only" was never one click
+  // away for the non-English rule: hiding a set from the index is a different act from
+  // hiding a non-English printing, and only one of them can be done through a code.
+  //
+  // So the rule is not a boolean with extra steps. It is one field naming a surface, and
+  // each surface asks whether it is the one being addressed. That is the shape that
+  // failed before — a boolean the reader could not see the difference between — and the
+  // difference this time is that both readers of it are the code below and both are
+  // checked. If a surface ever stops asking, the value stops having any meaning, and
+  // the tests below are what say so.
 
+  const SURFACES = {
+    off: 'off',
+    prints: 'prints',
+    'sets-prints': 'sets-prints'
+  };
+  const SURFACE_NAMES = Object.keys(SURFACES);
+
+  // The categories a rule with a category under it is broken into. The keys are storage
+  // keys and the labels are what the settings page shows; nothing else is read out of
+  // these tables, and they used to carry more: a `code` and a `setName` for each entry,
+  // neither of which anything has ever read.
+  //
+  // Both were wrong. Read from https://api.scryfall.com/sets on 2026-10-03, the sets
+  // Scryfall names Foreign Black Border are:
+  //
+  //   4bb    Fourth Edition Foreign Black Border
+  //   fbb    Foreign Black Border
+  //   bchr   Chronicles Foreign Black Border
+  //
+  // `fbb` was labelled "Future Sight (FBB)". Future Sight is `fut`, an ordinary set with
+  // no border edition; `fbb` is a set of its own. And the `setName` patterns were worse
+  // than the labels: /fourth edition/i matches the ordinary Fourth Edition, and
+  // /chronicles/i matches the ordinary Chronicles, so both would have hidden the
+  // versions nobody asked about. `portal` and `secret-lair` were not set codes at all —
+  // Portal is `por`, and Secret Lair is a family (sld, slc, slu, slp, pssc and others).
+  //
+  // So the tables hold the two things that are used, and the codes and patterns are
+  // gone rather than corrected. The worker finds these sets by name off the same index,
+  // which is where the codes come from now; a table that keeps a copy of them is a copy
+  // that can disagree with the API.
   const FOREIGN_BLACK_BORDER = {
-    // Read off the sets themselves, by code: 4BB is Fourth Edition, FBB is Future Sight,
-    // BCHR is the Chronicles set that came with it.
-    '4bb': { code: '4bb', label: 'Fourth Edition (4BB)', setName: /fourth edition/i },
-    fbb: { code: 'fbb', label: 'Future Sight (FBB)', setName: /future sight/i },
-    bchr: { code: 'bchr', label: 'Chronicles (BCHR)', setName: /chronicles/i }
+    '4bb': { label: 'Fourth Edition Foreign Black Border (4BB)' },
+    fbb: { label: 'Foreign Black Border (FBB)' },
+    bchr: { label: 'Chronicles Foreign Black Border (BCHR)' }
   };
 
   // Portal, Secret Lair, and everything else that prints a language other than English
-  // while still being an English-legal printing. These are matched by set, not by the
-  // printing's language, because the rule is about which sets, and a Secret Lair drop
-  // has English printings in it that stay.
+  // while still being an English-legal printing. Matched by printing on the Prints
+  // table, where the printing says which language it is, and by name on the Sets index,
+  // where only the first two of these can be found at all — the third is every other
+  // set that prints a second language, which no set name states.
   const NON_ENGLISH = {
-    portal: { code: 'portal', label: 'Portal и Portal II', setName: /portal/i },
-    'secret-lair': { code: 'secret-lair', label: 'Secret Lair', setName: /secret lair/i },
-    other: { code: 'other', label: 'Другие языки', languages: true }
+    portal: { label: 'Portal, Portal Second Age и Portal Three Kingdoms' },
+    'secret-lair': { label: 'Secret Lair' },
+    // Not a set: the rest of them, recognised by the language on the printing. There is
+    // no name to match, so the name matching in the worker finds nothing for this one
+    // and the rule reaches it only on the Prints table.
+    other: { label: 'Другие языки' }
   };
 
   // Every storage key the migration has to be able to see.
@@ -106,8 +153,8 @@
     sets: {
       nonTournament: false,
       oversized: false,
-      foreignBlackBorder: { on: false, which: Object.keys(FOREIGN_BLACK_BORDER) },
-      nonEnglish: { on: false, which: Object.keys(NON_ENGLISH) }
+      foreignBlackBorder: { surfaces: SURFACES.off, which: Object.keys(FOREIGN_BLACK_BORDER) },
+      nonEnglish: { surfaces: SURFACES.off, which: Object.keys(NON_ENGLISH) }
     },
     prices: { usd: false, tix: false, tcg: false, cardhoarder: false },
     tokens: true,
@@ -133,7 +180,14 @@
     if (typeof input.sets?.oversized === 'boolean') out.sets.oversized = input.sets.oversized;
     for (const [key, table] of [['foreignBlackBorder', FOREIGN_BLACK_BORDER], ['nonEnglish', NON_ENGLISH]]) {
       const given = input.sets?.[key];
-      if (typeof given?.on === 'boolean') out.sets[key].on = given.on;
+      if (SURFACE_NAMES.includes(given?.surfaces)) out.sets[key].surfaces = given.surfaces;
+      // An `on` from a build that shipped the boolean, mapped to the surface that
+      // boolean actually reached. Both of them reached both surfaces, so both of them
+      // become 'sets-prints' rather than one of them becoming 'prints': choosing the
+      // narrower one would quietly stop hiding what the reader had been hiding.
+      if (typeof given?.on === 'boolean') {
+        out.sets[key].surfaces = given.on ? SURFACES['sets-prints'] : SURFACES.off;
+      }
       const which = knownList(given?.which, table);
       // An empty list means "nothing in this category is hidden", which is a real
       // choice, so it is kept. An unusable one falls back to all of them.
@@ -150,10 +204,13 @@
 
   // What the flat booleans meant, translated once.
   //
-  // `hideNonEnglishPrints` only ever applied to the Prints table. It maps to a plain
-  // switch, so it keeps reaching exactly what it reached before: the rule is the whole
-  // rule, and a shape that could promise "Prints only" and quietly not keep that
-  // promise was worse than one that says nothing about surfaces at all.
+  // `hideNonEnglishPrints` only ever applied to the Prints table, and its migration
+  // said so at the time. It maps to 'sets-prints' rather than to 'prints' for one
+  // reason: the rule has since been able to reach the Sets index as well, through the
+  // set code, and a reader who had this on had asked for the non-English printings to
+  // go — not for a narrower version of that. Choosing 'prints' here would be the
+  // migration deciding, on the reader's behalf, that they had meant less than they
+  // said.
   //
   // `onlyCardmarket` was one switch that turned all four price kinds off at once, so all
   // four come on together.
@@ -183,8 +240,12 @@
 
     if (stored.hideNonTournamentSets === true) out.sets.nonTournament = true;
     if (stored.hideOversizedSets === true) out.sets.oversized = true;
-    if (stored.hideForeignBlackBorder === true) out.sets.foreignBlackBorder.on = true;
-    if (stored.hideNonEnglishPrints === true) out.sets.nonEnglish.on = true;
+    // Both of these reached both surfaces before there was a choice, so both migrate to
+    // 'sets-prints': what the reader had was both, and 'sets-prints' is what both is
+    // now called. Mapping them to 'prints' would be the migration quietly narrowing
+    // somebody's settings on upgrade.
+    if (stored.hideForeignBlackBorder === true) out.sets.foreignBlackBorder.surfaces = SURFACES['sets-prints'];
+    if (stored.hideNonEnglishPrints === true) out.sets.nonEnglish.surfaces = SURFACES['sets-prints'];
 
     if (stored.onlyCardmarket === true) {
       for (const price of Object.keys(out.prices)) out.prices[price] = true;
@@ -236,20 +297,35 @@
       return {
         platforms: { paper: true, arena: true, mtgo: true },
         nonTournament: false, oversized: false,
-        foreignBlackBorder: false, nonEnglish: false
+        foreignBlackBorder: SURFACES.off, nonEnglish: SURFACES.off
       };
     }
     return {
       platforms: normalised.platforms,
       nonTournament: normalised.sets.nonTournament,
       oversized: normalised.sets.oversized,
-      foreignBlackBorder: normalised.sets.foreignBlackBorder.on,
-      nonEnglish: normalised.sets.nonEnglish.on
+      // The surfaces, as surfaces. Not a boolean derived from them: a surface that asked
+      // whether the rule is "on" would be unable to tell 'prints' from 'sets-prints',
+      // which is precisely what went wrong in 1.1.0 and why this went out of the shape.
+      foreignBlackBorder: normalised.sets.foreignBlackBorder.surfaces,
+      nonEnglish: normalised.sets.nonEnglish.surfaces
     };
   }
 
+  // What a surface asks about a mode. Two separate questions, asked separately, because
+  // answering one of them with the other is the whole of the earlier bug.
+  //
+  // A surface is either addressed by this mode or it is not. 'sets-prints' addresses
+  // both; 'prints' addresses the Prints table and not the Sets index; 'off' addresses
+  // neither. Asking `mode !== 'off'` answers "is any of this on", which is what
+  // needsSetIndex wanted, and it is not what either surface wants.
+  const reachesSets = mode => mode === SURFACES['sets-prints'];
+  const reachesPrints = mode => mode === SURFACES.prints || mode === SURFACES['sets-prints'];
+  const anySurface = mode => mode !== SURFACES.off;
+
   window.STK_SET_FILTERS = {
-    FOREIGN_BLACK_BORDER, NON_ENGLISH, PRICE_KINDS, LEGACY_KEYS,
+    FOREIGN_BLACK_BORDER, NON_ENGLISH, PRICE_KINDS, LEGACY_KEYS, SURFACES, SURFACE_NAMES,
+    reachesSets, reachesPrints, anySurface,
     defaults, normalise, migrate, read, effective, withoutSets, withSets, isPlainObject
   };
 })();

@@ -215,11 +215,18 @@ choices back rather than the defaults. It never rewrites them.
   not turn the other off. The list comes from Scryfall and not from a guess: oversized is
   a flag on the printing, not a field on the set, so the sets holding an oversized
   printing are collected by asking for the printings.
-- **Hide Foreign Black Border sets** — 4BB, FBB and BCHR, each with its own checkbox,
-  so you can hide one border treatment and keep another.
-- **Hide non-English printings** — language-specific rows in Prints, with a checkbox each
-  for Portal, Secret Lair and the rest. English printings inside those sets stay: the
-  rule is about which sets, not about the language of each printing.
+- **Foreign Black Border** and **Non-English printings** — each has three positions rather
+  than a switch: not at all, the Prints table only, or both the Sets index and the Prints
+  table. They differ because the two surfaces are different things. On the Prints table a
+  set is a row and a printing is a row, and each printing carries its own language, so a
+  Japanese printing of Portal can go while the English printings beside it stay. On the
+  Sets index there are only sets: hiding one removes the whole set, English printings
+  included. Which you want is a real choice, and neither answer is the default for the
+  other.
+- Under each, a list of which parts: 4BB, FBB and BCHR; Portal, Secret Lair and the rest.
+  On the Sets index the non-English rule recognises only Portal and Secret Lair, because
+  those are named; every other set that prints a second language is only found by reading
+  its printings, so that category applies on the Prints table.
 - **Hide USD, TIX, TCGplayer and Cardhoarder prices** — four separate checkboxes, see
   the price filter above. They sit outside the master switch, because they are not a set
   rule.

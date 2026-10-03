@@ -23,6 +23,7 @@
   // that was not there.
   const {
     settings,
+    setFilters,
     language,
     t,
     cardPath,
@@ -197,7 +198,15 @@
         oracleId = (await request({type:'card', id})).oracle_id;
       }
       const {prints, truncated} = await request({type:'allPrints', oracleId});
-      const needsCategories = platformFilterOn || settings.hideNonTournamentSets || settings.hideOversizedSets || settings.hideForeignBlackBorder || settings.hideDigitalSets;
+      const rules = self.STK_CONTENT.SET_FILTER_RULES;
+      // The two surfaces, asked about separately. This is the third of the three places
+      // that read the mode, and the one 1.1.0 missed entirely: it asked
+      // `settings.hideForeignBlackBorder` and, with 'prints' chosen, that boolean was
+      // false, so `needsCategories` was false and the set index was never asked for.
+      const fbbOnPrints = rules.reachesPrints(settings.foreignBlackBorderSurfaces);
+      const langOnPrints = rules.reachesPrints(settings.nonEnglishSurfaces);
+      const needsCategories = platformFilterOn || settings.hideNonTournamentSets ||
+        settings.hideOversizedSets || fbbOnPrints || langOnPrints || settings.hideDigitalSets;
       // The platform index only says which client carries a digital set, so the
       // set index is what tells the two apart.
       const [categories, platforms] = needsCategories
@@ -207,17 +216,39 @@
         ])
         : [{}, {}];
       const platformVisible = platformFilterOn ? platformSetVisible(categories, platforms) : () => true;
+      // Per category, narrowed by the reader's list, because the sub-lists on the
+      // settings page are per category and a flat list of codes cannot be narrowed.
+      const codesFor = (group, which) => which.flatMap(key => (group?.[key] || []).map(code => String(code).toLowerCase()));
+      const fbbRule = setFilters.sets.foreignBlackBorder;
+      const langRule = setFilters.sets.nonEnglish;
       const excluded = new Set([
         ...(settings.hideDigitalSets ? categories.digital || [] : []),
         ...(settings.hideNonTournamentSets ? categories.nonTournament || [] : []),
         ...(settings.hideOversizedSets ? categories.oversized || [] : []),
-        ...(settings.hideForeignBlackBorder ? categories.foreignBlackBorder || [] : [])
+        ...(fbbOnPrints ? codesFor(categories.foreignBlackBorder, fbbRule.which) : [])
       ]);
+      // The non-English rule is the one that cannot be expressed as a set code here,
+      // because a Secret Lair drop has English printings in it that must stay. So the
+      // named categories are matched by their sets, and the third category — every
+      // other non-English printing — is matched by the printing's own language, which
+      // only the API gives. A printing in a named set stays when that category is left
+      // out of the list, and an English printing stays either way.
+      const namedLang = new Set(codesFor(categories.nonEnglish, langRule.which));
+      const hidesOtherLanguages = langRule.which.includes('other');
+      const hidesForeignPrinting = (card) => {
+        if (!langOnPrints) return false;
+        // A named set the reader picked hides every printing in it, English included:
+        // that is what picking the category means. Everything else non-English is only
+        // hidden while the third category is picked, so leaving it out keeps the
+        // Japanese printing of an ordinary set, which is what leaving it out says.
+        if (namedLang.has(String(card.set || '').toLowerCase())) return true;
+        return hidesOtherLanguages && card.lang !== 'en';
+      };
       const groups = new Map();
       for (const card of prints) {
-        if (excluded.has(card.set) || settings.hideDigitalSets && card.digital ||
+        if (excluded.has(String(card.set || '').toLowerCase()) || settings.hideDigitalSets && card.digital ||
             !platformVisible(card.set) ||
-            settings.hideNonEnglishPrints && card.lang !== 'en') continue;
+            hidesForeignPrinting(card)) continue;
         const group = groups.get(card.set) || [];
         group.push(card);
         groups.set(card.set, group);
