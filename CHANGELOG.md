@@ -8,6 +8,48 @@ All releases: <https://github.com/Solomag/scryfall-toolkit/releases>
 
 ---
 
+### A legality check that says what it did not check
+
+The obvious next thing, and the one this project left out three times on purpose: a check
+over a deck, and the reason it was left out was that **which format a deck is being judged
+against is a question the deck editor does not answer**, and a check that guesses is worse
+than none.
+
+It is answered now, and the answer is not a setting. Scryfall's deck editor builds
+commander decks and the deck names its commander, so the format follows from the page the
+check runs on. There is nothing to pick from, which is also why the format is not a
+parameter: a parameter is a promise of formats this build does not offer. The answer names
+the format it judged, so a reader is never left to work it out.
+
+**It costs no new request.** `/cards/collection` — the endpoint the Show Tokens dialog
+already posts the deck's identifiers to — returns each card's `legalities`. The two were
+separate readings of the same list doing the same kind of call, so they are now one
+function, and the check is the parsing after a request the page was making anyway.
+
+**And the panel prints its own boundary, under the answer, always.** It checks one thing:
+whether Scryfall counts each card as legal in Commander. It does not check the commander's
+colour identity, the hundred-card limit, or the one-copy rule for cards marked "Commander
+only" — rules about the deck as a whole, which Scryfall has no endpoint for, and which
+would mean writing a mana-symbol parser and then trusting it. The panel says so on a clean
+deck as well as a dirty one, because a clean answer is the one most worth qualifying.
+
+A card Scryfall says nothing about is counted **apart** from a card it calls illegal.
+"No answer" is not "legal", and a reader who acted on the difference would swap a card
+that was fine.
+
+### The token dialog had no test and could not have had one
+
+Writing the first test for the new deck panel failed on `showModal is not a function`, and
+the reason is worth recording: **the harness patched `showModal` onto the `<dialog>`
+elements it found in the markup.** Both the token dialog and the legality panel are built
+at run time, so neither had it — which is why the token button has had no test since it
+shipped, and why a test for it could not simply have been written now.
+
+The patch is on the prototype, so a dialog a page creates for itself behaves like one it
+shipped in. Verified by the token path being reachable at all.
+
+---
+
 ### The "?" opens the whole column, not a piece of it
 
 Five of the six illustrations behind the "?" were crops of a panel. Now they are the card

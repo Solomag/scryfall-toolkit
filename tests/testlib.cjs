@@ -232,15 +232,22 @@ function createPage(options) {
   const url = options.url;
   const mock = options.mock || createChrome({ state: options.state, routes: options.routes });
   const { window, document } = parseHTML(options.html);
-  // linkedom parses a <dialog> but gives the element no modal behaviour, so a page
-  // that opens one throws a TypeError on the click. Patched here rather than through
-  // the context's HTMLDialogElement, because the element was already built by the
-  // parser and a class in the context does not reach it. The attribute stands in for
-  // the state a browser tracks in the element itself, so `open` reads back.
-  for (const dialog of document.querySelectorAll('dialog')) {
-    if (typeof dialog.showModal === 'function') continue;
-    dialog.showModal = function () { dialog.setAttribute('open', ''); };
-    dialog.close = function () { dialog.removeAttribute('open'); };
+  // linkedom parses a <dialog> but gives it no modal behaviour, so a page that opens one
+  // throws a TypeError on the click. Patched on the prototype rather than on each
+  // element: the token dialog and the deck legality dialog are both built at run time,
+  // and patching the elements that happened to be in the markup left every dialog a page
+  // creates for itself without a `showModal` — which is why the token button had no test
+  // and could not have had one.
+  //
+  // linkedom builds every element as a plain HTMLElement, so there is no
+  // HTMLDialogElement to patch and the prototype is shared with the rest of the document.
+  // `open` is an attribute here, standing in for the state a browser tracks in the
+  // element itself, so `open` reads back the way a page's own close button expects.
+  const dialogPrototype = Object.getPrototypeOf(document.querySelector('dialog') ||
+    document.createElement('dialog'));
+  if (typeof dialogPrototype.showModal !== 'function') {
+    dialogPrototype.showModal = function () { this.setAttribute('open', ''); };
+    dialogPrototype.close = function () { this.removeAttribute('open'); };
   }
 
   // linkedom has no HTMLSelectElement.value. Every settings handler reads it, so

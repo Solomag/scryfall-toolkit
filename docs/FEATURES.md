@@ -152,6 +152,19 @@ Scryfall previewed under another name (for example Lavabrink Venturer (IKO #19) 
 up deck cards and their tokens through Scryfall (at most 150 unique deck cards). These do
 not install Shambleshark itself.
 
+**Deck legality check.** A button on a deck page asks Scryfall about each of the deck's
+cards and lists the ones it counts as not legal in Commander. Commander is not chosen: the
+editor on Scryfall builds commander decks, and that is a fact about the page rather than a
+setting, so there is nothing to pick from.
+
+**What it does not check, and says so beside the answer:** the commander's colour
+identity, the hundred-card limit, and the one-copy rule for cards marked "Commander
+only". Those are rules about the deck as a whole. Scryfall has no endpoint that applies
+them to a deck, and computing them here would mean writing a mana-symbol parser and then
+trusting it — so the panel reports one thing well and prints its own boundary underneath.
+A card Scryfall says nothing about is counted apart from a card it calls illegal, because
+the two call for different actions.
+
 **Clean up improver** *(off by default)*. The first Shambleshark deck module to be
 ported. When a deck is cleaned up it moves lands out of the nonland column and nonlands
 out of the land one, and it can sort every column by card type or by name and head each
@@ -257,10 +270,8 @@ time.
 - Shambleshark's deckbuilder search, EDHREC suggestions, cleanup and card input editing
   **are** integrated; see the deck page section above. Its Card Notes and Legality Check
   modules are empty placeholders upstream, so there is nothing there to port. A legality
-  check over the deck is the obvious thing to build next and it is deliberately left out
-  rather than overlooked: the data is already here, but which format a deck is being
-  judged against is a question the deck editor does not answer, and a check that guesses
-  is worse than none.
+  check over the deck is now ours, and is described under Deck pages: it judges Commander
+  per card and prints the rules it did not apply rather than guessing them.
 - The dark theme is applied over Scryfall's own styles, so it depends on Scryfall's
   markup. A page that changes its markup can come out partly unthemed until this
   extension is updated. Behaviour on private, signed-in pages depends on what that page

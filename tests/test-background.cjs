@@ -154,6 +154,31 @@ async function fetchMock(url, init) {
     if (identifiers.some(item => item.oracle_id === '00000000-0000-0000-0000-000000000000')) {
       return jsonResponse({ object: 'error', code: 'bad_identifiers' }, 400);
     }
+    if (identifiers.length && identifiers.every(item => item.set && item.collector_number)) {
+      // The deck features identify by set and collector number: the token lookup and the
+      // legality check alike. The verdict is decided by the set code rather than written
+      // into a list, so a test says what it is asking for instead of matching on a name.
+      const VERDICT = {
+        // `penny` inside a set's verdict is the Penny *format*; `penny` as a set code
+        // below is the Penny set. The first version of this fixture had only the format
+        // and the test caught it, which is the kind of confusion worth leaving a comment
+        // about rather than quietly fixing.
+        mh3: { commander: 'legal', penny: 'not_legal' },
+        dom: { commander: 'legal' },
+        penny: { commander: 'not_legal', penny: 'legal' },
+        // No `commander` key at all: Scryfall said nothing about this one, which is not
+        // the same as it being legal, and the check keeps the two apart.
+        por: { penny: 'legal' }
+      };
+      return jsonResponse({ data: identifiers.map(item => ({
+        id: 'deck-card-' + item.set + '-' + item.collector_number,
+        name: 'Card of ' + item.set.toUpperCase(),
+        set: item.set,
+        collector_number: item.collector_number,
+        scryfall_uri: 'https://scryfall.com/card/' + item.set + '/' + item.collector_number,
+        legalities: VERDICT[item.set] || {}
+      })) });
+    }
     if (identifiers.length && identifiers.every(item => item.oracle_id)) {
       return jsonResponse({ data: identifiers.map(item => {
         // A real UUID, because the background checks the shape of what comes
@@ -356,6 +381,49 @@ async function edhrecThrottleTest() {
         'a malformed oracle id is refused rather than passed on');
     }
 
+    {
+      // The deck legality check, which asks the same endpoint the token lookup does.
+      const verdict = await send({
+        type: 'deckLegality',
+        entries: [
+          { set: 'mh3', collector_number: '42' },
+          { set: 'dom', collector_number: '126' },
+          { set: 'por', collector_number: '1' }
+        ]
+      });
+      assertEqual(verdict.data.format, 'commander', 'the format is named in the answer, not left to the caller');
+      assertEqual(verdict.data.checked, 3, 'all three cards were looked at');
+      // `mh3` is legal in Commander and not legal in Penny, and `por` says nothing
+      // about Commander at all. The check must put the middle one nowhere, the first one
+      // nowhere, and the last one in `unknown` rather than in `notLegal` — a card Scryfall
+      // will not answer about is not a card it calls legal.
+      assertEqual(verdict.data.notLegal, [], 'a deck of cards Scryfall calls legal has nothing on the list');
+      assertEqual(verdict.data.unknown, 1, 'and the card it said nothing about is counted apart');
+    }
+    {
+      const mixed = await send({
+        type: 'deckLegality',
+        entries: [
+          { set: 'mh3', collector_number: '42' },
+          { set: 'penny', collector_number: '1' }
+        ]
+      });
+      assertEqual(mixed.data.notLegal.length, 1, 'a card Scryfall calls not legal is on the list');
+      assertEqual(mixed.data.notLegal[0].set, 'penny', 'with the set it was found in');
+      assertEqual(mixed.data.notLegal[0].collector_number, '1', 'and its collector number');
+      assertEqual(mixed.data.unknown, 0, 'and nothing is counted as unknown that was answered');
+    }
+    {
+      // The bound and the shape, which are the same ones the token lookup takes: a
+      // malformed identifier must fail the request rather than produce a deck that looks
+      // checked and is not.
+      const bad = await send({ type: 'deckLegality', entries: [{ set: 'mh3', collector_number: 'not a number' }] });
+      assertEqual(bad, { ok: false, error: 'Invalid deck cards' },
+        'a malformed collector number is refused rather than passed on');
+      const tooMany = await send({ type: 'deckLegality', entries: Array.from({ length: 151 }, () => ({ set: 'mh3', collector_number: '1' })) });
+      assertEqual(tooMany, { ok: false, error: 'Invalid deck cards' },
+        'and a deck longer than a hundred and fifty cards is refused');
+    }
     {
       // A list of suggestions is longer than Scryfall's 75 identifiers per call.
       // EDHREC sends a hundred at a time, and the art is the whole point of the

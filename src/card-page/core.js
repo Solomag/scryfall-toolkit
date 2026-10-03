@@ -69,7 +69,7 @@
     edhrecUsage: false, edhrecSalt: false, showSaltScale: false, edhrecLink: false, edhrecUsageDisplay: 'both',
     usageColorMetric: 'decks', usageMediumDecks: 50000, usageHighDecks: 100000,
     usageMediumPercent: 1, usageHighPercent: 2.6, saltMediumThreshold: 1, saltHighThreshold: 2,
-    taggerSearchLinks: false, cardSearchLinks: true, cardNicknames: true, deckNoPrices: true, stackedDeckCards: true,
+    taggerSearchLinks: false, cardSearchLinks: true, cardNicknames: true, deckNoPrices: true, stackedDeckCards: true, deckLegality: true,
     premodern: true, heritage: false, classic: false, peak: false,
     formatOrder: null, formatVisibility: null,
     deckCleanUpImprover: false, cleanUpLandsInSingleton: true,
@@ -483,6 +483,7 @@
     ["deckPriceOption", () => settings.deckNoPrices, false],
     ["stackedDeckCards", () => settings.stackedDeckCards, false],
     ["deckTokens", () => settings.deckTokens, false],
+    ["deckLegality", () => settings.deckLegality && /^\/@[^/]+\/decks\//.test(location.pathname), false],
   ];
 
   // On a macrotask, not a microtask. Every feature file is waiting on `arrived`

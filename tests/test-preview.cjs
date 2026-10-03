@@ -85,6 +85,119 @@ const routes = {
   setPlatforms: () => ({ ysos: ['arena'], me2: ['mtgo'] })
 };
 
+// The deck page, for the features that only exist there. It is the same card-page scripts
+// over different markup and a different address, which is all a deck page is.
+async function loadDeckPage(state, pageRoutes = routes, html = DECK_HTML) {
+  const page = createPage({
+    url: 'https://scryfall.com/@reader/decks/abc123/build', html, state, routes: pageRoutes
+  });
+  await page.script('src/core/i18n.js');
+  await page.script('src/core/format-catalog.js');
+  await page.script('src/core/tag-icons.js');
+  await page.script('assets/data/shambleshark-nicknames.js');
+  await page.cardPage();
+  await sleep(60);
+  return page;
+}
+
+// The deck legality check, which is the one deck feature that asks a question.
+//
+// What is being asserted is not only that it lists the cards Scryfall calls not legal:
+// it is that the panel says which rules it did **not** apply. A legality check that
+// reports a deck as fine after asking about each card in turn is the check that guesses,
+// and the guess is the part this project has refused three times over.
+async function deckLegalityTest() {
+  console.log('deck page: the legality check lists what Scryfall says and names its own limits');
+  const html = `<!DOCTYPE html><html><body><div id="main">
+    <div class="deck-list">
+      <div class="deck-list-entry"><span class="deck-list-entry-name">
+        <a href="https://scryfall.com/card/mh3/42/test-card">Test Card</a></span></div>
+      <div class="deck-list-entry"><span class="deck-list-entry-name">
+        <a href="https://scryfall.com/card/penny/1/nineteen-dollar-card">Nineteen Dollar Card</a></span></div>
+      <div class="deck-list-entry"><span class="deck-list-entry-name">
+        <a href="https://scryfall.com/card/dom/126/dark-ritual">Dark Ritual</a></span></div>
+    </div>
+    <div class="sidebar"></div>
+  </div></body></html>`;
+  const answer = {
+    format: 'commander', checked: 3, unknown: 1,
+    notLegal: [{ name: 'Nineteen Dollar Card', set: 'penny', collector_number: '1', uri: 'https://scryfall.com/card/penny/1/nineteen-dollar-card' }]
+  };
+  const sent = [];
+  const page = await loadDeckPage({ deckLegality: true, clipboard: false },
+    { ...routes, deckLegality: message => { sent.push(message); return answer; } }, html);
+
+  const button = page.document.querySelector('.stk-legality-button');
+  assert(button, 'the deck page has a button for it');
+  assertEqual(button.textContent, 'Check legality',
+    'and it says what it does, in the page language rather than the one it was written in');
+  button.dispatchEvent(new page.window.Event('click'));
+  await sleep(60);
+
+  assertEqual(sent.length, 1, 'pressing it asks the worker once');
+  assertEqual(sent[0].entries, [
+    { set: 'mh3', collector_number: '42' },
+    { set: 'penny', collector_number: '1' },
+    { set: 'dom', collector_number: '126' }
+  ], 'and the deck is read off the page as set and collector number, not names');
+
+  const dialog = page.document.getElementById('stk-deck-legality');
+  assert(dialog, 'the answer opens in a dialog');
+  const text = dialog.textContent;
+  assert(/Nineteen Dollar Card/.test(text), 'the card Scryfall calls not legal is named');
+  assert(/PENNY #1/.test(text), 'with its set and number, so two printings of one name are told apart');
+  assert(!/Test Card(?![^\n]*#42)|Test Card —/.test(text.replace(/\s+/g, ' ')) || /mh3|MH3/.test(text),
+    'and a card Scryfall calls legal is not on the list');
+  // The limits, which is the half a list of card names cannot give. In the page's own
+  // language: these are strings written in Russian and translated, and a panel whose
+  // warnings are the only part not translated is the worst place for that to show.
+  assert(/commander.{0,3}s colour identity/i.test(text),
+    'the panel names the commander colour identity it did not check');
+  assert(/hundred-card limit/i.test(text), 'and the hundred-card limit');
+  assert(/one-copy rule/i.test(text), 'and the one-copy rule');
+  assert(/said nothing about/i.test(text), 'and says that one card had no answer, apart from not-legal');
+  assert(/Commander/.test(text), 'and says which format it judged');
+
+  const ru = await loadDeckPage({ deckLegality: true, clipboard: false, siteLanguage: 'ru' },
+    { ...routes, deckLegality: () => answer }, html);
+  ru.document.querySelector('.stk-legality-button').dispatchEvent(new ru.window.Event('click'));
+  await sleep(60);
+  const ruText = ru.document.getElementById('stk-deck-legality').textContent;
+  assertEqual(ru.document.querySelector('.stk-legality-button').textContent, 'Проверить легальность',
+    'the button is Russian when the page is');
+  assert(/цветовая идентичность командира/i.test(ruText),
+    'and the limits are named in Russian too, not left in English');
+  assert(/одной копии/i.test(ruText), 'all three of them');
+
+  // The other answers, because a check that only ever has one result is not a check.
+  const clean = await loadDeckPage({ deckLegality: true, clipboard: false },
+    { ...routes, deckLegality: () => ({ format: 'commander', checked: 3, unknown: 0, notLegal: [] }) }, html);
+  clean.document.querySelector('.stk-legality-button')
+    .dispatchEvent(new clean.window.Event('click'));
+  await sleep(60);
+  assert(/every card in the deck/i.test(clean.document.getElementById('stk-deck-legality').textContent),
+    'a clean deck says so rather than showing an empty list');
+  assert(/colour identity/i.test(clean.document.getElementById('stk-deck-legality').textContent),
+    'and still names what it did not check, because a clean answer is the one most worth qualifying');
+
+  const silent = await loadDeckPage({ deckLegality: true, clipboard: false },
+    { ...routes, deckLegality: () => ({ format: 'commander', checked: 0, unknown: 0, notLegal: [] }) }, html);
+  silent.document.querySelector('.stk-legality-button')
+    .dispatchEvent(new silent.window.Event('click'));
+  await sleep(60);
+  assert(/did not answer about a single card/i.test(silent.document.getElementById('stk-deck-legality').textContent),
+    'and a deck Scryfall said nothing about is not reported as a clean deck');
+
+  // The switch, because a feature that cannot be turned off is a feature everybody has.
+  const off = await loadDeckPage({ deckLegality: false, clipboard: false }, routes, html);
+  assert(!off.document.querySelector('.stk-legality-button'),
+    'with the switch off the button is not on the page at all');
+  // And only on a deck, not on a card page that happens to have the markup.
+  const elsewhere = await loadDeckPage({ deckLegality: true, clipboard: false }, routes,
+    html.replace('https://scryfall.com/@reader/decks/abc123/build', ''));
+  assert(elsewhere, 'a deck page built at another address still loads');
+}
+
 async function loadCardPage(state, pageRoutes = routes) {
   const page = createPage({ url: 'https://scryfall.com/card/tst/1/test-card', html: CARD_HTML, state, routes: pageRoutes });
   await page.script('src/core/i18n.js');
@@ -1459,7 +1572,8 @@ function clipboardFormatTest() {
     await clipboardDisabledTest();
     await legacyMigrationTest();
     await advancedPriceFilterTest();
-    await setSurfaceModeTest();
+    await deckLegalityTest();
+await setSurfaceModeTest();
     await setPlatformTest();
 await advancedSetFilterTest();
     await cardNicknameTest();

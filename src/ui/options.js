@@ -21,7 +21,7 @@ const defaults = {
   // here would make every old key look as though it had a value, and the migration
   // reads those keys to decide what the reader had chosen.
   setFilters: null, setFiltersMigrated: false,
-  taggerSearchLinks: false, cardSearchLinks: true, cardNicknames: true, deckNoPrices: true, stackedDeckCards: true,
+  taggerSearchLinks: false, cardSearchLinks: true, cardNicknames: true, deckNoPrices: true, stackedDeckCards: true, deckLegality: true,
   deckCleanUpImprover: false, cleanUpLandsInSingleton: true, sortEntriesPrimary: 'none', insertSortingHeadings: true,
   edhrecSuggestions: false, deckSearch: false,
   legalities: true, exportFormat: "moxfield", formatOrder: null, formatVisibility: null,
@@ -40,7 +40,7 @@ const defaults = {
 // one flag, the two category rules carry a list under them, and the four price kinds are
 // told apart by the model rather than by an id. A key-by-key save would have to be kept
 // in step with all three, and there is no test that could tell that it was not.
-const basicFields = ["clipboard", "printAddButtons", "printPageSameTab", "tags", "cardTags", "artTags", "relationships", "finishBadges", "cardtraderPrices", "euroPriceSources", "edhrecUsage", "edhrecSalt", "showSaltScale", "edhrecLink", "edhrecUsageDisplay", "usageColorMetric", "legalities", "exportFormat", "taggerSearchLinks", "cardSearchLinks", "cardNicknames", "deckNoPrices", "stackedDeckCards", "deckCleanUpImprover", "cleanUpLandsInSingleton", "sortEntriesPrimary", "insertSortingHeadings", "edhrecSuggestions", "deckSearch", "printGrouping", "printFoldGroups", "printFullPageLink"];
+const basicFields = ["clipboard", "printAddButtons", "printPageSameTab", "tags", "cardTags", "artTags", "relationships", "finishBadges", "cardtraderPrices", "euroPriceSources", "edhrecUsage", "edhrecSalt", "showSaltScale", "edhrecLink", "edhrecUsageDisplay", "usageColorMetric", "legalities", "exportFormat", "taggerSearchLinks", "cardSearchLinks", "cardNicknames", "deckNoPrices", "stackedDeckCards", "deckLegality", "deckCleanUpImprover", "cleanUpLandsInSingleton", "sortEntriesPrimary", "insertSortingHeadings", "edhrecSuggestions", "deckSearch", "printGrouping", "printFoldGroups", "printFullPageLink"];
 // EDHREC and CardTrader are optional features, and so is the access they need.
 // Chrome has a place for exactly this: optional_host_permissions, granted only
 // when the user turns one of them on. Turning a switch off and on again is also

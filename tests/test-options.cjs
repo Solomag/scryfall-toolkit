@@ -34,7 +34,7 @@ const REQUIRED_IDS = [
   'cardtraderPrices', 'euroPriceSources', 'edhrecUsage',
   'edhrecSalt', 'showSaltScale', 'edhrecLink', 'edhrecUsageDisplay',
   'legalities', 'exportFormat', 'taggerSearchLinks', 'cardSearchLinks',
-  'cardNicknames', 'deckNoPrices', 'stackedDeckCards',
+  'cardNicknames', 'deckNoPrices', 'stackedDeckCards', 'deckLegality',
   'deckCleanUpImprover', 'cleanUpLandsInSingleton', 'sortEntriesPrimary',
   'insertSortingHeadings', 'edhrecSuggestions', 'deckSearch',
   'deckModuleStatus', 'grantDeckHosts',
@@ -705,6 +705,8 @@ function sectionOrderTest() {
   assertEqual(sectionOf('setTokens'), 'Скрытие лишнего',
     'the deck token switch moved to the hiding group, which is where the model keeps it');
 assertEqual(sectionOf('deckNoPrices'), 'Scryfall Deckbuilder', 'the other deck options share one category');
+  assertEqual(sectionOf('deckLegality'), 'Scryfall Deckbuilder',
+    'the legality check is a deck tool and sits with the deck tools, not with the hiding rules');
   assertEqual(sectionOf('deckCleanUpImprover'), 'Scryfall Deckbuilder',
     'the clean up improver is a deck option');
   assertEqual(sectionOf('sortEntriesPrimary'), 'Scryfall Deckbuilder',

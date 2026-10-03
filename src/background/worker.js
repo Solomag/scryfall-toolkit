@@ -433,8 +433,15 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
         };
       }).filter(card => card.id);
     }
-    if (message.type === 'deckTokens') {
-      const entries = message.entries;
+    // The deck's own cards, by set and collector number, validated the same way wherever it
+    // is asked for.
+//
+// One collector of card objects for the whole page, used by the token lookup and by the
+    // legality check alike. They were separate requests of the same kind — both post the
+    // deck's identifiers to /cards/collection in batches of seventy-five — and the answer
+    // carries everything both of them need: `all_parts` for the tokens, `legalities` for
+    // the check. The check needs no endpoint this project did not already call.
+    async function deckCards(entries) {
       if (!Array.isArray(entries) || entries.length > 150 || entries.some(item =>
         !/^[a-z0-9_-]{1,16}$/i.test(item?.set || '') ||
         !/^[a-z0-9★-]{1,24}$/i.test(item?.collector_number || ''))) throw new Error('Invalid deck cards');
@@ -449,16 +456,62 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
         }
         return output;
       };
-      const cards = await collect(entries);
+      return { cards: await collect(entries), byIds: ids => collect(ids.map(id => ({ id }))) };
+    }
+    if (message.type === 'deckTokens') {
+      const { cards, byIds } = await deckCards(message.entries);
       const ids = [...new Set(cards.flatMap(card => (card.all_parts || [])
         .filter(part => part.component === 'token' && /^[0-9a-f-]{36}$/.test(part.id || ''))
         .map(part => part.id)))].slice(0,150);
-      const tokens = await collect(ids.map(id => ({ id })));
+      const tokens = await byIds(ids);
       return tokens.map(token => ({ name:token.name, uri:token.scryfall_uri,
         image:token.image_uris?.normal || token.card_faces?.[0]?.image_uris?.normal }))
         .filter(token => /^https:\/\/scryfall\.com\//.test(token.uri || '') &&
           /^https:\/\/cards\.scryfall\.io\//.test(token.image || ''))
         .sort((a,b) => a.name.localeCompare(b.name));
+    }
+    // Legality of the deck's cards, read off the same collection answer the tokens come
+    // from. Nothing new is called: `/cards/collection` returns each card's `legalities`,
+    // so the check costs the request the token button makes and the parsing after it.
+    //
+    // **One format, and it is Commander**, because the deck editor on Scryfall builds
+    // commander decks and the deck names its commander. That is a fact about the page the
+    // check runs on, not a preference; the format is therefore not a parameter, because a
+    // parameter is a promise of formats this build does not offer.
+    //
+    // What this is not, and what the panel says out loud rather than letting a reader
+    // assume: it is Scryfall's per-format answer for each card, one at a time. It does not
+    // check the colour identity of the deck's commander, the hundred-card limit, or the
+    // one-copy rule for cards that say "Commander only". Those are rules about the deck
+    // as a whole, Scryfall has no endpoint that applies them to a deck, and computing
+    // them here would mean writing a mana-symbol parser and then trusting it.
+    if (message.type === 'deckLegality') {
+      const FORMAT = 'commander';
+      const { cards } = await deckCards(message.entries);
+      // A card Scryfall says nothing about is not a card it calls legal. Kept apart from
+      // the rest rather than folded into either list, because "not_legal" and "no answer"
+      // are different findings and a reader acting on them does different things.
+      const notLegal = [];
+      let unknown = 0;
+      for (const card of cards) {
+        const verdict = card.legalities?.[FORMAT];
+        if (verdict === 'legal') continue;
+        if (verdict !== 'not_legal') { unknown += 1; continue; }
+        notLegal.push({
+          name: card.name,
+          set: card.set,
+          collector_number: card.collector_number,
+          uri: card.scryfall_uri
+        });
+      }
+      return {
+        format: FORMAT,
+        checked: cards.length,
+        unknown,
+        notLegal: notLegal
+          .filter(card => /^https:\/\/scryfall\.com\//.test(card.uri || ''))
+          .sort((a, b) => a.name.localeCompare(b.name))
+      };
     }
     if (message.type === 'edhrecRecs') {
       // The whole deck list, as the names EDHREC's own site would send. This is

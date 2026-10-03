@@ -47,13 +47,22 @@
     shared
   } = await self.STK_CONTENT.context;
 
-  function initDeckTokens() {
-    if (!/^\/@[^/]+\/decks\//.test(location.pathname)) return;
+  // The deck's own cards, by set and collector number.
+  //
+  // One reader for the token lookup and the legality check alike. They were separate
+  // readings of the same list a moment ago, and two readers of one list is two things
+  // that can disagree about which cards are in the deck.
+  function deckEntries() {
+    if (!/^\/@[^/]+\/decks\//.test(location.pathname)) return [];
     const anchors = [...document.querySelectorAll('.deck-list-entry .deck-list-entry-name a, a.card-grid-item-card[href]')];
-    const entries = [...new Map(anchors.map(a => {
+    return [...new Map(anchors.map(a => {
       const path = new URL(a.href, location.href).pathname.match(/^\/card\/([^/]+)\/([^/]+)/);
-      return path && [path[1] + '/' + path[2], {set:path[1],collector_number:decodeURIComponent(path[2])}];
-    }).filter(Boolean)).values()].slice(0,150);
+      return path && [path[1] + '/' + path[2], { set: path[1], collector_number: decodeURIComponent(path[2]) }];
+    }).filter(Boolean)).values()].slice(0, 150);
+  }
+
+  function initDeckTokens() {
+    const entries = deckEntries();
     const place = document.querySelector('#main .sidebar') || document.querySelector('#main .deck-list')?.parentElement;
     if (!entries.length || !place) return;
     const button = document.createElement('button');
@@ -131,7 +140,92 @@
   }
 
 
+  // Which cards Scryfall does not accept in Commander, and the limit of what that is.
+  //
+  // The panel opens with the answer and closes with what the answer is not. A legality
+  // check that reports "your deck is fine" when it has only asked Scryfall about each
+  // card in turn is the check that guesses, which is the thing this project has declined
+  // to ship three times; so the panel names the rules it did not apply, where it can be
+  // read before the reader acts on a list.
+  function initDeckLegality() {
+    const entries = deckEntries();
+    const place = document.querySelector('#main .sidebar') || document.querySelector('#main .deck-list')?.parentElement;
+    if (!entries.length || !place) return;
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'button-n stk-legality-button';
+    button.textContent = t('Проверить легальность');
+    const dialog = document.createElement('dialog');
+    dialog.id = 'stk-deck-legality';
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'button-n';
+    close.textContent = t('Закрыть');
+    close.addEventListener('click', () => dialog.close());
+    const title = document.createElement('h2');
+    title.textContent = t('Легальность колоды');
+    const content = document.createElement('div');
+    content.className = 'stk-legality-result';
+    dialog.append(title, close, content);
+    document.body.append(dialog);
+
+    let pending;
+    const line = text => {
+      const p = document.createElement('p');
+      p.className = 'stk-legality-note';
+      p.textContent = text;
+      return p;
+    };
+    button.addEventListener('click', async () => {
+      dialog.showModal();
+      if (!pending) {
+        content.textContent = t('Проверяю легальность…');
+        pending = request({ type: 'deckLegality', entries })
+          .catch(error => { pending = null; throw error; });
+      }
+      try {
+        const answer = await pending;
+        content.replaceChildren();
+        if (!answer.checked) {
+          content.append(line(t('Scryfall не ответил ни по одной карте.')));
+          return;
+        }
+        if (!answer.notLegal.length && !answer.unknown) {
+          content.append(line(t('Все карты колоды Scryfall считает легальными в Commander.')));
+        } else if (answer.notLegal.length) {
+          const list = document.createElement('ul');
+          list.className = 'stk-legality-list';
+          for (const card of answer.notLegal) {
+            const item = document.createElement('li');
+            const link = document.createElement('a');
+            link.href = card.uri;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            link.textContent = card.name;
+            item.append(link, document.createTextNode(
+              ' — ' + (card.set || '').toUpperCase() + ' #' + card.collector_number));
+            list.append(item);
+          }
+          content.append(line(t('Scryfall считает эти карты нелегальными в Commander:')));
+          content.append(list);
+        }
+        if (answer.unknown) {
+          content.append(line(t('Про %s карт Scryfall не сказал ничего; это не то же самое, что «легально».').replace('%s', String(answer.unknown))));
+        }
+        // Always last, and never omitted: it is the half of the answer a list of card
+        // names cannot give.
+        content.append(line(t(
+          'Проверена только легальность каждой карты отдельно. Цветовая идентичность командира, ограничение в 100 карт и правило одной копии для карт с надписью «только Commander» не проверялись.')));
+      } catch {
+        content.replaceChildren(line(t('Не удалось проверить легальность.')));
+      }
+    });
+    place.prepend(button);
+  }
+
   self.STK_CONTENT.on("deckTokens", () => initDeckTokens());
+  self.STK_CONTENT.on("deckLegality", () => initDeckLegality());
   self.STK_CONTENT.on("stackedDeckCards", () => initStackedDeckCards());
   self.STK_CONTENT.on("deckPriceOption", () => initDeckPriceOption());
 })();

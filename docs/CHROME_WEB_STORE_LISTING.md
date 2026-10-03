@@ -1,4 +1,4 @@
-# Chrome Web Store listing — Scryfall Toolkit 1.1.7
+# Chrome Web Store listing — Scryfall Toolkit 1.2.0
 
 Everything here is written from the shipped code, so that the answers given in the store
 console match what the extension actually does. Where a field needs a decision from the
@@ -57,7 +57,8 @@ has a button that asks for whichever a turned-on feature is still missing.
 > **Optional extras.** EDHREC and CardTrader are off until you turn them on; the rest have their own defaults and each can be switched off. EDHREC deck usage and Salt Meter
 > inside the legality block. CardTrader prices for the exact printing, using your own
 > personal access token. Finish badges, card nicknames, type and mana search links, set and
-> printing filters, a No Prices mode and a token list on deck pages.
+> printing filters, a No Prices mode, a token list and a Commander legality check on deck
+> pages.
 >
 > **In the deck editor.** Three more optional tools, all off by default: a Clean Up button
 > that sorts the deck and puts lands back in their column, EDHREC's own card lists for your
