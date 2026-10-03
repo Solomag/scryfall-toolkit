@@ -896,8 +896,22 @@ function loadSetCategories() {
         for (const [key, pattern] of Object.entries(NON_ENGLISH_SET_NAMES)) {
           if (pattern.test(name)) (categories.nonEnglish[key] ||= []).push(code);
         }
-        if (['memorabilia','minigame','vanguard','token'].includes(set.set_type) ||
-          /^(?:30a|cei|ced|wc97|wc98|wc99|wc0[0-4])$/.test(code)) categories.nonTournament.push(code);
+        // A set Scryfall calls one of these four types cannot hold a card a Commander deck could
+        // play, and that is what makes them junk rather than their name: measured on
+        // 2026-10-03, these are the only four set types where a search for
+        // `e:<set> format=commander` returns nothing, while every other type has cards in
+        // its first two sets that Commander accepts. Ask Scryfall instead of reading names
+        // and the answer is a type; read names and it is a list of exceptions that grows.
+        //
+        // This used to add nine code prefixes to the four types. All eleven of those codes
+        // are `memorabilia` sets - 30th Anniversary, the Collectors' Editions, the World
+        // Championship Decks - so the alternation caught nothing the type list did not, on
+        // any of the 1,053 sets Scryfall serves. It read like a second, independent way of
+        // catching memorabilia sets and was not one, which is worth noticing the next time
+        // a second condition is added to a rule like this.
+        if (['memorabilia', 'minigame', 'vanguard', 'token'].includes(set.set_type)) {
+          categories.nonTournament.push(code);
+        }
       }
       // Thrown rather than swallowed: an index that came back with an empty oversized
       // list would hide nothing and look complete, which is the failure being fixed

@@ -76,6 +76,33 @@ its verdicts rather than asserting them — a fixture written from memory about 
 a fixture that is wrong about the format, and it was wrong in the direction that would have
 hidden the bug.
 
+---
+
+### Nine codes in a rule that never caught anything
+
+The same question asked of the next hand-written rule: which sets count as non-tournament.
+It named four set types — `memorabilia`, `minigame`, `vanguard`, `token` — **and nine code
+prefixes**: `30a`, `cei`, `ced`, `wc97` through `wc04`.
+
+All eleven codes are `memorabilia` sets. 30th Anniversary, both Collectors' Editions, the
+World Championship Decks. So the alternation caught nothing the type list did not, on any of
+the 1,053 sets Scryfall serves, and removing it changes the answer by zero sets.
+
+It is worth noticing what that looked like in the source: a list of types *and* a list of
+codes, reading like a second independent way of catching the same thing. It was not one. A
+second condition in a rule like this is normally a second source of truth, and this one was
+a mirror of the first that happened to be written down.
+
+The four types are the right four, and that was measured rather than assumed. Asking
+Scryfall for `e:<set> format=commander` across the first two sets of every set type, those
+four return nothing and **every one of the other eighteen returns cards Commander accepts**.
+A set cannot be junk because of its name, so it is asked.
+
+The test fixture had been hiding this by spelling `cei` as an `expansion` — a type
+Scryfall does not give it. Under that fiction the code list was load-bearing. With the real
+type it is not, and the fixture now also carries a set whose name reads like a product and
+whose type is `commander`, so the rule is held to the type rather than to how a name sounds.
+
 ### The token dialog had no test and could not have had one
 
 Writing the first test for the new deck panel failed on `showModal is not a function`, and

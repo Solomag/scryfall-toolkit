@@ -70,8 +70,14 @@ const setsResponse = {
     { code: 'mtgo', digital: true, set_type: 'online', name: 'MTGO Sets' },
     { code: 'OCMD', set_type: 'memorabilia', name: 'Commander Oversized Deck' },
     { code: 'token', set_type: 'token', name: 'Tokens' },
-    { code: 'CEI', set_type: 'expansion', name: "Collector's Edition" },
+    // `cei` is a `memorabilia` set on Scryfall, not an expansion. It used to be spelled
+    // `expansion` here so that a list of code prefixes would catch it, and the list has
+    // gone: on all 1,053 sets Scryfall serves, every code it named was a `memorabilia`
+    // set, so it caught nothing the four types did not. The type is the whole rule.
+    { code: 'CEI', set_type: 'memorabilia', name: "Intl. Collectors' Edition" },
     { code: '4BB', set_type: 'expansion', name: 'Fourth Edition Foreign Black Border' },
+    // Sounds like memorabilia, is not. The rule is the type, so this stays visible.
+    { code: 'TRC', set_type: 'commander', name: "Tarkir: Drums of Boom Commander Deck" },
     { code: 'bad code!', name: 'Ignored' }
   ]
 };
@@ -698,6 +704,12 @@ async function edhrecThrottleTest() {
     assertEqual(categories.data, {
       digital: ['mtgo'], nonTournament: ['ocmd', 'token', 'cei'],
       oversized: ['opca', 'who', 'ocmd'],
+      // Non-tournament is decided by `set_type` and nothing else, which is what the
+      // measurement supports: on 2026-10-03 the four types in the rule were the only four
+      // where `e:<set> format=commander` returns nothing. A set that merely sounds like
+      // memorabilia is not one, and the old code list would have caught `cei` under a
+      // `expansion` type that Scryfall does not give it.
+      //
       // Per category, not one flat list: the settings page has a list under this rule
       // and a list cannot narrow a single answer. `4bb` is under its own category and
       // nowhere else, which is what makes unticking it on the settings page mean
@@ -705,6 +717,8 @@ async function edhrecThrottleTest() {
       foreignBlackBorder: { '4bb': ['4bb'] },
       nonEnglish: {}
     }, 'set categories are classified correctly');
+    assert(!categories.data.nonTournament.includes('trc'),
+      'a set whose name reads like a product but whose type is commander is not junk');
     assertEqual(oversizedPages, [1, 2], 'the oversized list is walked until Scryfall says there is no more');
     assertEqual(setsFetches(), 1, 'first setCategories call fetched /sets once');
     assert(mock.state.digitalSetIndex && mock.state.digitalSetIndex.expires > Date.now(),
