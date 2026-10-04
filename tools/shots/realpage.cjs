@@ -36,7 +36,16 @@ const PAGES = {
   counterspell: { set: 'dsc', number: '114' },
   darkRitual: { set: 'dom', number: '126' },
   lightningBolt: { set: 'm19', number: '170' },
-  solRing: { set: 'lea', number: '1' }
+  solRing: { set: 'lea', number: '1' },
+  // The sets index, and it is here for one reason. The two name-matched rules — the
+  // foreign black border sets and the Portal and Secret Lair sets — act on a set code, and
+  // this is the surface where a row *is* a set. On the prints table the same rules are
+  // masked by the ten-unit window the extension takes around the printing being viewed,
+  // and nothing in a rendered page can widen that window, because the rendered page's
+  // features have already run and their event handlers did not survive being written to a
+  // file. So a check there can only ever report that the rule did nothing visible, which
+  // is not the same as reporting that it works.
+  sets: { url: 'https://scryfall.com/sets' }
 };
 
 // The whole key, hashed. Truncating it was the second version of this file's only
@@ -73,9 +82,10 @@ async function realPage(name) {
   // Set code and collector number are enough: /card/<set>/<number> answers with the
   // page whether or not the slug is right. The card object's own `uri` is not it —
   // that address is the API, which answers with JSON, and a page fetched from there
-  // names no stylesheet and reads as a page that does not exist.
-  const url = 'https://scryfall.com/card/' +
-    encodeURIComponent(wanted.set) + '/' + encodeURIComponent(wanted.number);
+  // names no stylesheet and reads as a page that does not exist. A page that is not a
+  // card's carries its own address instead.
+  const url = wanted.url || ('https://scryfall.com/card/' +
+    encodeURIComponent(wanted.set) + '/' + encodeURIComponent(wanted.number));
   const html = await fetchText(url);
   if (!/<title>[^<]+<\/title>/.test(html)) {
     throw new Error('no page at ' + url + ': the answer is not a document');
@@ -103,7 +113,7 @@ async function realPage(name) {
     // what the picture's panel has to describe.
     set: wanted.set,
     number: wanted.number,
-    cardName: (page.match(/<title>([^<·]+)·/) || [])[1].trim(),
+    cardName: ((page.match(/<title>([^<·]+)·/) || [])[1] || wanted.cardName || '').trim(),
     html: page,
     css: css.map(sheet => sheet.text).join('\n'),
     // What the features read out of the document rather than out of our own fixtures.

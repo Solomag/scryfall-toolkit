@@ -96,11 +96,14 @@ Settings and the clipboard live in `chrome.storage.local` and never leave your b
 
 ```
 npm install     # linkedom, for the tests
-npm test        # eight suites
+npm test        # nine suites
+npm run render  # draw every panel in Chrome and measure it
 npm run package # build the release archive
 ```
 
 The last suite is a smoke test of the package: it builds the archive, unpacks it and turns it on. Two earlier releases shipped with a file missing from the zip while the working folder was fine, which is what that suite exists to stop.
+
+**`npm run render` is not in `npm test`, because Chrome is not something a test suite may assume.** It builds all six card-page panels and both deck panels the way the extension builds them, from Scryfall's own markup and stylesheet with our theme on top, and measures them in a real browser at four widths from 1600px down to a phone: 407 checks about containment, overlap, size, overflow and legibility. The suites run on linkedom, which is an HTML parser with no layout and no CSS, so everything they can say about a panel is about the DOM. `npm run render-mutations` breaks three things on purpose and fails if any of them goes unnoticed, which is how a check that cannot fail is found.
 
 **Before a release, run the live pass.** The suites check repository invariants — that the archive holds what the pages reference, that the version is written everywhere it is shown, that no host is used without being declared, and that the documents do not contradict each other. None of that can see Scryfall, and Scryfall can change its markup or its application internals with no deprecation cycle. **[docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md)** is the ten minutes of browser work that closes that gap, and it lists the limits that are known rather than defects.
 

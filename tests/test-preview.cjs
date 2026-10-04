@@ -87,10 +87,16 @@ const routes = {
 
 // The deck page, for the features that only exist there. It is the same card-page scripts
 // over different markup and a different address, which is all a deck page is.
-async function loadDeckPage(state, pageRoutes = routes, html = DECK_HTML) {
+//
+// `before` runs after the document exists and before any feature file does, which is the
+// only place a stand-in for something the document has to answer can go. A feature that
+// asks a question at load time cannot be given that answer afterwards: the question has
+// already been answered wrongly and the page is already built.
+async function loadDeckPage(state, pageRoutes = routes, html = DECK_HTML, before = null) {
   const page = createPage({
     url: 'https://scryfall.com/@reader/decks/abc123/build', html, state, routes: pageRoutes
   });
+  if (before) await before(page);
   await page.script('src/core/i18n.js');
   await page.script('src/core/format-catalog.js');
   await page.script('src/core/tag-icons.js');
@@ -223,6 +229,80 @@ async function deckLegalityTest() {
   const elsewhere = await loadDeckPage({ deckLegality: true, clipboard: false }, routes,
     html.replace('https://scryfall.com/@reader/decks/abc123/build', ''));
   assert(elsewhere, 'a deck page built at another address still loads');
+}
+
+// Where the deck buttons go, which is the one decision on this page that depends on
+// something a test has to supply.
+//
+// Scryfall's stylesheet shows `.sidebar` only from 800px up and keeps one on a narrow
+// screen with the class `always-visible`, so below that the sidebar is `display:none`:
+// present in the markup, zero pixels on screen. Both buttons used to be prepended into it
+// whenever it existed, and it exists at every width — so on a phone the token dialog and
+// the legality check were 0x0 controls and neither could be opened. The fix asks the
+// browser whether the sidebar is on screen and puts the button beside the deck list when it
+// is not; the second container was already named in the old fallback and was simply never
+// reached, because the test was whether the sidebar was *absent* rather than *shown*.
+//
+// `getClientRects()` is the browser's own answer and the reason this is testable here: an
+// element with `display:none` produces no boxes. linkedom has no layout and no
+// `getClientRects` at all, so the harness has to say which way the answer goes — and that
+// is the whole content of this test. It cannot be checked by `npm run render`, which is
+// where that limitation is written down: the features run in the harness and the browser
+// only draws what they left behind, so a decision made here cannot be revisited there.
+async function deckButtonPlacementTest() {
+  console.log('deck page: the buttons go where a reader can see them, not into a hidden box');
+  const html = `<!DOCTYPE html><html><body><div id="main">
+    <div class="deck-list">
+      <div class="deck-list-entry"><span class="deck-list-entry-name">
+        <a href="https://scryfall.com/card/mh3/42/test-card">Test Card</a></span></div>
+    </div>
+    <div class="sidebar"></div>
+  </div></body></html>`;
+
+  // What the browser says about the sidebar, given as an argument rather than as a stub on
+  // the prototype: two pages, two answers, and the page is otherwise identical.
+  const pageWhereSidebarHas = boxes => loadDeckPage(
+    { deckTokens: true, deckLegality: true }, routes, html,
+    page => {
+      // One box per element that is on screen. `display:none` produces none, which is the
+      // answer the feature reads and the only thing this test varies.
+      page.document.querySelector('#main .sidebar').getClientRects =
+        () => boxes.map(() => ({ width: 540, height: 900 }));
+    });
+
+  // One box: the sidebar is on screen, which is the desktop.
+  const shown = await pageWhereSidebarHas([{}]);
+  assert(shown.document.querySelector('#main .sidebar .stk-token-button'),
+    'a sidebar that is on screen is where the token button goes');
+  assert(shown.document.querySelector('#main .sidebar .stk-legality-button'),
+    'and the legality button with it, so the two are never in different places');
+
+  // No boxes: `display:none`, which is every width below 800px — the phone.
+  const hidden = await pageWhereSidebarHas([]);
+  const main = hidden.document.getElementById('main');
+  const tokenButton = hidden.document.querySelector('.stk-token-button');
+  const legalityButton = hidden.document.querySelector('.stk-legality-button');
+  assert(tokenButton, 'a sidebar with no boxes still gets a button — beside the deck list');
+  assert(!hidden.document.querySelector('#main .sidebar .stk-token-button'),
+    'and not the unreachable one inside the hidden sidebar');
+  assert(!hidden.document.querySelector('#main .sidebar .stk-legality-button'),
+    'the legality button too');
+  assert(tokenButton && tokenButton.parentElement === main,
+    'the token button is in the deck list\'s own container, which is on screen at every width');
+  assert(legalityButton && legalityButton.parentElement === main,
+    'and the legality button in the same place');
+  assert(main.contains(hidden.document.querySelector('.deck-list')),
+    'which is the container the deck list is in, so there is something to sit above');
+
+  // The degradation, pinned because the rest of this file depends on it: with no
+  // `getClientRects` at all — linkedom's own state — the sidebar is used, which is what the
+  // code did before there was a question to ask. Guessing "hidden" would move the buttons
+  // somewhere these tests never look and fail for a reason that is not a defect.
+  const silent = await loadDeckPage({ deckTokens: true }, routes, html);
+  assertEqual(typeof silent.document.querySelector('#main .sidebar').getClientRects,
+    'undefined', 'the harness has no getClientRects of its own, so the tests supply it');
+  assert(silent.document.querySelector('#main .sidebar .stk-token-button'),
+    'and with no answer available the sidebar is used, as it was before');
 }
 
 async function loadCardPage(state, pageRoutes = routes) {
@@ -1600,6 +1680,7 @@ function clipboardFormatTest() {
     await legacyMigrationTest();
     await advancedPriceFilterTest();
     await deckLegalityTest();
+await deckButtonPlacementTest();
 await setSurfaceModeTest();
     await setPlatformTest();
 await advancedSetFilterTest();

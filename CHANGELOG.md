@@ -315,6 +315,82 @@ feature's own code, keyed on the browser's answer.
 
 ---
 
+### The render check grows to the card page, and its own fixture was three releases out of date
+
+The gap I reported last round was that `npm run render` draws one page and the other six
+features are not drawn at all. That is closed: `tools/check-card-render.cjs` renders all six
+panels behind the settings illustrations, at four widths from 1600px to a phone, in the
+arrangement a reader has — Scryfall's markup, Scryfall's stylesheet, our theme on top, our
+panels where our feature files put them, and no extra CSS to flatter any of it. 205 checks.
+
+Writing it turned up four things, and the first is the reason this entry exists.
+
+**The fixture that draws the pictures was classifying sets the way the extension did before
+1.1.4.** `tools/shots/live.cjs` kept its own copy of the rules — a flat `foreignBlackBorder`
+array matched by the words "foreign black border" in a set's name, and no `nonEnglish` at
+all. The copy had drifted from `worker.js` when the two rules became per-category lists with
+sub-lists a reader can narrow to. Nothing failed. Every sub-list came back empty, both rules
+hid nothing, and the sixth settings illustration was a picture of a filter the extension no
+longer has. The file's own comment said the rules were "copied from worker.js on purpose: a
+second, slightly different copy here would quietly show a picture of a filter that does not
+exist", and the second copy is what happened.
+
+The tables are read out of the worker now, by name, and a renamed table stops the tool rather
+than emptying it. Measured against `/sets` on 2026-10-04: `4bb`, `fbb`, `bchr` for the
+border rule; `por`, `ptk`, `p02`, `pptk` for Portal; `pssc`, `slc`, `sld`, `slp`, `slu` for
+Secret Lair. Same rule, one copy, and the check that reads the worker's own answer is the
+same object the page is given.
+
+**And the platform index was routed as `{}`.** The same file answered `setPlatforms` with an
+empty object, which says no digital set is on any client — so with paper alone chosen, `omb`
+and all sixty other digital sets stayed on the page. The index the extension ships is routed
+instead, read from `assets/data/set-platforms.js` rather than copied, so a check can now say
+which sets a client carries instead of assuming none do.
+
+Both fixtures were wrong in the direction that hides nothing, which is the direction that
+looks like a working feature. Neither picture changed when they were fixed, which is worth
+saying plainly: `hide-extra.png` shows the price columns, and the set filters in its fixture
+name sets that are not among the ten rows Scryfall shows on that card, so they do nothing
+visible there. The picture was not lying. It was not demonstrating either.
+
+**A check that failed with a reason did not fail the run.** Both render tools filed a failure
+that came with an explanation as a note and exited 0. Found by mutation: the non-English rule
+was made to stop reaching the sets index, the tool printed `FAIL: … hides all of them (0 of
+5)`, and then reported success. A reason is worth printing; it is not a substitute for
+failing. Both tools now fail on any check that does not pass.
+
+**And the phone fix was covered by nothing.** `deckButtonPlace` put back the way it was —
+the sidebar whenever the sidebar exists — passed `npm run render`, which cannot see the
+decision, and passed `npm test`, which had never been asked. `npm run render-mutations` exists
+because of that, and the third mutation is now caught by a test in `test-preview.cjs` that
+gives the harness the answer the browser would give: one box for the sidebar and it is used,
+no boxes and the button goes beside the deck list, and with no `getClientRects` at all the
+sidebar is used, as it was before.
+
+**Where the rules are checked, and why not on the prints table.** The two name-matched rules
+are checked on Scryfall's sets index, where a row *is* a set. On the prints table they are
+masked: the extension takes a window of ten sets around the printing being viewed, `sld` is
+the eleventh of twenty-four for this card, and the window can only be widened by pressing
+"View all prints" — which a rendered page cannot do, because the features ran in the harness
+and their event handlers did not survive being written out to a file. Two switches were tried
+there first, the black-border filter and the non-tournament one, and both hid nothing and
+passed. A check like that is worse than no check.
+
+Measured, with the rule in force on the index: 1,064 rows, the five Secret Lair sets found and
+shown with it off, all five hidden with it on, nothing else hidden, and Scryfall's own counter
+rewritten to `1059 of 1064`. With paper alone chosen, all 61 digital sets go.
+
+Checked and left alone, so it need not be decided again: the tag icons are 18px on the real
+page, so the `STAGE_CSS` in `make-feature-shots.cjs` that sizes them is belt and braces and
+not the thing making them the right size; Scryfall's prints table is 409px wide in a 383px
+column and always has been, so the group rows are checked against the table's full width
+rather than against the window; `sets.js` falls back to
+`{digital:[], foreignBlackBorder:['4bb','fbb','bchr']}` when the set index request fails,
+which is the old flat shape — harmless, because an array yields no per-category answers and a
+failed request hides nothing anyway, but it is the pre-1.1.4 shape and should not be.
+
+---
+
 ### `lang:!en` is not a negation, and it answered confidently
 
 The same treatment for the two rules left. Both name sets by their names, which is the one

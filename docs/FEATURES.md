@@ -274,6 +274,22 @@ The set field of Advanced search follows the **Games** checkboxes Scryfall alrea
 above it. Hidden sets are marked, never removed, so the field can widen again at any
 time.
 
+**What these rules are checked against.** The two name-matched rules are verified on the Sets
+index, in a real browser: with the rule in force, 1,064 rows are on the page, the five Secret
+Lair sets are among them, all five go when the category is chosen, nothing else does, and
+Scryfall's own counter is rewritten to match. With paper alone chosen, all 61 digital sets go.
+The rule's names are read out of `worker.js` rather than copied into the check, so a change to
+a pattern changes what is expected instead of quietly disagreeing with it.
+
+They are not verified on the Prints table, and the reason is worth knowing before reading
+that as a gap in the feature. That table shows a window of ten sets around the printing being
+viewed, and the sets these rules name sit outside it for most cards — for Counterspell, `sld`
+is the eleventh of twenty-four. The window widens when "View all prints" is pressed, which no
+automated check can do to a page whose features have already run. So the Prints table's own
+behaviour is checked in the extension's unit tests, where the fixture supplies the API's
+answer directly, and the browser check is on the surface where the switch and the row are
+next to each other.
+
 ---
 
 ## What is not done yet

@@ -284,29 +284,82 @@ async function clipboardCards(count = 3) {
 // really remove.
 //
 // The classification is not Scryfall's to ask for: the category endpoints answer
-// 404 now. It is the worker's own reading of /sets — a name pattern for the
-// oversized and black-border sets, a code list for the non-tournament ones, and
-// Scryfall's own `digital` flag. The rules below are copied from
-// src/background/worker.js on purpose: a second, slightly different copy here would
-// quietly show a picture of a filter that does not exist.
+// 404 now. It is the worker's own reading of /sets — a name pattern per black-border
+// category and per non-English category, a type list for the non-tournament ones, and
+// Scryfall's own `digital` flag.
+//
+// The name patterns used to be copied into this file, and the copy drifted. It matched a
+// flat `foreignBlackBorder` array by the words "foreign black border" in a set's name and
+// had no `nonEnglish` at all — the shape the extension had before 1.1.4, when the two rules
+// were single on/off switches. Nothing failed: the sixth settings illustration went on
+// showing a picture of a filter the extension no longer has, every sub-list came back
+// empty, and `npm run render` reported the feature as covered. So the tables are read out
+// of the worker now, and a renamed table stops the tool instead of emptying it.
+function workerNameTables() {
+  const source = fs.readFileSync(
+    path.join(__dirname, '..', '..', 'src', 'background', 'worker.js'), 'utf8');
+  const read = name => {
+    const at = source.search(new RegExp('^const ' + name + ' = \\{', 'm'));
+    if (at === -1) {
+      throw new Error('worker.js has no ' + name + ' table of name patterns any more, so ' +
+        'this tool cannot classify sets the way the extension does. Copying the patterns ' +
+        'here instead is what caused this: the copy drifted and nothing said so.');
+    }
+    const from = source.indexOf('{', at);
+    let depth = 0;
+    let end = from;
+    for (; end < source.length; end += 1) {
+      if (source[end] === '{') depth += 1;
+      else if (source[end] === '}') { depth -= 1; if (depth === 0) break; }
+    }
+    // The slice is a `const NAME = {…}`, and `return` cannot be followed by a declaration,
+    // so the table is declared and then returned rather than returned in place of itself.
+    return new Function(source.slice(at, end + 1) + '\nreturn ' + name + ';')();
+  };
+  return { border: read('BORDER_SET_NAMES'), nonEnglish: read('NON_ENGLISH_SET_NAMES') };
+}
+
 async function setCategories() {
   const data = await cachedGet('https://api.scryfall.com/sets');
   if (!Array.isArray(data.data)) throw new Error('the list of sets came back without one');
-  const categories = { digital: [], nonTournament: [], oversized: [], foreignBlackBorder: [] };
+  const tables = workerNameTables();
+  const categories = {
+    digital: [], nonTournament: [], oversized: [], foreignBlackBorder: {}, nonEnglish: {}
+  };
   for (const set of data.data) {
     if (!/^[a-z0-9_-]+$/i.test(set.code || '')) continue;
     const code = set.code.toLowerCase();
-    const oversized = /oversiz/i.test(set.name || '') || /^o(?:cmd|cd|pr|pd)/i.test(code);
+    const name = set.name || '';
     if (set.digital === true) categories.digital.push(code);
-    if (/foreign black border/i.test(set.name || '')) categories.foreignBlackBorder.push(code);
+    for (const [key, pattern] of Object.entries(tables.border)) {
+      if (pattern.test(name)) (categories.foreignBlackBorder[key] ||= []).push(code);
+    }
+    for (const [key, pattern] of Object.entries(tables.nonEnglish)) {
+      if (pattern.test(name)) (categories.nonEnglish[key] ||= []).push(code);
+    }
+    const oversized = /oversiz/i.test(name) || /^o(?:cmd|cd|pr|pd)/i.test(code);
     if (oversized) categories.oversized.push(code);
-    else if (['memorabilia', 'minigame', 'vanguard', 'token'].includes(set.set_type) ||
-      /^(?:30a|cei|ced|wc97|wc98|wc99|wc0[0-4])$/.test(code)) categories.nonTournament.push(code);
+    // The four set types Scryfall serves that cannot hold a Commander card, which is what
+    // makes them junk rather than their name. Measured 2026-10-03 against
+    // `e:<set> format=commander`: these four return nothing, every other type returns cards.
+    if (['memorabilia', 'minigame', 'vanguard', 'token'].includes(set.set_type)) {
+      categories.nonTournament.push(code);
+    }
   }
-  for (const flag of Object.keys(categories)) {
+  // Every category, and every sub-list, must come out with something in it. An empty one
+  // hides nothing and looks complete, which is the whole failure this guards against.
+  for (const flag of ['digital', 'nonTournament', 'oversized']) {
     if (!categories[flag].length) {
       throw new Error('not one set came out as ' + flag +
         ', so the classification in the picture would be an empty claim');
+    }
+  }
+  for (const group of ['foreignBlackBorder', 'nonEnglish']) {
+    for (const key of Object.keys(tables[group === 'foreignBlackBorder' ? 'border' : 'nonEnglish'])) {
+      if (!(categories[group][key] || []).length) {
+        throw new Error('no set came out as ' + group + '.' + key +
+          ', so the sub-list a reader can narrow to would be empty');
+      }
     }
   }
   return categories;

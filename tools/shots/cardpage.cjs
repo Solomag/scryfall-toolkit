@@ -80,9 +80,76 @@ function routesFor(data) {
     card: () => ({ oracle_id: data.hero.oracleId, legalities: data.hero.legalities || {} }),
     allPrints: () => ({ prints: data.prints, truncated: false }),
     setCategories: () => data.categories,
-    setPlatforms: () => ({}),
+    // The platform index the extension ships, rather than an empty object.
+    //
+    // It used to be `{}`, which is the same as saying no digital set is on any platform:
+    // the filter then has nothing to hide and every digital printing stays on the page. The
+    // sixth settings illustration was drawn that way and showed a column of prices with the
+    // filters apparently doing nothing — which is what it was doing, in the picture and in
+    // the harness, and neither was the extension. This is the snapshot the manifest loads,
+    // read as the file the worker would answer from.
+    setPlatforms: () => shippedPlatforms(),
     preview: name => ({ name, image: '', uri: 'https://scryfall.com/card/' })
   };
+}
+
+// The second page the illustrations can be cut from: Scryfall's sets index.
+//
+// It is here for one reason and it is a check's reason.
+// The two name-matched rules — the foreign black border sets, and Portal and the Secret
+// Lairs — act on a set code, and the sets index is the surface where a row *is* a set: no
+// collector number, no ten-unit window taken around the printing being viewed, nothing
+// between the switch and the row it names. On the prints table the same rules are masked
+// by that window, and a rendered page cannot widen it, because the features have already
+// run by the time the browser draws and their event handlers did not survive being written
+// out to a file. So a check on the prints table can report that the rule did nothing
+// visible, which is not a report that the rule works.
+async function setsFixture() {
+  const page = await realpage.realPage('sets');
+  return { page, categories: await live.setCategories() };
+}
+
+async function buildSetsPage({ data, storage = {}, routes: overrides = {}, waitFor = null } = {}) {
+  if (!data) throw new Error('no data was given, so the page would carry invented text again');
+  const page = createPage({
+    url: data.page.url,
+    html: data.page.html,
+    state: { cards: [], ...storage },
+    routes: {
+      setCategories: () => data.categories,
+      setPlatforms: () => shippedPlatforms(),
+      ...overrides
+    }
+  });
+  await page.script('src/core/i18n.js');
+  await page.script('src/core/format-catalog.js');
+  await page.script('src/core/tag-icons.js');
+  await page.script('assets/data/shambleshark-nicknames.js');
+  await page.cardPage();
+  await sleep(200);
+  if (waitFor) await waitForSelector(page, waitFor);
+  return page;
+}
+
+// The platform index the extension ships, read from the file itself rather than copied.
+//
+// `assets/data/set-platforms.js` assigns to `self.__STK_SET_PLATFORMS` and is loaded by the
+// manifest, so it is read here by evaluating that one assignment and handing back the
+// object. If the file is renamed or the global it writes changes, this says so instead of
+// quietly answering with nothing.
+function shippedPlatforms() {
+  if (shippedPlatforms.value) return shippedPlatforms.value;
+  const file = path.join(__dirname, '..', '..', 'assets', 'data', 'set-platforms.js');
+  const source = fs.readFileSync(file, 'utf8');
+  const self = {};
+  new Function('self', source)(self);
+  const index = self.__STK_SET_PLATFORMS;
+  if (!index || typeof index !== 'object') {
+    throw new Error('assets/data/set-platforms.js does not leave an index behind, so the ' +
+      'platform filter has nothing to answer with and would hide nothing without saying so');
+  }
+  shippedPlatforms.value = index;
+  return index;
 }
 
 // Runs the real feature files over Scryfall's real document, and hands back the
@@ -201,5 +268,5 @@ function themeCss() {
   return sheets.map(sheet => fs.readFileSync(path.join(ROOT, sheet), 'utf8')).join('\n');
 }
 
-module.exports = { fixture, buildCardPage, routesFor, waitForSelector, waitForCount, reveal,
-  renderableHtml, themeCss };
+module.exports = { fixture, buildCardPage, setsFixture, buildSetsPage, routesFor,
+  waitForSelector, waitForCount, reveal, renderableHtml, themeCss };

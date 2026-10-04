@@ -47,11 +47,19 @@ const VIEWPORTS = [
 const failures = [];
 const notes = [];
 const checks = [];
+// A check that does not pass fails the run, whether or not it can say why.
+//
+// A note used to stand in for the failure: `if (!ok && !note) failures.push(label)` meant a
+// check that failed *with* a reason was printed and then not counted, and the run exited 0.
+// Found by mutation in the card tool and fixed in both, because the two were written the
+// same way and one being wrong says nothing about the other.
 function check(ok, label, note = '') {
   checks.push(1);
-  if (!ok && !note) failures.push(label);
+  if (!ok) {
+    failures.push(label);
+    if (note) notes.push(label + ' — ' + note);
+  }
   console.log((ok ? '  ok:   ' : '  FAIL: ') + label + (note ? '\n         — ' + note : ''));
-  if (!ok && note) notes.push(label + ' — ' + note);
 }
 
 // Two boxes overlap if their rectangles intersect by more than half a pixel in both axes.
