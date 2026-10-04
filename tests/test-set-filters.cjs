@@ -156,6 +156,30 @@ assertEqual(F.normalise({ sets: { nonEnglish: { surfaces: 'nowhere' } } }).sets.
   assertEqual(F.withSets(F.withoutSets(chosen)).sets.nonTournament, true,
     'and opening the gate brings the same choices back, not the defaults');
 
+  console.log('set-filters: the foreign-only switch, which has no surface of its own');
+  const withForeignOnly = F.normalise({ sets: { foreignOnly: true } });
+  assertEqual(withForeignOnly.sets.foreignOnly, true, 'it is read and kept');
+  assertEqual(F.defaults().sets.foreignOnly, false, 'and it is off by default, like the other two');
+  assertEqual(F.effective(withForeignOnly).foreignOnly, true,
+    'effective() carries it, so a surface can ask the gate-respecting question');
+  assertEqual(F.effective(F.withoutSets(withForeignOnly)).foreignOnly, false,
+    'and the gate shuts it like everything else under it');
+  assertEqual(F.withoutSets(withForeignOnly).sets.foreignOnly, true,
+    'while the choice itself survives a closed gate');
+  // A plain boolean and nothing else. It is a property of a set, so there is no surface to
+  // choose and no sub-list to narrow: a set with no English printing has nothing to show on
+  // either surface, and the 34 sets it covers are foreign releases and Japanese-only products
+  // with nothing in common to narrow by. If this ever grows a `which`, that is a different
+  // rule and the two mode rules already are one.
+  assertEqual(Object.keys(F.effective(withForeignOnly)).includes('foreignOnly'), true,
+    'it is one of the answers effective() gives');
+  assertEqual(F.effective(withForeignOnly).foreignOnly === 'sets-prints', false,
+    'and it is a boolean rather than a surface string, which is what the two mode rules use');
+  assertEqual(F.normalise({ sets: { foreignOnly: 'yes' } }).sets.foreignOnly, false,
+    'a value that is not a boolean does not switch it on');
+  assertEqual(F.normalise({ sets: { foreignOnly: true } }).sets.oversized, false,
+    'and it does not disturb the switches beside it');
+
   console.log('set-filters: a malformed object is completed, not replaced');
   const half = F.normalise({ platforms: { arena: false }, sets: { foreignBlackBorder: { which: ['fbb'] } } });
   assertEqual(half.platforms, { paper: true, arena: false, mtgo: true },

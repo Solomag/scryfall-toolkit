@@ -19,7 +19,8 @@ const TARGETS = {
   css: path.join(ROOT, 'src/styles/content.css'),
   sets: path.join(ROOT, 'src/card-page/sets.js'),
   deck: path.join(ROOT, 'src/card-page/deck-lists.js'),
-  worker: path.join(ROOT, 'src/background/worker.js')
+  worker: path.join(ROOT, 'src/background/worker.js'),
+  setsPage: path.join(ROOT, 'src/card-page/sets.js')
 };
 const before = {};
 for (const [key, file] of Object.entries(TARGETS)) before[key] = fs.readFileSync(file, 'utf8');
@@ -75,6 +76,30 @@ const MUTATIONS = [
     find: "'4bb': /^Fourth Edition Foreign Black Border/i",
     replace: "'4bb': /^Fourth Edition/i",
     expect: '4bb/4ed'
+  },
+  {
+    // The measured list is dropped from the answer the worker gives. The rule then reads
+    // `undefined`, hides nothing, and looks switched on — which is the failure this whole
+    // shape of bug has been about, and the reason the cache guard in `loadSetCategories`
+    // names every list rather than the ones that existed when it was written.
+    name: 'the worker stops answering with the foreign-only list',
+    file: 'worker',
+    run: 'test-background',
+    find: "categories.foreignOnly = bundledForeignOnly.filter(code => served.has(code));",
+    replace: "categories.foreignOnly = [];",
+    expect: 'set categories are classified correctly'
+  },
+  {
+    // And the same list not reaching the page that acts on it, which is where the drifted
+    // copy in this repository's own tools hid for three releases: the fixture had no
+    // `foreignOnly` at all, every sub-list came back empty, and both rules hid nothing while
+    // the render check reported the feature as covered.
+    name: 'the card page stops asking for the foreign-only list',
+    file: 'setsPage',
+    run: 'test',
+    find: "...(settings.hideForeignOnlySets ? categories.foreignOnly || [] : [])",
+    replace: "...([])",
+    expect: 'foreign-only'
   }
 ];
 
@@ -82,6 +107,7 @@ const RUNS = {
   'render-card': () => [path.join(ROOT, 'tools/check-card-render.cjs')],
   'render-deck': () => [path.join(ROOT, 'tools/check-deck-render.cjs')],
   test: () => [path.join(ROOT, 'tests/test-preview.cjs')],
+  'test-background': () => [path.join(ROOT, 'tests/test-background.cjs')],
   'set-rules': () => [path.join(ROOT, 'tools/check-set-name-rules.cjs')]
 };
 
@@ -103,8 +129,17 @@ try {
       source.replace(mutation.find, mutation.replace), 'utf8');
     let output = '';
     let code = 0;
+    const run = RUNS[mutation.run];
+    if (!run) {
+      console.log('FAIL: ' + mutation.name + ' — no runner named "' + mutation.run +
+        '", so this mutation was never applied. A mutation pointing at a runner that does ' +
+        'not exist passes by not running.');
+      wrong += 1;
+      restore(mutation.file);
+      continue;
+    }
     try {
-      output = execFileSync(process.execPath, RUNS[mutation.run](),
+      output = execFileSync(process.execPath, run(),
         { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 2400000 });
     } catch (error) {
       code = error.status === undefined ? -1 : error.status;

@@ -439,8 +439,14 @@ chrome.storage.local.get(defaults, values => {
   });
   applyGate();
 
-  // The two plain rules in the group. They are booleans and stay booleans.
-  for (const [id, key] of [['setNonTournament', 'nonTournament'], ['setOversized', 'oversized']]) {
+  // The plain rules in the group. They are booleans and stay booleans.
+  //
+  // Three of them now, and the third was added after the other two rather than beside them:
+  // it is a plain switch for the same reason they are, but unlike them its list behind it is
+  // a dated measurement rather than something Scryfall answers on request, and the hint under
+  // it says so. A switch whose data ages should not look like a switch whose data is fetched.
+  for (const [id, key] of [['setNonTournament', 'nonTournament'], ['setOversized', 'oversized'],
+    ['setForeignOnly', 'foreignOnly']]) {
     const box = document.getElementById(id);
     box.checked = filters.sets[key];
     box.addEventListener('change', () => {

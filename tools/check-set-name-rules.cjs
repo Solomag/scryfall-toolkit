@@ -43,6 +43,7 @@ const { workerTables, classify } = require('./shots/worker-tables.cjs');
 
 const ROOT = path.join(__dirname, '..');
 const CACHE = path.join(ROOT, 'dist', 'set-name-rules');
+const SNAPSHOT = path.join(ROOT, 'assets', 'data', 'set-foreign-only.js');
 const AGENT = 'Scryfall Toolkit build tool (checking the set name rules)';
 const SET_INDEX = 'https://api.scryfall.com/sets';
 
@@ -181,6 +182,65 @@ async function sweep(sets, fresh) {
     (unread ? ', ' + unread + ' unread' : '') + '\n');
   fs.writeFileSync(file, JSON.stringify(answers), 'utf8');
   return answers;
+}
+
+// The snapshot the extension ships, written from what this tool just measured.
+//
+// Why a snapshot and not a walk. The platform index can refresh itself because its candidate
+// list is short — the 61 sets Scryfall marks digital — so an unknown one is worth a page of its
+// printings. This list has no short candidate list: the sets with no English printing are a
+// subset of all 1,053, so "the ones we do not know about" is most of Scryfall, and asking about
+// each would be 1,053 requests a day for every reader. That is not a cost this extension should
+// generate on anybody's behalf.
+//
+// So the answer is dated, like every other measurement in this project, and the direction it
+// goes stale is the safe one: a foreign-only set released since the snapshot stays visible
+// until the next run. That is the same policy the platform lookup already follows — a set it
+// cannot place stays visible rather than being hidden on a guess — and it is why the date is
+// in the file and not only in a changelog.
+//
+// `--write` is the only thing that changes it, and it writes what was just measured rather
+// than what was typed.
+function writeSnapshot(codes, measuredOn) {
+  const sorted = [...codes].sort();
+  const body = sorted.map(code => "  '" + code + "'").join(',\n');
+  const text = `/*
+ * Scryfall Toolkit. Copyright (c) 2026 Scryfall Toolkit contributors.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ *
+ * Third-party data, images and code in this project keep their own licence
+ * and are described in THIRD_PARTY_NOTICES.md. The MPL does not cover them.
+ */
+// The sets Scryfall has printings for and no English printing among them.
+//
+// Measured on ${measuredOn} by asking Scryfall about every set it serves: for each of the
+// ${sorted.length} codes here, \`e:<code>\` answers with printings and \`e:<code> lang:en\` is
+// refused. Both halves are needed. A refusal on its own is ambiguous, because Scryfall refuses
+// the same way for a set it indexes no printings for at all, and one set on the day of the
+// sweep (pfra) is in that second state and is not in this list.
+//
+// What these sets have in common is not a border and not a language family: they are foreign
+// releases and Japanese-only products, from the French Renaissance (\`ren\`, 122 printings, all
+// French) and the Italian Rinascimento (\`rin\`) through the Magic Premiere Shop runs to five
+// sets of Japanese promo tokens. Nothing here is a Portal or a Secret Lair set — those are
+// English sets that were released abroad as well, and they are in the other list.
+//
+// This is a measurement, not a rule, and it is dated because it goes out of date. A new
+// foreign-only set stays visible until the next sweep, which is the safe direction to be stale
+// in: a reader sees one promo set they could have hidden, rather than losing a set they meant
+// to see. Regenerate with: npm run set-rules -- --write
+//
+// The platform index beside this one can refresh itself and this cannot, because its candidate
+// list is the 61 digital sets and this one's would be every set Scryfall serves.
+self.__STK_SET_FOREIGN_ONLY = [
+${body}
+];
+`;
+  fs.writeFileSync(SNAPSHOT, text, 'utf8');
+  return sorted.length;
 }
 
 (async () => {
@@ -362,6 +422,39 @@ async function sweep(sets, fresh) {
   console.log('  ' + englishTotal + ' of ' + Object.keys(english).length +
     ' sets have at least one English printing, ' + withoutEnglish.length +
     ' have printings and none in English, and ' + empty.length + ' are not indexed at all.');
+
+  // The snapshot the extension ships is what this tool measured, so the two cannot drift: a
+  // stale snapshot is a check that fails rather than a filter that quietly hides the wrong
+  // thing. Only the codes Scryfall still serves count, so a set it has dropped leaves the file.
+  const live = new Set(sets.map(set => String(set.code).toLowerCase()));
+  const wanted = withoutEnglish.filter(code => live.has(code));
+  const shipped = fs.existsSync(SNAPSHOT)
+    ? (() => {
+      const self = {};
+      new Function('self', fs.readFileSync(SNAPSHOT, 'utf8'))(self);
+      return self.__STK_SET_FOREIGN_ONLY || [];
+    })()
+    : null;
+  if (shipped === null) {
+    check(false, 'the shipped snapshot of foreign-only sets exists',
+      'assets/data/set-foreign-only.js is missing; run with --write to create it from this sweep');
+  } else {
+    const missing = wanted.filter(code => !shipped.includes(code));
+    const extra = shipped.filter(code => !wanted.includes(code));
+    check(missing.length === 0 && extra.length === 0,
+      'the shipped snapshot of foreign-only sets is exactly what this sweep measured (' +
+      shipped.length + ' codes, measured ' + new Date().toISOString().slice(0, 10) + ')',
+      missing.length || extra.length
+        ? 'in the sweep but not shipped: ' + (missing.join(', ') || 'none') +
+          '; shipped but not in the sweep: ' + (extra.join(', ') || 'none') +
+          '. Run with --write to bring the file up to date.'
+        : null);
+  }
+  if (process.argv.includes('--write')) {
+    const written = writeSnapshot(wanted, new Date().toISOString().slice(0, 10));
+    console.log('');
+    console.log('wrote ' + written + ' codes to ' + path.relative(ROOT, SNAPSHOT));
+  }
 
   console.log('');
   if (notes.length) {

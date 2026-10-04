@@ -29,6 +29,10 @@ const {
   fixture, buildCardPage, setsFixture, buildSetsPage,
   waitForSelector, waitForCount, reveal, renderableHtml
 } = require('./shots/cardpage.cjs');
+const { shippedForeignOnly } = require('./shots/worker-tables.cjs');
+
+// The codes the shipped measurement names, read from the file rather than typed here.
+const foreignOnlyCodes = () => shippedForeignOnly();
 
 const OUT = path.join(ROOT, 'dist', 'render-check');
 const VIEWPORTS = [
@@ -392,6 +396,7 @@ const SET_FILTERS = {
       sets: {
         nonTournament: false,
         oversized: false,
+        foreignOnly: false,
         foreignBlackBorder: { surfaces: 'off', which: [] },
         nonEnglish: { surfaces: surface, which: on ? ['secret-lair'] : [] }
       },
@@ -535,6 +540,35 @@ const SET_FILTERS = {
       shownDigital.length + ' of ' + digital.length + ' still shown)',
       shownDigital.length ? 'still shown: ' +
         JSON.stringify(shownDigital.slice(0, 6).map(row => row.set)) : null);
+
+    // And the third rule in the group, which is a plain switch over a dated measurement.
+    // Read from the same file the extension loads, so the row a reader loses is named here by
+    // the file rather than by a list typed into this check.
+    const foreignOnly = SET_FILTERS.storage(false, 'off');
+    foreignOnly.setFilters.sets.foreignOnly = true;
+    const foreignPage = await buildSetsPage({ data: sets, storage: foreignOnly });
+    await waitForSelector(foreignPage, SET_FILTERS.waitFor);
+    const foreignFile = path.join(OUT, 'card-foreign-only.html');
+    fs.writeFileSync(foreignFile, renderableHtml(foreignPage.document, sets, { dark: true }), 'utf8');
+    await session.open_(foreignFile, { width: 1600, height: 1000 });
+    const foreignRows = JSON.parse(await session.evaluate(SET_ROWS));
+    const listed = foreignOnlyCodes().filter(code =>
+      foreignRows.some(row => row.set === code));
+    const stillShown = foreignRows.filter(row => foreignOnlyCodes().includes(row.set) && row.shown);
+    const wronglyHidden = foreignRows.filter(row => !row.shown && !foreignOnlyCodes().includes(row.set));
+    check(listed.length > 0,
+      'set filters: and the index lists sets the shipped measurement names (' + listed.length +
+      ' of ' + foreignOnlyCodes().length + ')',
+      listed.length ? null : 'none of them is on the page, so the rule cannot be observed here');
+    check(stillShown.length === 0,
+      'set filters: and with the switch on, none of them is on the page (' +
+      stillShown.length + ' of ' + listed.length + ' still shown)',
+      stillShown.length ? 'still shown: ' +
+        JSON.stringify(stillShown.slice(0, 6).map(row => row.set)) : null);
+    check(wronglyHidden.length === 0,
+      'set filters: and nothing else went with them (' + wronglyHidden.length + ' other rows hidden)',
+      wronglyHidden.length ? 'hidden but not in the measurement: ' +
+        JSON.stringify(wronglyHidden.slice(0, 6).map(row => row.set)) : null);
   }
   console.log('');
 

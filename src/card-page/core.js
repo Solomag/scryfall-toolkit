@@ -109,6 +109,7 @@
   // the gate, so a closed gate reaches all of them at once.
   settings.hideNonTournamentSets = hiding.nonTournament;
   settings.hideOversizedSets = hiding.oversized;
+  settings.hideForeignOnlySets = hiding.foreignOnly;
   // Straight through, with no comparison. These two were comparing against the mode
   // strings, and with the mode gone a boolean is never 'off', so the non-English rule
   // read as permanently on - which is how a whole set of printings went missing from a
@@ -461,7 +462,7 @@
     const onPrints = rules.reachesPrints(settings.foreignBlackBorderSurfaces) ||
       rules.reachesPrints(settings.nonEnglishSurfaces);
     return (platformFilterOn || settings.hideDigitalSets || settings.hideNonTournamentSets ||
-      settings.hideOversizedSets || onSets || onPrints);
+      settings.hideOversizedSets || settings.hideForeignOnlySets || onSets || onPrints);
   })();
   const setFilterPage = /^\/sets\/?$/.test(location.pathname) || cardPage;
   const BOOT = [

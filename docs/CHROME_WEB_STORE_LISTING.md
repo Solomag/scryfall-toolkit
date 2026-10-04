@@ -1,4 +1,4 @@
-# Chrome Web Store listing — Scryfall Toolkit 1.2.2
+# Chrome Web Store listing — Scryfall Toolkit 1.3.0
 
 Everything here is written from the shipped code, so that the answers given in the store
 console match what the extension actually does. Where a field needs a decision from the
@@ -258,13 +258,13 @@ Ready in `store-assets/`, each exactly **1280×800** (PNG), in English:
 | File | What it shows |
 | --- | --- |
 | `store-assets/01-settings-01-of-05.png` | the header, General (settings language, theme), Tags with its per-tag switches, CardClip with its export format, and the Hide extras heading opening with its master switch |
-| `store-assets/02-settings-02-of-05.png` | Hide extras continued — what counts as junk (non-tournament sets, oversized cards), Foreign Black Border and Non-English printings as mode selects over their category lists, the experimental platform block, and the price list starting |
-| `store-assets/03-settings-03-of-05.png` | the end of the price list with the Caster indicator and the deck token switch, then Additional info: EDHREC deck usage and Salt Meter, and CardTrader with its EUR source and token field |
+| `store-assets/02-settings-02-of-05.png` | Hide extras continued — what counts as junk (non-tournament sets, oversized cards, sets with no English printing), Foreign Black Border and Non-English printings as mode selects over their category lists, and the experimental platform block with its four switches |
+| `store-assets/03-settings-03-of-05.png` | which prices to hide with its four switches, the Caster indicator and the deck token switch, then Additional info: the nickname switches, EDHREC deck usage and Salt Meter, and CardTrader with its EUR source and token field |
 | `store-assets/04-settings-04-of-05.png` | the end of the CardTrader token field, Legality with the format grid, and Scryfall Deckbuilder with the Commander legality check and the two opt-in deck tools |
 | `store-assets/05-settings-05-of-05.png` | the tail of the deck tools with the host-access button, the deck clean-up block, Prints, Experimental, and Credits and third-party projects |
 
 All five come from one real capture of the settings page
-(`store-assets/settings-page-full.png`, 1280×5827), so nothing is repeated or cropped
+(`store-assets/settings-page-full.png`, 1280×5960), so nothing is repeated or cropped
 away between them. Each tile is scaled uniformly to 800 rows and the margins continue
 the page's own colour, so no screenshot is stretched.
 

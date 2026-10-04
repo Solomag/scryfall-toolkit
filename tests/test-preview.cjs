@@ -79,6 +79,12 @@ const routes = {
   // of the two rules and a flat list of codes cannot be narrowed by one.
   setCategories: () => ({
     digital: ['ysos', 'me2'], nonTournament: [], oversized: [],
+    // The measured list, as the worker answers it. `por` is in it because the fixture's own
+    // route says Portal is a foreign-only set, which is a fiction — on Scryfall Portal has 215
+    // English printings and is not in the list. It is here so the test can watch the list
+    // being acted on, and the real file is checked against a real sweep by
+    // `npm run set-rules`, which is where the truth about `por` is settled.
+    foreignOnly: ['por', 'wmkm'],
     foreignBlackBorder: { '4bb': ['4bb'], fbb: ['fbb'], bchr: ['bchr'] },
     nonEnglish: { portal: ['por', 'p02', 'ptk'], 'secret-lair': ['sld'] }
   }),
@@ -304,6 +310,43 @@ async function deckButtonPlacementTest() {
   assert(silent.document.querySelector('#main .sidebar .stk-token-button'),
     'and with no answer available the sidebar is used, as it was before');
 }
+
+// The sets index, which is the other surface the set filters act on.
+//
+// It is built the way the extension builds it — the same scripts, over Scryfall's own row
+// markup, at Scryfall's own address — because the rule is decided by what a row's link says
+// and a fixture that did not look like the page could not tell a working filter from a broken
+// one. `#js-checklist` and `/sets/<code>` are the page's own names, not this file's.
+const SETS_HTML = `<!DOCTYPE html><html><body><div id="main">
+  <div class="search-controls"><label for="order">1059 of 1064 sets in</label></div>
+  <table class="checklist" id="js-checklist"><tbody>
+    <tr><td class="flexbox"><a href="https://scryfall.com/sets/mh3">Modern Horizons 3</a></td></tr>
+    <tr><td class="flexbox"><a href="https://scryfall.com/sets/por">Portal</a></td></tr>
+    <tr><td class="flexbox"><a href="https://scryfall.com/sets/wmkm">MKM Japanese Promo Tokens</a></td></tr>
+    <tr><td class="flexbox"><a href="https://scryfall.com/sets/sld">Secret Lair Drop</a></td></tr>
+    <tr><td class="flexbox"><a href="https://scryfall.com/sets/ysos">Alchemy: Innistrad</a></td></tr>
+  </tbody></table>
+</div></body></html>`;
+
+async function loadSetsPage(state, pageRoutes = routes, html = SETS_HTML) {
+  const page = createPage({ url: 'https://scryfall.com/sets', html, state, routes: pageRoutes });
+  await page.script('src/core/i18n.js');
+  await page.script('src/core/format-catalog.js');
+  await page.script('src/core/tag-icons.js');
+  await page.script('assets/data/shambleshark-nicknames.js');
+  await page.cardPage();
+  await sleep(80);
+  return page;
+}
+
+// The set codes of the rows the page has marked, read out of each row's own link. The link is
+// a full address on this page, and the code is the last segment, so it is read from there
+// rather than from a path this file assumes.
+const hiddenSets = page => [...page.document.querySelectorAll('#js-checklist tbody tr')]
+  .filter(row => row.classList.contains('stk-digital-set-hidden'))
+  .map(row => (/\/sets\/([^/?#]+)/.exec(
+    row.querySelector('td:first-child a[href]')?.getAttribute('href') || '') || [])[1])
+  .filter(Boolean);
 
 async function loadCardPage(state, pageRoutes = routes) {
   const page = createPage({ url: 'https://scryfall.com/card/tst/1/test-card', html: CARD_HTML, state, routes: pageRoutes });
@@ -1664,9 +1707,62 @@ function clipboardFormatTest() {
   assertEqual(F.FORMATS.moxfield.withSets, true, 'the set format has one');
 }
 
+// The foreign-only rule on the sets index: a plain switch over a measured list, and the one
+// rule in the group whose list is dated rather than fetched.
+//
+// What matters here is that the page asks the worker for the list and acts on the answer. The
+// list itself is not this test's business — whether `por` belongs in it is settled against
+// Scryfall by `npm run set-rules`, and settled wrongly on purpose in the route above so that a
+// page which stopped reading the list could be caught. A rule that reads `undefined` and hides
+// nothing looks exactly like a rule switched off, which is why the mutation list has one for
+// it.
+async function foreignOnlySetsTest() {
+  console.log('sets index: the foreign-only switch hides the measured list and nothing else');
+  const base = { setFiltersMigrated: true, setFilters: {
+    setsEnabled: true,
+    platforms: { paper: true, arena: true, mtgo: true },
+    sets: { nonTournament: false, oversized: false, foreignOnly: true,
+      foreignBlackBorder: { surfaces: 'off', which: [] },
+      nonEnglish: { surfaces: 'off', which: [] } },
+    prices: {}, tokens: false, caster: false
+  } };
+
+  const on = await loadSetsPage(base);
+  assertEqual(hiddenSets(on), ['por', 'wmkm'],
+    'both sets the worker names as foreign-only are marked, and in page order');
+
+  const off = await loadSetsPage({ ...base, setFilters: { ...base.setFilters,
+    sets: { ...base.setFilters.sets, foreignOnly: false } } });
+  assertEqual(hiddenSets(off), [],
+    'with the switch off nothing is hidden, so the two are not the same page');
+
+  // The gate. A rule that answered the question itself instead of asking would keep hiding
+  // rows behind a closed master switch, which is the whole thing the gate is for.
+  const gated = await loadSetsPage({ ...base, setFilters: { ...base.setFilters,
+    setsEnabled: false } });
+  assertEqual(hiddenSets(gated), [],
+    'and with the master switch off the rule does nothing, without losing the choice');
+
+  // A worker that answers without the list — an older build's cache, or the failure path.
+  // The page must not treat a missing list as a reason to hide everything.
+  const empty = await loadSetsPage(base, { ...routes, setCategories: () => ({
+    digital: [], nonTournament: [], oversized: [], foreignOnly: [],
+    foreignBlackBorder: {}, nonEnglish: {}
+  }) });
+  assertEqual(hiddenSets(empty), [],
+    'a worker that answers with an empty list hides nothing rather than everything');
+
+  // And the counter, which the reader quotes.
+  const counter = on.document.querySelector('#main .search-controls label[for="order"]');
+  assert(counter && /3 of 5/.test(counter.textContent),
+    'the counter above the list counts what is left, not what the page holds ("' +
+    (counter ? counter.textContent.trim() : 'absent') + '")');
+}
+
 (async () => {
   try {
     clipboardFormatTest();
+    await foreignOnlySetsTest();
     await cardPageTest();
     await printsGroupsEdgeTest();
     await promoParentMergeTest();

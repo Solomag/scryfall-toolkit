@@ -31,7 +31,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
-const { workerTables, classify } = require('./worker-tables.cjs');
+const { workerTables, classify, shippedForeignOnly } = require('./worker-tables.cjs');
 
 const ROOT = path.join(__dirname, '..', '..') + path.sep;
 const CACHE = path.join(ROOT, 'dist', 'live-data');
@@ -300,6 +300,14 @@ async function setCategories() {
   if (!Array.isArray(data.data)) throw new Error('the list of sets came back without one');
   const tables = workerTables();
   const categories = classify(data.data, tables);
+  // The measured list, narrowed to the sets this index serves — the same two steps the worker
+  // takes, in the same order, so a picture of this rule shows what the rule does.
+  const served = new Set(data.data.map(set => String(set.code).toLowerCase()));
+  categories.foreignOnly = shippedForeignOnly().filter(code => served.has(code));
+  if (!categories.foreignOnly.length) {
+    throw new Error('not one set came out as foreignOnly, so the classification in the ' +
+      'picture would be an empty claim');
+  }
   // Every category, and every sub-list, must come out with something in it. An empty one
   // hides nothing and looks complete, which is the whole failure this guards against.
   for (const flag of ['digital', 'nonTournament', 'oversized']) {

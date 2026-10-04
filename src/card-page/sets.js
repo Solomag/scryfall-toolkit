@@ -77,9 +77,19 @@
     const fbbHidesPrints = RULES.reachesPrints(settings.foreignBlackBorderSurfaces);
     const langHidesPrints = RULES.reachesPrints(settings.nonEnglishSurfaces);
     const needsSetIndex = settings.hideDigitalSets || settings.hideNonTournamentSets ||
-      settings.hideOversizedSets || fbbHidesSets || fbbHidesPrints || langHidesSets;
+      settings.hideOversizedSets || settings.hideForeignOnlySets ||
+      fbbHidesSets || fbbHidesPrints || langHidesSets;
     const categoriesRequest = needsSetIndex || platformFilterOn
-      ? platformSetRequests().catch(() => ({categories: {digital: [], foreignBlackBorder: ['4bb', 'fbb', 'bchr']}, visible: () => true}))
+      ? platformSetRequests().catch(() => ({
+        // The empty per-category objects are the point of this fallback rather than an
+        // omission. It used to answer with the pre-1.1.4 shape, a flat
+        // `foreignBlackBorder: ['4bb','fbb','bchr']`, which `codesFor` reads as an array and
+        // so yields nothing for — meaning a failed request quietly produced a page with
+        // every rule looking on and hiding nothing. The current shape fails the same way but
+        // for the right reason: the shape is right and the answer is empty.
+        categories: {digital: [], foreignOnly: [], foreignBlackBorder: {}, nonEnglish: {}},
+        visible: () => true
+      }))
       : Promise.resolve({categories: {digital: []}, visible: () => true});
     categoriesRequest
       .then(({categories, visible: setVisible}) => {
@@ -100,7 +110,10 @@
       const commonHidden = [
         ...(settings.hideDigitalSets ? categories.digital : []),
         ...(settings.hideNonTournamentSets ? categories.nonTournament || [] : []),
-        ...(settings.hideOversizedSets ? categories.oversized || [] : [])
+        ...(settings.hideOversizedSets ? categories.oversized || [] : []),
+        // A set with no English printing has nothing to show on either surface, so this one
+        // needs no surface of its own and no list under it.
+        ...(settings.hideForeignOnlySets ? categories.foreignOnly || [] : [])
       ].map(code => String(code).toLowerCase());
       // The per-category answers, narrowed by the reader's list. A category left out of
       // the list contributes nothing, which is what unchecking its row on the settings

@@ -52,7 +52,9 @@
 <fieldset id="setsGroup"><legend>Что считать лишним</legend>
 <label><input type="checkbox" id="setNonTournament"> Нетурнирные сеты (сувениры, официальные прокси, токены)</label>
 <label><input type="checkbox" id="setOversized"> Увеличенные карты (oversized)</label>
-<p class="hint">Обе галочки независимы: набор может быть увеличенным и одновременно нетурнирным — например, Vintage Championship это сувенирная увеличенная колода. Включение одной не выключает другую.</p>
+<label><input type="checkbox" id="setForeignOnly"> Наборы только на неанглийских языках</label>
+<p class="hint">Галочки независимы: набор может быть увеличенным и одновременно нетурнирным — например, Vintage Championship это сувенирная увеличенная колода. Включение одной не выключает другую.</p>
+<p class="hint">«Только на неанглийских языках» — это наборы, у которых Scryfall находит издания, и ни одного из них не на английском: французское издание Renaissance, итальянское Rinascimento, Salvat, Sega Dreamcast, японские промо-наборы. Таких наборов 34, список измерен 4 октября 2026 и лежит в расширении, а не подтягивается при открытии страницы: наборов на 1053, и спрашивать у каждого — это тысяча запросов на каждого читателя. Поэтому список стареет в безопасную сторону: новый иноязычный набор останется видимым до следующего замера. В отличие от этого, правила Foreign Black Border и «Неанглийские издания» умеют обновляться сами.</p>
 <!-- Two rules, and each has three positions rather than a switch, because they can
      reach the Sets index or the Prints table or both and the difference is real:
      a reader who wants Portal gone from the prints table does not necessarily want

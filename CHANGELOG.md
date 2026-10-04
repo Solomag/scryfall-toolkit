@@ -391,6 +391,61 @@ failed request hides nothing anyway, but it is the pre-1.1.4 shape and should no
 
 ---
 
+### A switch for the 34 sets Scryfall has no English printing for
+
+The list came out of the sweep as a by-product and then sat in the changelog for a round as a
+finding, which is where findings go to be forgotten. It is a switch now.
+
+**It is a plain switch, beside the two junk rules and not among the two mode rules.** A set
+with no English printing has nothing to show on either surface, so there is no surface to
+choose and nothing to narrow: the 34 are foreign releases and Japanese-only products with no
+property in common beyond the one the rule is about. The two rules below it have three
+positions each and a list under them because they are decisions about a surface and a
+category; this one is a fact about a set, like `oversized`.
+
+**Its list ships as a dated measurement, because it cannot refresh itself.** The platform index
+beside it can: its candidates are the 61 sets Scryfall marks digital, so an unknown one is worth
+a page of its printings. This list's candidates are every set Scryfall serves — the 34 are a
+subset of 1,053, so "the ones we do not know about" is most of Scryfall, and looking each up
+would be a thousand requests a day for every reader. So it is `assets/data/set-foreign-only.js`,
+dated 2026-10-04, narrowed at read time to the codes `/sets` still serves so a retired set
+leaves the answer. It goes stale in the safe direction: a foreign-only set released since the
+measurement stays visible, which is the same policy the platform lookup already follows — a set
+it cannot place stays visible rather than being hidden on a guess.
+
+`npm run set-rules --write` regenerates the file from a fresh sweep, and the checker fails when
+the file and the sweep disagree — so a stale list is a red run, not a filter quietly hiding the
+wrong rows.
+
+**Three of the 34 are the border releases**, which have no English printing either, so a reader
+with both rules on hides them twice. That is harmless and not worth a special case.
+
+**The cache guard now names every list.** `loadSetCategories` already refused a cached index
+whose `foreignBlackBorder` was the old flat array, and `foreignOnly` had to be added to that
+test for the same reason: a cache written before a list existed still passes a guard that only
+knows about the older ones, the missing list arrives as `undefined`, and the rule that reads it
+hides nothing while looking switched on. The fallback in `sets.js` had the pre-1.1.4 flat shape
+in it and now carries the current one — empty per-category objects rather than an array, so a
+failed request produces the right shape with nothing in it instead of the right answer by
+accident.
+
+**And the harness had been quietly emptying a snapshot for three releases.** `test-background.cjs`
+skipped every `assets/data/` import, which it needed to do when the tag bulk was imported at
+start-up and stopped being. The effect was that `bundledSetPlatforms` was `{}` in every test in
+the file, so "the shipped snapshot answers for this set" was asserted by none of them — and a
+test was asserting that a *lookup* happened for `vma`, a set the snapshot covers. The skip is
+now an explicit allowlist of the two directories the worker's own files live in, `vma` is
+asserted to cost no request, and the walk's real test — a page rather than one card, and the
+union of a set whose printings disagree about their client — moved onto `mtgo`, which the
+snapshot genuinely does not cover.
+
+Seven mutations are caught now, two of them for this rule: the worker answering without the
+list, and the page not asking for it. The second is the shape of bug this file has been about
+all along — a rule that reads `undefined` and hides nothing looks exactly like a rule switched
+off.
+
+---
+
 ### The two name-matched rules, asked about rather than read — and my completeness claim was wrong
 
 `BORDER_SET_NAMES` and `NON_ENGLISH_SET_NAMES` are the only rules in this extension decided

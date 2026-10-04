@@ -70,4 +70,26 @@ function classify(sets, tables) {
   return categories;
 }
 
-module.exports = { workerTables, classify, JUNK_TYPES, WORKER };
+// The dated list of sets with printings and no English printing, read from the file the
+// extension loads.
+//
+// Read as a function call and evaluated, for the same reason the tables above are: the tools
+// and the worker must be looking at one list, and a copy in the tools is a copy that drifts.
+// `npm run set-rules --write` rewrites the file from a fresh sweep, and the check in that tool
+// fails when the file and the sweep disagree, so a stale list is a failed check rather than a
+// filter quietly hiding the wrong rows.
+function shippedForeignOnly() {
+  if (shippedForeignOnly.value) return shippedForeignOnly.value;
+  const file = path.join(__dirname, '..', '..', 'assets', 'data', 'set-foreign-only.js');
+  const self = {};
+  new Function('self', fs.readFileSync(file, 'utf8'))(self);
+  const list = self.__STK_SET_FOREIGN_ONLY;
+  if (!Array.isArray(list)) {
+    throw new Error('assets/data/set-foreign-only.js does not leave a list behind, so the ' +
+      'rule that reads it has nothing to act on and would hide nothing without saying so');
+  }
+  shippedForeignOnly.value = list;
+  return list;
+}
+
+module.exports = { workerTables, classify, shippedForeignOnly, JUNK_TYPES, WORKER };

@@ -198,16 +198,26 @@ with their verdicts) written for this project.
   already looking at, and calls Scryfall's documented public API
   (`api.scryfall.com`, `data.scryfall.io`) and Tagger's own endpoints.
 
-One derived data file is bundled:
+Two derived data files are bundled:
 
 | File in this repo | What it is |
 | --- | --- |
 | `assets/data/set-platforms.js` | A snapshot, taken 2026-09-25, mapping 61 digital set codes to the client each was released for |
+| `assets/data/set-foreign-only.js` | A snapshot, measured 2026-10-04, of the 34 set codes Scryfall has printings for and no English printing among |
 
-It was produced by reading Scryfall's `/sets` list and the `games` field of one card per
+The first was produced by reading Scryfall's `/sets` list and the `games` field of one card per
 set. It contains set codes and platform names only — no card names, no card text, no
 artwork, and nothing from Wizards of the Coast beyond factual set identifiers. Sets missing
 from the snapshot are looked up at runtime and cached.
+
+The second was produced by asking Scryfall's search, once per set it serves, whether that set
+has any English printing, and keeping the ones it does not. It is set codes only — no card
+names, no card text, no artwork. It cannot be refreshed at runtime the way the first one can:
+the sets it is about are a subset of all 1,053, so there is no short list of candidates to
+look up, and a thousand requests a day for every reader is not a cost this extension should
+generate. It goes stale in the safe direction — a foreign-only set released after the
+measurement stays visible until the next one — and `npm run set-rules --write` regenerates it,
+with a check that fails when the file and a fresh sweep disagree.
 
 One Scryfall asset was copied and then removed. The icon beside the EUR price column
 began as the inline SVG from Scryfall's own "Buy at Cardmarket" link, recoloured to

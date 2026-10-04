@@ -10,6 +10,7 @@
  */
 // Bundled compact tag data originates from MoxTags v1.8.3 (MIT).
 importScripts("../../assets/data/set-platforms.js");
+importScripts("../../assets/data/set-foreign-only.js");
 importScripts("../core/format-overrides.js");
 const cache = new Map();
 const traderCache = new Map();
@@ -19,6 +20,14 @@ let setPlatformRequest;
 // never says which client carries one. See assets/data/set-platforms.js.
 const bundledSetPlatforms = self.__STK_SET_PLATFORMS || {};
 delete self.__STK_SET_PLATFORMS;
+// The dated list of sets with printings and no English printing among them, measured by
+// `npm run set-rules`. Unlike the platform snapshot this one cannot refresh itself: the sets
+// it is about are a subset of every set Scryfall serves, so "the ones we do not know" is most
+// of Scryfall and looking each up would be a thousand requests a day for every reader. It is
+// narrowed to the codes /sets still serves below, so a set Scryfall drops leaves the answer.
+const bundledForeignOnly = Array.isArray(self.__STK_SET_FOREIGN_ONLY)
+  ? [...self.__STK_SET_FOREIGN_ONLY] : [];
+delete self.__STK_SET_FOREIGN_ONLY;
 // Marketplace calls are spaced 1.1s apart by CardTrader's own expectations, and
 // the moment until which the next one must wait is kept in storage: a global
 // would reset to zero when the worker is unloaded and let the next start burst.
@@ -893,15 +902,23 @@ function loadSetCategories() {
     // it is still there for a day after an update; serving it would hand the page an array
     // where it expects per-category answers, and every sub-list would come back empty
     // without anything failing.
+    //
+    // Each list added to this answer has to be named here too, for the same reason and with
+    // the same consequence if it is forgotten: a cache written before a list existed still
+    // passes a guard that only knows about the older ones, the missing list arrives as
+    // undefined, and the rule that reads it hides nothing while looking switched on.
     const cached = digitalSetIndex?.categories;
-    if (cached && !Array.isArray(cached.foreignBlackBorder) && digitalSetIndex.expires > Date.now()) {
-      return cached;
-    }
+    const cacheIsCurrent = cached && !Array.isArray(cached.foreignBlackBorder) &&
+      cached.foreignBlackBorder && typeof cached.foreignBlackBorder === 'object' &&
+      cached.nonEnglish && typeof cached.nonEnglish === 'object' &&
+      Array.isArray(cached.foreignOnly) &&
+      digitalSetIndex.expires > Date.now();
+    if (cacheIsCurrent) return cached;
     try {
       const result = await scryfallJSON('https://api.scryfall.com/sets',
         {headers:{Accept:'application/json'},credentials:'omit'});
       if (!Array.isArray(result?.data) || result.has_more) throw new Error('Incomplete set index');
-      const categories = {digital:[],nonTournament:[],oversized:[],foreignBlackBorder:{},nonEnglish:{}};
+      const categories = {digital:[],nonTournament:[],oversized:[],foreignOnly:[],foreignBlackBorder:{},nonEnglish:{}};
       for (const set of result.data) {
         if (!/^[a-z0-9_-]+$/i.test(set.code || '')) continue;
         const code = set.code.toLowerCase();
@@ -935,6 +952,11 @@ function loadSetCategories() {
       // here. Letting it propagate lands in the catch below, which serves the previous
       // index whole rather than a partial one.
       categories.oversized = await oversizedSetCodes();
+      // The bundled list, narrowed to the sets this answer to /sets actually names. A code
+      // Scryfall has retired stays in the file — it is a measurement of a day — but must not
+      // stay in the answer, where it would name a set that no longer exists.
+      const served = new Set(result.data.map(set => String(set.code).toLowerCase()));
+      categories.foreignOnly = bundledForeignOnly.filter(code => served.has(code));
       await chrome.storage.local.set({ digitalSetIndex:{ categories, expires:Date.now() + 24 * 3600000 } });
       return categories;
     } catch (error) {

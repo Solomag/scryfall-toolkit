@@ -22,6 +22,7 @@
 //
 //   platforms  { paper, arena, mtgo }        which platforms' sets are shown at all
 //   sets       nonTournament, oversized      plain switches
+//              foreignOnly                   plain switch, and a measured list behind it
 //              foreignBlackBorder            { surfaces, which }
 //              nonEnglish                    { surfaces, which }
 //   prices     { usd, tix, tcg, cardhoarder }
@@ -153,6 +154,12 @@
     sets: {
       nonTournament: false,
       oversized: false,
+      // A plain switch, like the two above it and unlike the two below, because it is a
+      // property of a set and not a decision about a surface: a set with no English printing
+      // has nothing to show on either the index or a prints table. It has no sub-list either
+      // — the 34 sets it covers are foreign releases and Japanese-only products with nothing
+      // in common to narrow by, and a list of one category is a list of no information.
+      foreignOnly: false,
       foreignBlackBorder: { surfaces: SURFACES.off, which: Object.keys(FOREIGN_BLACK_BORDER) },
       nonEnglish: { surfaces: SURFACES.off, which: Object.keys(NON_ENGLISH) }
     },
@@ -178,6 +185,7 @@
     }
     if (typeof input.sets?.nonTournament === 'boolean') out.sets.nonTournament = input.sets.nonTournament;
     if (typeof input.sets?.oversized === 'boolean') out.sets.oversized = input.sets.oversized;
+    if (typeof input.sets?.foreignOnly === 'boolean') out.sets.foreignOnly = input.sets.foreignOnly;
     for (const [key, table] of [['foreignBlackBorder', FOREIGN_BLACK_BORDER], ['nonEnglish', NON_ENGLISH]]) {
       const given = input.sets?.[key];
       if (SURFACE_NAMES.includes(given?.surfaces)) out.sets[key].surfaces = given.surfaces;
@@ -296,7 +304,7 @@
     if (normalised.setsEnabled === false) {
       return {
         platforms: { paper: true, arena: true, mtgo: true },
-        nonTournament: false, oversized: false,
+        nonTournament: false, oversized: false, foreignOnly: false,
         foreignBlackBorder: SURFACES.off, nonEnglish: SURFACES.off
       };
     }
@@ -304,6 +312,7 @@
       platforms: normalised.platforms,
       nonTournament: normalised.sets.nonTournament,
       oversized: normalised.sets.oversized,
+      foreignOnly: normalised.sets.foreignOnly,
       // The surfaces, as surfaces. Not a boolean derived from them: a surface that asked
       // whether the rule is "on" would be unable to tell 'prints' from 'sets-prints',
       // which is precisely what went wrong in 1.1.0 and why this went out of the shape.

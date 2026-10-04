@@ -241,7 +241,23 @@ async function fetchMock(url, init) {
       }
       return jsonResponse({ data: cards, has_more: false });
     }
-    if (q === 'e:mtgo') return jsonResponse({ data: [{ name: 'Online Card', games: ['mtgo'] }] });
+    if (q === 'e:mtgo') {
+      // The same disagreeing shape as vma, and for the same reason: the walk has to read a
+      // page and take the union, and `mtgo` is the set in this fixture that the shipped
+      // snapshot does not cover, so it is the one that actually reaches the walk. vma used to
+      // be that set — until the harness stopped skipping `assets/data/` imports, at which
+      // point the snapshot answered for it and the test was asserting that a lookup happened
+      // for a set that needed none.
+      const wanted = Number(new URL(target).searchParams.get('page_size') || 175);
+      const cards = Array.from({ length: Math.min(20, wanted) }, (_, i) => ({
+        name: 'Online Card ' + i, games: ['mtgo']
+      }));
+      if (wanted > 7) {
+        cards[7].name = 'Arena Bonus Card';
+        cards[7].games = ['arena', 'mtgo'];
+      }
+      return jsonResponse({ data: cards, has_more: false });
+    }
     if (q.includes(PREVIEW_BAD_ID)) {
       return jsonResponse({ data: [{ name: 'Bad Image', image_uris: { normal: 'https://evil.example/img.jpg' }, scryfall_uri: 'https://scryfall.com/card/bad/1' }] });
     }
@@ -283,13 +299,17 @@ page.context.importScripts = (...files) => {
   // a worker that cannot find its own scripts.
   const workerDir = 'src/background';
   for (const file of files) {
-    // The tag data is no longer imported at start-up; the fixtures below stand
-    // in for it and are read through getURL instead.
-    if (file.indexOf('assets/data/') >= 0) continue;
     const resolved = file.startsWith('/')
       ? file.slice(1)
       : path.posix.normalize(path.posix.join(workerDir, file));
-    assert(resolved.startsWith('src/'), `importScripts stays inside the extension: ${resolved}`);
+    // The worker's own two directories, and nothing else. `assets/data/` is outside `src/`
+    // and has to be named: the platform and foreign-only snapshots are loaded this way and
+    // are the data the worker cannot answer without. This used to skip `assets/data/`
+    // outright — the tag bulk used to be imported here and stopped being — and in doing so
+    // it silently emptied `bundledSetPlatforms` for every test in this file, so the platform
+    // snapshot was never exercised by any of them and nothing said so.
+    assert(resolved.startsWith('src/') || resolved.startsWith('assets/data/'),
+      `importScripts stays inside the extension: ${resolved}`);
     page.script(resolved);
   }
 };
@@ -738,9 +758,20 @@ async function edhrecThrottleTest() {
       // and a list cannot narrow a single answer. `4bb` is under its own category and
       // nowhere else, which is what makes unticking it on the settings page mean
       // anything at all.
+      // The measured list of sets with printings and no English printing among them, shipped
+      // as a dated snapshot because there is no short list of candidates to look up. `4bb`
+      // is in it and this fixture's `/sets` serves `4bb`, so it comes through — which is the
+      // narrowing being tested: the file holds 34 codes and the answer holds the ones this
+      // index names.
+      foreignOnly: ['4bb'],
       foreignBlackBorder: { '4bb': ['4bb'] },
       nonEnglish: {}
     }, 'set categories are classified correctly');
+    // And the narrowing, from the other side: a code in the snapshot that this index does
+    // not serve must not appear in the answer, or the filter would go on naming a set
+    // Scryfall has retired.
+    assert(!categories.data.foreignOnly.includes('wmkm'),
+      'a set the snapshot names but this index does not is not in the answer');
     assert(!categories.data.nonTournament.includes('trc'),
       'a set whose name reads like a product but whose type is commander is not junk');
     assertEqual(oversizedPages, [1, 2], 'the oversized list is walked until Scryfall says there is no more');
@@ -795,7 +826,8 @@ async function edhrecThrottleTest() {
     const platforms = await send({ type: 'setPlatforms' }, undefined, 6000);
     assertEqual(platforms.data.ysos, ['arena'], 'the bundled snapshot answers for a known Arena set');
     assertEqual(platforms.data.omb, ['arena', 'mtgo'], 'a set released for both clients keeps both platforms');
-    assertEqual(platforms.data.mtgo, ['mtgo'], 'a digital set missing from the snapshot is looked up');
+    assertEqual(platforms.data.mtgo, ['arena', 'mtgo'],
+      'a digital set missing from the snapshot is looked up, and the lookup takes the union');
     assertEqual(gameSearches(), 1, 'only sets missing from the snapshot are searched');
     // The bug this catches: a set whose printings do not all name the same clients. Of
     // Scryfall's 61 digital sets, vma has 320 printings saying mtgo and 5 saying arena and
@@ -803,11 +835,15 @@ async function edhrecThrottleTest() {
     // one card reported mtgo and told the reader Vintage Masters was never on Arena.
     assertEqual(platforms.data.vma, ['arena', 'mtgo'],
       'a set whose printings disagree about their clients is the union of them, not the first card');
+    // Which the shipped snapshot already records for vma, so it is answered without a request
+    // at all. This is the reason the snapshot exists, and until the harness stopped skipping
+    // `assets/data/` imports nothing here could see it: the bundled list was empty in every
+    // test, so "the snapshot answers" was never asserted by any of them.
     const vmaSearches = () => fetchLog.filter(url => url.includes('q=e%3Avma')).length;
-    assertEqual(vmaSearches(), 1, 'and it took one request for the whole set');
-    const vmaCall = fetchLog.find(url => url.includes('q=e%3Avma'));
-    assert(/[?&]page_size=175/.test(vmaCall),
-      'that request asks for a page rather than one card, which is the whole fix');
+    assertEqual(vmaSearches(), 0, 'and a set the snapshot covers costs no request at all');
+    const mtgoCall = fetchLog.find(url => url.includes('q=e%3Amtgo'));
+    assert(/[?&]page_size=175/.test(mtgoCall),
+      'a set that does need looking up is asked for a page rather than one card, which is the whole fix');
     assert(mock.state.setPlatformIndex && mock.state.setPlatformIndex.expires > Date.now(),
       'platform index persisted with a future expiry');
     const cachedPlatforms = await send({ type: 'setPlatforms' }, undefined, 6000);  // same budget, see above

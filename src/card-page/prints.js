@@ -206,7 +206,8 @@
       const fbbOnPrints = rules.reachesPrints(settings.foreignBlackBorderSurfaces);
       const langOnPrints = rules.reachesPrints(settings.nonEnglishSurfaces);
       const needsCategories = platformFilterOn || settings.hideNonTournamentSets ||
-        settings.hideOversizedSets || fbbOnPrints || langOnPrints || settings.hideDigitalSets;
+        settings.hideOversizedSets || settings.hideForeignOnlySets ||
+        fbbOnPrints || langOnPrints || settings.hideDigitalSets;
       // The platform index only says which client carries a digital set, so the
       // set index is what tells the two apart.
       const [categories, platforms] = needsCategories
@@ -225,6 +226,11 @@
         ...(settings.hideDigitalSets ? categories.digital || [] : []),
         ...(settings.hideNonTournamentSets ? categories.nonTournament || [] : []),
         ...(settings.hideOversizedSets ? categories.oversized || [] : []),
+        // Measured once, by `npm run set-rules`, and shipped as a dated list rather than
+        // asked for per page: the sets it is about are a subset of all of them, so there is
+        // no short list of candidates to look up. Stale in the safe direction — a new
+        // foreign-only set stays visible until the next sweep.
+        ...(settings.hideForeignOnlySets ? categories.foreignOnly || [] : []),
         ...(fbbOnPrints ? codesFor(categories.foreignBlackBorder, fbbRule.which) : [])
       ]);
       // The non-English rule is the one that cannot be expressed as a set code here,

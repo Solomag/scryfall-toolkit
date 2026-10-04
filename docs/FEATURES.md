@@ -237,6 +237,21 @@ choices back rather than the defaults. It never rewrites them.
   not turn the other off. The list comes from Scryfall and not from a guess: oversized is
   a flag on the printing, not a field on the set, so the sets holding an oversized
   printing are collected by asking for the printings.
+- **Hide sets with no English printing** — also its own toggle, and a plain one for the same
+  reason: a set Scryfall has printings for and not one of them in English has nothing to show
+  on either surface, so there is no surface to choose and no list to narrow it by. There are
+  34 of them — the French `ren` and Italian `rin` releases of Renaissance, Salvat 2005 and
+  2011, Sega Dreamcast Cards, the Magic Premiere Shop runs, Japanese promo sets and five sets
+  of Japanese promo tokens.
+
+  **Its list is dated and ships inside the extension, and it says so on the settings page.**
+  There is no short list of sets to check: these are a subset of all 1,053, so "the ones we do
+  not know about" is most of Scryfall and looking each one up would be a thousand requests a
+  day for every reader. Unlike the platform index beside it, which can refresh itself because
+  its candidates are the 61 digital sets, this one cannot. It goes stale in the safe
+  direction: a foreign-only set released since the measurement stays visible until the next
+  one. `npm run set-rules --write` regenerates it, and the check in that tool fails when the
+  file and a fresh sweep disagree.
 - **Foreign Black Border** and **Non-English printings** — each has three positions rather
   than a switch: not at all, the Prints table only, or both the Sets index and the Prints
   table. They differ because the two surfaces are different things. On the Prints table a
@@ -252,7 +267,6 @@ choices back rather than the defaults. It never rewrites them.
 - **Hide USD, TIX, TCGplayer and Cardhoarder prices** — four separate checkboxes, see
   the price filter above. They sit outside the master switch, because they are not a set
   rule.
-
 The **set index is cached for one day**, and the Caster marker and the deck token list
 sit in the same section.
 
@@ -315,11 +329,11 @@ printings of `m21`; `-lang:en` is not one either and returns 3,411 against 397; 
 incorrectly.
 
 **And 34 sets have no English printing at all, three of which are the border releases.** The
-rest are foreign-only products — 22 promo sets, five sets of Japanese promo tokens, three box
+rest are foreign-only products — 21 promo sets, five sets of Japanese promo tokens, three box
 sets (Salvat 2005 and 2011, Sega Dreamcast Cards) and two master sets, the French `ren` and the
-Italian `rin` of Renaissance. Nothing hides them today beyond the ordinary junk-type rule, and
-that is deliberate rather than an oversight: they are not border releases, and calling them
-such would be a different rule with a different name.
+Italian `rin` of Renaissance. A switch in the group above hides all 34; the three border
+releases are in it too, since they have no English printing either, and hiding them twice is
+harmless.
 
 **The "rest" category reaches the Prints table only.** Which sets print a language besides
 English cannot be read from `/sets`, and getting the list by search is not cheap: `unique=sets`
