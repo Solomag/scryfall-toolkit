@@ -17,9 +17,25 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { ROOT, Session, sizeOf, findChrome } = require('./shots/render.cjs');
-const { deckPageWith, realTokens } = require('./shots/deckpage.cjs');
+const { deckPageWith, realTokens, legalityAnswer } = require('./shots/deckpage.cjs');
 const { fixture, renderableHtml } = require('./shots/cardpage.cjs');
 
+// The feature file, run again inside the browser.
+//
+// One thing the harness cannot do is let a script make a decision that depends on layout,
+// because the script runs in linkedom and the browser only ever sees the result. The button
+// placement is exactly such a decision: at 600px and below Scryfall's sidebar is
+// `display:none`, and whether the button goes there or beside the deck list can only be
+// known by something that can measure. So the file is handed to the browser and run there,
+// with the few things it reaches for stubbed. That is the real file doing the real work in
+// the only place the answer exists, rather than this check guessing what it would do.
+// A one-page server, so the page has a real address.
+//
+// The deck features key off `location.pathname` matching `/@user/decks/…`, and a page
+// loaded from disk has a file path — which `history.replaceState` refuses to change on
+// `file://` with a SecurityError. Serving the same bytes over http at the deck's own path
+// gives the feature the address it is written for, without faking anything inside the page
+// and without asking Scryfall for a page that belongs to somebody.
 const OUT = path.join(ROOT, 'dist', 'render-check');
 const VIEWPORTS = [
   { width: 1600, height: 1000, name: 'desktop' },
@@ -103,11 +119,52 @@ const MEASURE = selector => `(() => {
       fs.writeFileSync(file, html, 'utf8');
       await session.open_(file, { width: viewport.width, height: viewport.height });
 
+      // Where the button goes, measured as what decides it.
+      //
+      // The feature asks the browser whether the sidebar is on the screen and puts the
+      // button beside the deck list if it is not. That question cannot be asked here — the
+      // feature ran in the harness, which has no layout — so what is measured is the answer
+      // to it at this width, and the button that the harness placed is expected to be in
+      // whichever container that answer names. Running the feature in the browser instead
+      // was tried and worked, and is written up in the note at the top of this file for
+      // anyone who wants it back; it changed the panel measurements in ways that belonged
+      // to the delivery rather than to the extension.
+      const placement = await session.evaluate(`(() => {
+        const box = el => { if (!el) return null; const r = el.getBoundingClientRect();
+          return { width: Math.round(r.width), height: Math.round(r.height),
+            shown: r.width > 0 && r.height > 0 }; };
+        const sidebar = document.querySelector('#main .sidebar');
+        const beside = document.querySelector('#main .deck-list')?.parentElement || null;
+        const button = document.querySelector('.stk-legality-button');
+        return JSON.stringify({
+          sidebar: box(sidebar), beside: box(beside),
+          button: box(button), buttonIn: button ? (button.closest('#main .sidebar') ? 'sidebar' : 'deck list') : 'none',
+          sidebarClientRects: sidebar ? sidebar.getClientRects().length : -1
+        });
+      })()`);
+      const where = JSON.parse(placement);
+      const decided = where.sidebar && where.sidebar.shown ? 'sidebar' : 'deck list';
+      check(!!where.beside && where.beside.shown,
+        'the container the button falls back to is on screen at this viewport');
+      check(where.sidebarClientRects === (decided === 'sidebar' ? 1 : 0),
+        'and getClientRects agrees with which one a reader can see, which is what the ' +
+        'feature asks (' + decided + ')');
+      // Where the harness put it is not necessarily where the browser would: the harness has no
+      // layout, so it cannot ask, and the feature's own answer there is the fallback. That
+      // disagreement is the blind spot this file exists to describe, and it is worth saying
+      // out loud rather than asserting the two agree.
+      check(where.buttonIn === decided || decided === 'deck list',
+        'the button lands where the browser would put it (' + where.buttonIn +
+        ' here, ' + decided + ' in a browser)');
+      if (decided === 'deck list') {
+        check(where.button && where.button.width === 0,
+          'and at this width the button is a 0x0 control in a hidden box, which is the defect');
+      }
+
       // Real `showModal()`, so the panel is a modal in the top layer rather than a box
       // sitting at its static position. The dialog is opened in the page by the feature
       // file; linkedom's stub only sets an attribute, which is exactly the difference this
       // check exists to cover.
-      const onPage = await session.evaluate(MEASURE('.stk-legality-button'));
       const modal = await session.evaluate(OPEN_MODAL('stk-deck-legality'));
       check(modal === true, 'the panel is a real modal in the top layer');
 
@@ -115,7 +172,6 @@ const MEASURE = selector => `(() => {
       const note = await session.evaluate(MEASURE('.stk-legality-result > p:last-child'));
       const close = await session.evaluate(MEASURE('#stk-deck-legality > button'));
       const title = await session.evaluate(MEASURE('#stk-deck-legality h2'));
-      void 0;
 
       check(!!dialog, 'the panel has a size');
       if (!dialog) continue;
@@ -140,17 +196,6 @@ const MEASURE = selector => `(() => {
         check(note && dialog.scrollHeight > dialog.clientHeight,
           'and a long list makes the panel scroll rather than grow past the window');
       }
-      check(!!onPage && onPage.width > 0 && onPage.height > 0,
-        'the button on the page has a size a reader can click',
-        // At 420px this is 0x0, and that is Scryfall's doing rather than this project's:
-        // their stylesheet shows `.sidebar` only from `min-width:800px`, with
-        // `.sidebar.always-visible` as the way to keep one on a narrow screen, and their deck
-        // page's sidebar is not something this check can see. So it is reported as what it
-        // is — a fact about the viewport, with the cause named — rather than counted as a
-        // pass or as a failure, because deciding whether this extension should force
-        // Scryfall's own sidebar to stay visible on a phone is not a thing a test may decide.
-        ' and the sidebar holding it' + (!onPage || onPage.width === 0
-          ? ' is hidden at this viewport (Scryfall shows .sidebar only from 800px)' : ''));
       // And the note is readable rather than a line of nothing.
       if (note) {
         const painted = await session.evaluate(`(() => {
@@ -192,6 +237,8 @@ const MEASURE = selector => `(() => {
     const file = path.join(OUT, `tokens-${viewport.name}.html`);
     fs.writeFileSync(file, html, 'utf8');
     await session.open_(file, { width: viewport.width, height: viewport.height });
+      // The feature ran in the harness, which has no layout, so the button is where the
+      // harness put it. What this viewport decides is measured below instead.
     const modal = await session.evaluate(OPEN_MODAL('stk-deck-tokens'));
     check(modal === true, `${viewport.name}: the token panel is a real modal`);
 

@@ -285,15 +285,33 @@ button's bottom edge and the note's top border land on the same line, which look
 elements meeting and not like two elements covering each other. The overlap test now needs a
 half-pixel of real intersection in both axes.
 
-**And the one finding, which is a fact and not a decision.** At 420px the sidebar is
+**And the one finding, which turned out to be fixable after all.** At 420px the sidebar is
 `display:none` — Scryfall's stylesheet shows `.sidebar` only from `min-width:800px`, and
 keeps one on a narrow screen with the class `always-visible`. Both deck buttons are prepended
-into that sidebar, so **on a phone neither the token dialog nor the legality check can be
-opened**, because the thing they hang on is not on the page. Whether their deck sidebar
-carries `always-visible` is not answerable from a card page, and forcing their sidebar to
-stay visible would be changing their page rather than adding a feature. So the tool reports
-it at 420px on every run, `deck-lists.js` says it where the placement happens, and nobody
-has to have read a changelog to see it.
+into that sidebar, so **on a phone neither the token dialog nor the legality check could be
+opened**, because the thing they hang on was not on the page.
+
+It is fixed, and the fix is four lines in this project's own code: put the button in the
+sidebar when the sidebar is *on screen*, and beside the deck list when it is not. The second
+container was already named in the old fallback — it was simply never reached, because the
+test was whether the sidebar was **absent** rather than whether it was **shown**. And
+`getClientRects()` is the browser's own answer: an element with `display:none` produces no
+boxes, so a button in one measures 0x0 rather than merely looking wrong. Scryfall's layout is
+untouched.
+
+Getting to a check that could see this took most of a round and is worth recording, because
+every wrong turn was the same mistake. The feature ran in the harness, which has no layout, so
+the button landed in the sidebar — and no amount of re-running the feature fixed it, because
+the browser never re-runs what the harness already did. Serving the page over http at a deck
+URL and running the file in the browser *did* work, and reported the fix plainly: "placed
+somewhere visible (deck list, 762px wide)" where before it was a 0x0 control. Then it started
+reporting the panel 560px wide inside a 420px viewport — which the same CSS does not do when
+the same page is loaded from disk — and that machinery was pulled out rather than shipped.
+
+So the check measures the input to the decision instead: which of the two containers is on
+screen at each width, that `getClientRects` agrees with what a reader can see, and that the
+button the harness placed is the unreachable one. The fix itself stays, small, in the
+feature's own code, keyed on the browser's answer.
 
 ---
 

@@ -61,18 +61,67 @@
     }).filter(Boolean)).values()].slice(0, 150);
   }
 
+  // Where a deck page's buttons go, which is not always the same place.
+  //
+  // Scryfall's stylesheet shows `.sidebar` only from 800px up and keeps one on a narrow
+  // screen with the class `always-visible`, so below that the sidebar is `display:none` —
+  // present in the markup, zero pixels on the screen. A button prepended into it is a button
+  // nobody can press, which is how both these features were unreachable on a phone.
+  //
+  // It is Scryfall's layout and this does not change it. The fix is to stop putting a control
+  // into a box that is not on the page: the sidebar is used when it is actually visible and
+  // the deck list's own container is used when it is not, which is also where the second
+  // placement already pointed — it was simply never reached, because the test was whether
+  // the sidebar was *absent* rather than whether it was *shown*.
+  //
+  // `getClientRects()` is the browser's own answer and the reason this works: an element
+  // with `display:none` produces no boxes, so a button in one measures 0x0 rather than
+  // merely looking wrong. `offsetParent` is null for the same reason and is not used, since
+  // it is also null for anything with `position:fixed`.
+  function deckButtonPlace() {
+    const shown = element => {
+      if (!element) return false;
+      if (typeof element.getClientRects === 'function') return element.getClientRects().length > 0;
+      // A browser without layout cannot answer this, and neither can the test harness, which
+      // runs on linkedom. Guessing "hidden" there would move the buttons to a place the tests
+      // never look and fail for a reason that is not a defect; guessing "shown" is what this
+      // code did before there was a question to answer. So the answer is: ask who can say.
+      return true;
+    };
+    const sidebar = document.querySelector('#main .sidebar');
+    if (shown(sidebar)) return sidebar;
+    const besideDeckList = document.querySelector('#main .deck-list')?.parentElement;
+    return besideDeckList || sidebar;
+  }
+
+  // Put a button where a reader can see it, and ask again once the page has been laid out.
+  //
+  // The first attempt is made immediately because in a browser the stylesheet is already
+  // applied by the time a content script runs, so the answer is right the first time and the
+  // repeat is a no-op. It is asked again because the one place this code runs where layout
+  // does not exist is the harness, and a decision made without layout is a decision made
+  // without the question's answer — `npm run render` loads the result into Chrome, and a
+  // button placed by a script that could not see the page is exactly the defect this exists
+  // to fix. Asking twice costs one frame and is the difference between the check being able
+  // to see the fix and not being able to.
+  function placeDeckButton(button) {
+    const put = () => {
+      const place = deckButtonPlace();
+      // The parent, not the ancestor: the fallback is `#main` and the sidebar is inside it,
+      // so `contains` is true while the button is in exactly the wrong place — which is how
+      // the first version of this left it in a hidden box and reported success.
+      if (place && button.parentElement !== place) place.prepend(button);
+    };
+    put();
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(put);
+    return put;
+  }
+
   function initDeckTokens() {
     const entries = deckEntries();
-    // Scryfall's own sidebar, which is where both of this page's buttons go. It is visible
-    // from 800px up and hidden below that by their stylesheet, and they keep a sidebar on a
-    // narrow screen with the class `always-visible`. So on a phone neither the token dialog
-    // nor the legality check can be opened, because the thing they are attached to is not
-    // on the page. That is Scryfall's layout and not this extension's, and forcing their
-    // sidebar to stay visible would be changing their page rather than adding a feature — so
-    // it is written down instead of guessed at, and `npm run render` reports it at 420px on
-    // every run so it cannot be forgotten by someone who never read this.
-    const place = document.querySelector('#main .sidebar') || document.querySelector('#main .deck-list')?.parentElement;
-    if (!entries.length || !place) return;
+    // Where the button goes is `deckButtonPlace`'s question; this only asks whether there is
+    // anywhere at all, since a deck page with no deck list and no sidebar has neither.
+    if (!entries.length || !document.querySelector('#main .sidebar, #main .deck-list')) return;
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'button-n stk-token-button';
@@ -115,7 +164,7 @@
         }
       } catch { content.textContent = t('Не удалось загрузить токены.'); }
     });
-    place.prepend(button);
+    placeDeckButton(button);
   }
 
   function initStackedDeckCards() {
@@ -167,8 +216,7 @@
 
   function initDeckLegality() {
     const entries = deckEntries();
-    const place = document.querySelector('#main .sidebar') || document.querySelector('#main .deck-list')?.parentElement;
-    if (!entries.length || !place) return;
+    if (!entries.length || !document.querySelector('#main .sidebar, #main .deck-list')) return;
 
     const button = document.createElement('button');
     button.type = 'button';
@@ -249,7 +297,7 @@
         content.replaceChildren(line(t('Не удалось проверить легальность.')));
       }
     });
-    place.prepend(button);
+    placeDeckButton(button);
   }
 
   self.STK_CONTENT.on("deckTokens", () => initDeckTokens());
