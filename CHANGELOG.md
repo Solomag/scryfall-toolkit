@@ -229,6 +229,35 @@ The third would have become a 170-card finding and was worth nothing.
 
 ---
 
+### What was measured and found correct, written down so it is not measured again
+
+The audit found four wrong things out of nine it looked at. The other five were right, and
+a list of right answers is worth as much as the wrong ones here — it is what stops the next
+person spending an afternoon re-deriving it, and it is the difference between "this was
+checked" and "this looked fine".
+
+- **The oversized walk.** `is:oversized` to exhaustion: 726 printings over five pages, every
+  one with `oversized=true`, 38 sets. The comment's numbers, unchanged.
+- **The foreign black border rule.** All three sets the patterns name have zero English
+  printings, and they are the only three sets Scryfall calls Foreign Black Border.
+- **The overrides table.** 29 entries over 17 cards, every id still naming a card Scryfall
+  has, no duplicates within a format, and every entry disagreeing with what its clause would
+  have said — so none of it is dead weight that reads like a decision.
+- **The tag icon map.** Its three tag types are exactly the three Tagger emits. Of fourteen
+  relation classifiers, seven turned up in fifteen live cards and all seven are covered;
+  nothing Tagger emitted is missing from the map.
+- **`promo_types`.** Absent from most of the 62 keys a printing carries and present on some
+  — an optional field, not a renamed one, so the finish badges' read of it is correct. Worth
+  stating because its absence from a key list looks exactly like the two renames this
+  release did find.
+
+And one that looked like a defect and was not: the catalog's `compbrawl` key reads like a
+misspelling of Scryfall's `competitivebrawl`. It is this project's own key for the row
+Scryfall labels "Comp. Brawl", the value is read from the page's own markup, and only
+`premodern` reads `card.legalities`. Chasing it would have meant changing a key that works.
+
+---
+
 ### `lang:!en` is not a negation, and it answered confidently
 
 The same treatment for the two rules left. Both name sets by their names, which is the one
