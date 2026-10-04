@@ -63,6 +63,14 @@
 
   function initDeckTokens() {
     const entries = deckEntries();
+    // Scryfall's own sidebar, which is where both of this page's buttons go. It is visible
+    // from 800px up and hidden below that by their stylesheet, and they keep a sidebar on a
+    // narrow screen with the class `always-visible`. So on a phone neither the token dialog
+    // nor the legality check can be opened, because the thing they are attached to is not
+    // on the page. That is Scryfall's layout and not this extension's, and forcing their
+    // sidebar to stay visible would be changing their page rather than adding a feature — so
+    // it is written down instead of guessed at, and `npm run render` reports it at 420px on
+    // every run so it cannot be forgotten by someone who never read this.
     const place = document.querySelector('#main .sidebar') || document.querySelector('#main .deck-list')?.parentElement;
     if (!entries.length || !place) return;
     const button = document.createElement('button');

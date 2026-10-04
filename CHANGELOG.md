@@ -258,6 +258,45 @@ Scryfall labels "Comp. Brawl", the value is read from the page's own markup, and
 
 ---
 
+### The render check exists now, and it was right to be fussy about its own harness
+
+The scratch script that found the 2,276-pixel caveat was gone, and "a panel nobody thought
+to draw is a panel nobody looked at" was a sentence in a changelog doing the work of a tool.
+So there is one: `npm run render`. It builds the deck page the way the extension builds it
+— the same feature files over deck markup, which is all a deck page is — opens both panels
+with a **real `showModal()`**, and measures them in Chrome at four viewports from 1600 wide
+down to a phone. 175 checks, and pictures clipped to the panels in `dist/render-check`.
+
+It is not in `npm test` and will not be: Chrome is not something a test suite may assume.
+
+Writing it turned up three things, and the first is the one worth reading.
+
+**The harness's dialog stub is a lie, and this tool walked into it.** linkedom opens a
+dialog by setting the `open` attribute, so the serialised page arrives already open, and a
+guard written as "if it is not open, open it" skips the call. The panel was open and sat at
+its static position in the page — below twenty rows of deck list — for the whole first run,
+and one of my own checks passed it, because I had written `position === 'fixed' || width > 0`
+and the second half is always true. The attribute comes off before `showModal()` is called
+now, and the check that the modal is *centred* is worth more than the one that it has a
+size. A check that cannot fail is worse than no check, because it is counted.
+
+**A sub-pixel edge touch was reported as an overlap**, at zero rows, three times. The Close
+button's bottom edge and the note's top border land on the same line, which looks like two
+elements meeting and not like two elements covering each other. The overlap test now needs a
+half-pixel of real intersection in both axes.
+
+**And the one finding, which is a fact and not a decision.** At 420px the sidebar is
+`display:none` — Scryfall's stylesheet shows `.sidebar` only from `min-width:800px`, and
+keeps one on a narrow screen with the class `always-visible`. Both deck buttons are prepended
+into that sidebar, so **on a phone neither the token dialog nor the legality check can be
+opened**, because the thing they hang on is not on the page. Whether their deck sidebar
+carries `always-visible` is not answerable from a card page, and forcing their sidebar to
+stay visible would be changing their page rather than adding a feature. So the tool reports
+it at 420px on every run, `deck-lists.js` says it where the placement happens, and nobody
+has to have read a changelog to see it.
+
+---
+
 ### `lang:!en` is not a negation, and it answered confidently
 
 The same treatment for the two rules left. Both name sets by their names, which is the one
