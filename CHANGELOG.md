@@ -361,7 +361,7 @@ failing. Both tools now fail on any check that does not pass.
 
 **And the phone fix was covered by nothing.** `deckButtonPlace` put back the way it was —
 the sidebar whenever the sidebar exists — passed `npm run render`, which cannot see the
-decision, and passed `npm test`, which had never been asked. `npm run render-mutations` exists
+decision, and passed `npm test`, which had never been asked. `npm run mutations` exists
 because of that, and the third mutation is now caught by a test in `test-preview.cjs` that
 gives the harness the answer the browser would give: one box for the sidebar and it is used,
 no boxes and the button goes beside the deck list, and with no `getClientRects` at all the
@@ -388,6 +388,97 @@ rather than against the window; `sets.js` falls back to
 `{digital:[], foreignBlackBorder:['4bb','fbb','bchr']}` when the set index request fails,
 which is the old flat shape — harmless, because an array yields no per-category answers and a
 failed request hides nothing anyway, but it is the pre-1.1.4 shape and should not be.
+
+---
+
+### The two name-matched rules, asked about rather than read — and my completeness claim was wrong
+
+`BORDER_SET_NAMES` and `NON_ENGLISH_SET_NAMES` are the only rules in this extension decided
+by a pattern in a set's *name*, and a name is not evidence. The reason they are patterns is
+that nothing on Scryfall says otherwise, and that is now measured rather than remembered. A
+set object carries `arena_code, block, block_code, card_count, code, digital, foil_only,
+icon_svg_uri, id, mtgo_code, name, nonfoil_only, object, printed_size, released_at,
+scryfall_uri, search_uri, set_type, tcgplayer_id, uri`. Nothing about languages, nothing
+about borders. `npm run set-rules` sweeps all 1,053 sets and asks Scryfall about each one.
+
+**The claim I wrote is the one the sweep refused, and it is worth reading how it went.** The
+border rule is falsifiable — a foreign black border set has no English printing anywhere in
+it, so `e:<code> lang:en` is *refused* for one and answered for every other set, and that
+refusal is an answer rather than a failure. So I wrote that these three are the only sets
+Scryfall serves with no English printing, and the first full sweep came back with **34**.
+Three are the border releases. The other 31 are foreign-only products, and they are in that
+state for an unrelated reason:
+
+| | |
+|---|---|
+| 22 promo sets | Hobby Japan Promos, Japan Junior Tournament, the Magic Premiere Shop 2005–2011 runs, Planeswalker Championship Promos, the Japanese release promos of Apocalypse, Invasion, Judgment, Odyssey, Planeshift and Torment, Redemption Program, Summer Vacation Promos 2022, 30th Anniversary Celebration Tokyo, Final Fantasy Regional Promos |
+| 5 token sets | the Japanese promo tokens for DMU, MKM, MOM, ONE and WOE |
+| 3 box sets | Salvat 2005 and 2011, Sega Dreamcast Cards |
+| 2 master sets | `ren` Renaissance — 122 printings, **all French** — and `rin` Rinascimento, its Italian release, 69 printings, all Italian |
+
+So the true claim is the narrower one: these three are the sets Scryfall *calls* Foreign Black
+Border, and no other set carries that name. The check now asserts that, and lists the other
+31 rather than asserting them away. Written as "only these three lack English" it was simply
+false, and only a sweep would have said so.
+
+**The other half of a name rule is completeness, and it costs nothing to check.** The sweep
+proves each matched set is in the state claimed. What it cannot show is a set Scryfall *calls*
+Portal that no pattern matches — a hole in the rule that every matched set looks fine beside.
+The names are already in hand, so this is exact and free: **nine** sets say Portal or Secret
+Lair and all nine are matched (`por`, `p02`, `ptk`, `pptk`, `pssc`, `slp`, `slc`, `sld`,
+`slu`); **three** say Foreign Black Border and all three are matched. Both rules are complete
+for what they claim, and that is now a check rather than an assurance.
+
+**And the non-English rule cannot be falsified, now for a measured reason.** Portal and the
+Secret Lairs are English sets that happened to be released abroad — `sld` counts 2,799 English
+printings, `ptk` 180, `por` 215. No set-level property separates them from an ordinary set,
+because there is none to find. Their list stays name-based, and the code says so where a reader
+meets it.
+
+**Three ways of asking about the absence of English, and all three fail.** This is why the
+sweep asks about English rather than about its absence, and it cost three probes to learn:
+
+| query | m21 | sld | por | 4bb | ren |
+|---|---|---|---|---|---|
+| `e:<set> lang:en` | 397 | 2,799 | 215 | refused | refused |
+| `e:<set> lang:!en` | 397 | 2,799 | 215 | refused | refused |
+| `e:<set> -lang:en` | 3,411 | 119 | 1,297 | 1,871 | 244 |
+| `e:<set> NOT lang:en` | refused | 9 | 2 | refused | refused |
+
+`lang:!en` is not a negation — it returns everything, which is what was recorded on 2026-10-03.
+`-lang:en` is not one either: 3,411 against 397 English for a set with no foreign printing, and
+244 against 122 for a set with 122. `NOT lang:en` is honoured and wrong — refused for `m21`,
+correctly, and refused for `cmd` and `tsp`, which certainly have foreign printings.
+
+**A refusal is ambiguous, and the first sweep got that wrong too.** `e:<code> lang:en` is
+refused for a set with no English printing *and* for a set Scryfall indexes no printings for at
+all. One set here is the second kind (`pfra`), and had it been several hundred the sweep would
+have invented them. So every refused set is asked again with no language term, and only the 34
+that have printings and no English among them count as being in the border state. The three
+border sets: 378, 307 and 125 printings, none of them English.
+
+**The "rest" category reaching the Sets index is not cheap, and now has a price.** Which sets
+print a language besides English cannot be read from `/sets`. Getting it by search does not
+work either: `unique=sets` is not honoured for `lang:<code>` — `lang:en` comes back as 33,649
+"sets" over 193 pages — and eleven useful languages is about 1,400 requests. Walking every
+set's printings is not much better. So the category stays stated as applying where a printing
+says its own language, and the settings page says so rather than the page implying otherwise.
+
+**And the reader of those patterns is now one file.** `tools/shots/worker-tables.cjs` locates
+`BORDER_SET_NAMES` and `NON_ENGLISH_SET_NAMES` in `worker.js` by name and evaluates them, and
+both `live.cjs` and the new checker use it. Two of the five mutations in `npm run mutations`
+exist to keep it that way: a Secret Lair pattern that stops matching, caught by the
+completeness check; and a border pattern widened to `/^Fourth Edition/`, which also claims
+`4ed` and is caught against the API. A renamed table stops the tool instead of emptying it —
+an empty list hides nothing and looks complete, which is how the copy that drifted went
+unnoticed for three releases.
+
+Two things about the sweep itself, because both cost an hour. It runs at 1.15 seconds a
+request: 1,053 requests, about twenty minutes, so it is a tool and not part of `npm test`. And
+it writes its answers every fifty sets rather than at the end — the first attempt was piped
+through a pager that closed after twelve lines, the process died at a hundred sets, and a cache
+written once at the end would have discarded every request it had made. It resumes from the
+file now, and `--fresh` asks again whatever it finds.
 
 ---
 

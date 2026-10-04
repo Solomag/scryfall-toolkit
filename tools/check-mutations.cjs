@@ -1,12 +1,15 @@
 'use strict';
-// The three mutations the render tools and the unit tests must each catch, so a claim about
-// coverage is not taken on trust.
+// The mutations each check must catch, so a claim about coverage is not taken on trust.
 //
-// The third one is here because it slipped through both: `deckButtonPlace` put the buttons
-// back into the hidden sidebar, `npm run render` passed (it cannot see the decision — the
-// features run in the harness and the browser only draws what they left), and so did
-// `npm test`. Nothing was covering the phone fix. It is covered now, by a test that gives
-// the harness the answer the browser would give.
+// Two of these are here because they slipped through something. `deckButtonPlace` put the
+// buttons back into the hidden sidebar and both `npm run render` and `npm test` passed: the
+// render tools cannot see the decision (the features run in the harness and the browser only
+// draws what they left) and the suites had never been asked. And a Secret Lair name pattern
+// that no longer matched anything would have been reported as covered by everything, because
+// the tools that classify sets each kept their own copy of the patterns — the copy that
+// drifted, and the reason `tools/shots/worker-tables.cjs` exists.
+//
+// So each mutation names the check that must notice it, and this file fails if none does.
 const fs = require('node:fs');
 const path = require('node:path');
 const { execFileSync } = require('node:child_process');
@@ -15,7 +18,8 @@ const ROOT = path.join(__dirname, '..');
 const TARGETS = {
   css: path.join(ROOT, 'src/styles/content.css'),
   sets: path.join(ROOT, 'src/card-page/sets.js'),
-  deck: path.join(ROOT, 'src/card-page/deck-lists.js')
+  deck: path.join(ROOT, 'src/card-page/deck-lists.js'),
+  worker: path.join(ROOT, 'src/background/worker.js')
 };
 const before = {};
 for (const [key, file] of Object.entries(TARGETS)) before[key] = fs.readFileSync(file, 'utf8');
@@ -45,13 +49,40 @@ const MUTATIONS = [
     find: 'if (shown(sidebar)) return sidebar;',
     replace: 'if (sidebar) return sidebar;\n    if (shown(sidebar)) return sidebar;',
     expect: 'not the unreachable one inside the hidden sidebar'
+  },
+  {
+    // A name pattern that stops matching. Nothing in the extension notices: no sub-list
+    // comes back, every row stays, and the feature reads as a switch that does nothing —
+    // which is how the drifted copy in the tools went unnoticed for three releases. What
+    // catches it is the completeness check: nine sets on Scryfall say Portal or Secret Lair
+    // and a pattern that matches none of them is a rule with a hole, which nothing about the
+    // sets it does match would ever show.
+    name: 'the Secret Lair name pattern stops matching anything',
+    file: 'worker',
+    run: 'set-rules',
+    find: "'secret-lair': /^Secret Lair/i",
+    replace: "'secret-lair': /^Secret Lairs and Things/i",
+    expect: 'every set Scryfall names Portal or Secret Lair is matched'
+  },
+  {
+    // And the same in the other direction: a pattern that matches too much. Widened to
+    // /^Fourth Edition/, the rule also claims `4ed` — an ordinary English set with hundreds
+    // of English printings — and the sweep contradicts it against the API rather than
+    // against a copy of itself.
+    name: 'the black border pattern is widened to an ordinary English set',
+    file: 'worker',
+    run: 'set-rules',
+    find: "'4bb': /^Fourth Edition Foreign Black Border/i",
+    replace: "'4bb': /^Fourth Edition/i",
+    expect: '4bb/4ed'
   }
 ];
 
 const RUNS = {
   'render-card': () => [path.join(ROOT, 'tools/check-card-render.cjs')],
   'render-deck': () => [path.join(ROOT, 'tools/check-deck-render.cjs')],
-  test: () => [path.join(ROOT, 'tests/test-preview.cjs')]
+  test: () => [path.join(ROOT, 'tests/test-preview.cjs')],
+  'set-rules': () => [path.join(ROOT, 'tools/check-set-name-rules.cjs')]
 };
 
 function restore(key) {

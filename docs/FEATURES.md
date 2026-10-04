@@ -290,6 +290,43 @@ behaviour is checked in the extension's unit tests, where the fixture supplies t
 answer directly, and the browser check is on the surface where the switch and the row are
 next to each other.
 
+**Why these two rules read names at all.** Nothing on Scryfall says a set is a Portal release:
+a set object carries `code`, `name`, `set_type`, `digital`, `card_count`, `released_at` and
+fifteen more, and nothing about languages or borders. `npm run set-rules` sweeps all 1,053 sets
+and asks Scryfall about each, which settles both halves of a name-based rule — that each
+matched set really is in the state claimed, and that nothing Scryfall *names* Portal, Secret
+Lair or Foreign Black Border was left out. Nine sets say Portal or Secret Lair and all nine are
+matched; three say Foreign Black Border and all three are.
+
+The border half is falsifiable: a foreign black border set has no English printing anywhere in
+it, so `e:<code> lang:en` is refused for one and answered for every other set. All three hold —
+378, 307 and 125 printings, none of them English.
+
+Portal and the Secret Lairs cannot be settled that way, and this is measured rather than
+asserted: they are English sets that happened to be released abroad. Scryfall counts 2,799
+English printings in `sld` and 215 in `por`, so there is no set-level property that separates
+them from an ordinary set — there is none to find. Which is why their list comes from names,
+and why the code says so where a reader meets it.
+
+Three ways of asking about the *absence* of English were tried and all three fail, which is
+why the sweep asks about English instead: `lang:!en` is not a negation and returns all 397
+printings of `m21`; `-lang:en` is not one either and returns 3,411 against 397; and
+`NOT lang:en` is honoured and wrong, refused for `m21` correctly and for `cmd` and `tsp`
+incorrectly.
+
+**And 34 sets have no English printing at all, three of which are the border releases.** The
+rest are foreign-only products — 22 promo sets, five sets of Japanese promo tokens, three box
+sets (Salvat 2005 and 2011, Sega Dreamcast Cards) and two master sets, the French `ren` and the
+Italian `rin` of Renaissance. Nothing hides them today beyond the ordinary junk-type rule, and
+that is deliberate rather than an oversight: they are not border releases, and calling them
+such would be a different rule with a different name.
+
+**The "rest" category reaches the Prints table only.** Which sets print a language besides
+English cannot be read from `/sets`, and getting the list by search is not cheap: `unique=sets`
+is not honoured for `lang:<code>`, and `lang:en` comes back as 33,649 "sets" over 193 pages. It
+would mean walking every set's printings, which is why the category is stated as applying where
+a printing says its own language.
+
 ---
 
 ## What is not done yet

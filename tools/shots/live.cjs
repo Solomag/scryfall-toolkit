@@ -31,6 +31,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
+const { workerTables, classify } = require('./worker-tables.cjs');
 
 const ROOT = path.join(__dirname, '..', '..') + path.sep;
 const CACHE = path.join(ROOT, 'dist', 'live-data');
@@ -288,64 +289,17 @@ async function clipboardCards(count = 3) {
 // category and per non-English category, a type list for the non-tournament ones, and
 // Scryfall's own `digital` flag.
 //
-// The name patterns used to be copied into this file, and the copy drifted. It matched a
-// flat `foreignBlackBorder` array by the words "foreign black border" in a set's name and
-// had no `nonEnglish` at all — the shape the extension had before 1.1.4, when the two rules
-// were single on/off switches. Nothing failed: the sixth settings illustration went on
-// showing a picture of a filter the extension no longer has, every sub-list came back
-// empty, and `npm run render` reported the feature as covered. So the tables are read out
-// of the worker now, and a renamed table stops the tool instead of emptying it.
-function workerNameTables() {
-  const source = fs.readFileSync(
-    path.join(__dirname, '..', '..', 'src', 'background', 'worker.js'), 'utf8');
-  const read = name => {
-    const at = source.search(new RegExp('^const ' + name + ' = \\{', 'm'));
-    if (at === -1) {
-      throw new Error('worker.js has no ' + name + ' table of name patterns any more, so ' +
-        'this tool cannot classify sets the way the extension does. Copying the patterns ' +
-        'here instead is what caused this: the copy drifted and nothing said so.');
-    }
-    const from = source.indexOf('{', at);
-    let depth = 0;
-    let end = from;
-    for (; end < source.length; end += 1) {
-      if (source[end] === '{') depth += 1;
-      else if (source[end] === '}') { depth -= 1; if (depth === 0) break; }
-    }
-    // The slice is a `const NAME = {…}`, and `return` cannot be followed by a declaration,
-    // so the table is declared and then returned rather than returned in place of itself.
-    return new Function(source.slice(at, end + 1) + '\nreturn ' + name + ';')();
-  };
-  return { border: read('BORDER_SET_NAMES'), nonEnglish: read('NON_ENGLISH_SET_NAMES') };
-}
-
+// The patterns are read out of `worker.js` by `worker-tables.cjs` rather than copied here.
+// They were copied once, and the copy drifted: it matched a flat `foreignBlackBorder` array
+// by the words "foreign black border" in a set's name and had no `nonEnglish` at all — the
+// shape the extension had before 1.1.4, when the two rules were single on/off switches.
+// Nothing failed. Every sub-list came back empty, both rules hid nothing, and the sixth
+// settings illustration went on showing a picture of a filter the extension no longer has.
 async function setCategories() {
   const data = await cachedGet('https://api.scryfall.com/sets');
   if (!Array.isArray(data.data)) throw new Error('the list of sets came back without one');
-  const tables = workerNameTables();
-  const categories = {
-    digital: [], nonTournament: [], oversized: [], foreignBlackBorder: {}, nonEnglish: {}
-  };
-  for (const set of data.data) {
-    if (!/^[a-z0-9_-]+$/i.test(set.code || '')) continue;
-    const code = set.code.toLowerCase();
-    const name = set.name || '';
-    if (set.digital === true) categories.digital.push(code);
-    for (const [key, pattern] of Object.entries(tables.border)) {
-      if (pattern.test(name)) (categories.foreignBlackBorder[key] ||= []).push(code);
-    }
-    for (const [key, pattern] of Object.entries(tables.nonEnglish)) {
-      if (pattern.test(name)) (categories.nonEnglish[key] ||= []).push(code);
-    }
-    const oversized = /oversiz/i.test(name) || /^o(?:cmd|cd|pr|pd)/i.test(code);
-    if (oversized) categories.oversized.push(code);
-    // The four set types Scryfall serves that cannot hold a Commander card, which is what
-    // makes them junk rather than their name. Measured 2026-10-03 against
-    // `e:<set> format=commander`: these four return nothing, every other type returns cards.
-    if (['memorabilia', 'minigame', 'vanguard', 'token'].includes(set.set_type)) {
-      categories.nonTournament.push(code);
-    }
-  }
+  const tables = workerTables();
+  const categories = classify(data.data, tables);
   // Every category, and every sub-list, must come out with something in it. An empty one
   // hides nothing and looks complete, which is the whole failure this guards against.
   for (const flag of ['digital', 'nonTournament', 'oversized']) {
@@ -354,8 +308,8 @@ async function setCategories() {
         ', so the classification in the picture would be an empty claim');
     }
   }
-  for (const group of ['foreignBlackBorder', 'nonEnglish']) {
-    for (const key of Object.keys(tables[group === 'foreignBlackBorder' ? 'border' : 'nonEnglish'])) {
+  for (const [group, tables_] of [['foreignBlackBorder', 'border'], ['nonEnglish', 'nonEnglish']]) {
+    for (const key of Object.keys(tables[tables_])) {
       if (!(categories[group][key] || []).length) {
         throw new Error('no set came out as ' + group + '.' + key +
           ', so the sub-list a reader can narrow to would be empty');
