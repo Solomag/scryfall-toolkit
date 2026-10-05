@@ -26,6 +26,7 @@ const CARD_ID = '11111111-1111-4111-8111-111111111111';
 const QUERY_ID = '33333333-3333-4333-8333-333333333333';
 const QUERY_404_ID = '44444444-4444-4444-8444-444444444444';
 const EVIL_PRINTS_ID = '22222222-2222-4222-8222-222222222222';
+const FACES_PRINTS_ID = '44444444-4444-4444-8444-444444444444';
 const PREVIEW_ID = '55555555-5555-4555-8555-555555555555';
 const PREVIEW_BAD_ID = '66666666-6666-4666-8666-666666666666';
 const CLASSIC_OVERRIDE_ID = 'c7c7bffa-442d-4ba5-b778-ad394c192f27';
@@ -92,12 +93,33 @@ const PRINT_A = {
   id: 'card-a', name: 'Test Card', scryfall_uri: 'https://scryfall.com/card/tst/1/test',
   set: 'tst', set_name: 'Test Set', collector_number: '1', lang: 'en',
   digital: false, finishes: ['nonfoil'], prices: { eur: '1.00' },
-  released_at: '2024-01-02', image_uris: { normal: 'https://cards.scryfall.io/normal/front/a/aa/test.jpg' }
+  released_at: '2024-01-02', image_uris: { normal: 'https://cards.scryfall.io/normal/front/a/aa/test.jpg' },
+  // The fields the "only without an English analogue" rule compares, measured on real
+  // answers 2026-10-04: a paper printing carries "paper" in `games`, and a single-faced one
+  // carries its illustration at the top level.
+  games: ['paper', 'mtgo', 'arena'], illustration_id: '99999999-9999-4999-8999-999999999999',
+  frame: '2015', frame_effects: [], border_color: 'black', full_art: false
 };
 const PRINT_B = {
   id: 'card-b', name: 'Test Card', scryfall_uri: 'https://scryfall.com/card/mh3/42/test',
   set: 'mh3', set_name: 'Modern Horizons 3', collector_number: '42', lang: 'jp',
-  digital: false, finishes: ['foil'], prices: {}
+  digital: false, finishes: ['foil'], prices: {},
+  games: ['paper', 'mtgo'], illustration_id: null,
+  frame_effects: []
+};
+// A double-faced printing. Scryfall puts `illustration_id` on each face and leaves the
+// card's own absent, which is measured on Delver of Secrets: two faces, two different
+// illustrations, and no top-level one of either. A reader that took face 0 would call this
+// the same picture as any other printing whose front matched.
+const PRINT_FACES = {
+  id: 'card-d', name: 'Delver of Secrets', scryfall_uri: 'https://scryfall.com/card/mh3/615/delver-of-secrets',
+  set: 'mh3', set_name: 'Modern Horizons 3', collector_number: '615', lang: 'en',
+  digital: false, finishes: ['nonfoil'], prices: {}, games: ['paper'],
+  frame: '2015', frame_effects: [], border_color: 'borderless', full_art: false,
+  card_faces: [
+    { name: 'Delver of Secrets', illustration_id: '77777777-7777-4777-8777-777777777777' },
+    { name: 'Insectile Aberration', illustration_id: '66666666-6666-4666-8666-666666666666' }
+  ]
 };
 
 const ORACLE_BULK = Array.from({ length: 110 }, (_, i) => ({ slug: `tag-${i}`, oracle_ids: [`00000000-0000-4000-8000-${String(i).padStart(12, '0')}`] }));
@@ -221,6 +243,9 @@ async function fetchMock(url, init) {
     if (parsed.searchParams.get('unique') === 'prints') { // allPrints
       if (q.includes(EVIL_PRINTS_ID)) {
         return jsonResponse({ data: [PRINT_A], has_more: true, next_page: 'https://evil.example/steal' });
+      }
+      if (q.includes(FACES_PRINTS_ID)) {
+        return jsonResponse({ data: [PRINT_FACES], has_more: false });
       }
       return jsonResponse({ data: [PRINT_A, PRINT_B], has_more: false });
     }
@@ -901,9 +926,38 @@ async function edhrecThrottleTest() {
       id: 'card-a', name: 'Test Card', uri: 'https://scryfall.com/card/tst/1/test',
       set: 'tst', setName: 'Test Set', number: '1', lang: 'en',
       digital: false, finishes: ['nonfoil'], prices: { eur: '1.00' },
-      image: 'https://cards.scryfall.io/normal/front/a/aa/test.jpg'
-    }, 'scryfall print fields are renamed for the content script, art included');
+      image: 'https://cards.scryfall.io/normal/front/a/aa/test.jpg',
+      games: ['arena', 'mtgo', 'paper'],
+      art: ['99999999-9999-4999-8999-999999999999'],
+      frame: '2015', frameEffects: [], borderColor: 'black', fullArt: false
+    }, 'scryfall print fields are renamed for the content script, art and treatment included');
     assertEqual(allPrints.data.prints[1].image, null, 'a printing without art reports no image');
+
+    // The five fields the "only without an English analogue" rule compares, and the two
+    // things they have to be for it to work: present when Scryfall has them, and absent as a
+    // value rather than as a property when it does not.
+    //
+    // A printing with no artwork in Scryfall's answer comes back with an empty list rather
+    // than without the field, because a missing property and an empty one would then mean
+    // different things to the two places that read it.
+    assertEqual(allPrints.data.prints[1].art, [],
+      'a printing with no illustration comes back with an empty art list, not without the field');
+    assertEqual(allPrints.data.prints[1].frame, null,
+      'and no frame as null, so the comparison can read it without asking whether it is there');
+    assertEqual(allPrints.data.prints[1].borderColor, null, 'likewise for the border colour');
+
+    // Multi-faced cards. Scryfall puts `illustration_id` on each face and not on the card
+    // when there is more than one face, so the artwork of the printing is the list of its
+    // faces' illustrations. Reading `card_faces[0]` instead would call two cards the same
+    // picture whenever their fronts matched and their backs did not.
+    const facesPrints = await send({ type: 'allPrints', oracleId: FACES_PRINTS_ID });
+    assertEqual(facesPrints.data.prints[0].art,
+      ['66666666-6666-4666-8666-666666666666', '77777777-7777-4777-8777-777777777777'],
+      'a double-faced printing carries one illustration per face, sorted');
+    assertEqual(facesPrints.data.prints[0].frame, '2015',
+      'and the frame from the card, which is the only place it is recorded');
+    assertEqual(facesPrints.data.prints[0].borderColor, 'borderless',
+      'as it does the border colour, which is also only on the card');
     const evilPage = await send({ type: 'allPrints', oracleId: EVIL_PRINTS_ID });
     assertEqual(evilPage, { ok: false, error: 'Invalid next page' }, 'next_page from a foreign host is rejected');
 

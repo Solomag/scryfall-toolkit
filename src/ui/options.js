@@ -415,53 +415,51 @@ chrome.storage.local.get(defaults, values => {
   const saveFilters = () => chrome.storage.local.set(
     { setFilters: filters, setFiltersMigrated: true }, () => { status.textContent = t('Сохранено'); });
 
-  // The master switch is a gate, and the one thing it must never do is write the
-  // switches under it. It is going to be "hide everything", which is a different thing:
-  // a switch that writes four others has to be kept in step with them, and when it is
-  // not, the master says one and the page does another. So it stores one flag, and
-  // everything it governs is drawn dimmed while it is off — the reader's choices are
-  // still there, which is the entire point of wanting a gate.
-  const gate = document.getElementById('setFiltersEnabled');
-  const setsGroup = document.getElementById('setsGroup');
-  const platformGroup = document.getElementById('setPlatformsGroup');
-  gate.checked = filters.setsEnabled;
-  function applyGate() {
-    setsGroup.disabled = !gate.checked;
-    platformGroup.disabled = !gate.checked;
-  }
-  gate.addEventListener('change', () => {
-    // One key. The sub-switches are not written, and the model's withoutSets/withSets
-    // are not used either: both of them copy the whole object, which would also be a
-    // way of quietly rewriting sub-switches that were never touched.
-    filters.setsEnabled = gate.checked;
-    applyGate();
-    saveFilters();
-  });
-  applyGate();
-
-  // The plain rules in the group. They are booleans and stay booleans.
+  // The three platforms, one switch each, and nothing above them.
   //
-  // Three of them now, and the third was added after the other two rather than beside them:
-  // it is a plain switch for the same reason they are, but unlike them its list behind it is
-  // a dated measurement rather than something Scryfall answers on request, and the hint under
-  // it says so. A switch whose data ages should not look like a switch whose data is fetched.
-  for (const [id, key] of [['setNonTournament', 'nonTournament'], ['setOversized', 'oversized'],
-    ['setForeignOnly', 'foreignOnly']]) {
-    const box = document.getElementById(id);
-    box.checked = filters.sets[key];
-    box.addEventListener('change', () => {
-      filters.sets[key] = box.checked;
+  // A switch writes one field. It does not touch the detail panel, and the detail panel does
+  // not touch it — so turning Paper off and back on brings the reader's own settings with it,
+  // which is the requirement, achieved by neither of them being able to rewrite the other.
+  //
+  // The "all platforms" fallback is gone with the master switch. There is no list to empty:
+  // a reader who unticks all three has said so, and the page then shows no sets at all, which
+  // is a legitimate thing to have chosen and which the earlier build quietly undid on reload.
+  const platformBoxes = FILTERS.PLATFORM_NAMES.map(name => ({
+    name,
+    element: document.getElementById('show' + name[0].toUpperCase() + name.slice(1))
+  }));
+  for (const box of platformBoxes) {
+    box.element.checked = filters.platforms[box.name] !== false;
+    box.element.addEventListener('change', () => {
+      filters.platforms[box.name] = box.element.checked;
       saveFilters();
     });
   }
 
-  // A rule with a category under it: a switch plus a list of which parts of the
-  // category it covers. The list is built from the model's own tables, so a new entry
-  // is one line in set-filters.js and needs nothing here.
+  // Paper's detail panel, closed to begin with.
   //
-  // The list is drawn from the model's labels rather than translated in this file,
-  // because STK_I18N already holds the Russian string and the English beside it. A
-  // second dictionary would be a second thing to forget.
+  // A disclosure rather than a section that is always there, because the main screen is meant
+  // to answer "what is shown" in one glance and this is the answer to "and within Paper".
+  // Its state is kept for the session and not stored: a panel that reopens where the reader
+  // left it is a nicety, and a stored flag for it is one more thing to migrate.
+  const paperButton = document.getElementById('paperDetails');
+  const paperPanel = document.getElementById('paperPanel');
+  paperButton.addEventListener('click', () => {
+    const open = paperPanel.hidden;
+    paperPanel.hidden = !open;
+    paperButton.setAttribute('aria-expanded', String(open));
+  });
+
+  // The categories inside Paper. Positive switches, one per row, each about a whole category.
+  for (const [id, key] of [['showNonTournament', 'nonTournament'], ['showOversized', 'oversized'],
+    ['showNoEnglishSets', 'noEnglishSets']]) {
+    const box = document.getElementById(id);
+    box.checked = filters.paper[key] !== false;
+    box.addEventListener('change', () => {
+      filters.paper[key] = box.checked;
+      saveFilters();
+    });
+  }
   function buildWhichList(containerId, table, chosen, onChange) {
     const container = document.getElementById(containerId);
     const boxes = [];
@@ -484,60 +482,73 @@ chrome.storage.local.get(defaults, values => {
     return boxes.filter(box => box.checked).map(box => box.dataset.which);
   }
 
-  // The two rules that carry a surface, at once, because they are the same shape and
-  // writing them separately is how one of them ends up saving and the other not.
+  // Foreign Black Border: one switch for the category and a list of families behind it.
   //
-  // A select rather than a switch, because the value is the surface and not a yes. The
-  // list underneath stays usable in all three positions: picking which of 4BB, FBB and
-  // BCHR while the rule is off is how a reader sets it up before switching it on, and
-  // hiding the list would throw that away.
-  for (const [id, listId, key, table] of [
-    ['setForeignBlackBorder', 'setForeignBlackBorderList', 'foreignBlackBorder', FILTERS.FOREIGN_BLACK_BORDER],
-    ['setNonEnglish', 'setNonEnglishList', 'nonEnglish', FILTERS.NON_ENGLISH]
-  ]) {
-    const select = document.getElementById(id);
-    const rule = filters.sets[key];
-    select.value = FILTERS.SURFACE_NAMES.includes(rule.surfaces) ? rule.surfaces : FILTERS.SURFACES.off;
-    const boxes = buildWhichList(listId, table, rule.which, () => {
-      rule.which = whichOf(boxes);
+  // The list is hidden while the category is on, because with every family shown there is
+  // nothing in it to decide — and it stays usable while it is off, which is how a reader sets
+  // up "show everything except BCHR" without the list disappearing the moment they touch the
+  // switch above it.
+  const borderSwitch = document.getElementById('showBorderFamilies');
+  const borderList = document.getElementById('setBorderFamiliesList');
+  const borderFamilies = Object.keys(FILTERS.FOREIGN_BLACK_BORDER);
+  const borderBoxes = buildWhichList('setBorderFamiliesList', FILTERS.FOREIGN_BLACK_BORDER,
+    borderFamilies.filter(key => filters.paper.foreignBlackBorder[key] !== false), () => {
+      const chosen = whichOf(borderBoxes);
+      for (const key of borderFamilies) filters.paper.foreignBlackBorder[key] = chosen.includes(key);
       saveFilters();
     });
-    select.addEventListener('change', () => {
-      rule.surfaces = FILTERS.SURFACE_NAMES.includes(select.value) ? select.value : FILTERS.SURFACES.off;
-      saveFilters();
-    });
+  function applyBorder() {
+    borderSwitch.checked = borderFamilies.some(key => filters.paper.foreignBlackBorder[key] !== false);
+    // The list follows the switch, and it follows the reader's own list rather than the
+    // switch's position: unticking the switch means "all of them", which is no list at all.
+    borderList.hidden = borderSwitch.checked || borderFamilies.every(
+      key => filters.paper.foreignBlackBorder[key] !== false);
+    for (const box of borderBoxes) {
+      box.checked = filters.paper.foreignBlackBorder[box.dataset.which] !== false;
+    }
   }
-
-  // Platform checkboxes behave as one control: "All" mirrors the three platforms, and
-  // unchecking the last one falls back to All so the set lists never end up empty.
-  //
-  // The fallback saves what it draws. Drawing all three while storage kept the one that
-  // had just been removed meant a reload brought it straight back — which is how this
-  // test once passed while doing nothing at all.
-  const platformBoxes = ['paper', 'arena', 'mtgo'].map(name => ({
-    name, element: document.getElementById('setPlatforms' + name[0].toUpperCase() + name.slice(1))
-  }));
-  const platformAll = document.getElementById('setPlatformsAll');
-  function showPlatforms(chosen) {
-    for (const box of platformBoxes) box.element.checked = chosen.includes(box.name);
-    platformAll.checked = platformBoxes.every(box => box.element.checked);
-  }
-  function savePlatforms() {
-    const chosen = platformBoxes.filter(box => box.element.checked).map(box => box.name);
-    const next = chosen.length ? chosen : platformBoxes.map(box => box.name);
-    showPlatforms(next);
-    for (const box of platformBoxes) filters.platforms[box.name] = next.includes(box.name);
+  borderSwitch.addEventListener('change', () => {
+    for (const key of borderFamilies) filters.paper.foreignBlackBorder[key] = borderSwitch.checked;
+    applyBorder();
     saveFilters();
+  });
+  for (const box of borderBoxes) box.addEventListener('change', applyBorder);
+  applyBorder();
+
+  // The non-English rule: one select, three positions, and the hint under it says what the
+  // middle one means because the middle one is not the opposite of either end.
+  const nonEnglishSelect = document.getElementById('nonEnglishMode');
+  const nonEnglishHint = document.getElementById('nonEnglishHint');
+  for (const [value, entry] of Object.entries(FILTERS.NON_ENGLISH_MODES)) {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = t(entry.label);
+    nonEnglishSelect.append(option);
   }
-  showPlatforms(platformBoxes.filter(box => filters.platforms[box.name]).map(box => box.name));
-  platformAll.addEventListener('change', () => {
-    showPlatforms(platformAll.checked ? platformBoxes.map(box => box.name) : []);
-    savePlatforms();
+  nonEnglishSelect.value = FILTERS.NON_ENGLISH_MODES[filters.paper.nonEnglish]
+    ? filters.paper.nonEnglish : 'all';
+  function applyNonEnglish() {
+    nonEnglishSelect.value = FILTERS.NON_ENGLISH_MODES[filters.paper.nonEnglish]
+      ? filters.paper.nonEnglish : 'all';
+    const entry = FILTERS.NON_ENGLISH_MODES[nonEnglishSelect.value];
+    nonEnglishHint.textContent = t(entry.hint);
+  }
+  nonEnglishSelect.addEventListener('change', () => {
+    filters.paper.nonEnglish = nonEnglishSelect.value;
+    applyNonEnglish();
+    saveFilters();
   });
-  for (const box of platformBoxes) box.element.addEventListener('change', () => {
-    platformAll.checked = platformBoxes.every(entry => entry.element.checked);
-    savePlatforms();
-  });
+  applyNonEnglish();
+
+  // Where filtering applies, one list for every rule.
+  for (const area of FILTERS.AREA_NAMES) {
+    const box = document.getElementById('area' + area[0].toUpperCase() + area.slice(1));
+    box.checked = filters.areas[area] !== false;
+    box.addEventListener('change', () => {
+      filters.areas[area] = box.checked;
+      saveFilters();
+    });
+  }
 
   // The four price kinds, one row each, from the model's own table. Which row is which
   // is the model's business: prices.js asks `setFilters.prices[kind]` for each of them,
@@ -550,8 +561,8 @@ chrome.storage.local.get(defaults, values => {
       saveFilters();
     });
 
-  // The two that sit outside the gate, because the model does not put them behind it:
-  // effective() returns them whatever setsEnabled says.
+  // The two that were outside the gate, and are now simply two more switches in their own
+  // sections — they were never about sets or platforms to begin with.
   for (const [id, key] of [['setCaster', 'caster'], ['setTokens', 'tokens']]) {
     const box = document.getElementById(id);
     box.checked = filters[key];

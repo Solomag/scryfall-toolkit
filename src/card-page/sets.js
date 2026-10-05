@@ -30,6 +30,9 @@
     PLATFORM_NAMES,
     chosenPlatforms,
     platformFilterOn,
+    setsFilterOn,
+    searchFilterOn,
+    printsFilterOn,
     setPlatformsOf,
     platformSetVisible,
     platformSetRequests,
@@ -64,21 +67,19 @@
     // chosen that was false: the index was never fetched, the rule did nothing on the
     // sets index, and it did nothing on the prints table either because the request
     // never happened. A setting that appeared to work did not work anywhere.
-    const RULES = self.STK_CONTENT.SET_FILTER_RULES;
     const setsSurface = /^\/sets\/?$/.test(location.pathname);
-    // The sets index is keyed by set code, so the mode rules can only act on it when
-    // they are addressed to it. Asking `!== 'off'` would say yes to 'prints' too, which
-    // is the surface that cannot see a set code at all.
-    const fbbHidesSets = RULES.reachesSets(settings.foreignBlackBorderSurfaces);
-    const langHidesSets = RULES.reachesSets(settings.nonEnglishSurfaces);
-    // The same two rules on the prints table. Non-English printings are matched by the
-    // printing's own language rather than by its set, so this surface can act on the
-    // whole of the rule even where the set code says nothing.
-    const fbbHidesPrints = RULES.reachesPrints(settings.foreignBlackBorderSurfaces);
-    const langHidesPrints = RULES.reachesPrints(settings.nonEnglishSurfaces);
-    const needsSetIndex = settings.hideDigitalSets || settings.hideNonTournamentSets ||
-      settings.hideOversizedSets || settings.hideForeignOnlySets ||
-      fbbHidesSets || fbbHidesPrints || langHidesSets;
+    // Whether the index is worth asking for at all. Only a rule that removes something, on a
+    // surface that is switched on, needs it — and the platform filter needs it whatever the
+    // rules say, because it is the one thing here that is answered from the index.
+    const wantsRemoving = !settings.showNonTournament || !settings.showOversized ||
+      !settings.showNoEnglishSets ||
+      Object.values(settings.showForeignBlackBorder || {}).some(show => show !== true);
+    // Only the two surfaces this file can act on with a set code. The search field has its own
+    // list and its own code path, and counting it here would fetch the index on a page whose
+    // filter is off — the request this whole `needsSetIndex` exists to avoid.
+    const setsWantedForIndex = setsFilterOn();
+    const printsWantedForIndex = printsFilterOn();
+    const needsSetIndex = (setsWantedForIndex || printsWantedForIndex) && wantsRemoving;
     const categoriesRequest = needsSetIndex || platformFilterOn
       ? platformSetRequests().catch(() => ({
         // The empty per-category objects are the point of this fallback rather than an
@@ -109,26 +110,32 @@
       const codesOf = value => (value || []).map(code => String(code).toLowerCase());
       const commonHidden = [
         ...(settings.hideDigitalSets ? categories.digital : []),
-        ...(settings.hideNonTournamentSets ? categories.nonTournament || [] : []),
-        ...(settings.hideOversizedSets ? categories.oversized || [] : []),
+        ...(settings.showNonTournament ? [] : categories.nonTournament || []),
+        ...(settings.showOversized ? [] : categories.oversized || []),
         // A set with no English printing has nothing to show on either surface, so this one
         // needs no surface of its own and no list under it.
-        ...(settings.hideForeignOnlySets ? categories.foreignOnly || [] : [])
+        ...(settings.showNoEnglishSets ? [] : categories.foreignOnly || [])
       ].map(code => String(code).toLowerCase());
-      // The per-category answers, narrowed by the reader's list. A category left out of
-      // the list contributes nothing, which is what unchecking its row on the settings
-      // page means — and this is the first code in the extension that acts on the list
-      // at all, so before 1.1.4 the rows were drawn and nothing read them.
-      const codesFor = (group, which) => which.flatMap(key => codesOf(group?.[key]));
-      const fbbRule = setFilters.sets.foreignBlackBorder;
-      const langRule = setFilters.sets.nonEnglish;
-      const borderCodes = codesFor(categories.foreignBlackBorder, fbbRule.which);
-      const langCodes = codesFor(categories.nonEnglish, langRule.which);
-      const hiddenOnSets = new Set([...commonHidden,
-        ...(fbbHidesSets ? borderCodes : []),
-        ...(langHidesSets ? langCodes : [])]);
-      const hiddenOnPrints = new Set([...commonHidden,
-        ...(fbbHidesPrints ? borderCodes : [])]);
+      // Only the categories the reader has switched off. Positive switches in, a list of codes to
+      // remove out, and the two are inverted here so that no other line has to know which way
+      // round a switch reads.
+      //
+      // Foreign Black Border is per family: a family that is off removes its sets and a family
+      // that is on leaves them, which is why this cannot be one `some()` over the whole
+      // table.
+      const codesFor = (group, keys) => keys.flatMap(key => codesOf(group?.[key]));
+      const borderOff = Object.entries(settings.showForeignBlackBorder || {})
+        .filter(([, show]) => show !== true)
+        .map(([key]) => key);
+      const borderCodes = codesFor(categories.foreignBlackBorder, borderOff);
+      const hiddenOnSets = new Set([...commonHidden, ...borderCodes]);
+      const hiddenOnPrints = new Set([...commonHidden, ...borderCodes]);
+      // The sets index and the search field are set-level surfaces, and each rule is asked
+      // only where the reader said it should apply. Before this the two rules carried their
+      // own surface list and each surface read its own copy of the mode, which is how a rule
+      // addressed to one surface ended up acting on the other.
+      const setsWanted = setsFilterOn();
+      const printsWanted = printsFilterOn();
       const main = document.querySelector('#main');
       if (!main) return;
       const apply = () => {
@@ -140,7 +147,9 @@
           catch { /* Ignore malformed unrelated links. */ }
           const set = path?.match(/^\/sets\/([^/]+)\/?$/)?.[1];
           const cube = path?.match(/^\/cubes\/([^/]+)\/?$/)?.[1];
-          row.classList.toggle('stk-digital-set-hidden', Boolean(set && (hiddenOnSets.has(set.toLowerCase()) || !setVisible(set)) || settings.hideDigitalSets && cube && onlineCubes.has(cube.toLowerCase())));
+          row.classList.toggle('stk-digital-set-hidden', Boolean(set &&
+            ((setsWanted && hiddenOnSets.has(set.toLowerCase())) || !setVisible(set)) ||
+            settings.hideDigitalSets && cube && onlineCubes.has(cube.toLowerCase())));
         }
         // Printings are identified by the set in the card URL. Keep the
         // selected printing visible so its own detail page remains coherent.
@@ -155,13 +164,19 @@
           // English links end after the card slug. A language-specific link
           // has an extra /lang/ segment before that slug (e.g. /ptk/1/ja/name).
           const foreignPrinting = /^\/card\/[^/]+\/[^/]+\/(?:[a-z]{2,3})\/[^/]+/i.test(path || '');
-          // The prints table on this page is the other surface, so the same rules are
-          // asked again about it rather than reused from the list above. With 'off'
-          // chosen neither applies, which is what a reader who has switched something
-          // off should see; with 'prints' chosen both apply here and neither touches the
-          // sets list.
+          // The prints table on this page is the other surface. It gets a narrower reading
+          // of the language rule than the extended table does: 'none' hides a foreign row by
+          // that link, and 'analogue' does not touch it at all.
+          //
+          // That is the honest limit rather than a shortcut. Deciding whether one of Scryfall's
+          // own rows has an English analogue means comparing its artwork with another
+          // printing's, and this page carries the link and the text and nothing else —
+          // no illustration, no frame, no border. There is nothing to compare, so the row stays,
+          // which is what "insufficient data leaves it visible" has to mean.
+          const languageHidesRow = settings.nonEnglishMode === 'none';
           row.classList.toggle('stk-digital-set-hidden', Boolean(!row.classList.contains('current') &&
-            (set && (hiddenOnPrints.has(set.toLowerCase()) || !setVisible(set)) || langHidesPrints && foreignPrinting)));
+            (set && ((printsWanted && hiddenOnPrints.has(set.toLowerCase())) || !setVisible(set)) ||
+             printsWanted && languageHidesRow && foreignPrinting)));
         }
         // Scryfall repeats the counter above and below the list, so both are
         // rewritten; the label is found by what it labels, not by its place.
@@ -235,8 +250,40 @@
         group.hidden = Boolean(rows.length) && rows.every(row => row.hidden);
       }
     };
+    // The set-level rules, asked about once and folded into the same answer as the platforms.
+    //
+    // Only the rules that can be answered from a set code are applied here. The non-English
+    // rule is not one of them: it is a statement about a printing, and this field lists sets,
+    // so "does this set have an English analogue" has no meaning on a dropdown that picks a
+    // set rather than a printing.
+    //
+    // The border families are asked as "some family is off" for the reason given in core.js:
+    // written as "not every family is on" is the same answer, and written as `some(show => show)`
+    // it would be true only when all of them are off.
+    const categoriesWanted = searchFilterOn() &&
+      (!settings.showNonTournament || !settings.showOversized || !settings.showNoEnglishSets ||
+        Object.values(settings.showForeignBlackBorder || {}).some(show => show !== true));
+    // The platform index is asked for whatever the rules say, because the Games checkboxes above
+  // this field decide the list on their own and they are not a setting. Asking for it
+  // conditionally would leave every digital set looking like an unplaceable one on a page
+  // whose filters are all at their defaults — which is a state a reader is in until they
+  // touch something.
     platformSetRequests(true).then(index => {
+      let excluded = new Set();
+      if (categoriesWanted && index.categories && Array.isArray(index.categories.digital)) {
+        const codesOf = value => (value || []).map(code => String(code).toLowerCase());
+        const borderOff = Object.entries(settings.showForeignBlackBorder || {})
+          .filter(([, show]) => show !== true)
+          .map(([key]) => key);
+        excluded = new Set([
+          ...(settings.showNonTournament ? [] : codesOf(index.categories.nonTournament)),
+          ...(settings.showOversized ? [] : codesOf(index.categories.oversized)),
+          ...(settings.showNoEnglishSets ? [] : codesOf(index.categories.foreignOnly)),
+          ...borderOff.flatMap(key => codesOf(index.categories.foreignBlackBorder?.[key]))
+        ]);
+      }
       visible = code => {
+        if (excluded.has(String(code || '').toLowerCase())) return false;
         const games = setPlatformsOf(index.categories, index.platforms, code);
         return !games.length || games.some(game => allowed().has(game));
       };

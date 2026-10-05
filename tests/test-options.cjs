@@ -38,10 +38,11 @@ const REQUIRED_IDS = [
   'deckCleanUpImprover', 'cleanUpLandsInSingleton', 'sortEntriesPrimary',
   'insertSortingHeadings', 'edhrecSuggestions', 'deckSearch',
   'deckModuleStatus', 'grantDeckHosts',
-  'setPlatformsAll', 'setPlatformsPaper', 'setPlatformsArena', 'setPlatformsMtgo',
-  'setFiltersEnabled', 'setsGroup', 'setNonTournament', 'setOversized',
-  'setForeignBlackBorder', 'setForeignBlackBorderList', 'setNonEnglish',
-  'setNonEnglishList', 'setPrices', 'setCaster', 'setTokens',
+  'showPaper', 'showArena', 'showMtgo', 'paperDetails', 'paperPanel',
+  'showNonTournament', 'showOversized', 'showNoEnglishSets',
+  'showBorderFamilies', 'setBorderFamiliesList', 'nonEnglishMode',
+  'areaPrints', 'areaSearch', 'areaSets',
+  'setPrices', 'setCaster', 'setTokens',
   'printGrouping', 'printFoldGroups', 'printFullPageLink'
 ];
 
@@ -53,7 +54,11 @@ const REQUIRED_IDS = [
 // drawing next to code that had stopped asking it anything.
 const REMOVED_IDS = [
   'hideCasterIndicator', 'hideDigitalSets', 'hideNonTournamentSets', 'hideOversizedSets',
-  'hideForeignBlackBorder', 'hideNonEnglishPrints', 'onlyCardmarket', 'deckTokens'
+  'hideForeignBlackBorder', 'hideNonEnglishPrints', 'onlyCardmarket', 'deckTokens',
+  'setFiltersEnabled', 'setsGroup', 'setPlatformsAll', 'setPlatformsPaper',
+  'setPlatformsArena', 'setPlatformsMtgo', 'setNonTournament', 'setOversized',
+  'setForeignOnly', 'setForeignBlackBorder', 'setForeignBlackBorderList',
+  'setNonEnglish', 'setNonEnglishList', 'setPlatformsGroup'
 ];
 
 // What the archive ships is not the same as what the working tree holds, so the
@@ -441,33 +446,36 @@ async function settingsLanguageChainTest() {
 // and the settings page is the one place they are looking. So the case is set up the
 // way such a reader's storage looks, and the answer is checked in the new key.
 async function lastPlatformTest() {
-  console.log('settings: taking away the last platform stores every platform');
+  console.log('settings: the old platform whitelist migrates, and turning the last one off is kept');
   const page = await loadOptions({ setPlatforms: ['mtgo'] });
   await groupReady(page);
   const { document, mock } = page;
-  const boxes = ['setPlatformsPaper', 'setPlatformsArena', 'setPlatformsMtgo']
+  const boxes = ['showPaper', 'showArena', 'showMtgo']
     .map(id => document.getElementById(id));
 
   assertEqual(boxes.map(box => box.checked), [false, false, true],
-    'the old stored platform list is migrated into the only one checked');
+    'the old stored platform list is migrated into the only one shown');
 
+  // The behaviour this test used to assert has been removed on purpose. There is no master
+  // above these switches, so there is nothing to restore them and no state where the page
+  // disagrees with storage: three boxes mean what they say.
   boxes[2].checked = false;
   fireEvent(boxes[2], 'change');
   await tick();
   assertEqual(mock.state.setFilters.platforms,
-    { paper: true, arena: true, mtgo: true },
-    'taking away the last one stores every platform');
-  assertEqual(boxes.map(box => box.checked), [true, true, true],
-    'and the page shows all of them');
+    { paper: false, arena: false, mtgo: false },
+    'turning the last platform off is stored as that');
+  assertEqual(boxes.map(box => box.checked), [false, false, false],
+    'and the page shows that, rather than drawing all three and keeping one in storage');
   assertEqual(mock.state.setPlatforms, ['mtgo'],
     'and the old key is left alone rather than written over the reader\'s choice');
 
   const again = await loadOptions({ setFilters: mock.state.setFilters, setFiltersMigrated: true });
   await groupReady(again);
   assertEqual(
-    ['setPlatformsPaper', 'setPlatformsArena', 'setPlatformsMtgo']
+    ['showPaper', 'showArena', 'showMtgo']
       .map(id => again.document.getElementById(id).checked),
-    [true, true, true], 'a reload keeps every platform instead of bringing one back');
+    [false, false, false], 'and a reload does not bring a platform back on its own');
 }
 
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
@@ -617,7 +625,7 @@ function modelLabelsTest() {
   // limits and the icon colours are read this way. A `const` inside a script run in a
   // context is not reachable from the test, and the strings are the thing being
   // asserted.
-  const labels = ['FOREIGN_BLACK_BORDER', 'NON_ENGLISH', 'PRICE_KINDS']
+  const labels = ['FOREIGN_BLACK_BORDER', 'NON_ENGLISH_MODES', 'PRICE_KINDS']
     .flatMap(table => {
       const block = new RegExp(`const ${table} = \\{[\\s\\S]*?\\n  \\};`).exec(filters);
       assert(block, `the model still declares ${table}, so the labels can be found in it`);
@@ -640,6 +648,21 @@ function switchStyleTest() {
   assert(/label:has\(> input\[type=checkbox\]\)\s*\{[^}]*display:\s*flex/.test(css), 'the label puts the switch in a row with its text');
   assert(/input\[type=checkbox\]:disabled\s*\{[^}]*opacity/.test(css), 'a locked switch is dimmed');
   assert(/fieldset:disabled\s*\{[^}]*opacity/.test(css), 'and so is a locked block');
+// The platform rows and the detail panel, which the new shape introduced. The switch has to
+// keep its shape on a platform row — a pill is what tells a reader it is a switch and not a
+// label — and the panel it opens has to sit inside the row above it rather than as another
+// framed box, because the frame is what says "this is a group of settings" and nesting one
+// inside another says it twice for no extra meaning.
+assert(/\.platform-row\s*\{[^}]*display:\s*flex/.test(css),
+  'a platform switch and its details button share one row');
+assert(/\.platform-row>label\s*\{[^}]*display:\s*flex/.test(css),
+  'and the switch on that row keeps the switch shape rather than becoming a plain label');
+assert(/\.details-button\s*\{/.test(css),
+  'the details button has a class of its own so it can shrink to its label');
+assert(/\.sub-panel\s*\{[^}]*border:\s*0/.test(css),
+  "Paper's detail panel has no frame of its own, so the switch above it is what says which platform it belongs to");
+assert(/\.sub-panel\s*\{[^}]*border-left/.test(css),
+  "and a rule down the side takes the frame's place, which reads as belonging to the row above");
 }
 
 function sectionOrderTest() {
@@ -679,24 +702,34 @@ function sectionOrderTest() {
   assertEqual(sectionOf('printGrouping'), 'Издания', 'the grouped prints table has its own category');
   assertEqual(sectionOf('printFoldGroups'), 'Издания', 'the fold line is configurable next to it');
   assertEqual(sectionOf('printFullPageLink'), 'Издания', 'the full-page link is configurable next to it');
-  assertEqual(sectionOf('setFiltersEnabled'), 'Скрытие лишнего', 'the hiding group has its master switch first');
-  assertEqual(sectionOf('setNonTournament'), 'Скрытие лишнего', 'the junk rules live in one category');
-  assertEqual(sectionOf('setNonEnglish'), 'Скрытие лишнего', 'and so does the non-English rule');
+  // The visibility group: the three platforms, the areas, and the prices. There is no
+  // master switch and no "all platforms" row, and both absences are checked — a control
+  // that is only not in the markup by accident comes back the next time someone tidies up.
+  assertEqual(sectionOf('showPaper'), 'Скрытие лишнего', 'the platforms live in the hiding category');
+  assertEqual(sectionOf('showArena'), 'Скрытие лишнего', 'and so does the second one');
+  assertEqual(sectionOf('showMtgo'), 'Скрытие лишнего', 'and the third');
+  assertEqual(sectionOf('areaPrints'), 'Скрытие лишнего', 'the areas are one group of their own');
+  assertEqual(sectionOf('areaSearch'), 'Скрытие лишнего', 'and all three of them are in it');
+  assertEqual(sectionOf('areaSets'), 'Скрытие лишнего', 'including the sets list');
   assertEqual(sectionOf('setPrices'), 'Скрытие лишнего', 'the price switches are one group of their own');
   assertEqual(sectionOf('setCaster'), 'Скрытие лишнего', 'the Caster marker stays in Hide extras');
   assertEqual(sectionOf('setTokens'), 'Скрытие лишнего', 'and the deck tokens, which the model groups with them');
-  assertEqual(sectionOf('setPlatformsAll'), 'Скрытие лишнего', 'the platform filter is nested under Скрытие лишнего');
-  assert(html.indexOf('id="setPlatformsAll"') > html.indexOf('class="experimental-sub"'),
-    'the platform filter sits inside the experimental sub-block');
-  // The gate and the prices are the two things a reader has to be able to find again
-  // without reading the hint, so both are checked for being reachable by name: one
-  // above everything it governs, one outside it.
-  assert(html.indexOf('id="setFiltersEnabled"') < html.indexOf('id="setNonTournament"') &&
-    html.indexOf('id="setFiltersEnabled"') < html.indexOf('id="setPlatformsAll"'),
-    'the master switch is drawn above the things it governs');
-  assert(html.indexOf('id="setPrices"') > html.indexOf('id="setNonEnglishList"') &&
-    html.indexOf('id="setCaster"') > html.indexOf('id="setNonEnglishList"'),
-    'and the price switches and the Caster marker sit outside the block the master switch dims');
+  assert(!html.includes('id="setFiltersEnabled"') && !html.includes('id="setPlatformsAll"'),
+    'the master switch and the all-platforms row are both gone from the markup');
+  // Paper's categories sit inside the panel its own button opens, and the areas sit outside
+  // it — which is the whole arrangement: what is shown, then what is shown within Paper, then
+  // where the rules apply.
+  assert(html.indexOf('id="paperDetails"') < html.indexOf('id="showNonTournament"') &&
+    html.indexOf('id="showNonTournament"') < html.indexOf('id="areaPrints"'),
+    'Paper\'s detail categories are drawn after its button and before the areas');
+  assert(html.indexOf('id="showPaper"') < html.indexOf('id="paperDetails"') &&
+    html.indexOf('id="showArena"') < html.indexOf('id="areaPrints"'),
+    'the platforms and their details are the first thing in the group');
+  // Only Paper gets a details button. Arena and Magic Online have nothing to put behind one,
+  // and a button that opens an empty panel is a promise this build cannot keep.
+  assert(html.includes('id="paperDetails"'), 'Paper has a details button');
+  assert(!html.includes('id="arenaDetails"') && !html.includes('id="mtgoDetails"'),
+    'and the two digital platforms do not, because there is nothing to put in one');
   assertEqual(sectionOf('finishBadges'), 'Дополнительная информация', 'the finish column moved to Additional info');
   assertEqual(sectionOf('cardSearchLinks'), 'Дополнительная информация', 'type and mana search moved to Additional info');
   assertEqual(sectionOf('cardNicknames'), 'Дополнительная информация', 'card nicknames moved to Additional info');
@@ -899,48 +932,61 @@ async function settingsTest() {
 }
 
 async function setPlatformsTest() {
-  console.log('options.js: platform checkboxes');
+  console.log('options.js: three platform switches, no master');
   const page = await groupReady(loadOptions({}));
   const { document, mock } = page;
-  const all = document.getElementById('setPlatformsAll');
-  const boxes = ['setPlatformsPaper', 'setPlatformsArena', 'setPlatformsMtgo']
-    .map(id => document.getElementById(id));
-  assertEqual([all.checked, ...boxes.map(box => box.checked)], [true, true, true, true],
-    'every platform starts checked, so All is checked as well');
+  const boxes = ['showPaper', 'showArena', 'showMtgo'].map(id => document.getElementById(id));
+  assertEqual(boxes.map(box => box.checked), [true, true, true],
+    'every platform starts shown, which is what a default has to mean');
 
-  boxes[1].checked = false;
-  boxes[2].checked = false;
-  fireEvent(boxes[1], 'change');
-  await tick();
-  assertEqual(mock.state.setFilters.platforms, { paper: true, arena: false, mtgo: false },
+  // Each change is fired on its own, because a switch that also wrote the other two would
+// pass a test that unticked two and fired once — which is what this test did for years.
+boxes[1].checked = false;
+fireEvent(boxes[1], 'change');
+await tick();
+boxes[2].checked = false;
+fireEvent(boxes[2], 'change');
+await tick();
+assertEqual(mock.state.setFilters.platforms, { paper: true, arena: false, mtgo: false },
     'leaving Paper alone is stored as the only platform');
-  assertEqual(all.checked, false, 'All is cleared once a platform is dropped');
 
-  all.checked = true;
-  fireEvent(all, 'change');
-  await tick();
-  assertEqual(mock.state.setFilters.platforms, { paper: true, arena: true, mtgo: true },
-    'All restores every platform');
-
+  // All three off is a choice, not a state to be rescued. The earlier build put a master
+  // above these and quietly restored them, which meant unchecking the last one appeared to
+  // do nothing and came back on reload.
   boxes[0].checked = false;
-  boxes[1].checked = false;
-  boxes[2].checked = false;
-  fireEvent(boxes[2], 'change');
+  fireEvent(boxes[0], 'change');
   await tick();
-  assertEqual(mock.state.setFilters.platforms, { paper: true, arena: true, mtgo: true },
-    'dropping the last platform falls back to All instead of an empty list');
-  assertEqual([all.checked, ...boxes.map(box => box.checked)], [true, true, true, true], 'and the boxes show it');
+  assertEqual(mock.state.setFilters.platforms, { paper: false, arena: false, mtgo: false },
+    'and turning the last one off is stored as that, rather than undone');
+  assertEqual(boxes.map(box => box.checked), [false, false, false], 'the boxes show it');
+
+  // The requirement that a platform keeps its own settings while it is off. The switch and
+  // the detail panel write different fields, and this is what proves neither rewrites the
+  // other: a change made while Paper is off is still there when it comes back.
+  const oversized = document.getElementById('showOversized');
+  oversized.checked = false;
+  fireEvent(oversized, 'change');
+  await tick();
+  assertEqual(mock.state.setFilters.paper.oversized, false,
+    "Paper's own categories are still editable while Paper is off");
+  boxes[0].checked = true;
+  fireEvent(boxes[0], 'change');
+  await tick();
+  assertEqual(mock.state.setFilters.platforms.paper, true, 'Paper comes back');
+  assertEqual(mock.state.setFilters.paper.oversized, false,
+    'and its categories are exactly as they were left');
 
   const stored = await groupReady(loadOptions({
     setFilters: { platforms: { paper: false, arena: false, mtgo: true } },
     setFiltersMigrated: true
   }));
   assertEqual(
-    [stored.document.getElementById('setPlatformsAll').checked,
-      ...['setPlatformsPaper', 'setPlatformsArena', 'setPlatformsMtgo'].map(id => stored.document.getElementById(id).checked)],
-    [false, false, false, true],
+    ['showPaper', 'showArena', 'showMtgo'].map(id => stored.document.getElementById(id).checked),
+    [false, false, true],
     'a stored single-platform choice is restored'
   );
+  assert(!stored.document.getElementById('setPlatformsAll'),
+    'and there is no all-platforms row to restore');
 }
 
 // The hiding group, drawn from the model. The point of these is that the page cannot
@@ -959,10 +1005,13 @@ async function hidingGroupTest() {
   // cannot be stored.
   const rowsOf = containerId => [...document.getElementById(containerId)
     .querySelectorAll('input[data-which]')].map(box => box.dataset.which);
-  assertEqual(rowsOf('setForeignBlackBorderList'), Object.keys(F.FOREIGN_BLACK_BORDER),
-    'one row per Foreign Black Border set in the model, and no others');
-  assertEqual(rowsOf('setNonEnglishList'), Object.keys(F.NON_ENGLISH),
-    'one row per non-English category in the model, and no others');
+  assertEqual(rowsOf('setBorderFamiliesList'), Object.keys(F.FOREIGN_BLACK_BORDER),
+    'one row per Foreign Black Border family in the model, and no others');
+  // The non-English rule has no list at all any more, and that is the point of the
+  // redesign: Portal, Secret Lair and the rest were three categories of a set name, and
+  // the question the reader actually has is about a printing rather than a set.
+  assert(!document.getElementById('setNonEnglishList'),
+    'the non-English rule has no category list, so there is nothing to re-derive');
   assertEqual(rowsOf('setPrices'), Object.keys(F.PRICE_KINDS),
     'one row per price kind in the model, and no others');
 
@@ -977,87 +1026,84 @@ async function hidingGroupTest() {
     { usd: false, tix: false, tcg: true, cardhoarder: false },
     'hiding one kind of price hides that one alone');
 
-  // A category rule stores a subset, and the subset is what comes back.
-  const fbb = document.getElementById('setForeignBlackBorderList-fbb');
+  // Foreign Black Border is per family, and positive: a family that is shown is a family
+  // that is left alone, so unticking one stores `false` for that family alone.
+  const fbb = document.getElementById('setBorderFamiliesList-fbb');
   fbb.checked = false;
   fireEvent(fbb, 'change');
   await tick();
-  assertEqual(mock.state.setFilters.sets.foreignBlackBorder.which, ['4bb', 'bchr'],
-    'unticking one entry stores the rest of the category');
-  assertEqual(mock.state.setFilters.sets.foreignBlackBorder.surfaces, 'off',
-    'and choosing entries does not turn the rule on: the surface is the whole rule');
+  assertEqual(mock.state.setFilters.paper.foreignBlackBorder,
+    { '4bb': true, fbb: false, bchr: true },
+    'unticking one family stores that family off and leaves the other two on');
+  assertEqual(F.effective(mock.state.setFilters).paper.foreignBlackBorder.fbb, false,
+    'and the model hands the page the same thing, so the page and the rules cannot disagree');
 
-  // The master switch is a gate, and the one thing it must never be is a setter.
-  const gate = document.getElementById('setFiltersEnabled');
+  // The non-English rule is one select with three positions, and the middle one is not the
+  // opposite of either end — so it is checked by value rather than by being on or off.
+  const mode = document.getElementById('nonEnglishMode');
+  assertEqual([...mode.options].map(option => option.value), Object.keys(F.NON_ENGLISH_MODES),
+    'one option per position in the model, in the model\'s order');
+  assertEqual(mode.value, 'all', 'and it starts at All, which shows everything');
+  mode.value = 'analogue';
+  fireEvent(mode, 'change');
+  await tick();
+  assertEqual(mock.state.setFilters.paper.nonEnglish, 'analogue',
+    'the middle position is stored as itself and not flattened into a switch');
+  assertEqual(mock.state.setFilters.paper.nonEnglish !== 'none', true,
+    'which is what makes it different from the third');
+
+  // The areas, and the requirement that a rule on with no area chosen removes nothing.
+  const area = document.getElementById('areaSets');
+  area.checked = false;
+  fireEvent(area, 'change');
+  await tick();
+  assertEqual(mock.state.setFilters.areas.sets, false,
+    'one area is stored on its own');
+  assertEqual(mock.state.setFilters.areas.prints, true, 'and the other two are untouched');
+
+  // Paper's categories: positive, and each one about a whole category.
   const before = JSON.parse(JSON.stringify(mock.state.setFilters));
-  document.getElementById('setNonTournament').checked = true;
-  document.getElementById('setOversized').checked = true;
-  fireEvent(document.getElementById('setNonTournament'), 'change');
-  fireEvent(document.getElementById('setOversized'), 'change');
+  const nonTournament = document.getElementById('showNonTournament');
+  nonTournament.checked = false;
+  fireEvent(nonTournament, 'change');
   await tick();
-  assertEqual(mock.state.setFilters.sets.nonTournament, true, 'a rule under the gate still stores');
-  const chosen = JSON.parse(JSON.stringify(mock.state.setFilters));
+  assertEqual(mock.state.setFilters.paper.nonTournament, false,
+    'a category that is switched off is stored as off');
+  assertEqual(F.effective(mock.state.setFilters).paper.nonTournament, false,
+    'and the model agrees, so a page drawing it as on would be visibly wrong');
 
-  gate.checked = false;
-  fireEvent(gate, 'change');
-  await tick();
-  const closed = JSON.parse(JSON.stringify(mock.state.setFilters));
-  assertEqual(closed.setsEnabled, false, 'the gate stores one flag');
-  assertEqual(closed.sets, chosen.sets,
-    'and writes nothing under it — a master that sets its switches has to be kept in step with them');
-  assertEqual(closed.platforms, chosen.platforms, 'nor the platforms it sits above');
-
-  // And what it does instead: the rules it governs stop being in force, and come back
-  // the way they were. The gate is what the model says it is, so this asks the model.
-  assertEqual(F.effective(closed).nonTournament, false, 'with the gate shut nothing is hidden');
-  assertEqual(F.effective(closed).platforms, { paper: true, arena: true, mtgo: true },
-    'and every platform comes back, since a platform switched off is a platform being hidden');
-  assertEqual(F.effective(chosen).nonTournament, true, 'opening it brings the same choices back, not the defaults');
-  assertEqual(F.effective(chosen).oversized, true, 'for every rule under it');
-
-  // What is outside the gate stays outside it: the model does not put the prices or the
-  // tokens behind it, so a page that dimmed them would be promising something the
-  // hiding rules do not do.
-  assertEqual(F.effective(closed).nonEnglish, 'off', 'the category rules are behind the gate');
-  const withGate = F.normalise({ ...before, setsEnabled: false, prices: { usd: true, tix: false, tcg: false, cardhoarder: false }, tokens: false });
-  assertEqual(F.effective(withGate).nonEnglish, 'off', 'the non-English rule answers the gate');
-  assertEqual(withGate.prices.usd, true, 'while the price switches keep their own values behind it');
-  assertEqual(withGate.tokens, false, 'and so do the tokens');
-
-  // The page has to draw them as unusable, not merely store the gate: a gate that dims
-  // nothing is a switch that says one thing and the page does another.
-  //
-  // The disabled flag is on the two blocks, not on each row inside them, because that is
-  // how a fieldset carries it — `input.disabled` is its own attribute and does not
-  // reflect the fieldset above it, so checking the rows would pass on a page that dimmed
-  // nothing at all. What the rows do with the flag is the browser's job, and the rule
-  // that dims them is checked in switchStyleTest.
-  assertEqual([document.getElementById('setsGroup').disabled,
-    document.getElementById('setPlatformsGroup').disabled], [true, true],
-    'a closed gate dims the rules and the platforms');
-  // Not disabled, as in "the page never touched it". linkedom reports an absent
-  // attribute as undefined rather than false, so this says what it means: nothing in
-  // the gate reaches the prices.
-  assert(!document.getElementById('setPrices').disabled,
-    'and leaves the prices alone, because the model does not put them behind it');
-  assert(!document.getElementById('setTokens').disabled,
-    'and the tokens, for the same reason');
-  gate.checked = true;
-  fireEvent(gate, 'change');
-  await tick();
-  assertEqual(document.getElementById('setsGroup').disabled, false, 'opening the gate releases the rules');
-  assertEqual(document.getElementById('setPlatformsGroup').disabled, false, 'and the platforms');
-  assert(!document.getElementById('setPrices').disabled, 'with the prices untouched throughout');
+  // Paper's detail panel is a disclosure, closed to begin with, and the areas sit outside
+  // it. Nothing dims anything any more, because there is no master to dim with — which is
+  // checked by asking whether the blocks are still usable, not by asking for a flag.
+  assertEqual(document.getElementById('paperPanel').hidden, true,
+    "Paper's categories start closed, so the main screen is three lines and an areas group");
+  click(document.getElementById('paperDetails'));
+  assertEqual(document.getElementById('paperPanel').hidden, false,
+    'and the button opens them');
+  assertEqual(document.getElementById('paperDetails').getAttribute('aria-expanded'), 'true',
+    'telling a screen reader what it just did');
+  assert(!document.getElementById('visibilityGroup').disabled,
+    'nothing is dimmed, because there is no master switch to dim anything with');
+  assert(!document.getElementById('filterAreasGroup').disabled,
+    'and the areas are usable whatever Paper is doing');
+  assertEqual(before.paper.nonTournament, true,
+    'the state before this block is the default, so the change above really was stored');
 
   // The labels under the switches are the model's own strings, translated by the same
-  // walk that translates the rest of the page. An English page that says "Portal и
-  // Portal II" beside a checkbox is a page that is half in one language.
-  const portalLabel = [...document.getElementById('setNonEnglishList').querySelectorAll('label')]
-    .find(label => label.textContent.includes('Portal'));
-  assert(portalLabel, 'the Portal row is there');
-  assert(/Portal, Portal Second Age and Portal Three Kingdoms/.test(portalLabel.textContent),
-    'and an English page calls it by Scryfall\'s own set names, not Portal и Portal II (' +
-      portalLabel.textContent.trim() + ')');
+  // walk that translates the rest of the page. An English page that says a Russian sentence
+  // beside a select is a page that is half in one language — and the middle position's
+  // explanation is the one that has to survive translation, since it is the only place the
+  // reader is told what "English analogue" means.
+  // The English page is the one this block loads, so "translated" means the option and the
+  // hint say it in English rather than carrying the Russian through unchanged. Asserting it
+  // against the model's Russian label would be asserting the opposite of what is wanted.
+  assertEqual(mode.options[1].textContent, 'Only without an English analogue',
+    'the middle option is drawn in the page language, not the model\'s');
+  assert(/only where the same card has no English/.test(document.getElementById('nonEnglishHint').textContent),
+    'and the hint under it says what the middle position means (' +
+      document.getElementById('nonEnglishHint').textContent.trim().slice(0, 60) + '…)');
+  assert(!/[А-Яа-я]/.test(document.getElementById('nonEnglishHint').textContent),
+    'with no Russian left in it');
 
   // The old flat keys are gone from the page. A control that still wrote one of them
   // would look exactly like the new one and stop hiding anything, because nothing
@@ -1095,28 +1141,55 @@ async function hidingMigrationTest() {
     'the same shape the card page would have stored, key for key');
   assertEqual(mock.state.setFiltersMigrated, true, 'and the flag is written, so it is not done twice');
 
-  assertEqual([document.getElementById('setNonTournament').checked,
-    document.getElementById('setForeignBlackBorder').value,
-    document.getElementById('setNonEnglish').value,
-    document.getElementById('setCaster').checked], [true, 'sets-prints', 'sets-prints', true],
-    'and every one of them is drawn as the reader left it');
+  assertEqual([document.getElementById('showNonTournament').checked,
+    document.getElementById('nonEnglishMode').value,
+    document.getElementById('setCaster').checked], [false, 'none', true],
+    'and every one of them is drawn as the reader left it — inverted where the old words were "hide"');
+  assertEqual([...document.getElementById('setBorderFamiliesList').querySelectorAll('input')]
+    .map(box => box.checked), [false, false, false],
+    'with all three border families off, which is what the old single switch meant');
   assertEqual([...document.getElementById('setPrices').querySelectorAll('input')].map(box => box.checked),
     [true, true, true, true], 'including four price kinds from the one switch that used to hide them');
   assertEqual(document.getElementById('setTokens').checked, false,
     'and the deck tokens, whose old switch was positive');
-  assertEqual([document.getElementById('setPlatformsPaper').checked,
-    document.getElementById('setPlatformsArena').checked], [true, false],
+  assertEqual([document.getElementById('showPaper').checked,
+    document.getElementById('showArena').checked], [true, false],
     'and the platform list, which was a whitelist');
 
-  // A reader who has already migrated must not be migrated again out of the stale flat
-  // keys. The card page checks this too; the page that shows the values is the one that
-  // has to agree about which half is the truth.
+  // A reader who has already migrated to the previous shape must not be migrated twice, and
+  // their choices must survive the change of words. This is the case the shape rewrite is
+  // most likely to lose: a stored `sets` block written by 1.1.4–1.3.0 is neither the flat
+  // booleans of the first migration nor the positive shape of this one.
   const stale = await groupReady(loadOptions({
-    ...old, hideOversizedSets: true, setFiltersMigrated: true,
-    setFilters: { sets: { oversized: false } }
+    ...old, setFiltersMigrated: true,
+    setFilters: {
+      setsEnabled: true,
+      sets: {
+        nonTournament: true,
+        oversized: false,
+        foreignOnly: false,
+        foreignBlackBorder: { surfaces: 'off', which: ['4bb', 'fbb', 'bchr'] },
+        nonEnglish: { surfaces: 'sets-prints', which: ['portal', 'secret-lair', 'other'] }
+      }
+    }
   }));
-  assertEqual(stale.document.getElementById('setOversized').checked, false,
-    'a stale flat switch does not undo a choice already migrated');
+  // What is asserted here is what the page drew, because that is what the reader sees: a
+  // value already marked migrated is not written back, so storage still holds the old
+  // shape and asking `effective()` about it would test the stored value rather than the
+  // migration.
+  assertEqual(stale.document.getElementById('showNonTournament').checked, false,
+    'a stored hide is drawn as not-shown');
+  assertEqual(stale.document.getElementById('showOversized').checked, true,
+    'and a stored not-hide is drawn as shown');
+  assertEqual(stale.document.getElementById('showNoEnglishSets').checked, true,
+    'including the measured foreign-only switch, which was stored as a hide');
+  assertEqual(stale.document.getElementById('nonEnglishMode').value, 'none',
+    'and the non-English rule keeps the position that hides, because that is what it was set to');
+  assertEqual([...stale.document.getElementById('setBorderFamiliesList').querySelectorAll('input')]
+    .map(box => box.checked), [true, true, true],
+    'with every border family shown, which is what a rule that was off meant');
+  assertEqual(F.upgrade(stale.mock.state.setFilters).paper.nonTournament, false,
+    'and the model reads that stored value the same way the page drew it');
 }
 
 async function lockedDependentsTest() {

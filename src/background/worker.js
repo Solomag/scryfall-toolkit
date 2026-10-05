@@ -15,6 +15,27 @@ importScripts("../core/format-overrides.js");
 const cache = new Map();
 const traderCache = new Map();
 let digitalSetRequest;
+
+// A printing's artwork, as the list of its illustrations, one per face.
+//
+// Scryfall puts `illustration_id` on a single-faced card and on each face of a multi-faced
+// one, and the card's own copy is *absent* when there is more than one face — measured on
+// Delver of Secrets, whose faces carry different illustrations and whose top level carries
+// neither of them. So the artwork of a card is read off its faces when it has them, and off
+// itself when it does not, and never off `card_faces[0]`: a double-faced card compared by its
+// front face alone would call two cards the same picture whenever their fronts matched.
+//
+// Sorted, so that two printings whose faces are in a different order compare equal, and a
+// card with no artwork information at all comes out as an empty list rather than as a missing
+// field — which the comparison treats as "cannot tell" and therefore leaves visible.
+function cardArt(card) {
+  if (Array.isArray(card.card_faces) && card.card_faces.length) {
+    return card.card_faces
+      .map(face => face.illustration_id || null)
+      .sort();
+  }
+  return card.illustration_id ? [card.illustration_id] : [];
+}
 let setPlatformRequest;
 // The bundled snapshot answers almost every digital set; Scryfall's own index
 // never says which client carries one. See assets/data/set-platforms.js.
@@ -681,7 +702,32 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
             digital: card.digital, finishes: card.finishes, prices: card.prices,
             // The row preview reuses the printing's own art, so it needs no
             // extra request once the print list is in.
-            image: card.image_uris?.normal || card.card_faces?.[0]?.image_uris?.normal || null
+            image: card.image_uris?.normal || card.card_faces?.[0]?.image_uris?.normal || null,
+            // The platform of this printing, which is not the platform of its set. Measured
+            // 2026-10-04: Scryfall puts `games` on every printing and never omits it, and a
+            // paper printing carries "paper" in it — so "is this printing somewhere I keep"
+            // can be answered per printing. Answering it per set is what made turning off
+            // Arena lose the paper printing of a set that was on both.
+            games: Array.isArray(card.games) ? card.games.slice().sort() : [],
+            // What makes two printings of one card the same picture rather than the same
+            // card, which is the whole of the "only without an English analogue" rule.
+            //
+            // `illustration_id` is the artwork; `frame`, `frame_effects`, `border_color` and
+            // `full_art` are the treatment around it. A reprint that shares all five with an
+            // English printing is a row showing a picture the reader is already looking at.
+            //
+            // `art` is reduced rather than passed whole: every face of a multi-faced card
+            // carries its own illustration, and the card's own `illustration_id` is absent on
+            // a double-faced card — measured on Delver of Secrets, whose two faces have
+            // different ones. Reducing to a sorted list of per-face ids means the comparison
+            // asks "does this printing have the same art, face for face", which is the
+            // question, instead of asking about a field that is missing exactly when a card
+            // has more than one face.
+            art: cardArt(card),
+            frame: card.frame ?? null,
+            frameEffects: Array.isArray(card.frame_effects) ? card.frame_effects.slice().sort() : [],
+            borderColor: card.border_color ?? null,
+            fullArt: card.full_art === true
           })));
           const next = response.has_more && response.next_page ? new URL(response.next_page) : null;
           if (next && (next.protocol !== 'https:' || next.hostname !== 'api.scryfall.com' || next.pathname !== '/cards/search')) throw new Error('Invalid next page');

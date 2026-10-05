@@ -220,27 +220,71 @@ These affect the **Sets** index and the **Prints** table on a card page. Card se
 individual set pages and decks are not changed, and the currently selected printing
 stays visible.
 
-These are one setting in the interface, grouped the way they are decided: which
-platforms, which sets are junk, which prices. There is a master switch over the set
-rules and the platforms.
+These are one group in the interface, and every switch in it means the same thing:
+**on is show.** Nothing here says "hide", and that is deliberate — a negative word read
+next to positive ones is the opposite of itself at every call site, and three of the four
+places that read this setting had to know which sense a given field was in.
 
-**The master switch is a gate, not a shortcut.** Turning it off leaves every switch
-under it exactly where you put it and hides nothing; turning it back on brings your own
-choices back rather than the defaults. It never rewrites them.
+**There is no master switch.** A reader who wants Paper, Arena and Magic Online has all
+three on by default, so a switch over them had no use except as a shortcut that loses
+per-platform settings when pressed. The earlier one was exactly that, and it could be
+drawn in a state the model could not explain — a master off with a rule on.
 
-- **Hide non-tournament sets** — memorabilia, minigame, Vanguard and token categories,
-  plus official proxy set codes (Collector's Edition, 30th Anniversary Edition, World
-  Championship Decks). Mixed "funny" sets stay, because some contain tournament-legal
-  cards.
-- **Hide oversized sets** — its own toggle, independent of the one above: a set can be
-  both, a Vintage Championship being memorabilia *and* oversized, and turning one on does
-  not turn the other off. The list comes from Scryfall and not from a guess: oversized is
-  a flag on the printing, not a field on the set, so the sets holding an oversized
-  printing are collected by asking for the printings.
-- **Hide sets with no English printing** — also its own toggle, and a plain one for the same
-  reason: a set Scryfall has printings for and not one of them in English has nothing to show
-  on either surface, so there is no surface to choose and no list to narrow it by. There are
-  34 of them — the French `ren` and Italian `rin` releases of Renaissance, Salvat 2005 and
+- **Paper / Arena / Magic Online** — three switches, and each one says whether that
+  platform is shown. Turning one off keeps its own settings and brings them back when it
+  returns: the switch writes one field and the detail panel writes another, and neither can
+  rewrite the other.
+
+  A printing can be on several platforms, so this is asked **per printing** rather than
+  per set. Scryfall records `games` on every printing and never omits it, and a paper
+  printing carries "paper" in it — Vintage Masters has 171 printings marked Magic Online
+  and four marked for Arena as well. Answering at the set level meant turning Arena off
+  took the paper printing of a set that was on both.
+
+- **Paper → Настроить** — Paper's own settings, behind a button, closed to begin with:
+  **Нетурнирные и вспомогательные издания** (memorabilia, minigame, Vanguard and token
+  categories, plus official proxy set codes — Collector's Edition, 30th Anniversary
+  Edition, World Championship Decks; mixed "funny" sets stay, because some contain
+  tournament-legal cards), **Увеличенные карты**, **Наборы без английских изданий**, and
+  **Foreign Black Border** with its list of 4BB / FBB / BCHR behind another switch.
+  Arena and Magic Online have no details button: a digital set is not memorabilia, is not
+  oversized and has no English printing to speak of.
+
+- **Неанглийские издания** — one dropdown, three positions: **Все**, **Только без
+  английского аналога**, **Никакие**. The middle one shows a foreign printing only where
+  the same card has no English **Paper** printing with the same artwork in the same
+  treatment — compared on `illustration_id`, `frame`, `frame_effects`, `border_color` and
+  `full_art`, and on every face of a multi-faced card, because Scryfall leaves the card's
+  own `illustration_id` off a double-faced card and puts it on the faces. A set name, a
+  collector number or the language is not part of that comparison. It is not a claim to
+  catch every visual difference Scryfall does not record, so anything it cannot compare
+  stays visible: an extra row is better than a missing one.
+
+  Scryfall's own rows in a Prints table carry no artwork, so the middle position does not
+  touch them; "Никакие" hides them by their link. The middle position does apply to the
+  printings the extension adds itself, which come from the API with those fields.
+
+- **Где применять** — one list of three places for every rule: **Таблица изданий**,
+  **Поиск**, **Список сетов**. One list rather than a selector per rule, because three
+  rules times three surfaces is nine switches and a reader who ticks one has answered a
+  question about a rule rather than about a place.
+
+  Set rules remove a set whole; the language rule removes an individual printing. A set
+  having some hidden cards in it does not by itself hide the set.
+
+**Oversized** is its own switch, independent of the one above it: a set can be both, a
+  Vintage Championship being memorabilia *and* oversized, and turning one off does not turn
+  the other off. Its list comes from Scryfall and not from a guess — oversized is a flag on
+  the printing, not a field on the set, so the sets holding an oversized printing are
+  collected by asking for the printings.
+
+  **Foreign Black Border** has its list of 4BB, FBB and BCHR behind another switch, because
+  unticking one family has to mean something. A set is found by name, because Scryfall has
+  nothing else to say: a set object carries `code`, `name`, `set_type`, `digital`,
+  `card_count`, `released_at` and fifteen more, and nothing about borders.
+
+- **Sets with no English printing** — the third switch inside Paper, and a plain one. There
+  are 34 of them: the French `ren` and Italian `rin` releases of Renaissance, Salvat 2005 and
   2011, Sega Dreamcast Cards, the Magic Premiere Shop runs, Japanese promo sets and five sets
   of Japanese promo tokens.
 
@@ -252,32 +296,19 @@ choices back rather than the defaults. It never rewrites them.
   direction: a foreign-only set released since the measurement stays visible until the next
   one. `npm run set-rules --write` regenerates it, and the check in that tool fails when the
   file and a fresh sweep disagree.
-- **Foreign Black Border** and **Non-English printings** — each has three positions rather
-  than a switch: not at all, the Prints table only, or both the Sets index and the Prints
-  table. They differ because the two surfaces are different things. On the Prints table a
-  set is a row and a printing is a row, and each printing carries its own language, so a
-  Japanese printing of Portal can go while the English printings beside it stay. On the
-  Sets index there are only sets: hiding one removes the whole set, English printings
-  included. Which you want is a real choice, and neither answer is the default for the
-  other.
-- Under each, a list of which parts: 4BB, FBB and BCHR; Portal, Secret Lair and the rest.
-  On the Sets index the non-English rule recognises only Portal and Secret Lair, because
-  those are named; every other set that prints a second language is only found by reading
-  its printings, so that category applies on the Prints table.
+
 - **Hide USD, TIX, TCGplayer and Cardhoarder prices** — four separate checkboxes, see
-  the price filter above. They sit outside the master switch, because they are not a set
-  rule.
+  the price filter above. They are in the same group because they are set rules about what
+  is shown, not because they have anything to do with sets.
 The **set index is cached for one day**, and the Caster marker and the deck token list
 sit in the same section.
 
-**Platforms** (experimental) — All, Paper, Arena, Magic Online. Decides which sets appear
-in `/sets` and in the Prints table. Paper is every set Scryfall does not mark digital;
-Arena and Magic Online are their digital-only sets. Taking away the last one falls back
-to All, because a set list with nothing in it is not a choice this setting can hold.
-Scryfall's index does not name the client behind a digital set, so the extension ships a
-snapshot of every known digital set's platform, looks up anything missing through a page of
-the set's printings, and keeps that answer for a month. A set the lookup cannot place stays
-visible rather than being hidden on a guess.
+**The set index and the platform index.** Paper is every set Scryfall does not mark digital;
+Arena and Magic Online are their digital-only sets. Scryfall's index does not name the
+client behind a digital set, so the extension ships a snapshot of every known digital set's
+platform, looks up anything missing through a page of the set's printings, and keeps that
+answer for a month. A set the lookup cannot place stays visible rather than being hidden on
+a guess.
 
 The lookup takes every printing's answer rather than one printing's, because they do not
 always agree: Vintage Masters has 320 printings marked Magic Online and 5 marked for Arena
@@ -288,12 +319,13 @@ The set field of Advanced search follows the **Games** checkboxes Scryfall alrea
 above it. Hidden sets are marked, never removed, so the field can widen again at any
 time.
 
-**What these rules are checked against.** The two name-matched rules are verified on the Sets
-index, in a real browser: with the rule in force, 1,064 rows are on the page, the five Secret
-Lair sets are among them, all five go when the category is chosen, nothing else does, and
-Scryfall's own counter is rewritten to match. With paper alone chosen, all 61 digital sets go.
-The rule's names are read out of `worker.js` rather than copied into the check, so a change to
-a pattern changes what is expected instead of quietly disagreeing with it.
+**What these rules are checked against.** The name-matched border rule is verified on the Sets
+index, in a real browser: with the category off, every row is on the page; with it off, exactly
+the border sets go and nothing else does, and Scryfall's own counter is rewritten to match.
+Narrowing it to a single family is checked separately, because "unticking one has to mean
+something" is a different claim from "the category works". With paper alone chosen, all 61
+digital sets go. The rule's names are read out of `worker.js` rather than copied into the check,
+so a change to a pattern changes what is expected instead of quietly disagreeing with it.
 
 They are not verified on the Prints table, and the reason is worth knowing before reading
 that as a gap in the feature. That table shows a window of ten sets around the printing being
@@ -304,42 +336,44 @@ behaviour is checked in the extension's unit tests, where the fixture supplies t
 answer directly, and the browser check is on the surface where the switch and the row are
 next to each other.
 
-**Why these two rules read names at all.** Nothing on Scryfall says a set is a Portal release:
+**Why the border rule reads names at all.** Nothing on Scryfall says a set has a black border:
 a set object carries `code`, `name`, `set_type`, `digital`, `card_count`, `released_at` and
-fifteen more, and nothing about languages or borders. `npm run set-rules` sweeps all 1,053 sets
-and asks Scryfall about each, which settles both halves of a name-based rule — that each
-matched set really is in the state claimed, and that nothing Scryfall *names* Portal, Secret
-Lair or Foreign Black Border was left out. Nine sets say Portal or Secret Lair and all nine are
-matched; three say Foreign Black Border and all three are.
+fifteen more, and nothing about borders. `npm run set-rules` sweeps all 1,053 sets and asks
+Scryfall about each, which settles both halves of a name-based rule — that each matched set
+really is in the state claimed, and that nothing Scryfall *names* Foreign Black Border was left
+out. Three sets say it and all three are matched.
 
-The border half is falsifiable: a foreign black border set has no English printing anywhere in
-it, so `e:<code> lang:en` is refused for one and answered for every other set. All three hold —
-378, 307 and 125 printings, none of them English.
+That half is falsifiable: a foreign black border set has no English printing anywhere in it, so
+`e:<code> lang:en` is refused for one and answered for every other set. All three hold — 378,
+307 and 125 printings, none of them English.
 
-Portal and the Secret Lairs cannot be settled that way, and this is measured rather than
-asserted: they are English sets that happened to be released abroad. Scryfall counts 2,799
-English printings in `sld` and 215 in `por`, so there is no set-level property that separates
-them from an ordinary set — there is none to find. Which is why their list comes from names,
-and why the code says so where a reader meets it.
-
-Three ways of asking about the *absence* of English were tried and all three fail, which is
-why the sweep asks about English instead: `lang:!en` is not a negation and returns all 397
-printings of `m21`; `-lang:en` is not one either and returns 3,411 against 397; and
+**The language rule asks a different question, and that is why it is not a set list.** The
+question is whether a *printing* has an English counterpart that looks the same, so the answer
+comes from the printings rather than from a set's name. Three ways of asking about the
+*absence* of English were tried and all three fail: `lang:!en` is not a negation and returns
+all 397 printings of `m21`; `-lang:en` is not one either and returns 3,411 against 397; and
 `NOT lang:en` is honoured and wrong, refused for `m21` correctly and for `cmd` and `tsp`
 incorrectly.
 
-**And 34 sets have no English printing at all, three of which are the border releases.** The
-rest are foreign-only products — 21 promo sets, five sets of Japanese promo tokens, three box
-sets (Salvat 2005 and 2011, Sega Dreamcast Cards) and two master sets, the French `ren` and the
-Italian `rin` of Renaissance. A switch in the group above hides all 34; the three border
-releases are in it too, since they have no English printing either, and hiding them twice is
-harmless.
+**34 sets have no English printing at all**, and three of them are the border releases. The rest
+are foreign-only products — 21 promo sets, five sets of Japanese promo tokens, three box sets
+(Salvat 2005 and 2011, Sega Dreamcast Cards) and two master sets, the French `ren` and the
+Italian `rin` of Renaissance. The switch inside Paper hides all 34; the three border releases
+are in it too, since they have no English printing either, and hiding them twice is harmless.
 
-**The "rest" category reaches the Prints table only.** Which sets print a language besides
-English cannot be read from `/sets`, and getting the list by search is not cheap: `unique=sets`
-is not honoured for `lang:<code>`, and `lang:en` comes back as 33,649 "sets" over 193 pages. It
-would mean walking every set's printings, which is why the category is stated as applying where
-a printing says its own language.
+**What the middle position can and cannot decide.** It compares a foreign printing with the
+English Paper printings of the same card across the whole print list, not only the rows the
+current window happens to show — the analogue of a printing is regularly *earlier* in the list
+than the printing being tested, and a rule that could only look forwards would call every
+reprint unique and hide nothing at all. It also refuses to use an English printing the reader
+has themselves hidden, since that is not a picture they have.
+
+What it cannot decide is a visual difference Scryfall does not record. `frame`,
+`frame_effects`, `border_color` and `full_art` cover the ones the API knows about; a treatment
+that differs in some other way is not visible to the comparison, and the consequence is a
+duplicate row rather than a missing one. That is the intended direction, and it is why every
+unresolved case — no artwork recorded, no English printing on paper, an empty comparison — keeps
+the printing on screen.
 
 ---
 

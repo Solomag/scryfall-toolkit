@@ -1295,50 +1295,101 @@ async function setPlatformTest() {
     ...routes,
     allPrints: () => ({ prints: [...prints, borderPrinting, secondBorderPrinting, japanesePortal, englishPortal], truncated: false })
   };
-  const modePage = (surfaces, borderWhich, langWhich) => loadCardPage({
+  const modePage = (paper = {}, areas) => loadCardPage({
     cards: [],
-    // Without this flag the migration runs and throws the stored object away, so the two
-    // positions that hide nothing would have passed without ever being set. Which is what
-    // they did, the first time this ran.
+    // Without this flag the stored object goes through the migration, which would translate
+    // it from a shape this build does not use, and the cases that hide nothing would pass
+    // without their settings ever having been set. Which is what they did, the first time
+    // this ran.
     setFiltersMigrated: true,
     setFilters: {
-      setsEnabled: true, platforms: { paper: true, arena: true, mtgo: true },
-      sets: {
-        nonTournament: false, oversized: false,
-        foreignBlackBorder: { surfaces, which: borderWhich || ['4bb', 'fbb', 'bchr'] },
-        nonEnglish: { surfaces, which: langWhich || ['portal', 'secret-lair'] }
+      platforms: { paper: true, arena: true, mtgo: true },
+      areas: areas || { prints: true, search: true, sets: true },
+      paper: {
+        nonTournament: true, oversized: true, noEnglishSets: true,
+        foreignBlackBorder: { '4bb': true, fbb: true, bchr: true },
+        nonEnglish: 'all',
+        ...paper
       },
       prices: { usd: false, tix: false, tcg: false, cardhoarder: false },
       tokens: true, caster: false
     },
     printGrouping: true, printFoldGroups: true, printFullPageLink: true
   }, modeRoutes);
-  const modeGroups = async (surfaces, borderWhich, langWhich, count) => {
-    const page = await modePage(surfaces, borderWhich, langWhich);
+  const modeGroups = async (paper, areas, count) => {
+    const page = await modePage(paper, areas);
+    // The count is waited for rather than read once, because the table builds itself from an
+    // API answer and the rows land after the page does. Reading once would test the timing of
+    // the test rather than the filter, and this fixture has needed both directions of that
+    // lesson.
     await waitFor(() => page.document.querySelectorAll('.stk-print-group-row').length === count
       ? true : null, `${count} print groups`);
     return groups(page);
   };
+  // The rows the built table added, found by the class prints.js puts on them and not by the
+  // text: the page also holds Scryfall's own prints table and a tags table, and a selector
+  // loose enough to catch those counts rows this filter never touched.
+  const addedRows = page => [...page.document.querySelectorAll('#main .prints-table tbody tr')]
+    .filter(row => row.classList.contains('stk-print-entry') || row.classList.contains('stk-print-extra'))
+    .map(row => ({ text: row.textContent, href: row.querySelector('a[href]')?.getAttribute('href') || '' }));
   const everySetHere = ['Test Set (TST) · 4', 'Modern Horizons 3 (MH3) · 2',
     'Border Set (4BB) · 2', 'Portal (POR) · 2'];
+  const withoutBorder = ['Test Set (TST) · 4'];
 
-  assertEqual(await modeGroups('off', null, null, 4), everySetHere,
-    'the grouped table keeps every set while the mode is off');
-  assertEqual(await modeGroups('prints', null, null, 2),
-    ['Test Set (TST) · 4', 'Modern Horizons 3 (MH3) · 2'],
-    '"prints" acts on this table as well — it is a prints table, which is the surface that position was asked for');
-  assertEqual(await modeGroups('sets-prints', null, null, 2),
-    ['Test Set (TST) · 4', 'Modern Horizons 3 (MH3) · 2'],
-    'and so does "sets-prints"; the two only come apart on the Sets index, which is the other half of this test');
-  assertEqual(await modeGroups('sets-prints', null, ['secret-lair'], 3),
+  assertEqual(await modeGroups({}, null, 4), everySetHere,
+    'the grouped table keeps every set with nothing switched off');
+  // The border rule removes a whole set, so its group goes with both of its printings —
+  // including an English one, which is the difference from the rule below.
+  assertEqual(await modeGroups({ foreignBlackBorder: { '4bb': false, fbb: false, bchr: false } }, null, 3),
     ['Test Set (TST) · 4', 'Modern Horizons 3 (MH3) · 2', 'Portal (POR) · 2'],
-    'leaving Portal out of the list keeps it whole, English printing and all');
-  // The list narrowed to categories this fixture has no sets for, which is how "nothing
-  // in this category is hidden" is actually stored. An empty list is not that: the model
-  // deliberately refuses to keep one, reading it as a build that never wrote the list,
-  // and this fixture is the proof — `[]` here hides everything.
-  assertEqual(await modeGroups('sets-prints', ['fbb'], ['secret-lair'], 4), everySetHere,
-    'and the list narrowed to categories this card has no sets for hides nothing at all');
+    'switching the border category off takes its set out of the table, English printing included');
+  // The language rule removes printings, and what that does to a group depends on what is in
+  // it. This fixture is arranged so both answers appear: MH3 holds two Japanese printings and
+  // no English one, so the group goes; Portal holds a Japanese and an English printing, so
+  // the group stays with one row. That is the whole difference between a rule about a set and
+  // a rule about a printing, and it is why they are not one switch.
+  // A group of one gets no header, so Portal disappearing from the list of groups here is the
+  // English printing still being there — the row simply stops having a header to sit under.
+  // That is the table behaving as written, which is the second time this fixture has had to
+  // be arranged around it, and it is checked by counting the rows rather than the groups.
+  assertEqual(await modeGroups({ nonEnglish: 'none' }, null, 2),
+    ['Test Set (TST) · 4', 'Border Set (4BB) · 2'],
+    'the language rule at None takes out MH3 whole, since all it has is Japanese, and takes ' +
+    'one row out of Portal, which still has an English printing');
+  const languagePage = await modePage({ nonEnglish: 'none' });
+  // Nine printings in the fixture, three of them non-English, so six rows are left. The count
+  // is a floor rather than an exact figure because the table also marks its own group rows,
+  // and a group row is not a printing.
+  await waitFor(() => addedRows(languagePage).length >= 6, 'six added rows left');
+  const kept = addedRows(languagePage).map(row => row.href);
+  assert(kept.includes('/card/por/2/test-card'),
+    'and Portal is not merely a group of one: its English row is still in the table');
+  assert(!kept.some(href => /\/card\/mh3\//.test(href)),
+    'while MH3, whose printings were all Japanese, is gone from the rows as well');
+  assert(kept.includes('/card/tst/3/test-card') && kept.includes('/card/4bb/1/test-card'),
+    'and the language rule touched neither an English TST row nor an English border row');
+  // Both together. MH3 loses its only language, the border set loses both of its printings.
+  // Both rules at once. What is left is TST, whose four rows are all English, and Portal's
+  // one English row, which has lost its group header along with its Japanese printing. So
+  // one group and five rows: the two rules between them removed the border set, the Japanese
+  // printings and MH3, which had nothing else.
+  assertEqual(await modeGroups({
+    foreignBlackBorder: { '4bb': false, fbb: false, bchr: false }, nonEnglish: 'none'
+  }, null, 1), withoutBorder,
+  'both rules at once, and each still does its own kind of removing');
+
+  // The area answer, asked of the surface it governs. This is one list for every rule rather
+  // than a selector per rule, so it is asked once and the table obeys. The rule used is the
+  // border one, because this fixture has a set for it and no oversized set at all — a check
+  // against a rule this card has nothing for measures nothing, which is why the earlier
+  // version of this block had to be replaced rather than reworded.
+  assertEqual(await modeGroups({ foreignBlackBorder: { '4bb': false, fbb: false, bchr: false } },
+    { prints: false, search: false, sets: true }, 4),
+    everySetHere, 'a rule that is on with the prints area off removes nothing from the table');
+  assertEqual(await modeGroups({ foreignBlackBorder: { '4bb': false, fbb: false, bchr: false } },
+    { prints: true, search: false, sets: true }, 3),
+    ['Test Set (TST) · 4', 'Modern Horizons 3 (MH3) · 2', 'Portal (POR) · 2'],
+    'and with the area on it removes exactly the set it was aimed at');
 }
 
 // The mode, on both surfaces, in all three positions.
@@ -1372,16 +1423,17 @@ async function setSurfaceModeTest() {
   const hiddenPrints = page => [...page.document.querySelectorAll('.prints-table tbody tr')]
     .filter(row => row.classList.contains('stk-digital-set-hidden'))
     .map(row => row.querySelector('a').getAttribute('href'));
-  const load = surfaces => {
+  const load = (areas, paper = {}) => {
     const state = {
       clipboard: false, setFiltersMigrated: true,
       setFilters: {
-        setsEnabled: true,
         platforms: { paper: true, arena: true, mtgo: true },
-        sets: {
-          nonTournament: false, oversized: false,
-          foreignBlackBorder: { surfaces, which: ['4bb', 'fbb', 'bchr'] },
-          nonEnglish: { surfaces, which: ['portal', 'secret-lair', 'other'] }
+        areas: areas || { prints: true, search: true, sets: true },
+        paper: {
+          nonTournament: true, oversized: true, noEnglishSets: true,
+          foreignBlackBorder: { '4bb': false, fbb: false, bchr: false },
+          nonEnglish: 'none',
+          ...paper
         },
         prices: { usd: false, tix: false, tcg: false, cardhoarder: false },
         tokens: true, caster: false
@@ -1395,48 +1447,75 @@ async function setSurfaceModeTest() {
     })();
   };
 
-  const off = await load('off');
-  assertEqual(hiddenSets(off), [], 'with the mode off nothing is hidden from the sets index');
+  // Nothing switched off. Every rule is at its default, so nothing is hidden anywhere, and
+  // this is the state every reader starts in — which is the first thing to be sure of after
+  // a change of shape, because a default that hides something is a default that takes rows
+  // away from somebody who never asked.
+  const off = await load(null, {
+    nonEnglish: 'all',
+    foreignBlackBorder: { '4bb': true, fbb: true, bchr: true }
+  });
+  assertEqual(hiddenSets(off), [], 'with nothing switched off nothing is hidden from the sets index');
   assertEqual(hiddenPrints(off), [], 'nor from the prints table on the same page');
 
-  const prints = await load('prints');
-  // The whole point: 'prints' hides on one surface and not on the other, which is the
-  // difference 1.1.0 could not express and 1.1.1 removed rather than ship broken.
-  assertEqual(hiddenSets(prints), [], '"prints" leaves the sets index alone');
-  assertEqual(hiddenPrints(prints), ['/card/4bb/1/test-card', '/card/por/1/ja/test-card'],
-    'and hides the border printing and the non-English one from the prints table');
-
-  const both = await load('sets-prints');
-  assertEqual(hiddenSets(both), ['Fourth Edition Foreign Black Border', 'Portal'],
-    '"sets-prints" also hides those two sets from the index');
+  // The rule on, both areas in force: it removes a set from the index and a printing from
+  // the table, which are two different acts done by one switch.
+  const both = await load(null);
+  assertEqual(hiddenSets(both), ['Fourth Edition Foreign Black Border'],
+    'the border rule hides its set from the index');
   assertEqual(hiddenPrints(both), ['/card/4bb/1/test-card', '/card/por/1/ja/test-card'],
-    'and the same two printings from the prints table');
+    'and both rules hide a printing from the table — the border one and the Japanese one');
 
-  // Narrowing the list, on the surface where the list means something. Portal and Secret
-  // Lair are hidden by set code; the third category is not, because no set name says a
-  // set prints another language.
-  const narrow = await (async () => {
-    const state = {
-      clipboard: false, setFiltersMigrated: true,
-      setFilters: {
-        setsEnabled: true, platforms: { paper: true, arena: true, mtgo: true },
-        sets: {
-          nonTournament: false, oversized: false,
-          foreignBlackBorder: { surfaces: 'sets-prints', which: ['fbb'] },
-          nonEnglish: { surfaces: 'sets-prints', which: ['portal'] }
-        },
-        prices: { usd: false, tix: false, tcg: false, cardhoarder: false },
-        tokens: true, caster: false
-      }
-    };
-    const page = createPage({ url: 'https://scryfall.com/sets', html, state, routes });
-    await page.cardPage();
-    await sleep(80);
-    return page;
-  })();
-  assertEqual(hiddenSets(narrow), ['Portal'], 'unticking 4BB keeps it in the sets index');
+  // The distinction the redesign is built on: a set rule removes a set, a printing rule
+  // removes a printing. Portal has an English printing, so hiding the Japanese one does not
+  // hide Portal, and a set is not hidden because some of its printings are.
+  assertEqual(hiddenSets(both).includes('Portal'), false,
+    'the language rule does not remove the set that holds a translated printing');
+  assertEqual(hiddenPrints(both).includes('/card/por/2/test-card'), false,
+    'nor the English printing of the same set');
+
+  // One area off, and the other still on. This is what "where to apply" now means: a single
+  // shared answer rather than a per-rule selector, so the same rule reaches one surface and
+  // leaves the other alone.
+  const printsOnly = await load({ prints: true, search: true, sets: false });
+  assertEqual(hiddenSets(printsOnly), [], 'leaving the sets index off leaves it alone');
+  assertEqual(hiddenPrints(printsOnly), ['/card/4bb/1/test-card', '/card/por/1/ja/test-card'],
+    'while the prints table, which was asked for, still loses both rows');
+
+  const setsOnly = await load({ prints: false, search: true, sets: true });
+  assertEqual(hiddenSets(setsOnly), ['Fourth Edition Foreign Black Border'],
+    'the other way round, the sets index still loses the border set');
+  assertEqual(hiddenPrints(setsOnly), [],
+    'and the prints table keeps every row, English and translated alike');
+
+  // A rule on with nowhere to act. The pair is the whole of the requirement: neither half
+  // removes anything on its own.
+  const nowhere = await load({ prints: false, search: false, sets: false });
+  assertEqual(hiddenSets(nowhere), [], 'a rule that is on with every area off removes nothing');
+  assertEqual(hiddenPrints(nowhere), [], 'on either surface');
+
+  // Narrowing a category rather than switching it. Foreign Black Border is per family, so
+  // leaving 4BB on keeps its sets and its printings while the other two families are off —
+  // which is the requirement about unticking one having to mean something.
+  const narrow = await load(null, {
+    foreignBlackBorder: { '4bb': true, fbb: false, bchr: false },
+    nonEnglish: 'none'
+  });
+  assertEqual(hiddenSets(narrow), [], 'showing 4BB keeps it in the sets index');
   assertEqual(hiddenPrints(narrow), ['/card/por/1/ja/test-card'],
-    'and keeps its printing on the card page too, while Portal goes from both');
+    'and keeps its printing on the card page too, while the language rule takes only its own row');
+
+  // The language rule's three positions, each asked of the one surface that can act on it.
+  // The middle one is not a boolean and cannot be reached by flipping the third, so it gets
+  // its own case rather than being folded into the other two.
+  const all = await load(null, {
+    nonEnglish: 'all',
+    foreignBlackBorder: { '4bb': false, fbb: false, bchr: false }
+  });
+  assertEqual(hiddenPrints(all), ['/card/4bb/1/test-card'],
+    'All hides nothing by language, while the border rule still hides its own row');
+  assertEqual(hiddenSets(all), ['Fourth Edition Foreign Black Border'],
+    'and the sets index loses only the border set, since the language rule is about printings');
 
   // The grouped table — the other prints surface, built by prints.js out of the API's
 // answer with its own needsCategories and its own excluded set — is checked in

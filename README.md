@@ -78,7 +78,7 @@ The toolbar button opens a small popup with the five switches you reach for most
 | **Tags** | Card/art tags, related cards, the Tagger link on search results |
 | **CardClip** | The clipboard, the copy format, the per-printing `+` |
 | **Prints** | Grouping printings by set, folding groups, the full-list link |
-| **Hide extras** | one master switch over the set rules and platforms; non-tournament, oversized, Foreign Black Border and non-English with a list under each; the platform filter; four separate price switches; the Caster marker and deck tokens |
+| **What to show** | three platform switches — Paper, Arena, Magic Online — where on means show and turning one off keeps its own settings; Paper's own categories behind one button (non-tournament, oversized, sets with no English printing, Foreign Black Border with 4BB/FBB/BCHR under it); non-English printings as one of all / only without an English analogue / none, compared on artwork, frame, frame effects, border colour and full art; one shared list of the three places filtering applies to; four separate price switches; the Caster marker and deck tokens |
 | **Additional info** | Finish column, type and mana search, nicknames, EDHREC, CardTrader |
 | **Legality** | The extra formats and their order |
 | **Scryfall Deckbuilder** | No Prices, stacked cards, the token list, a Commander legality check, and the three opt-in tools above |

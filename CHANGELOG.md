@@ -8,6 +8,80 @@ All releases: <https://github.com/Solomag/scryfall-toolkit/releases>
 
 ---
 
+### The set filters stopped being a tree
+
+The visibility settings were five rules, each with its own "where does it apply" selector and,
+for two of them, a list of sub-categories underneath. That is twelve switches for a reader who
+wants to stop seeing duplicates, and the arrangement had grown a master switch above them that
+the two rules with a surface could contradict: a master that was off while a rule was on was a
+state the interface could draw and the model could not explain.
+
+It is now three platform switches, one shared list of places, and one dropdown.
+
+**Every switch says the same thing: on is show.** The old shape was negative — "hide
+non-tournament", "hide oversized" — and a positive word meaning "not hiding" reads as the
+opposite of itself at every call site. Three of the four places that read the shape had to know
+which sense a given field was in, and one of them had it wrong in a way nothing tested: the
+`hideNonTournamentSets` alias was handed a value the old `effective()` had already inverted, so
+the two senses met there.
+
+**One list of places instead of a selector per rule.** "Where should filtering apply" is one
+question with one answer. Three rules times three surfaces is nine switches, and a reader who
+ticks one has answered a question about a rule rather than about a place.
+
+**The platform is a printing's, not a set's.** Scryfall puts `games` on every printing and
+never omits it, and a paper printing carries "paper" in it — measured 2026-10-04 on Vintage
+Masters, whose 171 printings are `["mtgo"]` and four are `["mtgo","arena"]`. Answering at the
+set level meant turning Arena off took the paper printing of a set that was on both. That is the
+requirement stated as a test now.
+
+**No master switch, and no "all platforms".** A reader who unticks all three has said so; the
+earlier build restored them and the change came back on reload. Turning a platform off keeps its
+own settings, because the switch writes one field and the detail panel writes another and
+neither can rewrite the other — which is checked by switching a platform off, changing its
+detail, switching it back and asking.
+
+**Only Paper gets a details button.** A digital set is not memorabilia, is not oversized and has
+no English printing to speak of, so there was nothing to put behind one.
+
+The middle position of the language rule is the reason it is a dropdown rather than a switch: it
+shows a foreign printing only where the same card has no English **Paper** printing with the
+same artwork in the same treatment. That is a judgement about a pair of printings and a switch
+cannot say it. What counts as the same picture is `illustration_id` (per face, because Scryfall
+leaves it off a double-faced card and puts it on the faces), `frame`, `frame_effects`,
+`border_color` and `full_art` — and it is not a claim to describe every visual difference, so
+every early return in the comparison leaves the printing visible. A set name or a collector
+number is not part of the picture, which is the case the requirement names outright and the one
+the old set-name categories could not express at all.
+
+Two limits, both honest. Scryfall's own rows in a prints table carry no artwork, so the middle
+position does not touch them and the "None" position hides them by their link — which is what
+"not enough to compare, therefore leave it visible" has to mean when the page carries a link and
+nothing else. And the English half of every comparison is drawn only from printings the reader
+kept: an English printing they have already hidden is not a picture they have, so it must not be
+allowed to hide anything else.
+
+Existing settings are translated rather than reset, through both old shapes — the flat booleans
+of 1.0 and the negative shape of 1.1.4 to 1.3.0 — and a reader who was hiding lands on the
+position that hides. The one judgement is the master: it meant "no rule below applies", which
+arrives here as every switch at its default, by inverting five switches rather than by keeping a
+gate that no longer has a meaning to keep.
+
+**And a bug this work found in itself.** The gate that decides whether the filter runs at all
+was written `some(show => show) === false`, which is true only when every border family is off.
+Narrow the category to a single family and it stood the whole feature down: untick 4BB, leave
+FBB and BCHR on, and not one row moved. Every check that had ever run switched whole categories.
+It is now `some(show => show !== true)`, and two render checks and a mutation exist because the
+first spelling looked correct.
+
+**One claim from the previous entry, corrected.** That the search the extension uses to fetch a
+card's printings — `oracleid:<id>` — returns only English printings, and that the non-English rule
+had therefore never worked on the extended prints table. It does return every language, and it
+does. The reading came from an `oracle_id` taken off a Chinese Portal printing of a card whose
+English identity is a different one; run on Counterspell (88 printings, `en es fr ja`) and
+Shivan Dragon (53, `en es fr ja ru`) both queries agree, row for row. The finding it was built
+on was real but had the wrong cause, and the rules are unchanged by it.
+
 ### A legality check that says what it did not check
 
 The obvious next thing, and the one this project left out three times on purpose: a check

@@ -42,47 +42,52 @@
 
 <section><div class="section-head"><h2>Скрытие лишнего</h2>
 <button type="button" class="shot-button" data-shot="hide-extra" aria-haspopup="dialog" title="Показать, как это выглядит">?</button></div>
-<!-- The whole group is one setting called setFilters, drawn here as the shape in
-     src/core/set-filters.js. The master switch is a gate rather than a setter: turning
-     it off leaves every switch below it exactly where it was, so the one time in a
-     while the junk is wanted back, one click brings it all without redoing the
-     tidying. It never writes the switches under it, which is checked. -->
-<label><input type="checkbox" id="setFiltersEnabled"> Скрывать лишнее в Sets и Prints</label>
-<p class="hint">Общий переключатель: пока он выключен, платформы и правила ниже не действуют. Выключение не сбрасывает то, что уже выбрано, — включая обратное включение. Цены, токены и индикатор Caster стоят вне этого переключателя и работают всегда.</p>
-<fieldset id="setsGroup"><legend>Что считать лишним</legend>
-<label><input type="checkbox" id="setNonTournament"> Нетурнирные сеты (сувениры, официальные прокси, токены)</label>
-<label><input type="checkbox" id="setOversized"> Увеличенные карты (oversized)</label>
-<label><input type="checkbox" id="setForeignOnly"> Наборы только на неанглийских языках</label>
-<p class="hint">Галочки независимы: набор может быть увеличенным и одновременно нетурнирным — например, Vintage Championship это сувенирная увеличенная колода. Включение одной не выключает другую.</p>
-<p class="hint">«Только на неанглийских языках» — это наборы, у которых Scryfall находит издания, и ни одного из них не на английском: французское издание Renaissance, итальянское Rinascimento, Salvat, Sega Dreamcast, японские промо-наборы. Таких наборов 34, список измерен 4 октября 2026 и лежит в расширении, а не подтягивается при открытии страницы: наборов на 1053, и спрашивать у каждого — это тысяча запросов на каждого читателя. Поэтому список стареет в безопасную сторону: новый иноязычный набор останется видимым до следующего замера. В отличие от этого, правила Foreign Black Border и «Неанглийские издания» умеют обновляться сами.</p>
-<!-- Two rules, and each has three positions rather than a switch, because they can
-     reach the Sets index or the Prints table or both and the difference is real:
-     a reader who wants Portal gone from the prints table does not necessarily want
-     the whole set unlisted. It is one field, not a switch plus a scope — a switch that
-     reads the same whichever way it is set is worse than no switch. -->
-<label for="setForeignBlackBorder">Foreign Black Border</label>
-<select id="setForeignBlackBorder"><option value="off">Не скрывать</option><option value="prints">Только в таблице изданий</option><option value="sets-prints">В Sets и в таблице изданий</option></select>
-<fieldset id="setForeignBlackBorderList" class="which-list"><legend>Какие именно</legend>
-<!-- One row per entry in STK_SET_FILTERS.FOREIGN_BLACK_BORDER, written by
-     options.js. They are written rather than laid out here because the list is the
-     model's: a fourth border set has to be one line in set-filters.js and nothing
-     else, or the settings page would be showing a rule it cannot store. -->
+<!-- Three platforms, each with its own switch, and the switch means one thing everywhere in
+     this group: on is show. The switches are positive because the rule they follow is "on
+     means show", and a row of switches reading "hide X" next to three reading "show Y" is
+     how a reader ends up with a platform hidden and a category hidden and no way to tell
+     which switch did which.
+     There is deliberately no "all platforms" master. The earlier one was a gate over
+     everything, which is a fourth thing with a fourth meaning; and a reader who wants all
+     three has them all on by default, so the switch would have had no use except as a
+     shortcut that loses per-platform settings when it is pressed.
+     Turning a platform off keeps everything under it. That is not a promise in a comment —
+     the switch writes one field and the detail panel writes another, and there is a test
+     that switches a platform off, changes its detail, switches it back, and asks. -->
+<fieldset id="visibilityGroup"><legend>Что показывать</legend>
+<div class="platform-row"><label><input type="checkbox" id="showPaper"> Paper</label>
+<button type="button" id="paperDetails" class="details-button" aria-expanded="false" aria-controls="paperPanel">Настроить</button></div>
+<div class="platform-row"><label><input type="checkbox" id="showArena"> Arena</label></div>
+<div class="platform-row"><label><input type="checkbox" id="showMtgo"> Magic Online</label></div>
+<p class="hint">Платформа выключается целиком, её собственные настройки при этом сохраняются и возвращаются вместе с ней. Издание может быть на нескольких платформах: выключение Arena не убирает то, что осталось и на Paper.</p>
+<fieldset id="paperPanel" class="sub-panel" hidden><legend>Paper: дополнительные категории</legend>
+<!-- Positive switches again, and each one is a statement about a whole category rather than
+     about a row. The two platform-only groups have no detail panel because there is nothing
+     to put in it: a digital set is not memorabilia, is not oversized, and has no English
+     printing to speak of. Inventing a row for them would be a switch that cannot do anything. -->
+<label><input type="checkbox" id="showNonTournament"> Нетурнирные и вспомогательные издания</label>
+<label><input type="checkbox" id="showOversized"> Увеличенные карты (oversized)</label>
+<label><input type="checkbox" id="showNoEnglishSets"> Наборы без английских изданий</label>
+<label><input type="checkbox" id="showBorderFamilies"> Foreign Black Border</label>
+<!-- The three families, behind their own toggle rather than always visible. Written by
+     options.js because the list is the model's: a fourth border set has to be one line in
+     set-filters.js and nothing else, or this page would be showing a rule it cannot store. -->
+<fieldset id="setBorderFamiliesList" class="which-list" hidden><legend>Какие именно</legend>
 </fieldset>
-<label for="setNonEnglish">Неанглийские издания</label>
-<select id="setNonEnglish"><option value="off">Не скрывать</option><option value="prints">Только в таблице изданий</option><option value="sets-prints">В Sets и в таблице изданий</option></select>
-<fieldset id="setNonEnglishList" class="which-list"><legend>Какие именно</legend>
+<label for="nonEnglishMode">Неанглийские издания</label>
+<select id="nonEnglishMode"></select>
+<p class="hint" id="nonEnglishHint"></p>
+<p class="hint">Режим «Только без английского аналога» сравнивает иноязычное издание со всеми бумажными английскими изданиями той же карты — не только с теми, что попали в текущую таблицу. Сравниваются арт, рамка, её особенности, цвет бордера и полноформатное оформление; у многолицевых карт — каждое лицо. Если сравнить нельзя, издание остаётся видимым: лишняя строка лучше пропавшей.</p>
+<p class="hint">Этот режим не возвращает то, что убрали другие правила. Например, Secret Lair останется скрытым при выключенной категории Foreign Black Border, даже если аналог у него есть.</p>
 </fieldset>
-<p class="hint">Две поверхности — это список сетов Scryfall и таблица изданий карты, и правило может действовать на одну или на обе. Разница не косметическая: набор скрывается из списка целиком вместе с английскими изданиями внутри него, а в таблице изданий каждое издание скрывается по своему языку, поэтому английские остаются. В списке сетов правило «Неанглийские издания» узнаёт только Portal и Secret Lair по названию набора — остальные языки не названы ни в одном наборе, и в Prints они скрываются по языку самого выпуска.</p>
-</fieldset>
-<fieldset class="experimental-sub"><legend>Экспериментальное</legend>
-<p class="hint">Эта настройка ещё уточняется и может измениться или исчезнуть.</p>
-<fieldset id="setPlatformsGroup"><legend>Платформы: какие сеты показывать</legend>
-<label><input type="checkbox" id="setPlatformsAll"> Все (Paper, Arena, Magic Online)</label>
-<label><input type="checkbox" id="setPlatformsPaper"> Paper</label>
-<label><input type="checkbox" id="setPlatformsArena"> Arena</label>
-<label><input type="checkbox" id="setPlatformsMtgo"> Magic Online</label>
-<p class="hint" id="setPlatformsHint">Отметьте одну или несколько платформ: показываются только сеты выбранных платформ. Paper — все обычные сеты, Arena и Magic Online — только их цифровые сеты. Фильтр работает в Sets и в Prints, а в поле сетов на странице Advanced search учитываются ещё и галки Games над этим полем.</p>
-<p class="hint">Индекс сетов Scryfall не называет клиент за цифровым набором, поэтому расширение везёт снимок известных наборов и уточняет недостающие через одну карту набора. Набор, который уточнить не удалось, остаётся видимым.</p>
+<!-- One list for every rule, deliberately. Three rules times three surfaces is nine
+     switches, and a reader who ticks one has answered a question about a rule rather than
+     about a place. "Where should filtering apply" is one question. -->
+<fieldset id="filterAreasGroup"><legend>Где применять</legend>
+<label><input type="checkbox" id="areaPrints"> Таблица изданий</label>
+<label><input type="checkbox" id="areaSearch"> Поиск</label>
+<label><input type="checkbox" id="areaSets"> Список сетов</label>
+<p class="hint">Правила наборов убирают набор целиком, правило языка — отдельное издание. Наличие в наборе скрытых карт само по себе набор не скрывает.</p>
 </fieldset>
 </fieldset>
 <fieldset id="setPrices" class="which-list"><legend>Какие цены скрывать</legend>

@@ -104,33 +104,27 @@
   if (filtersRead.migrated) {
     chrome.storage.local.set({ setFilters, setFiltersMigrated: true });
   }
-  // What the feature files read. The old names are kept as aliases because three of them
-  // are still asked for by name in places this file does not own; they now answer out of
-  // the gate, so a closed gate reaches all of them at once.
-  settings.hideNonTournamentSets = hiding.nonTournament;
-  settings.hideOversizedSets = hiding.oversized;
-  settings.hideForeignOnlySets = hiding.foreignOnly;
-  // Straight through, with no comparison. These two were comparing against the mode
-  // strings, and with the mode gone a boolean is never 'off', so the non-English rule
-  // read as permanently on - which is how a whole set of printings went missing from a
-  // test with nothing switched on.
+  // What the feature files read, and it is the stored shape: positive switches, a list of
+  // platforms kept and three areas. No alias, no derived boolean, and nothing named "hide".
   //
-  // Now that the modes are back they are carried through as modes, under names that say
-  // so. There is deliberately no `settings.hideForeignBlackBorder` any more: a boolean
-  // alias cannot be asked "does this reach the sets index" without a comparison that
-  // collapses 'prints' and 'sets-prints' into one, and that collapse is what made
-  // 'prints' do nothing at all in 1.1.0. A feature file that wants the old name back
-  // gets a missing property, which fails, rather than a boolean that is quietly wrong
-  // for one of the three values.
-  settings.foreignBlackBorderSurfaces = hiding.foreignBlackBorder;
-  settings.nonEnglishSurfaces = hiding.nonEnglish;
-  // Deliberately false, not derived. Which platforms are shown and which sets are
-  // digital are the same decision: the platform switches already hide every Arena and
-  // Magic Online set, so deriving this from them hid those sets twice over, and took
-  // Arena sets with it even when Arena was the platform being kept. The first version of
-  // this alias did exactly that.
+  // The aliases this replaces were the third place a rule could be spelled, and one of them
+  // was wrong in a way nothing tested: `hideNonTournamentSets` was handed `hiding.nonTournament`
+  // where the old shape meant *hide*, and the old shape's `effective()` returned the opposite,
+  // so the two senses met there. The shape now says "show" everywhere and the feature files
+  // read it under its own name.
+  settings.showNonTournament = hiding.paper.nonTournament;
+  settings.showOversized = hiding.paper.oversized;
+  settings.showNoEnglishSets = hiding.paper.noEnglishSets;
+  settings.showForeignBlackBorder = hiding.paper.foreignBlackBorder;
+  settings.nonEnglishMode = hiding.paper.nonEnglish;
+  settings.filterAreas = hiding.areas;
+  settings.setPlatforms = window.STK_SET_FILTERS.PLATFORM_NAMES
+    .filter(name => hiding.platforms[name]);
+  // Deliberately false, and still derived from nothing. Which platforms are shown and which
+  // sets are digital are the same decision: the platform switches already hide every Arena and
+  // Magic Online set, so deriving this from them hid those sets twice over, and took Arena
+  // sets with it even when Arena was the platform being kept.
   settings.hideDigitalSets = false;
-  settings.setPlatforms = Object.keys(hiding.platforms).filter(name => hiding.platforms[name]);
   settings.onlyCardmarket = Object.values(setFilters.prices).some(Boolean);
   settings.deckTokens = setFilters.tokens;
   settings.hideCasterIndicator = setFilters.caster;
@@ -222,6 +216,20 @@
   );
   if (!chosenPlatforms.size) for (const name of PLATFORM_NAMES) chosenPlatforms.add(name);
   const platformFilterOn = chosenPlatforms.size < PLATFORM_NAMES.length;
+  // Whether a filter is wanted at all, for a given surface. One question asked once, because
+  // three surfaces asking it separately is how a rule reached one of them and not another.
+  //
+  // The areas are the reader's answer to "where should filtering apply", and every rule
+  // consults them together with its own switch: a rule that is off is off everywhere, and a
+  // rule that is on applies only where the reader asked. So "all" is not a way of bringing
+  // back printings that a category switch has removed.
+  const filteringOn = area => settings.filterAreas?.[area] === true;
+  // The set index and the search field are set-level surfaces; the prints table is where
+  // individual printings can be removed. Keeping the distinction here rather than at each
+  // call site is what stops a printing-level rule from being asked to remove whole sets.
+  const setsFilterOn = () => filteringOn('sets');
+  const searchFilterOn = () => filteringOn('search');
+  const printsFilterOn = () => filteringOn('prints');
   // Tells whether a set belongs to a platform the user kept. A digital set the
   // index could not place stays visible: hiding a set on a guess is worse.
   const setPlatformsOf = (categories, platforms, code) => {
@@ -412,6 +420,9 @@
     PLATFORM_NAMES,
     chosenPlatforms,
     platformFilterOn,
+    setsFilterOn,
+    searchFilterOn,
+    printsFilterOn,
     setPlatformsOf,
     platformSetVisible,
     platformSetRequests,
@@ -456,13 +467,30 @@
   // there was the collapsed alias, so with 'prints' chosen it was false and the whole
   // feature did not run — on either surface, including the one it had been asked for.
   const setFilterNeeded = (() => {
-    const rules = window.STK_SET_FILTERS;
-    const onSets = rules.reachesSets(settings.foreignBlackBorderSurfaces) ||
-      rules.reachesSets(settings.nonEnglishSurfaces);
-    const onPrints = rules.reachesPrints(settings.foreignBlackBorderSurfaces) ||
-      rules.reachesPrints(settings.nonEnglishSurfaces);
-    return (platformFilterOn || settings.hideDigitalSets || settings.hideNonTournamentSets ||
-      settings.hideOversizedSets || settings.hideForeignOnlySets || onSets || onPrints);
+    // A rule that wants to remove something, and a surface it wants to remove it from. Both
+    // halves are needed and either alone is wrong: a rule on with no surface chosen removes
+    // nothing, and a surface chosen with every rule off removes nothing.
+    //
+    // The two rule families are asked apart because they act on different things and the
+    // surfaces can differ: the category rules are properties of a set, and the non-English
+    // rule is a property of a printing.
+    // A category is on while at least one of its families is, and it removes a set while any
+    // family is off. The two are not the same question and only the second is written here.
+    //
+    // "Some family is off", spelled as "not every family is on". The other spelling —
+    // `some(show => show)` being false — is what this said first, and it is true only when
+    // every family is off. So narrowing the category to a single family read as "nothing to
+    // do" and the whole feature stood down: untick 4BB, leave FBB and BCHR on, and not one
+    // row moved. A check that only ever switched whole categories passed.
+    const someFamilyOff = Object.values(settings.showForeignBlackBorder || {})
+      .some(show => show !== true);
+    const ruleWantsSomething =
+      !settings.showNonTournament || !settings.showOversized || !settings.showNoEnglishSets ||
+      someFamilyOff;
+    const languageWantsSomething = settings.nonEnglishMode !== 'all';
+    return (platformFilterOn ||
+      (ruleWantsSomething && (setsFilterOn() || printsFilterOn())) ||
+      (languageWantsSomething && printsFilterOn()));
   })();
   const setFilterPage = /^\/sets\/?$/.test(location.pathname) || cardPage;
   const BOOT = [

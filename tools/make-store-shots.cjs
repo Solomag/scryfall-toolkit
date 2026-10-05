@@ -36,6 +36,30 @@ async function main() {
   try {
     await session.open();
     await session.open_(page, { width: WIDTH, height: 900 });
+    // Paper's detail panel is closed to begin with, and a store screenshot taken with it
+    // closed shows three switches, a button and three more switches — which is honest about
+    // what a reader first sees and says nothing at all about what the button is for. So it is
+    // opened here, by pressing the button rather than by removing `hidden` from the
+    // markup: the capture then shows the page as it looks when someone has asked for it,
+    // and the button's own script has run, which a hand-edited attribute would not prove.
+    //
+    // The categories behind it are switched off in this capture as well, so the picture
+    // shows the rule's list — the part a reader cannot guess at — rather than three ticked
+    // switches that look the same as the ones above them.
+    await session.evaluate(`(() => {
+      document.getElementById('paperDetails').click();
+      for (const [id, value] of [['showBorderFamilies', false],
+        ['nonEnglishMode', 'analogue']]) {
+        const box = document.getElementById(id);
+        if (!box) continue;
+        if (box.tagName === 'SELECT') box.value = value;
+        else box.checked = value;
+        box.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      document.getElementById('areaSearch').checked = false;
+      document.getElementById('areaSearch').dispatchEvent(new Event('change', { bubbles: true }));
+      return true;
+    })()`);
     const tall = await session.fullHeight();
     const out = path.join(STORE, 'settings-page-full.png');
     await session.shootWholePage(out, { width: WIDTH });

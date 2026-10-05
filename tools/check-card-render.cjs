@@ -376,29 +376,28 @@ const PANELS = [
 // nothing in between. Built twice, because "some rows are hidden" only means something next
 // to "and exactly those were, and nothing else moved".
 //
-// The surface written is `sets-prints`, not `sets`: those are the three values the model has
-// — `off`, `prints`, `sets-prints` — and `reachesSets` is true for one of them. A fourth
-// spelling is not rejected loudly either; it normalises to `off`, so the page looks as though
-// nothing was chosen, which is the same silence this check was written to end.
+// The rule used here is Foreign Black Border rather than the language rule, and the reason is
+// the redesign's own: the language rule is about a printing, so it has nothing to say about a
+// row that is a set, while a border set is exactly what a row on this page is. A check on this
+// page that used the language rule would pass with every mutation of the set rules applied.
 const SET_FILTERS = {
   name: 'set filters on the sets index',
   waitFor: '#js-checklist tbody tr',
-  which: ['secret-lair'],
-  // The five sets whose names the rule matches, from the categories the fixture classifies
-  // with the worker's own patterns. Read rather than typed so a rule change shows up here
-  // as a change in what is expected, not as a silent pass.
-  covering: null,
-  storage: (on, surface) => ({
+  // The families this check switches off, and the sets it expects to go. Read out of the
+  // classification the page is given rather than typed, so a change in the worker's patterns
+  // shows up here as a change in what is expected and not as a silent pass.
+  families: ['4bb', 'fbb', 'bchr'],
+  storage: on => ({
     setFiltersMigrated: true,
     setFilters: {
-      setsEnabled: true,
       platforms: { paper: true, arena: true, mtgo: true },
-      sets: {
-        nonTournament: false,
-        oversized: false,
-        foreignOnly: false,
-        foreignBlackBorder: { surfaces: 'off', which: [] },
-        nonEnglish: { surfaces: surface, which: on ? ['secret-lair'] : [] }
+      areas: { prints: true, search: true, sets: true },
+      paper: {
+        nonTournament: true, oversized: true, noEnglishSets: true,
+        // Every family off means "hide this category"; one family left on is the narrowing
+        // case, and it is checked below with its own expectations.
+        foreignBlackBorder: { '4bb': !on, fbb: !on, bchr: !on },
+        nonEnglish: 'all'
       },
       prices: { usd: false, tix: false, tcg: false, cardhoarder: false },
       tokens: false,
@@ -459,12 +458,11 @@ const SET_FILTERS = {
     // What the rule is expected to cover, read out of the same classification the page is
     // given — so if the worker's patterns change, this expectation changes with them
     // instead of quietly disagreeing.
-    const expected = (sets.categories.nonEnglish?.['secret-lair'] || []).slice().sort();
+    const expected = SET_FILTERS.families
+      .flatMap(family => sets.categories.foreignBlackBorder?.[family] || []).slice().sort();
 
-    const rowsWith = async (on) => {
-      const page = await buildSetsPage({
-        data: sets, storage: SET_FILTERS.storage(on, on ? 'sets-prints' : 'off')
-      });
+    const rowsWith = async on => {
+      const page = await buildSetsPage({ data: sets, storage: SET_FILTERS.storage(on) });
       await waitForSelector(page, SET_FILTERS.waitFor);
       const file = path.join(OUT, 'card-set-filters-' + (on ? 'on' : 'off') + '.html');
       fs.writeFileSync(file, renderableHtml(page.document, sets, { dark: true }), 'utf8');
@@ -496,8 +494,8 @@ const SET_FILTERS = {
         ? 'a set the rule names is not in the index, so hiding it cannot be observed'
         : null);
     check(onNamed.length === expected.length && hiddenByName.length === expected.length,
-      'set filters: and choosing ' + SET_FILTERS.which.join(', ') +
-      ' hides all of them (' + hiddenByName.length + ' of ' + expected.length + ')',
+      'set filters: and switching the border category off hides all of them (' +
+      hiddenByName.length + ' of ' + expected.length + ')',
       hiddenByName.length === 0 ? 'they are still on screen — the rule matched no set name' : null);
     check(hiddenElsewhere.length === 0,
       'set filters: and nothing else (' + hiddenElsewhere.length + ' other rows hidden)',
@@ -507,6 +505,38 @@ const SET_FILTERS = {
         : null);
     check(shownOn > 0,
       'set filters: and the index is not emptied by it (' + shownOn + ' left)');
+
+    // Per family rather than one switch, because unticking one family has to mean something.
+    // 4BB is the family with the most sets, so leaving it on while the other two are off is
+    // the case where a rule that ignored the list would show all of them or none of them.
+    const oneFamily = SET_FILTERS.storage(true);
+    oneFamily.setFilters.paper.foreignBlackBorder['4bb'] = true;
+    const familyPage = await buildSetsPage({ data: sets, storage: oneFamily });
+    await waitForSelector(familyPage, SET_FILTERS.waitFor);
+    const familyFile = path.join(OUT, 'card-set-filters-one-family.html');
+    fs.writeFileSync(familyFile, renderableHtml(familyPage.document, sets, { dark: true }), 'utf8');
+    await session.open_(familyFile, { width: 1600, height: 1000 });
+    const familyRows = JSON.parse(await session.evaluate(SET_ROWS));
+    const fourBb = (sets.categories.foreignBlackBorder?.['4bb'] || []);
+    const otherFamilies = ['fbb', 'bchr']
+      .flatMap(family => sets.categories.foreignBlackBorder?.[family] || []);
+    const shownFourBb = familyRows.filter(row => fourBb.includes(row.set) && row.shown);
+    const shownOthers = familyRows.filter(row => otherFamilies.includes(row.set) && row.shown);
+    check(fourBb.length > 0 && otherFamilies.length > 0,
+      'set filters: and the index lists sets from more than one border family (' +
+      fourBb.length + ' in 4BB, ' + otherFamilies.length + ' in the other two)',
+      fourBb.length && otherFamilies.length ? null :
+        'the narrowing cannot be observed with sets from one family only');
+    check(shownFourBb.length === fourBb.length,
+      'set filters: leaving one family on keeps every one of its sets (' +
+      shownFourBb.length + ' of ' + fourBb.length + ')',
+      shownFourBb.length < fourBb.length
+        ? 'still hidden but its family is on: ' + JSON.stringify(shownFourBb.map(row => row.set))
+        : null);
+    check(shownOthers.length === 0,
+      'set filters: while the families that are off still take theirs (' +
+      shownOthers.length + ' of ' + otherFamilies.length + ' still shown)',
+      shownOthers.length ? 'still shown: ' + JSON.stringify(shownOthers.map(row => row.set)) : null);
     // Scryfall's own counter, which the extension rewrites to count what is left. It is
     // read by what it labels rather than by where it sits, and it is the number a reader
     // would quote.
@@ -520,7 +550,7 @@ const SET_FILTERS = {
     // which says no digital set is on any client: `omb` and every other Alchemy set stayed
     // on the page with paper-only chosen. The index the extension ships is routed instead,
     // so the check can say which sets a client is carrying — measured, not asserted.
-    const paperOnly = SET_FILTERS.storage(false, 'off');
+    const paperOnly = SET_FILTERS.storage(false);
     paperOnly.setFilters.platforms = { paper: true, arena: false, mtgo: false };
     const platformPage = await buildSetsPage({ data: sets, storage: paperOnly });
     await waitForSelector(platformPage, SET_FILTERS.waitFor);
@@ -544,8 +574,8 @@ const SET_FILTERS = {
     // And the third rule in the group, which is a plain switch over a dated measurement.
     // Read from the same file the extension loads, so the row a reader loses is named here by
     // the file rather than by a list typed into this check.
-    const foreignOnly = SET_FILTERS.storage(false, 'off');
-    foreignOnly.setFilters.sets.foreignOnly = true;
+    const foreignOnly = SET_FILTERS.storage(false);
+    foreignOnly.setFilters.paper.noEnglishSets = false;
     const foreignPage = await buildSetsPage({ data: sets, storage: foreignOnly });
     await waitForSelector(foreignPage, SET_FILTERS.waitFor);
     const foreignFile = path.join(OUT, 'card-foreign-only.html');
@@ -561,7 +591,7 @@ const SET_FILTERS = {
       ' of ' + foreignOnlyCodes().length + ')',
       listed.length ? null : 'none of them is on the page, so the rule cannot be observed here');
     check(stillShown.length === 0,
-      'set filters: and with the switch on, none of them is on the page (' +
+      'set filters: and with the category off, none of them is on the page (' +
       stillShown.length + ' of ' + listed.length + ' still shown)',
       stillShown.length ? 'still shown: ' +
         JSON.stringify(stillShown.slice(0, 6).map(row => row.set)) : null);

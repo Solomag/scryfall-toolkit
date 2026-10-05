@@ -20,6 +20,16 @@ section.experimental h2{color:#e8cf9e}
 .experimental-sub{border-style:dashed;border-color:#7a6a55}
 .experimental-sub>legend{color:#e8cf9e}
 label{display:block;margin:9px 0;cursor:pointer}input{accent-color:#aa85b5}
+/* A platform and the button that opens its detail, on one line. The switch keeps the
+   switch shape, so a row of platforms reads as three switches and the button beside them
+   reads as a second thing rather than a fourth switch. */
+.platform-row{display:flex;align-items:center;gap:12px;margin:9px 0}
+.platform-row>label{display:flex;align-items:center;gap:11px;margin:0;flex:1 1 auto}
+.details-button{flex:0 0 auto;padding:4px 10px;font-size:13px}
+/* The detail panel is a nested fieldset with no border of its own: the switch above it says
+   which platform these settings belong to, and a second frame inside that would say it again
+   with more ink. */
+.sub-panel{border:0;border-left:2px solid #655968;border-radius:0;margin:6px 0 4px 7px;padding:2px 0 4px 14px}
 /* Every checkbox is drawn as a switch: the input stays a real checkbox, so
    keyboard and screen readers keep working while it looks like a toggle. The
    knob is a background of the input itself — a pseudo-element on a form control
