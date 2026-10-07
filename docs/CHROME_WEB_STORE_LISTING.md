@@ -1,4 +1,4 @@
-# Chrome Web Store listing — Scryfall Toolkit 1.4.0
+# Chrome Web Store listing — Scryfall Toolkit 1.4.1
 
 Everything here is written from the shipped code, so that the answers given in the store
 console match what the extension actually does. Where a field needs a decision from the
@@ -258,22 +258,27 @@ Ready in `store-assets/`, each exactly **1280×800** (PNG), in English:
 | File | What it shows |
 | --- | --- |
 | `store-assets/01-settings-01-of-05.png` | the header, General (settings language, theme), Tags with its per-tag switches, and CardClip with its export format, then the Hide extras heading and the first platform switches |
-| `store-assets/02-settings-02-of-05.png` | Hide extras — Paper, Arena and Magic Online with Paper's detail panel open: its four categories, the Foreign Black Border families behind their own switch, non-English printings as one select over all / only without an English analogue / none, and the three places filtering applies to |
+| `store-assets/02-settings-02-of-05.png` | Hide extras — Paper, Arena and Magic Online with Paper's detail panel open: its four categories, the Foreign Black Border families behind their own switch with the category off so the list is showing, non-English printings as one select over all / only without an English analogue / none, and the three places filtering applies to |
 | `store-assets/03-settings-03-of-05.png` | which prices to hide with its four switches, the Caster indicator and the deck token switch, then Additional info: the nickname switches, EDHREC deck usage and Salt Meter, and CardTrader with its EUR source and token field |
 | `store-assets/04-settings-04-of-05.png` | the end of the CardTrader token field, Legality with the format grid, and Scryfall Deckbuilder with the Commander legality check and the two opt-in deck tools |
 | `store-assets/05-settings-05-of-05.png` | the tail of the deck tools with the host-access button, the deck clean-up block, Prints, Experimental, and Credits and third-party projects |
 
 All five come from one real capture of the settings page
-(`store-assets/settings-page-full.png`, 1280×5617), so nothing is repeated or cropped
+(`store-assets/settings-page-full.png`, 1280×5626), so nothing is repeated or cropped
 away between them. Each tile is scaled uniformly to 800 rows and the margins continue
 the page's own colour, so no screenshot is stretched.
 
-The capture is taken with Paper's detail panel open, and with three switches in it set
-off, because that is where the rule is: a store shot of the panel closed shows three
-switches, a button and three more switches, and says nothing about what the button is
-for. `tools/make-store-shots.cjs` opens it by pressing the button, so the button's own
-script has run — a capture made by removing an attribute would be a picture of a page
-this build does not produce.
+The capture is taken with Paper's detail panel open and the Foreign Black Border category
+switched off, because that is where the rule is: a store shot of the panel closed shows
+three switches, a button and three more switches, and says nothing about what the button is
+for; and with every border family on, the list under that category is closed too — which is
+the state a reader is in by default and the one where the rule looks like a plain switch.
+`tools/make-store-shots.cjs` opens the panel by pressing the button, so the button's own
+script has run; a capture made by removing an attribute would be a picture of a page this
+build does not produce.
+
+The switch that hides the Search area is off in the capture for the same reason: it is the
+one row of that group whose own meaning is not visible from the label.
 
 **The heights move together, so a small change moves all five pictures.** The tile height
 is the page height divided by five and rounded up, so a section added since the pictures

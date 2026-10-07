@@ -43,9 +43,11 @@ async function main() {
     // markup: the capture then shows the page as it looks when someone has asked for it,
     // and the button's own script has run, which a hand-edited attribute would not prove.
     //
-    // The categories behind it are switched off in this capture as well, so the picture
-    // shows the rule's list — the part a reader cannot guess at — rather than three ticked
-    // switches that look the same as the ones above them.
+    // The Foreign Black Border category is switched off in this capture, so the picture shows
+    // the rule's list — the part a reader cannot guess at — rather than a switch that looks
+    // the same as the three above it. And with a category off its list stays open, which is
+    // what a reader who has narrowed that category actually sees: the list is the only place
+    // the narrowing is visible at all.
     await session.evaluate(`(() => {
       document.getElementById('paperDetails').click();
       for (const [id, value] of [['showBorderFamilies', false],
@@ -56,8 +58,13 @@ async function main() {
         else box.checked = value;
         box.dispatchEvent(new Event('change', { bubbles: true }));
       }
-      document.getElementById('areaSearch').checked = false;
-      document.getElementById('areaSearch').dispatchEvent(new Event('change', { bubbles: true }));
+      // The areas are written by options.js rather than put in the markup, so they are
+      // addressed the way the page addresses them: the container id plus the name. Asking for
+      // "areaSearch" finds nothing, and a capture tool that disagrees with the settings page
+      // about an id is a drift this repository has already paid for twice.
+      document.getElementById('filterAreasGroup-search').checked = false;
+      document.getElementById('filterAreasGroup-search')
+        .dispatchEvent(new Event('change', { bubbles: true }));
       return true;
     })()`);
     const tall = await session.fullHeight();

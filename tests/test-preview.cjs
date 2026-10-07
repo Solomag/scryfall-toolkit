@@ -10,6 +10,7 @@
  */
 'use strict';
 // The card page end to end: the core and the nine feature files over linkedom.
+const vm = require('node:vm');
 const {
   assert, assertEqual, summary, sleep, waitFor, createPage, click, fireEvent
 } = require('./testlib.cjs');
@@ -1234,6 +1235,48 @@ async function setPlatformTest() {
   const all = await load({ clipboard: false, setPlatforms: ['paper', 'arena', 'mtgo'] }, 'https://scryfall.com/sets', setsHtml);
   assertEqual(hidden(all.document), [], 'with every platform kept no set is hidden');
 
+  // The same choice, written the way the settings page writes it — as three booleans that
+  // are all false — rather than as the old whitelist. An empty whitelist was rescued by the
+  // settings page and so never reached here; three falses produce an empty kept list on the
+  // page's own terms, and an empty kept list used to be read as "nothing this build can
+  // read" and turned back into three.
+  const noneKept = await load({
+    clipboard: false,
+    setFiltersMigrated: true,
+    setFilters: {
+      platforms: { paper: false, arena: false, mtgo: false },
+      areas: { prints: true, search: true, sets: true },
+      paper: {
+        nonTournament: true, oversized: true, noEnglishSets: true,
+        foreignBlackBorder: { '4bb': true, fbb: true, bchr: true }, nonEnglish: 'all'
+      },
+      prices: { usd: false, tix: false, tcg: false, cardhoarder: false },
+      tokens: true, caster: false
+    }
+  }, 'https://scryfall.com/sets', setsHtml);
+  assertEqual(hidden(noneKept.document).length, 3,
+    'with every platform switched off every set on the index is hidden');
+  assertEqual(noneKept.document.querySelector('.search-controls label[for="order"]').textContent,
+    '0 of 3 sets in', 'and the counter above the list says so rather than still counting three');
+  // The one state in which that is not a bug: a reader who unticks Paper *and* Arena and
+  // Magic Online has asked for nothing, and the page is allowed to show them nothing.
+  const paperOnlyIndex = await load({
+    clipboard: false,
+    setFiltersMigrated: true,
+    setFilters: {
+      platforms: { paper: true, arena: false, mtgo: false },
+      areas: { prints: true, search: true, sets: true },
+      paper: {
+        nonTournament: true, oversized: true, noEnglishSets: true,
+        foreignBlackBorder: { '4bb': true, fbb: true, bchr: true }, nonEnglish: 'all'
+      },
+      prices: { usd: false, tix: false, tcg: false, cardhoarder: false },
+      tokens: true, caster: false
+    }
+  }, 'https://scryfall.com/sets', setsHtml);
+  assertEqual(hidden(paperOnlyIndex.document), ['Alchemy: Secrets of Strixhaven', 'Magic Online'],
+    'and Paper alone still keeps the one set it is supposed to');
+
   // The same choice decides which printings join the grouped table.
   const digitalPrint = {
     id: 'p9', name: 'Test Card', uri: 'https://scryfall.com/card/ysos/7/test-card', set: 'ysos',
@@ -1295,7 +1338,7 @@ async function setPlatformTest() {
     ...routes,
     allPrints: () => ({ prints: [...prints, borderPrinting, secondBorderPrinting, japanesePortal, englishPortal], truncated: false })
   };
-  const modePage = (paper = {}, areas) => loadCardPage({
+  const modePage = (paper = {}, areas, platforms) => loadCardPage({
     cards: [],
     // Without this flag the stored object goes through the migration, which would translate
     // it from a shape this build does not use, and the cases that hide nothing would pass
@@ -1303,7 +1346,7 @@ async function setPlatformTest() {
     // this ran.
     setFiltersMigrated: true,
     setFilters: {
-      platforms: { paper: true, arena: true, mtgo: true },
+      platforms: platforms || { paper: true, arena: true, mtgo: true },
       areas: areas || { prints: true, search: true, sets: true },
       paper: {
         nonTournament: true, oversized: true, noEnglishSets: true,
@@ -1316,8 +1359,8 @@ async function setPlatformTest() {
     },
     printGrouping: true, printFoldGroups: true, printFullPageLink: true
   }, modeRoutes);
-  const modeGroups = async (paper, areas, count) => {
-    const page = await modePage(paper, areas);
+  const modeGroups = async (paper, areas, count, platforms) => {
+    const page = await modePage(paper, areas, platforms);
     // The count is waited for rather than read once, because the table builds itself from an
     // API answer and the rows land after the page does. Reading once would test the timing of
     // the test rather than the filter, and this fixture has needed both directions of that
@@ -1332,6 +1375,11 @@ async function setPlatformTest() {
   const addedRows = page => [...page.document.querySelectorAll('#main .prints-table tbody tr')]
     .filter(row => row.classList.contains('stk-print-entry') || row.classList.contains('stk-print-extra'))
     .map(row => ({ text: row.textContent, href: row.querySelector('a[href]')?.getAttribute('href') || '' }));
+  // Only the rows this table built for printings of its own. A group header also carries
+  // `stk-print-extra`, and a header can be built from Scryfall's own rows — which
+  // src/card-page/sets.js hides separately, and which this file has no business counting
+  // twice. So the two are told apart by their class rather than by their text.
+  const builtRows = page => [...page.document.querySelectorAll('#main .prints-table tbody tr.stk-print-entry')];
   const everySetHere = ['Test Set (TST) · 4', 'Modern Horizons 3 (MH3) · 2',
     'Border Set (4BB) · 2', 'Portal (POR) · 2'];
   const withoutBorder = ['Test Set (TST) · 4'];
@@ -1390,6 +1438,69 @@ async function setPlatformTest() {
     { prints: true, search: false, sets: true }, 3),
     ['Test Set (TST) · 4', 'Modern Horizons 3 (MH3) · 2', 'Portal (POR) · 2'],
     'and with the area on it removes exactly the set it was aimed at');
+
+  // The same answer, with the platform filter on — and this is the case the line above passed
+  // for the wrong reason. Turning a platform off fetches the set index for its own reasons, so
+  // `excluded` gets built whether the prints area is on or not, and the gate that was holding
+  // it back stopped holding. A reader who unticked "Prints table" and then turned Arena off
+  // found their prints table filtered by a rule they had excluded from it.
+  //
+  // Read after a settle rather than waited for by count, on purpose: `modeGroups` waits for an
+  // exact number of groups and reports a timeout when the count differs, which is a failure
+  // that names a number rather than the rule. This assertion has to be the thing that fails,
+  // because the mutation that breaks it is otherwise indistinguishable from a timing problem.
+  const settledGroups = async (paper, areas, platforms) => {
+    const page = await modePage(paper, areas, platforms);
+    await waitFor(() => modeRoutes.allPrints && true, 'the print list route');
+    await sleep(150);
+    return groups(page);
+  };
+  assertEqual(await settledGroups({ foreignBlackBorder: { '4bb': false, fbb: false, bchr: false } },
+    { prints: false, search: false, sets: true }, { paper: true, arena: false, mtgo: false }),
+    everySetHere,
+    'and with the prints area off it still removes nothing once the platform filter has ' +
+    'fetched the set index for itself');
+  // The control for the line above, so it cannot pass by the table being empty: the same
+  // settings with the area on do remove the set.
+  assertEqual(await settledGroups({ foreignBlackBorder: { '4bb': false, fbb: false, bchr: false } },
+    { prints: true, search: false, sets: true }, { paper: true, arena: false, mtgo: false }),
+    ['Test Set (TST) · 4', 'Modern Horizons 3 (MH3) · 2', 'Portal (POR) · 2'],
+    'while with the area on the same platform choice removes it');
+
+  // The language rule on its own against a switched-off area. Every category switch above is
+  // on, so nothing but the language rule can remove a row — which is the point: a gate can be
+  // right for the wrong reason, and with any other rule also acting, a broken gate passes by
+  // hiding the same rows for a different reason. The grouped table's own gate is checked
+  // above with the border rule acting, and this is its counterpart with none.
+  assertEqual(await settledGroups({ nonEnglish: 'none' },
+    { prints: false, search: false, sets: true }, null), everySetHere,
+    'the language rule at None takes nothing out while the prints area is off');
+  // The control: the same rule with the area on removes exactly the Japanese printings, so the
+  // line above is about the area and not about the rule being unable to act here.
+  assertEqual(await settledGroups({ nonEnglish: 'none' }, null, null),
+    ['Test Set (TST) · 4', 'Border Set (4BB) · 2'],
+    'and takes out the Japanese printings when the area is on');
+
+  // Every platform off. The settings page keeps that choice — "a reader who unticks all three
+  // has said so" — so the page has to act on it, and it used not to: the kept-platform list
+  // comes back empty and an empty list was read as "nothing this build can read", which put
+  // all three back. The interface showed three unticked switches and the page showed
+  // everything, and only the settings page had ever been checked for it.
+  //
+  // Counted on the rows this table built rather than on the group headers, because a header
+  // can be made of Scryfall's own rows and those are hidden by sets.js rather than by here.
+  const allOffPage = await modePage({}, null, { paper: false, arena: false, mtgo: false });
+  await waitFor(() => builtRows(allOffPage).length === 0, 'no printings left at all');
+  assertEqual(builtRows(allOffPage).length, 0,
+    'with every platform switched off the table builds no printing rows');
+  // And the reason, because "nothing is on the page" and "nothing was ever asked for" are
+  // the same picture and only one of them is the feature working.
+  assertEqual(await vm.runInContext(
+    'JSON.stringify([...self.STK_CONTENT.chosenPlatforms])', allOffPage.context), '[]',
+    'and the kept-platform list is empty rather than restored to three');
+  assertEqual(await vm.runInContext(
+    'String(self.STK_CONTENT.platformFilterOn)', allOffPage.context), 'true',
+    'so the platform filter is running');
 }
 
 // The mode, on both surfaces, in all three positions.
@@ -1404,7 +1515,12 @@ async function setPlatformTest() {
 // apart: a set row in the index, and a printing row in a prints table on the same page.
 async function setSurfaceModeTest() {
   console.log('set filters: the mode decides per surface, and each surface decides for itself');
-  const html = `<!DOCTYPE html><html><body><div id="main">
+  // One page holding both surfaces, which is what the fixture has always been: a sets index
+  // and a prints table on the same document, so one load can ask each of them a question.
+  // The oracle id is here because the language rule asks the print list what a row's language
+  // is, and the real card page carries this tag and a sets index does not.
+  const html = `<!DOCTYPE html><html><head>
+    <meta name="scryfall:oracle:id" content="${ORACLE_ID}"></head><body><div id="main">
     <div class="search-controls"><label for="order">0 of 0 sets in</label><select id="order"><option>Name</option></select></div>
     <table id="js-checklist"><tbody>
       <tr><td><a href="https://scryfall.com/sets/mh3">Modern Horizons 3</a></td><td>MH3</td></tr>
@@ -1415,6 +1531,13 @@ async function setSurfaceModeTest() {
       <tr><td><a href="/card/mh3/1/test-card">Test Card</a></td><td>MH3</td></tr>
       <tr><td><a href="/card/4bb/1/test-card">Test Card</a></td><td>4BB</td></tr>
       <tr><td><a href="/card/por/1/ja/test-card">Test Card</a></td><td>POR</td><td>JA</td></tr>
+      <!-- Two rows whose links carry no language at all, which is not a fiction: measured on
+           1762 printings on 2026-10-06, 995 of 1001 translated rows have the language in the
+           path and these six do not - sld/ph, acr/grc, ppls/grc and pinv/la all print a
+           link shaped exactly like an English one. Scryfall's games and lang fields know what
+           they are, so the row can still be identified; a link cannot. -->
+      <tr><td><a href="/card/sld/1206/batterskull">Test Card</a></td><td>SLD</td></tr>
+      <tr><td><a href="/card/sld/1207/blighted-agent">Test Card</a></td><td>SLD</td></tr>
     </tbody></table>
   </div></body></html>`;
   const hiddenSets = page => [...page.document.querySelectorAll('#js-checklist tbody tr')]
@@ -1423,7 +1546,7 @@ async function setSurfaceModeTest() {
   const hiddenPrints = page => [...page.document.querySelectorAll('.prints-table tbody tr')]
     .filter(row => row.classList.contains('stk-digital-set-hidden'))
     .map(row => row.querySelector('a').getAttribute('href'));
-  const load = (areas, paper = {}) => {
+  const load = (areas, paper = {}, pageRoutes = routes) => {
     const state = {
       clipboard: false, setFiltersMigrated: true,
       setFilters: {
@@ -1440,12 +1563,58 @@ async function setSurfaceModeTest() {
       }
     };
     return (async () => {
-      const page = createPage({ url: 'https://scryfall.com/sets', html, state, routes });
+      const page = createPage({ url: 'https://scryfall.com/sets', html, state, routes: pageRoutes });
       await page.cardPage();
       await sleep(80);
       return page;
     })();
   };
+
+  // A printed row that cannot be read as English and cannot be read as anything else.
+  //
+  // The rows above are identified by their link: Scryfall writes a translated printing's
+  // language into the path, so `/por/1/ja/…` says JA and `/mh3/1/…` says nothing. Measured on
+  // 1762 printings, that holds for 995 of 1001 translated rows and fails for six — sld/ph,
+  // acr/grc, ppls/grc and pinv/la all print a link shaped exactly like an English one. Under
+  // "None" those six stayed on the page: the rule was on, the mode was chosen, and the rows
+  // were there.
+  //
+  // The print list says what they are — `lang` is `ph` — and the extension already fetches
+  // it on every card page, so the row is identified by what the API says about that set and
+  // number rather than by a shape the link does not always have. The link stays the fallback
+  // for rows the list does not cover, which is the direction that errs towards leaving a row
+  // up.
+  const filipinoRows = await load(null, {}, {
+    ...routes,
+    // In the worker's own shape, not Scryfall's: `number` is what `collector_number` is
+    // renamed to on the way out, and a fixture that answers with the API's field names is
+    // answering a question nobody asked.
+    allPrints: () => ({
+      prints: [
+        { id: 'p-en', set: 'sld', number: '1', lang: 'en', games: ['paper'],
+          art: ['art-1'], frame: '2015', frameEffects: [], borderColor: 'black' },
+        { id: 'p-ph', set: 'sld', number: '1206', lang: 'ph', games: ['paper'],
+          art: ['art-2'], frame: '2015', frameEffects: [], borderColor: 'black' },
+        { id: 'p-ph2', set: 'sld', number: '1207', lang: 'ph', games: ['paper'],
+          art: ['art-3'], frame: '2015', frameEffects: [], borderColor: 'black' }
+      ],
+      truncated: false
+    })
+  });
+  assertEqual(hiddenPrints(filipinoRows).includes('/card/sld/1206/batterskull'), true,
+    "a Filipino printing whose link names no language is hidden under None, because the " +
+    'print list says so');
+  assertEqual(hiddenPrints(filipinoRows).includes('/card/sld/1207/blighted-agent'), true,
+    'and so is the one beside it');
+  assertEqual(hiddenPrints(filipinoRows).includes('/card/mh3/1/test-card'), false,
+    'while the English row in the same set stays');
+  // The link is still what identifies a row the list does not cover, so a reader without the
+  // print list — a failed request, a truncated answer — still gets the rows it can be told
+  // about. The one case this fixture cannot supply is a truncated list, and it is checked on
+  // the model instead: a row nothing is known about is left alone.
+  const noList = await load(null, {}, { ...routes, allPrints: () => { throw new Error('no'); } });
+  assertEqual(hiddenPrints(noList).includes('/card/por/1/ja/test-card'), true,
+    'and with no print list at all the link still carries the Japanese row away');
 
   // Nothing switched off. Every rule is at its default, so nothing is hidden anywhere, and
   // this is the state every reader starts in — which is the first thing to be sure of after

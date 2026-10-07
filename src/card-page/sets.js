@@ -52,9 +52,6 @@
   } = await self.STK_CONTENT.context;
 
   function initSetFilter() {
-    // Scryfall lists these curated online cubes under /cubes/, outside its
-    // /sets API. Restrict this exception to the twelve online-only cubes.
-    const onlineCubes = new Set(['apcube','arena','chromatic','livethedream','tinkerer','grixis','protour','vintage','uncommon','modern','legacy','twisted']);
     // Which of the two surfaces this page is, asked of the mode rather than assumed.
     //
     // The list of sets below is the Sets index. The rows of a prints table on this same
@@ -92,8 +89,35 @@
         visible: () => true
       }))
       : Promise.resolve({categories: {digital: []}, visible: () => true});
-    categoriesRequest
-      .then(({categories, visible: setVisible}) => {
+
+    // Which of this card's own printings are translated, asked of the print list rather than
+    // of the link. Only when the rule needs it: this is the "None" position of the language
+    // rule, which is the one position that acts on a row Scryfall drew itself, and the middle
+    // position cannot act on one at all because a native row carries no artwork to compare.
+    //
+    // The request is the same one prints.js makes on this page and the worker answers it out
+    // of a cache keyed by the oracle id, so this costs a lookup rather than a round trip. It
+    // is also allowed to fail: a failed request leaves the list empty and the link below is
+    // what is left, which hides the rows whose links carry their language and keeps the six
+    // whose links do not. Both answers are the safe direction — the one that errs towards
+    // leaving a row on the page.
+    const translatedPrintings = new Set();
+    const oracleId = document.querySelector('meta[name="scryfall:oracle:id"]')?.content;
+    const wantsPrintList = settings.nonEnglishMode === 'none' && oracleId &&
+      /^[0-9a-f-]{36}$/.test(oracleId);
+    const printListRequest = wantsPrintList
+      ? request({type: 'allPrints', oracleId}).catch(() => ({prints: []}))
+      : Promise.resolve({prints: []});
+
+    // Both answers have to be in hand before the rows are walked, because the rows are walked
+    // once and the observer below may walk them again on any change to the table.
+    Promise.all([categoriesRequest, printListRequest])
+      .then(([{categories, visible: setVisible}, printList]) => {
+      for (const printing of Array.isArray(printList?.prints) ? printList.prints : []) {
+        if (printing && printing.lang && printing.lang !== 'en') {
+          translatedPrintings.add(`${String(printing.set).toLowerCase()}|${printing.number}`);
+        }
+      }
       if (!categories || !Array.isArray(categories.digital)) return;
       // Two lists of set codes, one per surface, because the rules differ between them and a
       // single list applied to both is how a rule addressed to the Prints table ended up
@@ -109,7 +133,6 @@
       // and the settings page says so rather than the page implying otherwise.
       const codesOf = value => (value || []).map(code => String(code).toLowerCase());
       const commonHidden = [
-        ...(settings.hideDigitalSets ? categories.digital : []),
         ...(settings.showNonTournament ? [] : categories.nonTournament || []),
         ...(settings.showOversized ? [] : categories.oversized || []),
         // A set with no English printing has nothing to show on either surface, so this one
@@ -146,10 +169,8 @@
           try { path = new URL(link?.href || '',location.href).pathname; }
           catch { /* Ignore malformed unrelated links. */ }
           const set = path?.match(/^\/sets\/([^/]+)\/?$/)?.[1];
-          const cube = path?.match(/^\/cubes\/([^/]+)\/?$/)?.[1];
           row.classList.toggle('stk-digital-set-hidden', Boolean(set &&
-            ((setsWanted && hiddenOnSets.has(set.toLowerCase())) || !setVisible(set)) ||
-            settings.hideDigitalSets && cube && onlineCubes.has(cube.toLowerCase())));
+            (setsWanted && hiddenOnSets.has(set.toLowerCase())) || !setVisible(set)));
         }
         // Printings are identified by the set in the card URL. Keep the
         // selected printing visible so its own detail page remains coherent.
@@ -161,12 +182,32 @@
           try { path = new URL(link?.getAttribute('href') || '', location.href).pathname; }
           catch { /* Ignore malformed unrelated links. */ }
           const set = path?.match(/^\/card\/([^/]+)\//)?.[1];
-          // English links end after the card slug. A language-specific link
-          // has an extra /lang/ segment before that slug (e.g. /ptk/1/ja/name).
-          const foreignPrinting = /^\/card\/[^/]+\/[^/]+\/(?:[a-z]{2,3})\/[^/]+/i.test(path || '');
+          const number = path?.match(/^\/card\/[^/]+\/([^/]+)\//)?.[1];
+          // Whether this row is one of Scryfall's own translated printings.
+          //
+          // Two answers, and the second one exists because the first is not enough. Scryfall
+          // usually writes the language into the path — an English row's link ends after the
+          // card slug, a translated one carries an extra segment, `/por/1/ja/name` — and the
+          // comment above the regex used to say that this is the only language signal a row
+          // on this page carries. Measured on 1762 printings on 2026-10-06, it is the signal
+          // for 995 of 1001 translated rows and not for six: `sld/1206` and `sld/1207` are
+          // Filipino, `acr/272`, `acr/273` and `ppls/119` are Ancient Greek and `pinv/262` is
+          // Latin, and every one of them prints a link shaped exactly like an English one.
+          //
+          // So the link stays as what it is — a shape, and one that fails quietly — and the
+          // print list is asked as well. It is fetched on every card page already, by
+          // prints.js, and the worker answers `allPrints` out of a cache keyed by the oracle
+          // id, so asking a second time costs a lookup rather than a request. A row is
+          // translated when the link says so or when the list says so, and a row neither
+          // answer covers is left alone.
+          const translatedByList = (set && number)
+            ? translatedPrintings.has(`${set.toLowerCase()}|${decodeURIComponent(number)}`)
+            : false;
+          const foreignPrinting = translatedByList ||
+            /^\/card\/[^/]+\/[^/]+\/(?:[a-z]{2,3})\/[^/]+/i.test(path || '');
           // The prints table on this page is the other surface. It gets a narrower reading
-          // of the language rule than the extended table does: 'none' hides a foreign row by
-          // that link, and 'analogue' does not touch it at all.
+          // of the language rule than the extended table does: 'none' hides a translated row,
+          // and 'analogue' does not touch it at all.
           //
           // That is the honest limit rather than a shortcut. Deciding whether one of Scryfall's
           // own rows has an English analogue means comparing its artwork with another

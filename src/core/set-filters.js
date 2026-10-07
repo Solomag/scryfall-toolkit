@@ -44,9 +44,14 @@
 (function () {
   'use strict';
 
-  // The three places a filter can apply, and what they are called in Scryfall's own terms.
-  // `search` is the set field on the advanced search page, which is the only one of the three
-  // that is a form control rather than a list.
+  // The three places a filter can apply. `search` is the set field on the advanced search
+  // page, which is the only one of the three that is a form control rather than a list.
+  //
+  // The label lives here and not in the markup, because these three names appear in two
+  // places — the checkbox and the hint under it — and the checkboxes are written by
+  // options.js from this table while a copy typed into options.html would be a second thing to
+  // keep in step. That is the same reason the border families and the price kinds carry their
+  // labels here.
   const AREAS = {
     prints: { label: 'Таблица изданий' },
     search: { label: 'Поиск' },
@@ -57,12 +62,11 @@
   // The three places a printing can exist, as Scryfall's own `games` field names them.
   // `paper` is in there and printings carry it, so "is this printing on an allowed platform"
   // is a question about the printing rather than about the set it sits in.
-  const PLATFORMS = {
-    paper: { label: 'Paper' },
-    arena: { label: 'Arena' },
-    mtgo: { label: 'Magic Online' }
-  };
-  const PLATFORM_NAMES = Object.keys(PLATFORMS);
+  //
+  // No labels, and none needed: these are Scryfall's own product names, spelled the same way
+  // in every language this extension has. They used to carry a `label` that nothing read,
+  // which meant a fourth copy of three names and nothing to notice when they drifted.
+  const PLATFORM_NAMES = ['paper', 'arena', 'mtgo'];
 
   // The three positions of the non-English rule, in the order they appear in the interface.
   const NON_ENGLISH_MODES = {
@@ -282,12 +286,18 @@
   // migration from the flat booleans and is kept separate so neither reads the other's keys.
   function upgrade(input) {
     if (!isPlainObject(input)) return defaults();
-    // Which shape this is, asked before anything is read out of it. The positive shape has
-    // `paper` and no `sets`; the negative one has `sets` and no `paper`. Asking "is `paper`
-    // there" alone is not enough, because a value written by a build part-way through a
-    // migration can have neither, and treating that as the old shape would invert five
-    // switches for a reader who had never touched any of them.
-    if (isPlainObject(input.paper)) return normalise(input);
+    // Which of the two shapes this is, asked before anything is read out of it.
+    //
+    // The positive shape holds `paper`; the negative one of 1.1.4–1.3.0 holds `sets`. There
+    // is a third possibility, which is a value written part-way through a migration and
+    // holding neither, and it is not the old shape: feeding it to the translation below would
+    // invert five switches for a reader who had never touched any of them. So anything that
+    // does not carry `sets` is read as the positive shape and merely completed, and `sets`
+    // is the single thing that says "this is the old one".
+    //
+    // It used to ask the same question twice, once per shape, and both answers did the same
+    // thing — so the code said nothing about a case that a value with both keys would reach,
+    // and the comment claimed a check that was not there.
     if (!isPlainObject(input.sets)) return normalise(input);
 
     const out = normalise({
@@ -457,7 +467,7 @@
   }
 
   window.STK_SET_FILTERS = {
-    AREAS, AREA_NAMES, PLATFORMS, PLATFORM_NAMES, NON_ENGLISH_MODES,
+    AREAS, AREA_NAMES, PLATFORM_NAMES, NON_ENGLISH_MODES,
     FOREIGN_BLACK_BORDER, PRICE_KINDS, LEGACY_KEYS,
     defaults, normalise, upgrade, migrate, read, effective, isPlainObject,
     printingOnPlatform, pictureKey, isAnalogueCandidate, englishPictures, redundantAgainst

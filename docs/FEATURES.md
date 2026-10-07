@@ -235,6 +235,10 @@ drawn in a state the model could not explain — a master off with a rule on.
   returns: the switch writes one field and the detail panel writes another, and neither can
   rewrite the other.
 
+  **All three off is a choice, and the page acts on it.** There is no master above them to
+  put them back, so unchecking the last one leaves the index empty rather than restoring
+  them — which is what the settings page stores and what the Scryfall pages then show.
+
   A printing can be on several platforms, so this is asked **per printing** rather than
   per set. Scryfall records `games` on every printing and never omits it, and a paper
   printing carries "paper" in it — Vintage Masters has 171 printings marked Magic Online
@@ -261,13 +265,27 @@ drawn in a state the model could not explain — a master off with a rule on.
   stays visible: an extra row is better than a missing one.
 
   Scryfall's own rows in a Prints table carry no artwork, so the middle position does not
-  touch them; "Никакие" hides them by their link. The middle position does apply to the
-  printings the extension adds itself, which come from the API with those fields.
+  touch them; "Никакие" hides them. The middle position does apply to the printings the
+  extension adds itself, which come from the API with those fields.
+
+  **How a Scryfall row's language is known.** Mostly from its link: a translated printing's
+  path carries an extra segment, `/por/1/ja/name`, and an English row's does not. Measured
+  over 1762 printings on 2026-10-06, that identifies 995 of 1001 translated rows — and the
+  six it misses are `sld/1206`, `sld/1207` (Filipino), `acr/272`, `acr/273`, `ppls/119`
+  (Ancient Greek) and `pinv/262` (Latin), each of which prints a link shaped exactly like an
+  English one. Those are identified from the print list instead, which the extension already
+  fetches on every card page and the worker already caches, so it costs a lookup rather than
+  a request. The link remains what identifies a row nothing else covers, and a failed request
+  leaves the rows it can still tell about — both answers err towards leaving a row up.
 
 - **Где применять** — one list of three places for every rule: **Таблица изданий**,
   **Поиск**, **Список сетов**. One list rather than a selector per rule, because three
   rules times three surfaces is nine switches and a reader who ticks one has answered a
   question about a rule rather than about a place.
+
+  Every rule consults it, and a rule that is on with its place switched off removes nothing
+  there. That holds whichever other settings are in force: the rule only needed the set index
+  when something else wanted it, and turning a platform off wants it for its own reasons.
 
   Set rules remove a set whole; the language rule removes an individual printing. A set
   having some hidden cards in it does not by itself hide the set.
@@ -279,9 +297,15 @@ drawn in a state the model could not explain — a master off with a rule on.
   collected by asking for the printings.
 
   **Foreign Black Border** has its list of 4BB, FBB and BCHR behind another switch, because
-  unticking one family has to mean something. A set is found by name, because Scryfall has
-  nothing else to say: a set object carries `code`, `name`, `set_type`, `digital`,
-  `card_count`, `released_at` and fifteen more, and nothing about borders.
+  unticking one family has to mean something. The list stays open whenever the three families
+  are not all shown, so a reader who has narrowed the category can see that they have — a
+  switch reading "on" above a closed list is a setting that has been applied and cannot be
+  inspected. The switch above the list is a summary of the three rather than a fourth
+  setting: it is on while any family is shown.
+
+  A set is found by name, because Scryfall has nothing else to say: a set object carries
+  `code`, `name`, `set_type`, `digital`, `card_count`, `released_at` and fifteen more, and
+  nothing about borders.
 
 - **Sets with no English printing** — the third switch inside Paper, and a plain one. There
   are 34 of them: the French `ren` and Italian `rin` releases of Renaissance, Salvat 2005 and

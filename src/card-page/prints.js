@@ -237,8 +237,16 @@
       const borderOff = Object.entries(settings.showForeignBlackBorder || {})
         .filter(([, show]) => show !== true)
         .map(([key]) => key);
-      const excluded = new Set([
-        ...(settings.hideDigitalSets ? categories.digital || [] : []),
+      // Gated on the area, like the language rule further down. It was not, and the gate that
+      // appeared to hold it was the fetch above: while nothing else wanted the set index it
+      // never arrived, so `excluded` stayed empty and the table was untouched. Turning a
+      // platform off fetches the index for its own reasons, and from that moment the category
+      // rules reached a surface the reader had switched off — the same four rules, the same
+      // switches, a different answer depending on an unrelated setting.
+      //
+      // `categories` itself is still fetched when the platform filter is on, because that is
+      // what tells a digital set from a paper one. Only the removal list is gated.
+      const excluded = printsWantedForTable ? new Set([
         ...(settings.showNonTournament ? [] : categories.nonTournament || []),
         ...(settings.showOversized ? [] : categories.oversized || []),
         // Measured once, by `npm run set-rules`, and shipped as a dated list rather than
@@ -247,7 +255,7 @@
         // foreign-only set stays visible until the next sweep.
         ...(settings.showNoEnglishSets ? [] : categories.foreignOnly || []),
         ...codesFor(categories.foreignBlackBorder, borderOff)
-      ]);
+      ]) : new Set();
 
       // ---- the non-English rule -------------------------------------------------
       //
@@ -281,7 +289,7 @@
       };
       const groups = new Map();
       for (const card of prints) {
-        if (excluded.has(String(card.set || '').toLowerCase()) || settings.hideDigitalSets && card.digital ||
+        if (excluded.has(String(card.set || '').toLowerCase()) ||
             !platformVisible(card.set) ||
             platformFilterOn && !platformPrintingVisible(card) ||
             hidesForeignPrinting(card)) continue;

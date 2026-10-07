@@ -120,11 +120,14 @@
   settings.filterAreas = hiding.areas;
   settings.setPlatforms = window.STK_SET_FILTERS.PLATFORM_NAMES
     .filter(name => hiding.platforms[name]);
-  // Deliberately false, and still derived from nothing. Which platforms are shown and which
-  // sets are digital are the same decision: the platform switches already hide every Arena and
-  // Magic Online set, so deriving this from them hid those sets twice over, and took Arena
-  // sets with it even when Arena was the platform being kept.
-  settings.hideDigitalSets = false;
+  // There is no `hideDigitalSets` here, and there was never a decision behind the old one.
+  // It used to be derived from the platform switches, which hid every Arena and Magic Online
+  // set twice over and took Arena sets with it even when Arena was the platform being kept;
+  // so it was pinned to false and three branches went on reading it. A flag that is written
+  // once as a constant and read in three places is not a setting, it is a question nobody
+  // asked any more — and a list of twelve online-cube codes was unreachable behind it.
+  // Which sets are digital is still asked, in `setPlatformsOf`, because that is how a set is
+  // known to be paper.
   settings.onlyCardmarket = Object.values(setFilters.prices).some(Boolean);
   settings.deckTokens = setFilters.tokens;
   settings.hideCasterIndicator = setFilters.caster;
@@ -214,7 +217,20 @@
   const chosenPlatforms = new Set(
     (Array.isArray(settings.setPlatforms) ? settings.setPlatforms : PLATFORM_NAMES).filter(name => PLATFORM_NAMES.includes(name))
   );
-  if (!chosenPlatforms.size) for (const name of PLATFORM_NAMES) chosenPlatforms.add(name);
+  // An empty list means every platform was switched off, and that is a choice this build
+  // offers on purpose: the settings page has three switches with no master above them, and a
+  // reader who unticks all three has said so.
+  //
+  // There used to be a fallback here that put all three back when the list came back empty,
+  // on the grounds that an empty list is more likely a value this build cannot read than an
+  // answer. It cannot tell those apart, and the settings page's own behaviour — which keeps
+  // the empty choice, because the master that used to rescue it is gone — is the answer that
+  // reached the reader. So the two disagreed: the page showed three unticked switches and the
+  // Scryfall page showed everything. Only the settings page had been checked.
+  //
+  // Unreadable values are handled where they can be told apart from a choice: `normalise`
+  // falls back for a non-boolean, and `migrate` refuses a platform list naming nothing it
+  // knows, which is why neither can hand this line an empty list it did not mean.
   const platformFilterOn = chosenPlatforms.size < PLATFORM_NAMES.length;
   // Whether a filter is wanted at all, for a given surface. One question asked once, because
   // three surfaces asking it separately is how a rule reached one of them and not another.

@@ -18,11 +18,13 @@ const ROOT = path.join(__dirname, '..');
 const TARGETS = {
   css: path.join(ROOT, 'src/styles/content.css'),
   sets: path.join(ROOT, 'src/card-page/sets.js'),
+  setsPage: path.join(ROOT, 'src/card-page/sets.js'),
   core: path.join(ROOT, 'src/card-page/core.js'),
+  prints: path.join(ROOT, 'src/card-page/prints.js'),
+  options: path.join(ROOT, 'src/ui/options.js'),
   model: path.join(ROOT, 'src/core/set-filters.js'),
   deck: path.join(ROOT, 'src/card-page/deck-lists.js'),
-  worker: path.join(ROOT, 'src/background/worker.js'),
-  setsPage: path.join(ROOT, 'src/card-page/sets.js')
+  worker: path.join(ROOT, 'src/background/worker.js')
 };
 const before = {};
 for (const [key, file] of Object.entries(TARGETS)) before[key] = fs.readFileSync(file, 'utf8');
@@ -183,6 +185,75 @@ const MUTATIONS = [
     find: 'const filteringOn = area => settings.filterAreas?.[area] === true;',
     replace: 'const filteringOn = area => true;',
     expect: 'leaving the sets index off leaves it alone'
+  },
+  {
+    // The same answer asked of the grouped table rather than of the boot decision. This is
+    // the one that held for the wrong reason for a release: the language rule was gated on the
+    // area and the four category rules were not, and the only thing keeping them quiet was
+    // that nothing else wanted the set index. Turning a platform off wants it, so four rules
+    // reached a surface the reader had excluded, and the same settings gave two different
+    // answers depending on an unrelated switch.
+    name: 'the grouped table ignores the prints area for its category rules',
+    file: 'prints',
+    run: 'test',
+    find: 'const excluded = printsWantedForTable ? new Set([',
+    // Not `new Set([` without the guard: that leaves `]) : new Set();` behind and the file
+    // stops parsing, which fails the run without testing anything. `syntaxOnly` below is what
+    // stops such a mutation being counted as a caught one.
+    replace: 'const excluded = true ? new Set([',
+    expect: 'with the prints area off it still removes nothing once the platform filter'
+  },
+  {
+    // The area gate on the *language* rule, which is the sibling of the one above and was
+    // already correct. A gate can be right for the wrong reason, so it is mutated rather than
+    // assumed covered by the check above.
+    //
+    // The case it is checked against has the language rule as the *only* rule acting. Every
+    // other category switch is on, so with the gate gone nothing else would hide the Japanese
+    // printing and the fixture would pass — measuring the fixture rather than the gate, which
+    // is what the first version of this mutation did.
+    name: 'the language rule is not gated on the prints area',
+    file: 'prints',
+    run: 'test',
+    find: "const languageMode = printsWantedForTable ? settings.nonEnglishMode : 'all';",
+    replace: "const languageMode = settings.nonEnglishMode;",
+    expect: 'the language rule at None takes nothing out while the prints area is off'
+  },
+  {
+    // The fallback that put three platforms back when the kept list came back empty. A reader
+    // who unticks all three was shown a settings page with three unticked switches and a
+    // Scryfall page with everything on it, and only the settings page was ever checked.
+    name: 'an empty kept-platform list is read as three platforms',
+    file: 'core',
+    run: 'test',
+    find: 'const platformFilterOn = chosenPlatforms.size < PLATFORM_NAMES.length;',
+    replace: 'if (!chosenPlatforms.size) for (const n of PLATFORM_NAMES) chosenPlatforms.add(n);\n' +
+      '  const platformFilterOn = chosenPlatforms.size < PLATFORM_NAMES.length;',
+    expect: 'with every platform switched off every set on the index is hidden'
+  },
+  {
+    // The list of Foreign Black Border families, hidden whenever the category switch was on.
+    // A reader who had chosen "everything except FBB" was shown a category reading as simply
+    // on, with no way to see that one of its three families was hidden: the setting applied
+    // correctly and was invisible, which is the one state a reader cannot act on.
+    name: 'a narrowed border category hides the list that shows the narrowing',
+    file: 'options',
+    run: 'test-options',
+    find: 'borderList.hidden = borderFamilies.every(key => filters.paper.foreignBlackBorder[key] !== false);',
+    replace: 'borderList.hidden = borderSwitch.checked || borderFamilies.every(' +
+      'key => filters.paper.foreignBlackBorder[key] !== false);',
+    expect: 'and the list under it is open, so the one hidden family is visible'
+  },
+  {
+    // The print list as the answer to "is this row translated". Scryfall writes the language
+    // into most links and not into six of a thousand — sld/ph, acr/grc, pinv/la — and those
+    // rows stayed on the page with the rule switched on. Measured on 1762 printings.
+    name: 'a row is called translated only by the shape of its link',
+    file: 'sets',
+    run: 'test',
+    find: 'const foreignPrinting = translatedByList ||',
+    replace: 'const foreignPrinting = false ||',
+    expect: 'a Filipino printing whose link names no language is hidden under None'
   }
 ];
 
@@ -192,6 +263,7 @@ const RUNS = {
   test: () => [path.join(ROOT, 'tests/test-preview.cjs')],
   'test-background': () => [path.join(ROOT, 'tests/test-background.cjs')],
   'test-model': () => [path.join(ROOT, 'tests/test-set-filters.cjs')],
+  'test-options': () => [path.join(ROOT, 'tests/test-options.cjs')],
   'set-rules': () => [path.join(ROOT, 'tools/check-set-name-rules.cjs')]
 };
 
@@ -230,13 +302,23 @@ try {
       output = (error.stdout || '') + (error.stderr || '');
     }
     restore(mutation.file);
-    const caught = code !== 0 && output.includes(mutation.expect);
+    // A run that only reports a parse error has not tested the rule. Mutating an expression
+    // so that the file stops being valid JavaScript fails every suite in the repository, and
+    // calling that coverage is the same mistake this file exists to catch: the check "passed"
+    // for a reason that has nothing to do with what it claims to check.
+    //
+    // So a mutation whose output names the expected assertion *and* also reports a syntax
+    // error is not counted. It is reported as a broken mutation instead, which is a different
+    // failure with a different fix — rewrite the mutation so the file still parses.
+    const syntaxOnly = /SyntaxError|Unexpected token|Unexpected identifier/.test(output);
+    const caught = code !== 0 && output.includes(mutation.expect) && !syntaxOnly;
     if (!caught) wrong += 1;
-    console.log((caught ? 'ok:   ' : 'FAIL: ') + mutation.name + ' — ' +
-      (caught ? 'caught by ' + mutation.run : 'NOT caught by ' + mutation.run +
-        ' (exit ' + code + ')'));
+    console.log((caught ? 'ok:   ' : syntaxOnly ? 'BROKEN: ' : 'FAIL: ') + mutation.name + ' — ' +
+      (caught ? 'caught by ' + mutation.run
+        : syntaxOnly ? 'only broke the parse, so it proved nothing (exit ' + code + ')'
+          : 'NOT caught by ' + mutation.run + ' (exit ' + code + ')'));
     if (!caught) {
-      for (const line of output.split('\n').filter(l => /FAIL|Error/.test(l)).slice(0, 5)) {
+      for (const line of output.split('\n').filter(l => /FAIL|Error|Syntax/.test(l)).slice(0, 5)) {
         console.log('       ' + line.trim());
       }
     }
@@ -247,6 +329,9 @@ try {
 
 console.log('');
 console.log(wrong
-  ? wrong + ' of ' + MUTATIONS.length + ' mutations were not caught'
-  : 'all ' + MUTATIONS.length + ' mutations were caught, and every file is back as it was');
+  ? wrong + ' of ' + MUTATIONS.length +
+    ' mutations did not prove what they claim: either nothing noticed, or the run failed ' +
+    'only because the file stopped parsing'
+  : 'all ' + MUTATIONS.length +
+    ' mutations were caught by the check that names them, and every file is back as it was');
 process.exit(wrong ? 1 : 0);

@@ -498,15 +498,25 @@ chrome.storage.local.get(defaults, values => {
       saveFilters();
     });
   function applyBorder() {
+    // The switch is a summary of the three families rather than a fourth setting: it is on
+    // while any family is shown, so it cannot be wrong about the category's own state.
     borderSwitch.checked = borderFamilies.some(key => filters.paper.foreignBlackBorder[key] !== false);
-    // The list follows the switch, and it follows the reader's own list rather than the
-    // switch's position: unticking the switch means "all of them", which is no list at all.
-    borderList.hidden = borderSwitch.checked || borderFamilies.every(
-      key => filters.paper.foreignBlackBorder[key] !== false);
+    // The list opens whenever the families are not all shown, and closes only when they are.
+    //
+    // It used to open when the *switch* was off, which is a different question: the switch is
+    // on whenever any family is shown, so a reader who had chosen "everything except FBB" got
+    // a category reading as simply on and no way to see that one of its three families was
+    // hidden. The setting was applied correctly and was invisible, which is the one state a
+    // reader cannot act on — and the only thing the list is for is being acted on.
+    borderList.hidden = borderFamilies.every(key => filters.paper.foreignBlackBorder[key] !== false);
     for (const box of borderBoxes) {
       box.checked = filters.paper.foreignBlackBorder[box.dataset.which] !== false;
     }
   }
+  // The switch is the category's own control and it does what a category switch does: it
+  // moves all three families to its own position. That is a deliberate act on a control
+  // drawn above the list, and it is not what loses a reader's narrowing — being unable to
+  // see the narrowing in the first place is, and that is what the line above fixed.
   borderSwitch.addEventListener('change', () => {
     for (const key of borderFamilies) filters.paper.foreignBlackBorder[key] = borderSwitch.checked;
     applyBorder();
@@ -540,15 +550,19 @@ chrome.storage.local.get(defaults, values => {
   });
   applyNonEnglish();
 
-  // Where filtering applies, one list for every rule.
-  for (const area of FILTERS.AREA_NAMES) {
-    const box = document.getElementById('area' + area[0].toUpperCase() + area.slice(1));
-    box.checked = filters.areas[area] !== false;
-    box.addEventListener('change', () => {
-      filters.areas[area] = box.checked;
+  // Where filtering applies, one list for every rule. Drawn from the model's own table for
+  // the same reason the border families and the price kinds are: a fourth area has to be one
+  // line in set-filters.js and nothing here, or this page shows a rule it cannot store.
+  //
+  // The rows go before the hint rather than after it. The hint says what the choice means —
+  // that a set rule removes a whole set and the language rule removes one printing — and a
+  // reader meets a paragraph about a rule before the switches that rule is behind.
+  const areaBoxes = buildWhichList('filterAreasGroup', FILTERS.AREAS,
+    FILTERS.AREA_NAMES.filter(area => filters.areas[area] !== false), () => {
+      const chosen = whichOf(areaBoxes);
+      for (const area of FILTERS.AREA_NAMES) filters.areas[area] = chosen.includes(area);
       saveFilters();
     });
-  }
 
   // The four price kinds, one row each, from the model's own table. Which row is which
   // is the model's business: prices.js asks `setFilters.prices[kind]` for each of them,

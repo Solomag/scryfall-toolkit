@@ -8,6 +8,64 @@ All releases: <https://github.com/Solomag/scryfall-toolkit/releases>
 
 ---
 
+### Five defects in the settings the redesign shipped with
+
+The previous entry describes a feature that worked. It did not, in five places, and the
+mistakes are worth more than the fixes because each one is a way a settings page can be
+wrong while every test still passes.
+
+**Unticking all three platforms did nothing.** The settings page has three switches and no
+master above them, and a reader who unticks all three has said so. But the card page reads
+the *kept* platforms as a list, three switches off is an empty list, and an empty list was
+restored to all three — on the reasoning that it was more likely a value the build could not
+read. It cannot tell those apart. So the settings page showed three unticked switches and the
+Scryfall page showed everything, and only the settings page had been checked. The fallback is
+gone; unreadable values are refused where they can be told from a choice, in `normalise` and
+`migrate`, which is where the difference is actually visible.
+
+**The set rules reached the prints table the reader had excluded.** The language rule was
+gated on "Prints table" and the four category rules were not. What kept the category rules
+quiet was not the gate but the absence of a request: while nothing else wanted the set index
+it never arrived, and `excluded` stayed empty. Turning a platform off wants the index for its
+own reasons, so from that moment four rules filtered a surface the reader had switched off —
+the same settings giving two different answers depending on an unrelated switch. The existing
+check for this passed, and passed for exactly that reason.
+
+**A narrowed Foreign Black Border category was invisible.** The list of the three families
+was hidden whenever the category switch was on, and the switch is on whenever *any* family is
+shown. So a reader who had chosen "everything except FBB" was shown a category reading as
+simply on, with no way to see that one of three families was hidden. The setting applied
+correctly and could not be seen. The list now opens whenever the families are not all shown,
+which is the only state in which it has anything to say.
+
+**"Никакие" left six rows in a thousand on the page.** A translated printing's language was
+read from its link, on the stated ground that the link is the only language signal a
+Scryfall row carries. Measured over 1762 printings on 2026-10-06: 995 of 1001 translated rows
+carry it, and six do not — `sld/1206` and `sld/1207` are Filipino, `acr/272`, `acr/273` and
+`ppls/119` are Ancient Greek, `pinv/262` is Latin, and each prints a link shaped exactly like
+an English one. Those rows are now identified by what the print list says about that set and
+number, which the extension already fetches and the worker already has cached. The link stays
+as the fallback, so a failed request leaves the rows it can still tell about.
+
+**A check that only broke the parse was counted as coverage.** The mutation harness counted a
+mutation as caught when a suite failed and the expected string appeared anywhere in the
+output — including when the file no longer parsed and every suite in the repository failed for
+that reason. One mutation written this round did exactly that and was reported as proof. The
+harness now rejects a mutation whose output names a syntax error, and the one it caught was
+rewritten so the file still parses. A mutation that proves the file is invalid JavaScript is
+not a claim about a rule.
+
+Each fix is a test that fails on the previous code, and each has a mutation so that "the test
+would notice" is itself checked: 19 of 19, against 14 before.
+
+Also removed, because they were read by nothing and looked live: `settings.hideDigitalSets`,
+written once as a constant and read in three places, with a list of twelve online-cube codes
+unreachable behind it; the `label` fields of `AREAS` and `PLATFORMS`, which were a fourth copy
+of names the markup already carried — the areas' labels now come from the model, which is
+where the border families' and the price kinds' already came from; and eleven dictionary
+entries for the removed block, which the completeness check could not see because it only
+looks one way.
+
 ### The set filters stopped being a tree
 
 The visibility settings were five rules, each with its own "where does it apply" selector and,

@@ -41,7 +41,7 @@ const REQUIRED_IDS = [
   'showPaper', 'showArena', 'showMtgo', 'paperDetails', 'paperPanel',
   'showNonTournament', 'showOversized', 'showNoEnglishSets',
   'showBorderFamilies', 'setBorderFamiliesList', 'nonEnglishMode',
-  'areaPrints', 'areaSearch', 'areaSets',
+  'filterAreasGroup',
   'setPrices', 'setCaster', 'setTokens',
   'printGrouping', 'printFoldGroups', 'printFullPageLink'
 ];
@@ -625,7 +625,11 @@ function modelLabelsTest() {
   // limits and the icon colours are read this way. A `const` inside a script run in a
   // context is not reachable from the test, and the strings are the thing being
   // asserted.
-  const labels = ['FOREIGN_BLACK_BORDER', 'NON_ENGLISH_MODES', 'PRICE_KINDS']
+  // `AREAS` is in this list because its three switches are written by options.js from the
+  // table, so the page cannot be asked for a sentence it would then be found to be missing.
+  // The check on the rendered page below would catch it anyway; this catches it earlier and
+  // says which table is short.
+  const labels = ['FOREIGN_BLACK_BORDER', 'NON_ENGLISH_MODES', 'PRICE_KINDS', 'AREAS']
     .flatMap(table => {
       const block = new RegExp(`const ${table} = \\{[\\s\\S]*?\\n  \\};`).exec(filters);
       assert(block, `the model still declares ${table}, so the labels can be found in it`);
@@ -708,9 +712,11 @@ function sectionOrderTest() {
   assertEqual(sectionOf('showPaper'), 'Скрытие лишнего', 'the platforms live in the hiding category');
   assertEqual(sectionOf('showArena'), 'Скрытие лишнего', 'and so does the second one');
   assertEqual(sectionOf('showMtgo'), 'Скрытие лишнего', 'and the third');
-  assertEqual(sectionOf('areaPrints'), 'Скрытие лишнего', 'the areas are one group of their own');
-  assertEqual(sectionOf('areaSearch'), 'Скрытие лишнего', 'and all three of them are in it');
-  assertEqual(sectionOf('areaSets'), 'Скрытие лишнего', 'including the sets list');
+  // The areas are drawn by options.js rather than written out, so the section is the fieldset
+  // that holds them — and the fieldset has to be inside the visibility group, not a sibling
+  // of it, or the areas end up in a section of their own with no heading above them.
+  assertEqual(sectionOf('filterAreasGroup'), 'Скрытие лишнего',
+    'the areas are one group of their own, inside the same section');
   assertEqual(sectionOf('setPrices'), 'Скрытие лишнего', 'the price switches are one group of their own');
   assertEqual(sectionOf('setCaster'), 'Скрытие лишнего', 'the Caster marker stays in Hide extras');
   assertEqual(sectionOf('setTokens'), 'Скрытие лишнего', 'and the deck tokens, which the model groups with them');
@@ -718,13 +724,19 @@ function sectionOrderTest() {
     'the master switch and the all-platforms row are both gone from the markup');
   // Paper's categories sit inside the panel its own button opens, and the areas sit outside
   // it — which is the whole arrangement: what is shown, then what is shown within Paper, then
-  // where the rules apply.
+  // where the rules apply. `filterAreasGroup` is the anchor for the areas now, because the
+  // switches inside it are written by options.js rather than sitting in the markup.
   assert(html.indexOf('id="paperDetails"') < html.indexOf('id="showNonTournament"') &&
-    html.indexOf('id="showNonTournament"') < html.indexOf('id="areaPrints"'),
+    html.indexOf('id="showNonTournament"') < html.indexOf('id="filterAreasGroup"'),
     'Paper\'s detail categories are drawn after its button and before the areas');
   assert(html.indexOf('id="showPaper"') < html.indexOf('id="paperDetails"') &&
-    html.indexOf('id="showArena"') < html.indexOf('id="areaPrints"'),
+    html.indexOf('id="showArena"') < html.indexOf('id="filterAreasGroup"'),
     'the platforms and their details are the first thing in the group');
+  // The areas are not written out. A literal row here would be a fourth copy of three names,
+  // and the switch-count check further up would not notice it: it counts rows in the rendered
+  // page, and a literal is rendered as well as a written one.
+  assert(!html.includes('id="areaPrints"'),
+    'and the area switches are not written out, so the model is their only source');
   // Only Paper gets a details button. Arena and Magic Online have nothing to put behind one,
   // and a button that opens an empty panel is a promise this build cannot keep.
   assert(html.includes('id="paperDetails"'), 'Paper has a details button');
@@ -1038,6 +1050,24 @@ async function hidingGroupTest() {
   assertEqual(F.effective(mock.state.setFilters).paper.foreignBlackBorder.fbb, false,
     'and the model hands the page the same thing, so the page and the rules cannot disagree');
 
+  // And the list stays open while a family is off. It was hidden whenever the category switch
+  // was on, and the switch is on whenever *any* family is shown — so a reader who had chosen
+  // "everything except FBB" was shown a category that read as simply on, with no way to see
+  // that one of three families was hidden. The setting was applied correctly and was
+  // invisible, which is the state a reader cannot act on.
+  assertEqual(document.getElementById('showBorderFamilies').checked, true,
+    'the category switch reads as on, because two of its three families are shown');
+  assertEqual(document.getElementById('setBorderFamiliesList').hidden, false,
+    'and the list under it is open, so the one hidden family is visible rather than implied');
+  // With every family shown there is nothing in the list to decide, and leaving it open would
+  // be three switches that all agree — so this is the one state where hiding it is right.
+  const allShown = await groupReady(loadOptions({
+    setFiltersMigrated: true,
+    setFilters: { paper: { foreignBlackBorder: { '4bb': true, fbb: true, bchr: true } } }
+  }));
+  assertEqual(allShown.document.getElementById('setBorderFamiliesList').hidden, true,
+    'and it closes again once every family is shown');
+
   // The non-English rule is one select with three positions, and the middle one is not the
   // opposite of either end — so it is checked by value rather than by being on or off.
   const mode = document.getElementById('nonEnglishMode');
@@ -1052,8 +1082,13 @@ async function hidingGroupTest() {
   assertEqual(mock.state.setFilters.paper.nonEnglish !== 'none', true,
     'which is what makes it different from the third');
 
-  // The areas, and the requirement that a rule on with no area chosen removes nothing.
-  const area = document.getElementById('areaSets');
+  // The areas, drawn from the model, and the requirement that a rule on with no area chosen
+  // removes nothing.
+  const areasGroup = document.getElementById('filterAreasGroup');
+  const areaRows = [...areasGroup.querySelectorAll('input[data-which]')].map(box => box.dataset.which);
+  assertEqual(areaRows, Object.keys(F.AREAS),
+    'one row per area in the model, and no others');
+  const area = document.getElementById('filterAreasGroup-sets');
   area.checked = false;
   fireEvent(area, 'change');
   await tick();
