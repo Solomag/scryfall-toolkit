@@ -120,8 +120,8 @@ const resolveSettingsLanguage = value => {
     // it does and how to change it are the help button and the panel behind the second button.
     // The names are short because they are read as a list, and a list of paragraphs is not a
     // list — which is what this section was.
-    'Столбец отделки изданий': 'Finish column',
-    'Поиск по типу и мана-стоимости': 'Search by type and mana cost',
+    'Доступная отделка изданий': 'Available printing finishes',
+    'Клик по типу и мана-стоимости для поиска': 'Click the type and mana cost to search',
     'Популярность в Commander': 'Commander popularity',
     'Salt Meter': 'Salt Meter',
     'Предложения CardTrader': 'CardTrader offers',
@@ -138,7 +138,9 @@ const resolveSettingsLanguage = value => {
     'Окрашивать по': 'Colour by',
     'Показывать шкалу «/4»': 'Show the “/4” scale',
     'Показывать блок «Купить карту»': 'Show the “Buy This Card” block',
-    'Столбец EUR на Scryfall — это цена Cardmarket. Здесь выбирается, чем его заполнять: Cardmarket, CardTrader или обоими — тогда рядом появляется второй столбец. «Не показывать» убирает столбец целиком.': 'Scryfall’s EUR column is Cardmarket’s price. This chooses what fills it: Cardmarket, CardTrader, or both — in which case a second column appears beside it. “Show nothing” removes the column entirely.',
+    'Столбец EUR на Scryfall — это цена Cardmarket. Здесь выбирается, чем его заполнять: Cardmarket, CardTrader или обоими — тогда рядом появляется второй столбец. «Не показывать» убирает столбец целиком и снимает галочку EUR в группе «Цены»: это одна настройка с двумя ручками.': 'Scryfall’s EUR column is Cardmarket’s price. This chooses what fills it: Cardmarket, CardTrader, or both — in which case a second column appears beside it. “Show nothing” removes the column entirely and clears the EUR box in the Prices group: it is one setting with two handles.',
+    'Пока галочка EUR снята, список заблокирован: выбирать источник для столбца, которого нет, нечего.': 'While the EUR box is clear the list is blocked: there is nothing to choose a source for a column that is not there.',
+    'Нельзя выбрать источник цены, пока цена не показывается.': 'The price source cannot be chosen while the price is not shown.',
     'Для цен CardTrader нужен личный токен, и задаётся он в строке «Предложения CardTrader» выше, в том же блоке магазинов.': 'CardTrader prices need a personal token, and it is set in the “CardTrader offers” row above, in the same store block.',
     'Включать саму галочку «Предложения CardTrader» для этого не обязательно: она добавляет ссылки CardTrader в блок покупки, а столбец работает и без них.': 'Ticking “CardTrader offers” itself is not required for that: it adds CardTrader links to the buy block, and the column works without them.',
     'Источники EUR-цен в таблице изданий': 'EUR price sources in the prints table',

@@ -8,6 +8,35 @@ All releases: <https://github.com/Solomag/scryfall-toolkit/releases>
 
 ---
 
+### The euro column gets a box, the block switch moves up, and two names say what they do
+
+**The EUR column is a switch in the price group now, not only a dropdown.** The dropdown beside the
+shops chose whose number filled the euro column and could already say "show nothing", but the answer
+to "is there a column at all" lived in a control that read as a choice between shops. There is an
+**EUR** box with the USD and TIX ones now, and the two controls are kept in step so they cannot
+disagree: unticking **EUR** sets the dropdown to **show nothing** and blocks it, and choosing
+**show nothing** clears the box. A blocked field is covered by a transparent button rather than being
+`disabled`, because a disabled select swallows the click and leaves a reader with a dead control and
+no reason for it; reaching for it flashes the box that has to change first and says why. The card
+page reads both answers, so a value written by hand cannot put the column back against the reader.
+
+**The "Buy This Card" switch sits above the shops it governs.** A master below the things it masters
+reads as a summary of them rather than as a switch over them, and that is how the block switch read
+when it sat under the three shop boxes.
+
+**The Caster marker moved to the left column.** It is a marker on the card page, not a price, and the
+right column is a list of things about money. It sits under the platforms table now, where the left
+column has the room.
+
+**And two feature names say what the feature does.** "Столбец отделки изданий" named a column; the
+row shows the finishes a printing is available in, so it reads **Доступная отделка изданий**.
+"Поиск по типу и мана-стоимости" named a search; the feature makes the type line and mana cost on a
+card page clickable, so it reads **Клик по типу и мана-стоимости для поиска**.
+
+**Checks:** `npm test` 2439 assertions across nine suites, `npm run render` 208 + 202,
+`npm run mutations` 43 of 43. Three are new: the EUR source set to "show nothing" while the box stays
+ticked, the blocked field left uncovered, and the euro column ignoring the EUR box on the card page.
+
 ### Two features cut, a "show nothing" for the euro column, and a disabled box you can see
 
 **The disabled boxes were too quiet to read.** A box that is merely unticked wears `#6a6070` on the

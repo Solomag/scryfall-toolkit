@@ -122,18 +122,22 @@ between printing names and prices: foil-only, nonfoil-only, etched-only, or a kn
 special foil treatment. Hover for the meaning. Native foil stars in printing names are
 not duplicated. Uses Scryfall's collection API and may arrive after the page loads.
 
-**Price filter.** Hides the USD and TIX columns and the TCGplayer, Cardhoarder and Cardmarket
+**Price filter.** Hides the USD, TIX and EUR columns and the TCGplayer, Cardhoarder and Cardmarket
 purchase links, including Buy buttons in deck sidebars. Each is a switch of its own, so a reader
 who wants no shop links but keeps the dollar column can say so, and one more switch hides the whole
 **Buy This Card** block — the column the links sit in, heading and all — because hiding each shop
 leaves the block behind. Existing Scryfall prices are never altered.
 
-**EUR source.** Scryfall's native euro column is Cardmarket's price. The dropdown beside the shops
-chooses what fills it: Cardmarket, CardTrader, both — in which case a second column appears beside
-it — or **show nothing**, which removes the column. That dropdown is the only control for the column,
-so hiding Cardmarket hides its links and not the column. CardTrader needs a personal token for that,
-set in the CardTrader row above it, and the row's own switch is not required for it: that switch is
-about the buy-block links.
+**EUR source.** Scryfall's native euro column is Cardmarket's price, and two controls answer for it
+on the settings page, kept in step so they cannot disagree. The **EUR** box in the price group says
+whether the column exists; the dropdown beside the shops says whose number fills it — Cardmarket,
+CardTrader, both (a second column appears beside it), or **show nothing**, which removes the column.
+Unticking **EUR** sets the dropdown to **show nothing** and blocks it; a reader who reaches for the
+blocked field gets the box flashed and a line saying why, because a disabled select would swallow
+the click and explain nothing. Setting the dropdown to **show nothing** clears the box, and any
+other choice ticks it back. The shop box is a different question: hiding Cardmarket hides its links
+and not the column. CardTrader needs a personal token for the column, set in the CardTrader row
+above it, and the row's own switch is not required for it: that switch is about the buy-block links.
 
 **CardTrader prices.** With your own personal API token, the extension matches Scryfall
 print IDs against CardTrader blueprints, links the exact printing and shows the cheapest
@@ -324,13 +328,13 @@ drawn in a state the model could not explain — a master off with a rule on.
 
   **And one switch over the block they sit in.** Scryfall draws one column headed "Buy This Card",
   holding the three links; emptying it shop by shop leaves the heading and the column behind, which
-  is not what a reader who buys nowhere is asking for. That switch is not a fourth shop: it sits
-  under the group, it turns no shop off on its own, and the per-shop choices are still there when it
-  comes back on. With it off the shop boxes are drawn empty and disabled, because a link inside a
-  hidden block has nowhere to be shown — and CardTrader is drawn with them, since its switch is what
-  puts CardTrader links in that block. It is also not a price kind, so `priceFilter`'s gate — which
-  is "something is hidden", computed by walking the price keys — has to name it, or the switch saves
-  and does nothing.
+  is not what a reader who buys nowhere is asking for. That switch is not a fourth shop: it sits at
+  the top of the shop group, above the boxes it governs, it turns no shop off on its own, and the
+  per-shop choices are still there when it comes back on. With it off the shop boxes are drawn empty
+  and disabled, because a link inside a hidden block has nowhere to be shown — and CardTrader is
+  drawn with them, since its switch is what puts CardTrader links in that block. It is also not a
+  price kind, so `priceFilter`'s gate — which is "something is hidden", computed by walking the price
+  keys — has to name it, or the switch saves and does nothing.
 
   **Cardmarket is a shop here and nothing more.** Scryfall's native euro column *is* Cardmarket's
   price, and it is tempting to make one button hide both — but the column and the links are two
@@ -343,13 +347,18 @@ drawn in a state the model could not explain — a master off with a rule on.
   **The EUR source sits with the prices it chooses between**, under the shops, and so does
   CardTrader: it fills that column and adds a link to that block. It says whose number the euro
   column carries, and it was in the other section with the card-page features — a price setting in a
-  list of things that are not prices. It carries its own "?", because choosing CardTrader there
-  needs a token that is set up in the CardTrader row and ticking **Предложения CardTrader** is not
-  required for it — the switch is about the buy-block links and the column works without them.
+  list of things that are not prices. Its own **EUR** box is in the price group above it, and the two
+  are kept in step: unticking the box blocks the dropdown and sets it to **show nothing**, and
+  choosing **show nothing** clears the box. The dropdown carries its own "?", because choosing
+  CardTrader there needs a token that is set up in the CardTrader row and ticking
+  **Предложения CardTrader** is not required for it — the switch is about the buy-block links and the
+  column works without them.
 
-- **The Caster marker** — its own line under the prices, with no heading of its own: a heading
-  over a single box is a level of structure that holds nothing. It was indented under the store
-  links for one release, where it read as though it belonged to that group.
+- **The Caster marker** — its own line in the left column, under the platforms table, with no
+  heading of its own: a heading over a single box is a level of structure that holds nothing. It is
+  not a price and not a platform, so the right column — a list of things about money — is the wrong
+  place for it, and it was there for one release, indented under the store links, where it read as
+  though it belonged to that group.
 
   **The Caster marker was dead, and it was dead because its key was renamed rather than
   inverted.** The settings page wrote `setFilters.caster` while `theme.js` read a flat
@@ -383,8 +392,11 @@ The section used to be two fieldsets standing open with every threshold, select 
 them. That reads as a form to fill in, and every one of these settings works untouched — a reader
 who has never opened the section gets the finish column and the type search.
 
-- **Столбец отделки изданий**, **Поиск по типу и мана-стоимости** — a switch and nothing else. The
-  finish column carries a "?" because its name alone does not say what it is.
+- **Доступная отделка изданий**, **Клик по типу и мана-стоимости для поиска** — a switch and
+  nothing else. Both names were rewritten because the old ones named the control rather than what
+  it does: the first shows the finishes a printing is available in, and the second makes the type
+  line and mana cost on a card page clickable, each opening a search. The finish column carries a
+  "?" as well, because even a better name was not enough.
 - **Популярность в Commander** — the display format, the colouring metric, both pairs of thresholds
   with their units, and **Вернуть стандартные настройки**.
 - **Salt Meter** — the «/4» scale, its two thresholds, its own reset.

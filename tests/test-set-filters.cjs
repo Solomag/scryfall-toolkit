@@ -41,11 +41,12 @@ function defaultsTest() {
   }
   assertEqual(Object.keys(d.platforms.paper).sort(), ['areas', 'show'],
     'and a platform holds exactly a switch and its places');
-  assertEqual(d.prices, { usd: true, tix: true, tcg: true, cardhoarder: true, cardmarket: true },
-    'every price kind stays and is shown: two currencies and three shops, one of which owns the ' +
-    'euro column — and the shops are the ones that used to be negative');
-  assertEqual(Object.keys(d.prices).filter(kind => !['usd', 'tix', 'tcg', 'cardhoarder', 'cardmarket'].includes(kind)), [],
-    'and there is no price kind beyond those five, so the settings page cannot draw a box the ' +
+  assertEqual(d.prices, { usd: true, tix: true, eur: true, tcg: true, cardhoarder: true, cardmarket: true },
+    'every price kind stays and is shown: three currencies and three shops, and the shops are ' +
+    'the ones that used to be negative');
+  assertEqual(Object.keys(d.prices).filter(kind =>
+    !['usd', 'tix', 'eur', 'tcg', 'cardhoarder', 'cardmarket'].includes(kind)), [],
+  'and there is no price kind beyond those six, so the settings page cannot draw a box the ' +
     'model has nowhere to store');
   // Three more switches, all positive: the deck tokens, the Caster marker and the whole "Buy
   // This Card" block. The Caster one used to be the last negative key in the model — `caster`
@@ -72,9 +73,9 @@ function defaultsTest() {
   walk(d, 'filters');
   const negative = positives.filter(trail => /hide/i.test(trail));
   assertEqual(negative, [], 'no stored boolean is named as a hide: ' + negative.join(', '));
-  // Twelve platform switches, five price ones and three outside both. The count is asserted
+  // Twelve platform switches, six price ones and three outside both. The count is asserted
   // because a thirteenth would be a rule somebody added without deciding what it means here.
-  assertEqual(positives.length, 12 + 5 + 3,
+  assertEqual(positives.length, 12 + 6 + 3,
     `the model has ${positives.length} switches and all of them are positive`);
 }
 
@@ -246,24 +247,20 @@ function flatMigrationTest() {
   // instead of naming the four would hide the very shop the switch is named after. That is a real
   // defect this test was written for, not a hypothetical one.
   assertEqual(F.read({ onlyCardmarket: true }).filters.prices,
-    { usd: false, tix: false, tcg: false, cardhoarder: false, cardmarket: true },
-    'onlyCardmarket becomes the four other price kinds off together, and leaves Cardmarket');
-  assertEqual(F.read({}).filters.prices, { usd: true, tix: true, tcg: true, cardhoarder: true, cardmarket: true },
+    { usd: false, tix: false, eur: true, tcg: false, cardhoarder: false, cardmarket: true },
+    'onlyCardmarket becomes the four other price kinds off together, and leaves the euro column');
+  assertEqual(F.read({}).filters.prices, { usd: true, tix: true, eur: true, tcg: true, cardhoarder: true, cardmarket: true },
     'and with nothing set they are all on, so a first run hides nothing');
-  // The euro switch under the name it had for one unreleased build, before it moved from the
-  // currencies to the shops. Read rather than dropped: it is the same setting with a better name,
-  // and a reader who hid it in that build should not find the column back. The fixture is that
-  // build's shape — per-platform places, positive prices — because that is the only shape that
-  // could carry the old key.
-  const from172 = platform => ({
-    platforms: { paper: { show: true, areas: { prints: true, search: true, sets: true } } },
-    prices: { usd: true, tix: true, eur: false, tcg: true, cardhoarder: true, ...platform }
-  });
-  assertEqual(F.read({ setFilters: from172({}), setFiltersMigrated: true }).filters.prices.cardmarket,
-    false, 'the euro switch under its old key is read as the Cardmarket switch');
-  assertEqual(F.read({ setFilters: from172({ cardmarket: true }), setFiltersMigrated: true })
-    .filters.prices.cardmarket, true,
-  'and the new key wins when both are there, so an old key cannot undo a choice made since');
+  // The euro switch was briefly `eur` meaning the column and nothing else, in a build that was
+  // never released; it is `eur` again and means the column again, so there is nothing to migrate.
+  // The shop beside it is `cardmarket`, and the two are separate keys: one hides a link and one
+  // hides a column.
+  assertEqual(F.read({
+    setFilters: { platforms: { paper: { show: true, areas: { prints: true, search: true, sets: true } } },
+      prices: { eur: false, cardmarket: true } },
+    setFiltersMigrated: true
+  }).filters.prices, { usd: true, tix: true, eur: false, tcg: true, cardhoarder: true, cardmarket: true },
+  'the euro column and the Cardmarket link are two switches and neither reads the other');
   // The Caster marker, whose old switch read "hide" and whose label now reads "show". This is
   // the inversion the requirement is about: a reader who had the marker hidden keeps it hidden,
   // and a reader who had it visible keeps it visible. Reading it the other way round flips the
@@ -323,9 +320,9 @@ function upgradeTest() {
   // round. The fixture below stores tix off and the rest on; after the migration it is tix
   // shown and the rest off, which is the same page. Read the wrong way round and a reader who
   // had every price on gets every price hidden on their first page load.
-  assertEqual(up.prices, { usd: true, tix: false, tcg: true, cardhoarder: true, cardmarket: true },
-    'the price switches outside the group, each inverted from how that shape stored it — and ' +
-    'Cardmarket arrives at the default, because no shape that old had a key for it');
+  assertEqual(up.prices, { usd: true, tix: false, eur: true, tcg: true, cardhoarder: true, cardmarket: true },
+    'the price switches outside the group, each inverted from how that shape stored it — and the ' +
+    'euro column and Cardmarket arrive at the default, because no shape that old had keys for them');
   // `caster: true` in that shape meant *hide*, so it becomes the marker off. The prices are
   // inverted too, which is the other inversion this model has done, and both are in the same
   // branch because that is the shape that stored both the old way round.
@@ -396,12 +393,12 @@ function upgradeTest() {
     setFiltersMigrated: true,
     setFilters: {
       platforms: { paper: { show: true, areas: { prints: true, search: true, sets: false } } },
-      prices: { usd: true, tix: false, tcg: true, cardhoarder: true, cardmarket: false }
+      prices: { usd: true, tix: false, eur: false, tcg: true, cardhoarder: true, cardmarket: false }
     }
   });
-  assertEqual(current.filters.prices, { usd: true, tix: false, tcg: true, cardhoarder: true, cardmarket: false },
-    'a value already in the current shape keeps its prices exactly as stored, the hidden ' +
-    'Cardmarket column included');
+  assertEqual(current.filters.prices, { usd: true, tix: false, eur: false, tcg: true, cardhoarder: true, cardmarket: false },
+    'a value already in the current shape keeps its prices exactly as stored, the hidden euro ' +
+    'column included');
   assertEqual(current.filters.platforms.paper.areas.sets, false,
     'and keeps its places, which the branch that spreads a shared list would have overwritten');
   assertEqual(F.upgrade({ prices: { usd: false } }).prices.usd, true,
@@ -417,7 +414,7 @@ function upgradeTest() {
       arena: { show: false, areas: { prints: false, search: true, sets: false } },
       mtgo: { show: true, areas: { prints: true, search: true, sets: true } }
     },
-    prices: { usd: false, tix: true, tcg: false, cardhoarder: true, cardmarket: false },
+    prices: { usd: false, tix: true, eur: false, tcg: false, cardhoarder: true, cardmarket: false },
     tokens: false,
     showCaster: false,
     showStores: false
@@ -433,7 +430,7 @@ function upgradeTest() {
   // then a reader's settings are read as the wrong shape. A key either is there or is not.
   const from162 = {
     platforms: { paper: { show: true, areas: { prints: true, search: false, sets: true } } },
-    prices: { usd: true, tix: false, tcg: true, cardhoarder: true, cardmarket: true },
+    prices: { usd: true, tix: false, eur: true, tcg: true, cardhoarder: true, cardmarket: true },
     caster: true
   };
   const out162 = F.upgrade(from162);

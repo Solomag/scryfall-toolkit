@@ -73,20 +73,29 @@
 <thead><tr id="platformHead"></tr></thead>
 <tbody id="platformBody"></tbody>
 </table></div>
+<!-- The Caster marker, on its own under the table rather than at the foot of the prices. It is
+     not a price and not a platform: it is a marker on the card page, and the left column has the
+     room while the right one is a list of things about money. -->
+<label class="caster-row"><input type="checkbox" class="stk-check" id="setCaster"> Показывать индикатор Caster ON</label>
 </div>
 
 <div class="visibility-column">
 <h3>Цены и ссылки</h3>
-<!-- Two groups rather than five switches. A currency is a column of numbers and a shop is a
-     link, and the grouping says so without a paragraph saying so. Each caption sits directly
-     above the boxes it names, so there is no column of empty space between a label and the
-     control it labels. -->
-<div id="priceList"></div>
-<!-- The general switch over the block the three shops sit in. It is not a shop and not a price:
-     hiding each shop leaves the heading and the block itself behind, and a reader who buys
-     nowhere wants the block gone rather than emptied. Turning it off also takes the three shop
-     boxes out of reach, because a link inside a hidden block has nowhere to be shown. -->
+<!-- One block per price group, from the model's own table: options.js writes the caption and
+     draws the boxes into the container, so a third group in the model is a block here and
+     nothing else. Each caption sits directly above the boxes it names, so there is no column of
+     empty space between a label and the control it labels.
+
+     The general switch over the shop block is markup rather than drawn, and it sits above the
+     shops it governs — a master below the things it masters reads as a summary of them rather
+     than as a switch over them. -->
+<div id="priceList">
+<div class="pair-group" id="priceGroup-prices"><div class="pair-caption"></div><div class="pair-items"></div></div>
+<div class="pair-group" id="priceGroup-links"><div class="pair-caption"></div>
 <label class="stores-row"><input type="checkbox" class="stk-check" id="setStores"> Показывать блок «Купить карту»</label>
+<div class="pair-items"></div>
+</div>
+</div>
 <!-- CardTrader's offers, with the stores they belong to: it adds a link to that block and a euro
      column to the prints table, and it sits here rather than under the EUR source so that the
      store links are one place. -->
@@ -107,18 +116,24 @@
 </div>
 </div>
 <!-- Which shop's euro price the prints table's column carries. It needs CardTrader's token to
-     offer CardTrader at all, which is not obvious from a dropdown of three names, so it carries
-     its own help. -->
+     offer CardTrader at all, which is not obvious from a dropdown of names, so it carries its
+     own help.
+
+     It is blocked while the EUR box in the price group above is unticked, because the two answer
+     the same question and a dropdown that chooses what fills a column that is not there is a
+     control with nothing to do. A disabled select swallows clicks, so the blocking is a
+     transparent button laid over it: a reader who reaches for it is told why instead of finding
+     a dead control. -->
 <div class="price-source">
 <div class="price-source-head">
 <label class="pair-caption" for="euroPriceSources">Источники EUR-цен в таблице изданий</label>
 <button type="button" class="feature-help" data-help="eursource" aria-haspopup="dialog" title="Что это">?</button>
 </div>
+<div class="price-source-field">
 <select id="euroPriceSources"><option value="cm">Cardmarket</option><option value="ct">CardTrader</option><option value="both">Cardmarket и CardTrader</option><option value="none">Не показывать</option></select>
+<button type="button" class="price-source-shield" id="euroSourceShield" hidden></button>
 </div>
-<!-- Its own line rather than indented under the store links: it is a setting about the card
-     page's marker and has nothing to do with where a euro price comes from. -->
-<label class="caster-row"><input type="checkbox" class="stk-check" id="setCaster"> Показывать индикатор Caster ON</label>
+</div>
 </div>
 </div>
 </section>
@@ -134,12 +149,12 @@
 <div class="feature-list">
 
 <div class="feature-row">
-<label class="feature-main"><input type="checkbox" class="stk-check" id="finishBadges"> Столбец отделки изданий</label>
+<label class="feature-main"><input type="checkbox" class="stk-check" id="finishBadges"> Доступная отделка изданий</label>
 <button type="button" class="feature-help" data-help="finishes" aria-haspopup="dialog" title="Что это">?</button>
 </div>
 
 <div class="feature-row">
-<label class="feature-main"><input type="checkbox" class="stk-check" id="cardSearchLinks"> Поиск по типу и мана-стоимости</label>
+<label class="feature-main"><input type="checkbox" class="stk-check" id="cardSearchLinks"> Клик по типу и мана-стоимости для поиска</label>
 </div>
 
 <div class="feature-row">

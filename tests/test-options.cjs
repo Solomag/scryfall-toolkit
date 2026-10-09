@@ -917,19 +917,40 @@ function sectionOrderTest() {
     .map(match => match[1]), ['Платформы', 'Цены и ссылки'],
   'the section has exactly the two sub-headings, in that order, and no Interface heading left');
   assertEqual(sectionOf('setCaster'), 'Видимость',
-    'and the Caster row sits under the prices in the right column, with no heading of its own');
+    'and the Caster row is in the section, though not in the prices column any more');
   assertEqual(sectionOf('cardtraderPanel'), 'Видимость',
     'as does CardTrader, with the prices it fills');
   // The two columns are real elements, and each holds the one heading that belongs to it. This
   // is the arrangement the whole rework is about: a wrong nesting here puts the table under the
   // prices, which is a page that still works and reads in the wrong order.
-  assert(/<div class="visibility-grid">[\s\S]*<div class="visibility-column">\s*<h3>Платформы<\/h3>/
-    .test(group), 'the first column is the platforms, under its own heading');
-  assert(/<h3>Цены и ссылки<\/h3>[\s\S]*id="priceList"[\s\S]*id="setStores"[\s\S]*id="cardtraderPrices"[\s\S]*id="euroPriceSources"[\s\S]*id="setCaster"[\s\S]*<\/div>\s*<\/div>\s*<\/section>/
-    .test(group),
-  'and the second holds, in order: the prices, the whole-block switch, CardTrader with the ' +
-  'stores it belongs to, the EUR source and the marker — all inside it, which is where a reader ' +
-  'looks for a price');
+  //
+  // Position rather than slicing: the columns hold divs of their own, so a non-greedy match to the
+  // next `</div>` stops inside the first column and every assertion about the second reads the
+  // first.
+  const at = id => group.indexOf(`id="${id}"`);
+  const column1 = group.indexOf('<div class="visibility-column">');
+  const column2 = group.indexOf('<div class="visibility-column">', column1 + 1);
+  const inFirst = id => at(id) > column1 && at(id) < column2;
+  const inSecond = id => at(id) > column2;
+  assert(column1 >= 0 && column2 > column1 && /<h3>Платформы<\/h3>/.test(group.slice(column1, column2)),
+    'the first column is the platforms, under its own heading');
+  assert(inFirst('platformBody') && inFirst('setCaster'),
+    'and holds the table and the Caster marker, which is not a price and has no heading of its own');
+  assert(inSecond('priceList') && inSecond('cardtraderPrices') && inSecond('euroPriceSources'),
+    'the second is the prices: the price groups, CardTrader with the stores it belongs to, and the ' +
+    'EUR source');
+  assert(!inSecond('setCaster'),
+    'and the Caster marker is not among them, because it is not about money');
+  // The general switch over the shop block sits inside the shop group and above the shops it
+  // governs: a master drawn below the things it masters reads as a summary of them.
+  const linksGroup = group.slice(at('priceGroup-links'));
+  assert(linksGroup.indexOf('id="setStores"') < linksGroup.indexOf('class="pair-items"'),
+    'and the whole-block switch is above the shop boxes inside their group');
+  // The EUR box is a price and is drawn from the model, so it is not typed into the currencies
+  // group — the only thing the markup says about that group is that it exists.
+  const pricesGroup = group.slice(at('priceGroup-prices'), at('priceGroup-links'));
+  assert(!/id="price-eur"/.test(pricesGroup),
+    'the EUR box is drawn from the model rather than typed into the group');
   // The deck tokens moved out of the hiding group and into the Deckbuilder section, which is
   // where they always belonged and were not. The switch adds one button to one page — the deck
   // page, where Scryfall lists the deck's cards — and nowhere else on the site; it was in the
@@ -1495,30 +1516,30 @@ async function hidingGroupTest() {
     'the two groups are the model\'s two, in the model\'s order, each with its own caption');
   assertEqual(priceGroups.map(row => [...row.querySelectorAll('.pair-items input[data-which]')]
     .map(box => box.dataset.which)),
-    [['usd', 'tix'], ['tcg', 'cardhoarder', 'cardmarket']],
+    [['usd', 'tix', 'eur'], ['tcg', 'cardhoarder', 'cardmarket']],
     'and each holds the kinds the model put in it, so a kind cannot be left out of a group');
   assert(priceGroups.every(group => group.firstElementChild.classList.contains('pair-caption')),
     'with the caption above the boxes rather than beside them, so there is no empty column ' +
     'between a label and the control it labels');
-  assertEqual([...priceList.querySelectorAll('input')].map(box => box.checked),
-    [true, true, true, true, true],
-    'all five start shown, which is what a default has to mean');
-  assertEqual([...priceList.querySelectorAll('input')]
+  assertEqual([...priceList.querySelectorAll('input[data-which]')].map(box => box.checked),
+    [true, true, true, true, true, true],
+    'all six start shown, which is what a default has to mean');
+  assertEqual([...priceList.querySelectorAll('input[data-which]')]
     .map(box => box.getAttribute('aria-label')),
-    ['USD: show', 'TIX: show', 'TCGplayer: show', 'Cardhoarder: show', 'Cardmarket: show'],
-    'and each is announced by its name and what it is for, the shop that owns the euro column included');
+    ['USD: show', 'TIX: show', 'EUR: show', 'TCGplayer: show', 'Cardhoarder: show', 'Cardmarket: show'],
+    'and each is announced by its name and what it is for');
   const priceBox = kind => q('price-' + kind);
   priceBox('tcg').checked = false;
   fireEvent(priceBox('tcg'), 'change');
   await tick();
   assertEqual(mock.state.setFilters.prices,
-    { usd: true, tix: true, tcg: false, cardhoarder: true, cardmarket: true },
+    { usd: true, tix: true, eur: true, tcg: false, cardhoarder: true, cardmarket: true },
     'unticking one kind of price turns that one off alone');
   assertEqual(mock.state.setFilters.platforms.paper.areas.prints, true,
     'and touching a price touches no platform');
-  // Cardmarket is the one shop that also owns a column — the native EUR one — so its switch is
-  // the answer to both "hide the Cardmarket links" and "hide the euro price", which is what one
-  // button for one shop has to mean.
+  // Cardmarket is a shop and the euro column is a currency, so the two are two switches: one hides
+  // a link and the other hides a column. The old build had one button doing both, which meant the
+  // answer to "hide the euro price" lived under a shop's name.
   priceBox('cardmarket').checked = false;
   fireEvent(priceBox('cardmarket'), 'change');
   await tick();
@@ -1534,9 +1555,53 @@ async function hidingGroupTest() {
   priceBox('tcg').checked = true;
   fireEvent(priceBox('tcg'), 'change');
   await tick();
-  assertEqual([...priceList.querySelectorAll('input')].map(box => box.checked),
-    [true, true, true, true, true],
-    'and ticking it back shows all five again rather than leaving one stuck');
+  assertEqual([...priceList.querySelectorAll('input[data-which]')].map(box => box.checked),
+    [true, true, true, true, true, true],
+    'and ticking it back shows all six again rather than leaving one stuck');
+
+  // The EUR box and the EUR source are two handles on one question, and this is where they are
+  // kept in step. The box says whether the euro column exists; the dropdown says whose number is
+  // in it. A dropdown that chooses what fills a column that is not there has nothing to do, so it
+  // is blocked and set to "show nothing" while the box is clear.
+  const euroBox = q('price-eur');
+  const euroSource = q('euroPriceSources');
+  const euroShield = q('euroSourceShield');
+  assertEqual([euroBox.checked, euroSource.disabled, euroShield.hidden], [true, false, true],
+    'with the EUR box ticked the source is free and nothing covers it');
+  euroBox.checked = false;
+  fireEvent(euroBox, 'change');
+  await tick();
+  assertEqual(mock.state.setFilters.prices.eur, false, 'unticking EUR stores that the column is off');
+  assertEqual(mock.state.euroPriceSources, 'none',
+    'and sets the source to "show nothing" rather than leaving it choosing a column that is gone');
+  assertEqual([euroSource.value, euroSource.disabled, euroShield.hidden], ['none', true, false],
+    'with the dropdown blocked and covered');
+  // A disabled select swallows clicks, so the thing a reader presses is the shield over it. It is
+  // a real button, it is reachable by keyboard, and it says why.
+  euroShield.click();
+  await tick();
+  assert(euroBox.classList.contains('stk-blink'),
+    'pressing the blocked dropdown flashes the box that has to change first');
+  assert(/price source cannot be chosen/.test(q('status').textContent),
+    'and says why, in the page\'s own status line (' + q('status').textContent.slice(0, 60) + ')');
+  // The dropdown is the other handle: a reader who sets it to "show nothing" has said the same
+  // thing as clearing the box, and the two must not be able to disagree.
+  euroBox.checked = true;
+  fireEvent(euroBox, 'change');
+  await tick();
+  assertEqual([mock.state.setFilters.prices.eur, mock.state.euroPriceSources], [true, 'cm'],
+    'ticking the box back gives the source something to fill the column with');
+  assertEqual([euroSource.disabled, euroShield.hidden], [false, true], 'and frees the dropdown');
+  euroSource.value = 'none';
+  fireEvent(euroSource, 'change');
+  await tick();
+  assertEqual([euroBox.checked, mock.state.setFilters.prices.eur], [false, false],
+    'and setting the dropdown to "show nothing" clears the box, because it is the same answer');
+  euroSource.value = 'both';
+  fireEvent(euroSource, 'change');
+  await tick();
+  assertEqual([euroBox.checked, mock.state.setFilters.prices.eur], [true, true],
+    'while any real source ticks it back, since a column that is filled is a column that is there');
 
   // The Caster marker. Its old switch read "hide" and this one reads "show", so the stored key
   // was renamed rather than inverted in place — the rename is what lets the migration tell the
@@ -1566,21 +1631,21 @@ async function hidingGroupTest() {
   assertEqual(mock.state.setFilters.showStores, false,
     'unticking it stores that the whole block is hidden');
   assertEqual(mock.state.setFilters.prices,
-    { usd: true, tix: true, tcg: true, cardhoarder: true, cardmarket: true },
+    { usd: true, tix: true, eur: true, tcg: true, cardhoarder: true, cardmarket: true },
     'and it turns no shop off in storage: the block is the general switch and the shops are the ' +
     'particular ones, so hiding the block does not lose the reader\'s per-shop choices');
   // What the reader sees instead: a shop is a link inside that block, so with the block hidden
-  // its box has nowhere to be shown and is drawn off and out of reach. The two currencies are
+  // its box has nowhere to be shown and is drawn off and out of reach. The three currencies are
   // columns and are not in the block, so they are left alone.
-  assertEqual([...priceList.querySelectorAll('input')].map(box => [box.checked, box.disabled]),
-    [[true, false], [true, false], [false, true], [false, true], [false, true]],
+  assertEqual([...priceList.querySelectorAll('input[data-which]')].map(box => [box.checked, box.disabled]),
+    [[true, false], [true, false], [true, false], [false, true], [false, true], [false, true]],
     'and the three shop boxes are drawn empty and disabled while the block is off');
   q('setStores').checked = true;
   fireEvent(q('setStores'), 'change');
   await tick();
   assertEqual(mock.state.setFilters.showStores, true, 'and ticking it back stores "shown"');
-  assertEqual([...priceList.querySelectorAll('input')].map(box => [box.checked, box.disabled]),
-    [[true, false], [true, false], [true, false], [true, false], [true, false]],
+  assertEqual([...priceList.querySelectorAll('input[data-which]')].map(box => [box.checked, box.disabled]),
+    [[true, false], [true, false], [true, false], [true, false], [true, false], [true, false]],
     'with the shops back as the reader left them, which is what drawing them from the stored ' +
     'values rather than writing to them buys');
 
@@ -1640,10 +1705,11 @@ async function hidingMigrationTest() {
   assertEqual(mock.state.setFilters.platforms.arena.areas,
     { prints: true, search: true, sets: true },
     'while the stored places under them are untouched, so the platforms come back as they were');
-  assertEqual([...document.getElementById('priceList').querySelectorAll('input')].map(box => box.checked),
-    [false, false, false, false, true],
-    'and the kinds that one switch used to turn off are all drawn as off — which is what ' +
-    '"only Cardmarket" meant — while Cardmarket itself, the one price it kept, stays ticked');
+  assertEqual([...document.getElementById('priceList').querySelectorAll('input[data-which]')]
+    .map(box => box.checked),
+  [false, false, true, false, false, true],
+  'and the kinds that one switch used to turn off are all drawn as off — which is what "only ' +
+  'Cardmarket" meant — while Cardmarket and the euro column, which is its price, stay ticked');
   // The marker used to be stored as "hide". Its box now reads "show", so a reader who had it
   // hidden is drawn with it unticked. Reading the old boolean the new way round would have
   // drawn it ticked — a box that looks like the setting they had, meaning the opposite.
@@ -2123,7 +2189,7 @@ async function featureRowsTest() {
   }
   document.querySelector('[data-help="finishes"]').click();
   await tick();
-  assertEqual(document.getElementById('shotCaption').textContent, 'Столбец отделки изданий',
+  assertEqual(document.getElementById('shotCaption').textContent, 'Доступная отделка изданий',
     'the feature help names the feature it is about');
   assertEqual(document.getElementById('shotImage').hidden, true,
     'and carries no picture, because what moved here is a paragraph');

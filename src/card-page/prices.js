@@ -60,12 +60,15 @@
     if (table && eurIndex >= 0) {
       const heading = table.querySelectorAll('thead th')[eurIndex];
       const nativeEurCells = [...table.querySelectorAll('tbody tr')].map(row => row.children[eurIndex]);
-      // `none` is the reader saying they want no euro column at all, so the column goes and
-      // nothing replaces it. It is the same switch as the other three rather than a second one
-      // beside them: the source setting answers both questions about this column — whether it
-      // exists, and whose number is in it — which is why hiding Cardmarket does not answer
-      // either of them. Cardmarket is a shop there, and a shop is a link.
-      if (sources === 'none') {
+      // The column is hidden by either answer: the EUR box in the price group, or the source
+      // being "show nothing". The settings page keeps the two in step, and this reads both
+      // because a value written by hand should not be able to put the column back against the
+      // reader's answer.
+      //
+      // `both` relabels the column as Cardmarket's, and `ct` replaces it with CardTrader's own
+      // column below — and both of those are moot when the column is hidden, which is why this
+      // comes first.
+      if (setFilters.prices.eur === false || sources === 'none' || sources === 'ct') {
         heading.classList.add('stk-price-hidden');
         for (const cell of nativeEurCells) cell?.classList.add('stk-price-hidden');
       }
@@ -73,10 +76,6 @@
         heading.classList.add('stk-cm-price-header');
         heading.replaceChildren(priceHeading('cardmarket'));
         heading.title = t('Цены Cardmarket в евро');
-      }
-      if (sources === 'ct') {
-        heading.classList.add('stk-price-hidden');
-        for (const cell of nativeEurCells) cell?.classList.add('stk-price-hidden');
       }
       if (showTable) {
         const th = document.createElement('th');
@@ -99,6 +98,10 @@
         queue.sort((a,b) => Number(b.id === id) - Number(a.id === id));
         queue.splice(75);
         const showEurFallback = () => {
+          // The fallback exists for a CardTrader account in another currency: the column would
+          // otherwise be empty where a price was expected, so the native one comes back. It must
+          // not come back for a reader who said they want no euro column at all.
+          if (setFilters.prices.eur === false) return;
           heading.classList.remove('stk-price-hidden');
           for (const row of table.querySelectorAll('tbody tr')) row.children[eurIndex]?.classList.remove('stk-price-hidden');
         };
@@ -233,10 +236,12 @@
     // The currencies and the shops are separate kinds because they are separate things on the
     // page: a column of numbers, and a row of links.
     //
-    // Cardmarket is a shop here and nothing more. The euro column it prices is not this filter's
-    // business: whether that column exists is answered by the EUR source setting, which has a
-    // "show nothing" of its own, and answering it in two places would mean two controls for one
-    // question — the shape this file has been rewritten to get out of twice.
+    // Cardmarket is a shop here and nothing more, and EUR is a currency. The two are the same
+    // shop's price from two sides — the euro column is Cardmarket's — and they are two switches
+    // because they are two things: one hides a link, the other hides a column. The settings page
+    // keeps the column's switch and the EUR source dropdown in step, and either of them being
+    // "off" is enough here, because a value written by hand should not be able to put the column
+    // back against the reader's answer.
     //
     // `shops` maps a hostname to the model's key for it, and the filter reads the *value*. It
     // read the key for a long time, which meant `prices.tcgplayer` was asked for and the model
@@ -248,7 +253,7 @@
     // other switch in the settings. They were the negative booleans the model had left,
     // and the lines below are where the sense is turned round — once, rather than at each
     // of the places that asks.
-    const currency = new Map([['USD', 'usd'], ['TIX', 'tix']]);
+    const currency = new Map([['USD', 'usd'], ['TIX', 'tix'], ['EUR', 'eur']]);
     const shops = { tcgplayer: 'tcg', cardhoarder: 'cardhoarder', cardmarket: 'cardmarket' };
     const hideCurrency = kind => Boolean(kind) && setFilters.prices[kind] === false;
     const hiddenShops = Object.keys(shops).filter(shop => setFilters.prices[shops[shop]] === false);
@@ -293,9 +298,11 @@
 
   function initAdvancedPriceFilter() {
     const prices = setFilters.prices;
-    // The euro option follows the EUR source rather than a price kind: `none` is the reader
-    // saying they want no euro price, and there is no shop switch that means that.
-    const noEuro = settings.euroPriceSources === 'none';
+    // The euro option follows both answers: the EUR box in the price group, and the source being
+    // "show nothing". They are kept in step on the settings page and read together here, because
+    // a search for a currency the reader has said they do not want to see is the opposite of
+    // hiding it.
+    const noEuro = prices.eur === false || settings.euroPriceSources === 'none';
     if (prices.usd !== false && prices.tix !== false && !noEuro) return;
     // The Prices filter on /advanced offers USD, Euros and MTGO Tickets per row. With a
     // currency hidden its option is dropped, because a filter that searches a currency

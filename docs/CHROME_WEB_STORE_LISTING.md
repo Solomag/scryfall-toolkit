@@ -1,4 +1,4 @@
-# Chrome Web Store listing — Scryfall Toolkit 1.7.6
+# Chrome Web Store listing — Scryfall Toolkit 1.7.7
 
 Everything here is written from the shipped code, so that the answers given in the store
 console match what the extension actually does. Where a field needs a decision from the
@@ -258,13 +258,13 @@ Ready in `store-assets/`, each exactly **1280×800** (PNG), in English:
 | File | What it shows |
 | --- | --- |
 | `store-assets/01-settings-01-of-05.png` | the header, General (settings language, theme), Tags with its per-tag switches, and CardClip with its export format |
-| `store-assets/02-settings-02-of-05.png` | the whole of Visibility, side by side: the platforms table on the left with one row per platform and a column per place, one platform switched off and one place switched off, and Prices and links on the right with the prices, the three shop boxes, the whole-block switch, CardTrader unconnected, the EUR source — whose dropdown ends in "show nothing" — and the Caster marker, followed by Additional info as a list of features |
+| `store-assets/02-settings-02-of-05.png` | the whole of Visibility, side by side: on the left the platforms table with one row per platform and a column per place, one platform switched off and one place switched off, and the Caster marker under the table; and on the right the prices (USD, TIX, EUR), the whole-block switch above the three shop boxes it governs, CardTrader unconnected, and the EUR source — whose dropdown ends in "show nothing" — followed by Additional info as a list of features |
 | `store-assets/03-settings-03-of-05.png` | the end of Additional info and Legality with the format grid |
 | `store-assets/04-settings-04-of-05.png` | the end of the format grid and Scryfall Deckbuilder, including the Commander legality check and the three opt-in deck tools with the host-access button |
 | `store-assets/05-settings-05-of-05.png` | the deck clean-up block, the Prints table section with Experimental below it, and Credits and third-party projects |
 
 All five come from one real capture of the settings page
-(`store-assets/settings-page-full.png`, 1280×4014), so nothing is repeated or cropped
+(`store-assets/settings-page-full.png`, 1280×3963), so nothing is repeated or cropped
 away between them. Each tile is scaled uniformly to 800 rows and the margins continue
 the page's own colour, so no screenshot is stretched.
 

@@ -91,25 +91,24 @@
     'hideForeignOnlySets'
   ];
 
-  // The five prices, in two groups rather than five switches. `group` is what puts the two
-  // currencies on one line and the three shops on another, and it lives here rather than in the
-  // markup for the reason the area labels do: options.js draws both groups from these two
-  // tables, and a line typed into options.html would be a second place to forget a price.
+  // The six prices, in two groups rather than six switches. `group` is what puts the three
+  // currencies and the euro on one line and the three shops on another, and it lives here rather
+  // than in the markup for the reason the area labels do: options.js draws both groups from these
+  // two tables, and a line typed into options.html would be a second place to forget a price.
   //
-  // The split is not cosmetic. A currency is a column of numbers and a shop is a link, and on
-  // the page they are different things that happen to both be prices — which is why one switch
-  // for all of them was wrong, and why the grouping says so without a paragraph saying so.
+  // The split is not cosmetic. A currency is a column of numbers and a shop is a link, and on the
+  // page they are different things that happen to both be prices — which is why one switch for all
+  // of them was wrong, and why the grouping says so without a paragraph saying so.
   //
-  // Cardmarket is a shop, and it is the one shop that also owns a column: the native EUR column
-  // is Cardmarket's price, and Scryfall draws it whether or not the reader ever wants a euro
-  // price. So its switch hides two things — the EUR column and the cardmarket.com links — which
-  // is what "hide Cardmarket" has to mean to be one button rather than two. The key was `eur`
-  // for one unreleased build, where the switch sat among the currencies and read as one; it is
-  // `cardmarket` now, because it sits with the other shops and hides the other shops' things.
+  // EUR is the third currency and the one Scryfall draws from Cardmarket. It is a currency rather
+  // than a shop: it is a column of numbers in the same table as USD and TIX. Its box and the EUR
+  // source dropdown below it are two views of one question — whether that column exists — and the
+  // settings page keeps them in step rather than letting them disagree.
   const PRICE_GROUPS = { prices: 'Цены', links: 'Ссылки на магазины' };
   const PRICE_KINDS = {
     usd: { label: 'USD', group: 'prices' },
     tix: { label: 'TIX', group: 'prices' },
+    eur: { label: 'EUR', group: 'prices' },
     tcg: { label: 'TCGplayer', group: 'links' },
     cardhoarder: { label: 'Cardhoarder', group: 'links' },
     cardmarket: { label: 'Cardmarket', group: 'links' }
@@ -141,7 +140,7 @@
     // Inverted, so the switches say what every other switch in the settings says and the
     // group above them does not need a sentence explaining which way round they run. The
     // inversion is in the migration, not here.
-    prices: { usd: true, tix: true, tcg: true, cardhoarder: true, cardmarket: true },
+    prices: { usd: true, tix: true, eur: true, tcg: true, cardhoarder: true, cardmarket: true },
     tokens: true,
     showCaster: true,
     // The whole "Buy This Card" block on a card page, heading and disclaimer included — the
@@ -186,13 +185,6 @@
 
     for (const price of Object.keys(out.prices)) {
       if (typeof input.prices?.[price] === 'boolean') out.prices[price] = input.prices[price];
-    }
-    // The euro switch under the name it had for one unreleased build, before it moved from the
-    // currencies to the shops. Read rather than dropped: a reader who hid the euro column in
-    // that build hid Cardmarket, and this is the same setting with a better name — and a build
-    // that is never released still has readers between one local load and the next.
-    if (typeof input.prices?.cardmarket !== 'boolean' && typeof input.prices?.eur === 'boolean') {
-      out.prices.cardmarket = input.prices.eur;
     }
     if (typeof input.tokens === 'boolean') out.tokens = input.tokens;
     // The "Buy This Card" block, added after the shape settled, so it has no older name to read.

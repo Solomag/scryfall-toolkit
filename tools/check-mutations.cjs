@@ -351,7 +351,7 @@ const MUTATIONS = [
     run: 'test-model',
     find: '      for (const price of [\'usd\', \'tix\', \'tcg\', \'cardhoarder\']) out.prices[price] = false;',
     replace: '      for (const price of Object.keys(out.prices)) out.prices[price] = false;',
-    expect: 'onlyCardmarket becomes the four other price kinds off together, and leaves Cardmarket'
+    expect: 'onlyCardmarket becomes the four other price kinds off together, and leaves the euro column'
   },
   {
     // A disclosure that starts open. The section would still work and every setting in it would
@@ -445,18 +445,6 @@ const MUTATIONS = [
     expect: 'and the euro search goes with the EUR source being "show nothing"'
   },
   {
-    // The euro switch's old key, dropped rather than read. A reader who hid the euro column in
-    // the build that stored `eur` would find it back on their first page load, silently.
-    name: 'the euro switch under its old key is dropped',
-    file: 'model',
-    run: 'test-model',
-    find: '    if (typeof input.prices?.cardmarket !== \'boolean\' && typeof input.prices?.eur === \'boolean\') {\n' +
-      '      out.prices.cardmarket = input.prices.eur;\n' +
-      '    }',
-    replace: '    void input.prices;',
-    expect: 'the euro switch under its old key is read as the Cardmarket switch'
-  },
-  {
     // The general switch over the store block, doing nothing. A reader who hid the whole block
     // would keep the heading, the disclaimer and the three links — the switch would save and
     // change nothing on the page, which is the shape of bug this file keeps finding.
@@ -532,14 +520,8 @@ const MUTATIONS = [
     name: 'the EUR source "show nothing" leaves the euro column on the page',
     file: 'prices',
     run: 'test',
-    find: '      if (sources === \'none\') {\n' +
-      '        heading.classList.add(\'stk-price-hidden\');\n' +
-      '        for (const cell of nativeEurCells) cell?.classList.add(\'stk-price-hidden\');\n' +
-      '      }',
-    replace: '      if (sources === \'none\' && false) {\n' +
-      '        heading.classList.add(\'stk-price-hidden\');\n' +
-      '        for (const cell of nativeEurCells) cell?.classList.add(\'stk-price-hidden\');\n' +
-      '      }',
+    find: '      if (setFilters.prices.eur === false || sources === \'none\' || sources === \'ct\') {',
+    replace: '      if (setFilters.prices.eur === false || sources === \'ct\') {',
     expect: 'and "show nothing" as the EUR source hides the euro column'
   },
   {
@@ -552,6 +534,53 @@ const MUTATIONS = [
     find: '  background-color:#232229;border-color:#3b3642;opacity:1;cursor:default;',
     replace: '  background-color:#292830;border-color:#3b3642;opacity:1;cursor:default;',
     expect: 'and a disabled one is dark enough to be told apart from it at a glance'
+  },
+  {
+    // The two handles on the euro column disagreeing. The box says the column exists and the
+    // dropdown says whose number is in it; a dropdown set to "show nothing" while the box stays
+    // ticked is a page showing one setting in two states.
+    name: 'the EUR source can be set to nothing while the EUR box stays ticked',
+    file: 'options',
+    run: 'test-options',
+    find: '    filters.prices.eur = euroSource.value !== \'none\';\n' +
+      '    euroBox.checked = filters.prices.eur;',
+    replace: '    filters.prices.eur = euroSource.value !== \'none\';',
+    expect: 'and setting the dropdown to "show nothing" clears the box, because it is the same answer'
+  },
+  {
+    // And the blocked dropdown left uncovered. `disabled` on a select swallows clicks, so without
+    // the shield a reader who reaches for it finds a dead control and no reason for it.
+    name: 'the blocked EUR source is left uncovered',
+    file: 'options',
+    run: 'test-options',
+    find: '    euroShield.hidden = on;',
+    replace: '    euroShield.hidden = false;',
+    expect: 'with the EUR box ticked the source is free and nothing covers it'
+  },
+  {
+    // And the card page's currency map forgetting the euro column — the one place that decides
+    // whether a hidden currency's column is drawn. `initCardTrader` hides the column too, but only
+    // when it runs at all, which is when the EUR source is not the default `cm`; so with the
+    // default source this map is the only thing between a reader who unticked EUR and the column
+    // they said they did not want.
+    name: 'the euro column ignores the EUR box on the card page',
+    file: 'prices',
+    run: 'test',
+    find: '    const currency = new Map([[\'USD\', \'usd\'], [\'TIX\', \'tix\'], [\'EUR\', \'eur\']]);',
+    replace: '    const currency = new Map([[\'USD\', \'usd\'], [\'TIX\', \'tix\']]);',
+    expect: 'and unticking the EUR box hides the same column'
+  },
+  {
+    // And the whole-block switch drawn below the shops it governs, where it reads as a summary of
+    // them rather than as a switch over them.
+    name: 'the whole-block switch is drawn below the shops',
+    file: 'optionsHtml',
+    run: 'test-options',
+    find: '<label class="stores-row"><input type="checkbox" class="stk-check" id="setStores"> Показывать блок «Купить карту»</label>\n' +
+      '<div class="pair-items"></div>',
+    replace: '<div class="pair-items"></div>\n' +
+      '<label class="stores-row"><input type="checkbox" class="stk-check" id="setStores"> Показывать блок «Купить карту»</label>',
+    expect: 'and the whole-block switch is above the shop boxes inside their group'
   },
 ];
 

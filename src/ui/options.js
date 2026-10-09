@@ -312,7 +312,7 @@ chrome.storage.local.get(defaults, values => {
   // page that looks like a form to fill in, and every one of these settings works untouched.
   const FEATURE_HELP = {
     finishes: {
-      caption: 'Столбец отделки изданий',
+      caption: 'Доступная отделка изданий',
       notes: [
         'У издания бывает не вся отделка: только фойл, только нефойл, только etched или особый фойл. Когда это так, в таблице изданий между названием и ценами появляется узкий столбец с тем, что у издания есть.',
         'Обычные звёздочки фойла в названиях изданий при этом не дублируются. Данные приходят из Scryfall и могут появиться после загрузки страницы.'
@@ -343,7 +343,8 @@ chrome.storage.local.get(defaults, values => {
     eursource: {
       caption: 'Источники EUR-цен в таблице изданий',
       notes: [
-        'Столбец EUR на Scryfall — это цена Cardmarket. Здесь выбирается, чем его заполнять: Cardmarket, CardTrader или обоими — тогда рядом появляется второй столбец. «Не показывать» убирает столбец целиком.',
+        'Столбец EUR на Scryfall — это цена Cardmarket. Здесь выбирается, чем его заполнять: Cardmarket, CardTrader или обоими — тогда рядом появляется второй столбец. «Не показывать» убирает столбец целиком и снимает галочку EUR в группе «Цены»: это одна настройка с двумя ручками.',
+        'Пока галочка EUR снята, список заблокирован: выбирать источник для столбца, которого нет, нечего.',
         'Для цен CardTrader нужен личный токен, и задаётся он в строке «Предложения CardTrader» выше, в том же блоке магазинов.',
         'Включать саму галочку «Предложения CardTrader» для этого не обязательно: она добавляет ссылки CardTrader в блок покупки, а столбец работает и без них.'
       ]
@@ -659,29 +660,30 @@ for (const name of FILTERS.PLATFORM_NAMES) {
   body.append(row);
 }
 
-// The four prices in two groups: a currency is a column of numbers, a shop is a link, and the
-// grouping says so without a paragraph saying so.
+// The prices in two groups: a currency is a column of numbers, a shop is a link, and the grouping
+// says so without a paragraph saying so.
 //
-// Each caption sits directly above the boxes it names. Beside them it needed a column as wide
-// as the longest caption, and that column is empty on every other row — which is the wide grey
-// gap the pair used to have between a label and its own box.
+// The blocks are in the markup and this fills them, because the general switch over the shop block
+// is markup too and belongs above the shops it governs: a master drawn after them would read as a
+// summary. Filling rather than creating keeps the model the only list of shops — a fourth shop is
+// one entry in PRICE_KINDS and nothing here — and a group the markup does not have a block for is
+// reported rather than silently dropped.
+//
+// Each caption sits directly above the boxes it names. Beside them it needed a column as wide as
+// the longest caption, and that column is empty on every other row.
 //
 // Positive — ticked means shown — like everything else in this section. These were the last
-// four switches on the page that meant the opposite, and the group above them needed a legend
-// reading "which prices to hide" to make four unticked boxes mean "everything is on".
-const priceList = document.getElementById('priceList');
+// negative switches on the page, and the group above them needed a legend reading "which prices to
+// hide" to make unticked boxes mean "everything is on".
 const priceBoxes = {};
 for (const group of FILTERS.PRICE_GROUP_NAMES) {
-  const line = document.createElement('div');
-  line.className = 'pair-group';
-  const caption = document.createElement('div');
-  caption.className = 'pair-caption';
-  caption.textContent = t(FILTERS.PRICE_GROUPS[group]);
-  // The boxes go in a container of their own so they sit on one line when there is room and
-  // wrap under each other when there is not, rather than each becoming a row of its own.
-  const items = document.createElement('div');
-  items.className = 'pair-items';
-  line.append(caption, items);
+  const block = document.getElementById('priceGroup-' + group);
+  if (!block) {
+    console.error('no block for the price group ' + group + '; its prices cannot be shown');
+    continue;
+  }
+  block.querySelector('.pair-caption').textContent = t(FILTERS.PRICE_GROUPS[group]);
+  const items = block.querySelector('.pair-items');
   for (const [kind, entry] of Object.entries(FILTERS.PRICE_KINDS)) {
     if (entry.group !== group) continue;
     const label = document.createElement('label');
@@ -701,7 +703,6 @@ for (const group of FILTERS.PRICE_GROUP_NAMES) {
     label.append(box, document.createTextNode(' ' + entry.label));
     items.append(label);
   }
-  priceList.append(line);
 }
 
   // The switches that live outside this section's rules and are not drawn from a table: the
@@ -758,6 +759,59 @@ for (const group of FILTERS.PRICE_GROUP_NAMES) {
     saveFilters();
   });
   paintStores();
+
+  // The EUR box and the EUR source are two views of one question, and this is where they are kept
+  // in step. The box says whether the euro column exists; the dropdown says whose number is in it.
+  // The dropdown cannot choose a source for a column that is not there, so it is blocked while the
+  // box is unticked and set to "show nothing" to say so.
+  //
+  // Blocking is a transparent button over the select rather than `disabled` on it, because a
+  // disabled select swallows the click and a reader who reaches for it would find a dead control
+  // with no explanation. The button is reachable by keyboard and says why when it is pressed.
+  const euroBox = priceBoxes.eur;
+  const euroSource = document.getElementById('euroPriceSources');
+  const euroShield = document.getElementById('euroSourceShield');
+  const paintEuro = () => {
+    const on = filters.prices.eur !== false;
+    euroSource.disabled = !on;
+    euroShield.hidden = on;
+    euroShield.setAttribute('aria-label', t('Нельзя выбрать источник цены, пока цена не показывается.'));
+  };
+  const flashEuro = () => {
+    euroBox.classList.remove('stk-blink');
+    // Read back a layout property so the class is re-added to an element the browser has already
+    // animated: without it, pressing the shield twice in a row flashes once.
+    void euroBox.offsetWidth;
+    euroBox.classList.add('stk-blink');
+    setTimeout(() => euroBox.classList.remove('stk-blink'), 1600);
+    status.textContent = t('Нельзя выбрать источник цены, пока цена не показывается.');
+  };
+  euroShield.addEventListener('click', flashEuro);
+  euroBox.addEventListener('change', () => {
+    filters.prices.eur = euroBox.checked;
+    if (!euroBox.checked) {
+      euroSource.value = 'none';
+      chrome.storage.local.set({ euroPriceSources: 'none' });
+    } else if (euroSource.value === 'none') {
+      // Something to fill the column with, because the box just said there is one. The default,
+      // and the only value this page can pick without inventing a preference.
+      euroSource.value = 'cm';
+      chrome.storage.local.set({ euroPriceSources: 'cm' });
+    }
+    paintEuro();
+    saveFilters();
+  });
+  euroSource.addEventListener('change', () => {
+    // The dropdown can still be set to "show nothing" by a reader who wants the column gone, and
+    // that is the same answer as unticking the box: they are one setting with two handles, so the
+    // box follows the dropdown the same way the dropdown follows the box.
+    filters.prices.eur = euroSource.value !== 'none';
+    euroBox.checked = filters.prices.eur;
+    paintEuro();
+    saveFilters();
+  });
+  paintEuro();
+
   // The rows above were written after the page was localized, so the page is localized
   // again over them. Their labels are the model's own Russian strings, so this is the
   // same translation every other label on the page gets — and the language selector

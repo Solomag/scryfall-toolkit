@@ -1334,6 +1334,16 @@ async function priceFilterTest() {
   assertEqual(hiddenLinks(noEuro.document), [],
     'while no shop link is touched, because a source is not a shop');
 
+  // And the other handle on the same column: the EUR box in the price group. The settings page
+  // keeps the two in step, and the card page reads both, because a value written by hand should
+  // not be able to put the column back against the reader's answer.
+  const noEurBox = await load({ usd: true, tix: true, eur: false, tcg: true, cardhoarder: true, cardmarket: true });
+  assertEqual(hiddenHeads(noEurBox.document), ['EUR'],
+    'and unticking the EUR box hides the same column');
+  assertEqual(hiddenCells(noEurBox.document), ['€3.92'], 'with its cells');
+  assertEqual(hiddenLinks(noEurBox.document), [],
+    'and no link, because the euro column is a price and not a shop');
+
   // The currencies, which are columns and not links.
   const noCurrencies = await load({ usd: false, tix: false, tcg: true, cardhoarder: true, cardmarket: true });
   assertEqual(hiddenHeads(noCurrencies.document), ['TIX', 'USD'],

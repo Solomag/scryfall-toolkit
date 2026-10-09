@@ -97,13 +97,28 @@ label{display:block;margin:9px 0;cursor:pointer}input{accent-color:#aa85b5}
 .price-source-head{display:flex;align-items:center;gap:8px;margin:0 0 8px}
 .price-source .pair-caption{margin:0}
 .price-source select{width:auto;min-width:190px;max-width:260px;margin-top:0}
-/* The general switch over the block the three shops sit in, directly under the group it governs.
-   16px and not 24: it belongs to the group above it, and the 24px gap is for the two settings
-   that stand on their own. */
-.stores-row{margin:16px 0 0}
-/* One row and one box, on its own line under the prices rather than tucked under the store
-   links: it is a setting about the card page's marker and has nothing to do with where a euro
-   price comes from, and an indent under that group read as though it belonged to it. */
+/* The EUR source, and the shield that stands over it while the EUR box is unticked. The shield is
+   a real button laid over a disabled select: a disabled control swallows clicks, so without it a
+   reader who reaches for the dropdown finds nothing to press and nothing to read. */
+.price-source-field{position:relative;display:inline-block}
+.price-source-shield{position:absolute;top:0;right:0;bottom:0;left:0;width:100%;height:100%;margin:0;padding:0;border:0;background:transparent;cursor:not-allowed}
+.price-source-shield[hidden]{display:none}
+.price-source select:disabled{opacity:.45;cursor:not-allowed}
+/* The EUR box, blinked when a reader reaches for the blocked dropdown. It is the control that has
+   to change first, so it is the control that says so — and the flash is on the box rather than on
+   the dropdown, because the dropdown is the thing that cannot be used. */
+.stk-blink{animation:stk-blink 1.6s ease-out}
+@keyframes stk-blink{
+  0%,100%{box-shadow:0 0 0 0 rgba(201,164,213,0)}
+  15%,55%{box-shadow:0 0 0 5px rgba(201,164,213,.9)}
+  35%,75%{box-shadow:0 0 0 2px rgba(201,164,213,.35)}
+}
+/* The general switch over the shop block, above the shops it governs and inside their group. */
+.stores-row{margin:0 0 10px}
+/* One row and one box, on its own line in the left column under the platforms table. It is a
+   setting about the card page's marker, not a price, so the right column — a list of things about
+   money — is the wrong place for it; it sat there for one release, indented under the store links,
+   where it read as though it belonged to that group. */
 .caster-row{margin:24px 0 0}
 /* Every control in the settings that is a square box rather than a slider. Two sections use
    them — Visibility and Additional info — and they are one class rather than two sets of rules
