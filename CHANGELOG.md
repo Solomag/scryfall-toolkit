@@ -32,6 +32,14 @@ a separate question, and the notice still says plainly that no permission for it
 granted. The API is still account-bound — every call carries the user's own token — so nothing is
 fetched without the user's credential either way.
 
+**And the notices stop speaking about EDHREC's icon.** The EDHREC logo went with the icon-and-link
+control in 1.7.6, but the notices still described it as bundled — section 7 said "nothing from
+EDHREC is bundled except the logo file listed below", where there is no file below and no file in
+the build. Section 8 compared CardTrader's mark to EDHREC's "same basis" as if both shipped, and the
+roadmap still listed "the EDHREC and CardTrader marks" as shipped together. EDHREC's mark is not a
+permission question any more: nothing of theirs is bundled, and the only thing of EDHREC's in the
+build is the data the feature asks for at run time. The notices and the roadmap say so now.
+
 **Checks:** `npm test` 2333 assertions across nine suites, `npm run render` 176 + 202,
 `npm run mutations` 49 of 49. One is new: the expected non-attachment shown as a fault on a card
 page.

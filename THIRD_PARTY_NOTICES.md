@@ -231,9 +231,9 @@ rules this project's request pattern has to respect.
 ## 7. EDHREC — service used under their published data policy
 
 - <https://www.edhrec.com/> and the public card JSON at `json.edhrec.com`
-- Used: **service data fetched at run time only.** Nothing from EDHREC is bundled except
-  the logo file listed below. The card name is sent to EDHREC only when the user has
-  enabled the EDHREC feature.
+- Used: **service data fetched at run time only.** Nothing from EDHREC is bundled — their logo
+  used to ship and went with the control that showed it, below. The card name is sent to EDHREC
+  only when the user has enabled the EDHREC feature.
 
 Two parts of that public JSON are read. `pages/cards/<slug>.json` for one card's usage and
 salt, and `pages/commanders/<slug>.json` for a commander's page, whose `cardlists` already
@@ -327,18 +327,18 @@ without the user's own credential.
 is a monochrome version of it. **We have not asked for permission and have been granted
 none.** A trademark is not licensed as MIT and nothing here should be read as a licence.
 
-They are used on the same basis as EDHREC's: **to name the source of the numbers on the
-screen.** They appear only on the CardTrader price controls and beside CardTrader prices,
-unmodified and undistorted, and never as our own identity. The settings page states in its
-own words that this extension is not created, endorsed or sponsored by CardTrader.
+They are used on **nominative use — to name the source of the numbers on the screen.** They
+appear only on the CardTrader price controls and beside CardTrader prices, unmodified and
+undistorted, and never as our own identity. The settings page states in its own words that this
+extension is not created, endorsed or sponsored by CardTrader.
 
 Note that the mark here is not load-bearing in any way the data is not: the price source
 is off unless the user pastes a token from their own CardTrader account, so the one thing
 that would be wrong to distribute — their prices obtained without their say — cannot
 happen unless the user supplies their own credential to fetch it.
 
-**If they object**, the same single line goes as EDHREC's: the label already reads
-"CardTrader" beside the icon.
+**If they object**, the change is the same single line the EDHREC mark's removal was: the label
+already reads "CardTrader" beside the icon.
 
 ## 9. Cardmarket — their published logo, used as they distribute it
 
