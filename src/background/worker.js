@@ -188,7 +188,13 @@ function edhrecFetch(path) {
 // as such wherever this project talks about it and it is allowed to stop
 // working without notice.
 function edhrecRecs(commanders, cards) {
-  const key = 'RECS:' + commanders.join('|') + '#' + cards.length;
+  // The key carries the whole payload, not a summary of it. It was the commanders and the
+  // *number* of cards, so two different decks of the same size led by the same commander — one
+  // Counterspell against one Sol Ring — coalesced into a single request and the second reader got
+  // the first deck's suggestions. Sorted, because two requests for the same deck can list its
+  // cards in different orders and coalescing them is the point; the counts are inside the strings
+  // ("1 Counterspell"), so they are part of the key too.
+  const key = 'RECS:' + JSON.stringify([[...commanders].sort(), [...cards].sort()]);
   return edhrecRun(key, () => edhrecRecsRoundTrip(commanders, cards));
 }
 
@@ -760,22 +766,42 @@ function scryfallClass(url) {
 async function scryfallJSON(url, options = {}) {
   const kind = scryfallClass(String(url));
   const gap = SCRYFALL_LIMITS[kind];
-  for (;;) {
-    const now = Date.now();
-    const waitUntil = Math.max(scryfallQueues[kind], scryfallHeldUntil);
-    if (waitUntil <= now) break;
-    // Re-read on the way round, so a 429 raised while this one slept holds it
-    // back as well.
-    await new Promise(resolve => setTimeout(resolve, waitUntil - now));
+  // At most one retry, and the retry goes through the same wait as every other call. A 429 sets
+  // the hold on every queue; the call that caused it is held with the rest rather than slipping
+  // past them to fetch again immediately, which is what it did before — the comment and the
+  // documentation promised a pause the code did not take on the one request that needed it most.
+  for (let attemptNo = 0; ; attemptNo += 1) {
+    // Wait our turn, re-reading on the way round: a 429 raised while this one slept, or another
+    // call taking the slot while it did, has to hold this one back as well.
+    for (;;) {
+      const now = Date.now();
+      const waitUntil = Math.max(scryfallQueues[kind], scryfallHeldUntil);
+      if (waitUntil <= now) break;
+      await new Promise(resolve => setTimeout(resolve, waitUntil - now));
+    }
+    scryfallQueues[kind] = Date.now() + gap;
+    const attempt = await scryfallGetJSON(url, options);
+    if (attempt.failed && attempt.status === 429 && attemptNo === 0) {
+      scryfallHeldUntil = Date.now() + SCRYFALL_HOLD_MS;
+      for (const key of Object.keys(scryfallQueues)) scryfallQueues[key] = scryfallHeldUntil;
+      continue;
+    }
+    if (attempt.failed) {
+      // The status rides along on the error because some callers need to tell one
+      // failure from another: a card that does not exist is an answer, not a fault.
+      const error = new Error(`HTTP ${attempt.status}`);
+      error.status = attempt.status;
+      throw error;
+    }
+    return attempt.body;
   }
-  scryfallQueues[kind] = Date.now() + gap;
-  return scryfallGet(url, options);
 }
 
 // Their documentation says a 429 is not something to shrug at: access is limited
 // for thirty seconds, and going on afterwards can get the extension blocked. The
-// EDHREC queue has held back on a 429 since the start; this one did not, so a burst
-// that crossed a limit kept crossing it.
+// EDHREC queue has held back on a 429 since the start; this one holds every Scryfall
+// queue back for the same thirty seconds, and the retry waits with them rather than
+// fetching again at once.
 const SCRYFALL_HOLD_MS = 30000;
 
 // Fetch and give the body back, or the response itself if it is not a success, so
@@ -787,23 +813,6 @@ async function scryfallGetJSON(url, options) {
   const response = await fetch(url, { credentials: 'omit', ...options });
   if (!response.ok) return { failed: true, status: response.status };
   return { failed: false, body: await response.json() };
-}
-
-async function scryfallGet(url, options = {}) {
-  let attempt = await scryfallGetJSON(url, options);
-  if (attempt.failed && attempt.status === 429) {
-    scryfallHeldUntil = Date.now() + SCRYFALL_HOLD_MS;
-    for (const key of Object.keys(scryfallQueues)) scryfallQueues[key] = scryfallHeldUntil;
-    attempt = await scryfallGetJSON(url, options);
-  }
-  if (attempt.failed) {
-    // The status rides along on the error because some callers need to tell one
-    // failure from another: a card that does not exist is an answer, not a fault.
-    const error = new Error(`HTTP ${attempt.status}`);
-    error.status = attempt.status;
-    throw error;
-  }
-  return attempt.body;
 }
 
 async function getJSON(url, options = {}) {

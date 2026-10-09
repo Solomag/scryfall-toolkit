@@ -37,17 +37,17 @@ if (systemDark && systemDark.addEventListener) {
 // answers synchronously, so the class is set before the first paint and storage
 // simply corrects it a moment later.
 if (themeMode('auto') === 'dark') document.documentElement.classList.add('stk-dark');
-chrome.storage.local.get({ darkTheme: 'auto', settingsLanguage: 'auto', setFilters: null })
-  .then(({ darkTheme, settingsLanguage, setFilters }) => {
-  // The Caster marker reads `setFilters.showCaster`, and the class is the opposite of it.
-  //
-  // It used to read a flat `hideCasterIndicator`, which nothing has written since the settings
-  // were folded into `setFilters` — the options page wrote `setFilters.caster` and this read a
-  // key that had no writer, so the switch on the settings page changed a value nobody read and
-  // the marker never went away. The test that covered this asked the theme script to read the
-  // flat key directly, which is the same fiction one level up: it proved the read and never the
-  // write.
-  document.documentElement.classList.toggle('stk-hide-caster', !(setFilters?.showCaster !== false));
+chrome.storage.local.get({ darkTheme: 'auto', settingsLanguage: 'auto', setFilters: null, setFiltersMigrated: false })
+  .then(({ darkTheme, settingsLanguage, setFilters, setFiltersMigrated }) => {
+  // The Caster marker goes through the model, not through the raw key. A stored value from before
+  // the switch stopped reading "hide" carries `caster` and no `showCaster`, and a raw read sees
+  // `undefined` and treats it as shown — the opposite of what that reader chose. The model is the
+  // one place that knows every old shape, so reading it here is what keeps the first paint after
+  // an update honest. (It used to read a flat `hideCasterIndicator` that nothing wrote, which is
+  // the same class of bug one level up.)
+  const casterShown = () =>
+    window.STK_SET_FILTERS.read({ setFilters, setFiltersMigrated }).filters.showCaster !== false;
+  document.documentElement.classList.toggle('stk-hide-caster', !casterShown());
   // The site's own controls are translated for the same language the rest of the extension
   // speaks. There used to be a separate setting for this; it is the General choice now, so
   // "as in the browser" means the same thing on the settings page and on the site.
@@ -70,11 +70,13 @@ if (/(^|\.)tagger\.scryfall\.com$/.test(location.hostname)) document.documentEle
 if (/^\/(?:@[^/]+\/decks|decks)(?:\/|$)/.test(location.pathname)) initDeckActionsLayout();
 chrome.storage.onChanged.addListener(changes => {
   if (changes.setFilters) {
-  // Read out of the whole object rather than out of a named key, because the key inside it was
-  // renamed when the switch stopped reading "hide". A reader on the old shape has no
-  // `showCaster`, and there `undefined` means "shown", which is what the old `false` meant too.
-  document.documentElement.classList.toggle('stk-hide-caster',
-    !(changes.setFilters.newValue?.showCaster !== false));
+  // The same model read as on load: the change may carry the current shape, or the migration
+  // writing the current shape out of an old one, and both have to land on the same answer.
+  const next = window.STK_SET_FILTERS.read({
+    setFilters: changes.setFilters.newValue,
+    setFiltersMigrated: changes.setFiltersMigrated ? changes.setFiltersMigrated.newValue : true
+  }).filters;
+  document.documentElement.classList.toggle('stk-hide-caster', next.showCaster === false);
 }
   if (changes.settingsLanguage) {
     document.documentElement.classList.toggle('stk-site-ru',

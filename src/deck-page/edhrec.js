@@ -310,30 +310,43 @@
     host.appendChild(button);
   }
 
-  let wired = false;
+  let wired = false;      // the feature is on, so the button belongs on the page
+  let watching = false;   // the elementReady handlers are registered
 
   function apply(config) {
     config = config || {};
     if (!scryfall || !bridge() || !results) {
       return { applied: false, problems: ['the deck modules did not load in order'] };
     }
-    if (!wired && config.edhrecSuggestions) {
+    if (config.edhrecSuggestions) {
       wired = true;
-      // Two things have to be true before the button can go anywhere: the deck
-      // has a commander section, and the toolbar is on the page. They arrive in
-      // either order, so both are waited for and the attempt is idempotent —
-      // otherwise the first one to show up finds the other missing and the
-      // button is never placed.
-      const tryAdd = () => { if (isCommanderDeck()) addButton(); };
-      scryfall.elementReady('.deckbuilder-section-title', tryAdd);
-      scryfall.elementReady('.deckbuilder-toolbar', tryAdd);
-      scryfall.elementReady('.deckbuilder-toolbar-items-right', tryAdd);
+      if (!watching) {
+        watching = true;
+        // Two things have to be true before the button can go anywhere: the deck has a commander
+        // section, and the toolbar is on the page. They arrive in either order, so both are waited
+        // for and the attempt is idempotent — otherwise the first one to show up finds the other
+        // missing and the button is never placed. The handler checks `wired`, so a feature turned
+        // off does not put the button back when a late element arrives.
+        const tryAdd = () => { if (wired && isCommanderDeck()) addButton(); };
+        scryfall.elementReady('.deckbuilder-section-title', tryAdd);
+        scryfall.elementReady('.deckbuilder-toolbar', tryAdd);
+        scryfall.elementReady('.deckbuilder-toolbar-items-right', tryAdd);
+      }
+      if (isCommanderDeck()) addButton();
     }
     return { applied: wired, problems: scryfall.status().problems };
   }
 
+  // The feature turned off: take the button away. The element handlers stay registered — the
+  // adapter has no way to remove one — but they do nothing while `wired` is false.
+  function disable() {
+    wired = false;
+    document.getElementById('stk-edhrec-button')?.remove();
+  }
+
   self.STK_DECK_EDHREC = {
     apply: apply,
+    disable: disable,
     status: () => ({ applied: wired, problems: scryfall ? scryfall.status().problems : [] })
   };
 })();

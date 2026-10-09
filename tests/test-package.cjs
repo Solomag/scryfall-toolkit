@@ -140,6 +140,7 @@ async function themeTurnsOnTest(dir) {
 
   // The manifest loads i18n.js before theme.js now, because the theme resolves the site
   // language from the one language setting through it.
+  run('src/core/set-filters.js');
   run('src/core/i18n.js');
   run('src/core/theme.js');
   await tick();

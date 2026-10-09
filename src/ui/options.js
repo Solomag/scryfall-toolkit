@@ -111,7 +111,10 @@ function optionalHostsFor(key, value) {
   if (key === 'euroPriceSources') {
     return value === 'ct' || value === 'both' ? ['https://api.cardtrader.com/*'] : [];
   }
-  return OPTIONAL_HOSTS[key] || [];
+  // A feature that is being turned *off* needs no host. Asking for one there is the interface
+  // demanding access in order to stop using the thing the access is for — and if the reader
+  // refuses, the switch goes back on, so the feature cannot be turned off at all.
+  return value ? (OPTIONAL_HOSTS[key] || []) : [];
 }
 
 // Asks for hosts. Only ever from inside a click.
@@ -235,6 +238,10 @@ chrome.storage.local.get(defaults, values => {
     chrome.storage.local.remove('cardtraderToken', () => {
       document.getElementById('cardtraderPrices').checked = false;
       document.getElementById('euroPriceSources').value = 'cm';
+      // The reader's own answer goes with the token: without it, saving a new token later
+      // would redraw the box from a "wanted" that outlived the feature it belonged to, and the
+      // box would say on while storage said off.
+      cardtraderWanted = false;
       chrome.storage.local.set({ cardtraderPrices: false, euroPriceSources: 'cm' });
       showTokenState(false);
       status.textContent = t('Токен удалён');
@@ -521,6 +528,18 @@ chrome.storage.local.get(defaults, values => {
     }
     refreshPermissions();
   });
+  // What this page last actually stored for a key. A refused permission rolls a control back
+  // to that, not to whatever it held when the page opened: a reader who went cm → both and was
+  // then refused ct should find both, which is what storage holds, rather than the cm the page
+  // started with.
+  const accepted = {};
+  const saveField = (key, wanted) => {
+    chrome.storage.local.set({ [key]: wanted }, () => {
+      accepted[key] = wanted;
+      status.textContent = t('Сохранено');
+      if (OPTIONAL_HOSTS[key]) refreshPermissions();
+    });
+  };
   for (const key of basicFields) {
     const element = document.getElementById(key);
     if (element.type === "checkbox") element.checked = Boolean(values[key]);
@@ -538,24 +557,23 @@ chrome.storage.local.get(defaults, values => {
             // back to what storage holds rather than saving a switch that only
             // looks like it works. The browser refusing to ask is reported, because
             // a switch that quietly reverts looks like a broken checkbox.
-            if (element.type === 'checkbox') element.checked = Boolean(values[key]);
-            else if (values[key] !== undefined) element.value = values[key];
+            const back = key in accepted ? accepted[key] : values[key];
+            if (element.type === 'checkbox') element.checked = Boolean(back);
+            else if (back !== undefined) element.value = back;
+            // CardTrader keeps its own copy of the reader's answer, because the box is emptied
+            // while the store block is hidden; the revert has to reach that copy too, or a
+            // later repaint would draw the box from the answer the permission was refused for.
+            if (key === 'cardtraderPrices') { cardtraderWanted = element.checked; repaintCardtrader?.(); }
             status.textContent = answer.reason
               ? t('Браузер не дал спросить: ') + answer.reason
               : t('Доступ не выдан.');
             return;
           }
-          chrome.storage.local.set({ [key]: wanted }, () => {
-            status.textContent = t('Сохранено');
-            if (OPTIONAL_HOSTS[key]) refreshPermissions();
-          });
+          saveField(key, wanted);
         });
         return;
       }
-      chrome.storage.local.set({ [key]: wanted }, () => {
-        status.textContent = t('Сохранено');
-        if (OPTIONAL_HOSTS[key]) refreshPermissions();
-      });
+      saveField(key, wanted);
     });
   }
   // Master switches lock the settings that only mean something while they are
@@ -937,6 +955,16 @@ for (const group of FILTERS.PRICE_GROUP_NAMES) {
     paintEuro();
     saveFilters();
   });
+  // A profile written before the EUR box existed can carry "show nothing" as the source and no
+  // EUR key of its own; the model fills that key with its default (on), so on load the box and
+  // the dropdown would disagree — the box ticked, the dropdown blocked and set to "show nothing"
+  // only on paper. The source is what that reader chose, so it wins, and the pair is written back
+  // in step rather than left for the next edit to sort out.
+  if (euroSource.value === 'none' && filters.prices.eur !== false) {
+    filters.prices.eur = false;
+    euroBox.checked = false;
+    saveFilters();
+  }
   paintEuro();
 
   // The rows above were written after the page was localized, so the page is localized

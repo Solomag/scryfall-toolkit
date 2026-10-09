@@ -13,14 +13,23 @@
 // settings page writes, so the two views cannot drift apart; there is one set
 // of values and two ways to reach it.
 (() => {
-  const KEYS = ['darkTheme', 'tags', 'clipboard', 'edhrecUsage', 'cardtraderPrices', 'settingsLanguage'];
-
-  chrome.storage.local.get(Object.fromEntries(KEYS.map(key => [key, null])), values => {
+  // The same defaults the full settings page and the content scripts use. `null` here read every
+  // missing key as off, so on a fresh profile the popup showed Tags and CardClip switched off
+  // while both are on everywhere else — the popup is a view of the same settings, and a view that
+  // invents its own defaults is a second answer to the same question.
+  chrome.storage.local.get({
+    darkTheme: 'auto', tags: true, clipboard: true,
+    edhrecUsage: false, cardtraderPrices: false, settingsLanguage: 'auto'
+  }, values => {
     const language = window.STK_I18N.resolveSettingsLanguage(values.settingsLanguage);
     if (window.STK_I18N) window.STK_I18N.localizeOptions(language);
 
     const theme = document.getElementById('darkTheme');
-    theme.value = ['auto', 'light', 'dark'].includes(values.darkTheme) ? values.darkTheme : 'auto';
+    // Installations that predate the three-way choice stored a boolean: true is the dark theme
+    // the user asked for, false is the light page they were seeing. The full page reads it that
+    // way; the popup showed both as Auto.
+    const storedTheme = values.darkTheme === true ? 'dark' : values.darkTheme === false ? 'light' : values.darkTheme;
+    theme.value = ['auto', 'light', 'dark'].includes(storedTheme) ? storedTheme : 'auto';
 
     for (const id of ['tags', 'clipboard', 'edhrecUsage', 'cardtraderPrices']) {
       const box = document.getElementById(id);

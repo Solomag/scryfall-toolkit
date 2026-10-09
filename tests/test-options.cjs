@@ -434,6 +434,43 @@ function popupTest() {
     'and it asks the browser where it is running before deciding');
 }
 
+// The popup is a view of the same settings as the full page, so it has to read them the same
+// way. It read every missing key as `null`, and `Boolean(null)` is false, so on a fresh profile
+// it showed Tags and CardClip switched off while both are on everywhere else — a view that
+// invents its own defaults is a second answer to the same question.
+async function popupDefaultsTest() {
+  console.log('popup.js: the switches read the same defaults as the full page');
+  const fresh = createPage({
+    url: 'chrome-extension://scryfall-toolkit/popup.html',
+    html: read('src/ui/popup.html'),
+    state: {}
+  });
+  fresh.script('src/core/i18n.js');
+  fresh.script('src/ui/popup.js');
+  await tick();
+  const q = id => fresh.document.getElementById(id);
+  assertEqual([q('tags').checked, q('clipboard').checked], [true, true],
+    'on a fresh profile the popup shows the features that are on by default as on');
+  assertEqual([q('edhrecUsage').checked, q('cardtraderPrices').checked], [false, false],
+    'and the optional ones as off');
+  assertEqual(q('darkTheme').value, 'auto', 'and the theme as Auto');
+
+  // An old boolean theme is read the way the full page reads it, not as Auto; and a feature the
+  // reader actually turned off still shows as off.
+  const older = createPage({
+    url: 'chrome-extension://scryfall-toolkit/popup.html',
+    html: read('src/ui/popup.html'),
+    state: { darkTheme: true, tags: false }
+  });
+  older.script('src/core/i18n.js');
+  older.script('src/ui/popup.js');
+  await tick();
+  assertEqual(older.document.getElementById('darkTheme').value, 'dark',
+    'a stored boolean dark theme shows as Dark');
+  assertEqual(older.document.getElementById('tags').checked, false,
+    'and a feature the reader turned off shows as off');
+}
+
 // The settings language follows the browser. Russian, Belarusian and Ukrainian
 // get the Russian interface; everything else gets English rather than a page
 // that is neither.
@@ -1866,6 +1903,51 @@ async function hidingGroupTest() {
   assertEqual([euroBox.checked, mock.state.setFilters.prices.eur], [true, true],
     'while any real source ticks it back, since a column that is filled is a column that is there');
 
+  // A profile from before the EUR box existed: the source says "show nothing" and there is no
+  // EUR key of its own, so the model fills that key with its default (on). On load the source
+  // wins and the pair is written back in step, rather than the box reading ticked while the
+  // dropdown says the column is gone.
+  const legacyEuro = await groupReady(loadOptions({
+    settingsLanguage: 'en',
+    euroPriceSources: 'none',
+    setFiltersMigrated: true,
+    setFilters: {
+      platforms: {
+        paper: { show: true, areas: { prints: true, search: true, sets: true } },
+        arena: { show: true, areas: { prints: true, search: true, sets: true } },
+        mtgo: { show: true, areas: { prints: true, search: true, sets: true } }
+      },
+      prices: { usd: true, tix: true, tcg: true, cardhoarder: true, cardmarket: true },
+      tokens: true, showCaster: true, showStores: true
+    }
+  }));
+  assertEqual(legacyEuro.document.getElementById('price-eur').checked, false,
+    'a source of "show nothing" with no EUR key of its own loads with the box cleared');
+  assertEqual(legacyEuro.document.getElementById('euroPriceSources').value, 'none',
+    'and the dropdown still says so');
+  assertEqual(legacyEuro.document.getElementById('euroPriceSources').disabled, true,
+    'and is blocked, because the column is off');
+  assertEqual(legacyEuro.mock.state.setFilters.prices.eur, false,
+    'and the pair is written back in step');
+
+  // A refused permission rolls the dropdown back to what storage holds, not to what the page
+  // opened with: cm → both (stored), then both → ct refused, has to leave both.
+  const denied = await groupReady(loadOptions({ settingsLanguage: 'en', euroPriceSources: 'cm' }));
+  const deniedSource = denied.document.getElementById('euroPriceSources');
+  deniedSource.value = 'both';
+  fireEvent(deniedSource, 'change');
+  await tick();
+  await tick();
+  assertEqual(denied.mock.state.euroPriceSources, 'both', 'a granted source is stored');
+  denied.mock.permissions.deny = true;
+  deniedSource.value = 'ct';
+  fireEvent(deniedSource, 'change');
+  await tick();
+  await tick();
+  assertEqual(deniedSource.value, 'both',
+    'a refused source rolls back to the last one stored, not to the one the page opened with');
+  assertEqual(denied.mock.state.euroPriceSources, 'both', 'and storage is unchanged');
+
   // The Caster marker. Its old switch read "hide" and this one reads "show", so the stored key
   // was renamed rather than inverted in place — the rename is what lets the migration tell the
   // two senses apart, and a rename that were done as a bare inversion would flip the marker for
@@ -2325,19 +2407,32 @@ async function hostAccessTest() {
   assert(!document.getElementById('grantDeckHosts'),
     'and there is no separate "grant host access" button: the row is where it is asked for');
 
-  // A refusal must be read, or Chrome prints it as unchecked.
+  // Turning a feature *off* asks for nothing. It used to ask for the host on the way out, so a
+  // reader who wanted to stop using an integration was asked to grant it access first — and a
+  // refusal put the switch back on, which meant the feature could not be turned off at all.
+  mock.permissions.requestCount = 0;
+  const usageBox = document.getElementById('edhrecUsage');
+  assert(usageBox.checked === true, 'the feature under test starts switched on');
+  usageBox.checked = false;
+  fireEvent(usageBox, 'change');
+  await tick();
+  await tick();
+  assertEqual(mock.permissions.requestCount, 0,
+    'turning a feature off asks for no host at all');
+  assertEqual(mock.state.edhrecUsage, false, 'and the switch is saved off');
+
+  // A refusal must be read, or Chrome prints it as unchecked. A feature that is off and is
+  // turned on asks for its host; the refusal goes back and the switch reverts.
   mock.permissions.unchecked.length = 0;
   mock.permissions.refuseWith = 'This function must be called during a user gesture';
-  const prices = document.getElementById('cardtraderPrices');
-  assert(prices.checked === false, 'the feature under test starts switched off');
-  prices.checked = true;
-  fireEvent(prices, 'change');
+  usageBox.checked = true;
+  fireEvent(usageBox, 'change');
   await tick();
   await tick();
   assertEqual(mock.permissions.unchecked, [],
     'a refused request is read through chrome.runtime.lastError, so nothing is printed');
-  assert(prices.checked === false, 'and the switch goes back rather than looking switched on');
-  assert(mock.state.cardtraderPrices !== true, 'and nothing was saved as if it had worked');
+  assert(usageBox.checked === false, 'and the switch goes back rather than looking switched on');
+  assert(mock.state.edhrecUsage !== true, 'and nothing was saved as if it had worked');
   assert(/не дал спросить|would not let/.test(status.textContent),
     'saying the browser would not ask, which is not the reader saying no (' +
       status.textContent.slice(0, 60) + ')');
@@ -2511,6 +2606,23 @@ async function cardtraderRowTest() {
   assertEqual(mock.state.cardtraderPrices, false,
     'and the switch is put back off, because a feature that cannot reach anything is not on');
 
+  // A profile that had the feature on, loses its token, and gets a new one. The reader's answer
+  // went with the token: the box is drawn from that answer, and it used to outlive the removal,
+  // so a fresh token redrew the box ticked against a stored off.
+  const reconnect = await groupReady(loadOptions({ cardtraderToken: 'ct-old', cardtraderPrices: true }));
+  const rd = reconnect.document;
+  const rq = id => rd.getElementById(id);
+  assertEqual(rq('cardtraderPrices').checked, true, 'with a token and the feature on, the box is on');
+  rq('removeToken').click();
+  await tick();
+  rq('cardtraderToken').value = 'ct-new';
+  rq('saveToken').click();
+  await tick();
+  assertEqual(reconnect.mock.state.cardtraderPrices, false,
+    'a new token does not bring back a switch the reader turned off');
+  assertEqual(rq('cardtraderPrices').checked, false,
+    'and the box is not drawn ticked against a stored off');
+
   // And the second thing the box is drawn from: the block its links go in. CardTrader adds a
   // link to the "Buy This Card" block, so with that block hidden there is nowhere for the link
   // to be — the box is emptied and taken out of reach like the three shops beside it, and what
@@ -2545,6 +2657,7 @@ async function cardtraderRowTest() {
     switchStyleTest();
     sectionOrderTest();
     popupTest();
+    await popupDefaultsTest();
     await optionalHostsTest();
     await hostAccessTest();
     await lastPlatformTest();

@@ -559,6 +559,35 @@ async function cardPageTest() {
   assert(aside.querySelector('.stk-count').hidden, 'badge hidden for an empty clipboard');
 }
 
+// The page-world deck modules talk to the worker through the window, and the content script is
+// the only side that can reach it. The check that a message came "from this window" cannot tell
+// our module from any other script running on the page, so the list of names is what limits it —
+// and the payload must not be able to replace the type through the spread.
+async function bridgeRequestTest() {
+  console.log('content scripts: the page bridge only forwards the deck modules\' requests');
+  const page = await loadCardPage({ cards: [] });
+  const { mock } = page;
+  // The harness delivers a window message from this window, which is what the page-world module
+  // sends — and what any other script on the page could send too, which is the point.
+  const post = (name, value) => page.context.postMessage({
+    channel: 'scryfall-toolkit', version: 1, source: 'page', type: 'request',
+    value: { id: 'r-' + name, name, value }
+  });
+  const before = mock.sentMessages.length;
+  // A name the deck modules do not use is refused, even when the payload names a real worker
+  // request — this is how page code could reach any request before.
+  post('card', { type: 'edhrecRecs', commanders: ['Tameshi'], cards: ['1 Counterspell'] });
+  await sleep(20);
+  assertEqual(mock.sentMessages.slice(before), [],
+    'a name outside the deck modules\' list is not forwarded, whatever the payload says');
+  // And a name they do use is forwarded, with the type the bridge chose.
+  post('cardImages', { ids: ['11111111-1111-4111-8111-111111111111'] });
+  await sleep(20);
+  const sent = mock.sentMessages.slice(before);
+  assertEqual(sent.length, 1, 'a request the deck modules make is forwarded');
+  assertEqual(sent[0].type, 'cardImages', 'with the type the bridge set, not one from the payload');
+}
+
 async function searchPageTest() {
   console.log('content scripts: search page');
   const html = `<!DOCTYPE html><html><body><div id="main" class="card-grid">
@@ -1289,6 +1318,7 @@ async function setsIndexPlatformTest() {
     clipboardFormatTest();
     await setsIndexPlatformTest();
     await cardPageTest();
+    await bridgeRequestTest();
     await searchPageTest();
     await clipboardDisabledTest();
     await legacyMigrationTest();

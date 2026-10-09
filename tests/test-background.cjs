@@ -429,6 +429,45 @@ async function edhrecThrottleTest() {
   assert(spread >= 2000, 'the queued request sees the hold the 429 set (' + spread + 'ms)');
 }
 
+// A 429 holds every Scryfall queue for thirty seconds, and the call that caused it has to wait
+// with them rather than slipping past to fetch again at once — which is what it did, on the one
+// request that needed the pause most.
+//
+// This runs last, on purpose. It leaves the thirty-second hold in the worker's own lexical state
+// (a `let` in the vm is not a property of the context, so it cannot be reset from here), and any
+// request after it would sit behind a hold that never expires.
+async function scryfallHoldTest() {
+  console.log('background.js: a 429 holds the retry back with the queue');
+  const realFetch = ctx.fetch;
+  const realSetTimeout = ctx.setTimeout;
+  const delays = [];
+  let attempts = 0;
+  ctx.fetch = async url => {
+    const target = String(url);
+    if (/\/cards\/[0-9a-f-]+$/.test(target)) {
+      attempts += 1;
+      if (attempts === 1) return { ok: false, status: 429, json: async () => ({}) };
+      return jsonResponse(SCRYFALL_CARD);
+    }
+    return realFetch(url);
+  };
+  // Record the length the worker asks its timers to wait, and never let the wait finish: the
+  // point is what it asked for, and a timer that ran at once without moving the clock would send
+  // the retry round the loop again for ever.
+  ctx.setTimeout = (fn, ms) => { delays.push(ms); return realSetTimeout(() => {}, 0); };
+  try {
+    send({ type: 'card', id: CARD_ID }).catch(() => {});
+    await new Promise(resolve => realSetTimeout(resolve, 20));
+  } finally {
+    ctx.setTimeout = realSetTimeout;
+    ctx.fetch = realFetch;
+  }
+  assert(attempts >= 1, 'the request reached the card endpoint');
+  assert(delays.some(ms => ms >= 30000),
+    'and the 429 makes the retry ask to wait the thirty-second hold instead of fetching again ' +
+    'at once (' + JSON.stringify(delays) + ')');
+}
+
 (async () => {
   try {
     console.log('background.js: registration');
@@ -682,6 +721,32 @@ async function edhrecThrottleTest() {
       const elapsed = Date.now() - started;
       assert(elapsed >= 2 * 500,
         'three card requests are spread across their slots, not fired together (' + elapsed + 'ms)');
+    }
+    {
+      // Two decks of the same size led by the same commander are two decks. The in-flight key
+      // used to be the commanders and the *number* of cards, so they coalesced into one request
+      // and the second reader got the first deck's suggestions.
+      const posted = [];
+      const realFetch = ctx.fetch;
+      ctx.fetch = async (url, init) => {
+        if (String(url) === 'https://edhrec.com/api/recs/') {
+          posted.push(JSON.parse((init && init.body) || '{}'));
+          return jsonResponse({ inRecs: [], outRecs: [] });
+        }
+        return realFetch(url, init);
+      };
+      try {
+        await Promise.all([
+          send({ type: 'edhrecRecs', commanders: ['Tameshi, Reality Architect'], cards: ['1 Counterspell'] }, undefined, 6000),
+          send({ type: 'edhrecRecs', commanders: ['Tameshi, Reality Architect'], cards: ['1 Sol Ring'] }, undefined, 6000)
+        ]);
+      } finally {
+        ctx.fetch = realFetch;
+      }
+      assertEqual(posted.length, 2,
+        'two decks of the same size and commander are two requests, not one');
+      assertEqual(posted.map(body => body.cards.join(',')).sort(), ['1 Counterspell', '1 Sol Ring'],
+        'and each request carries its own deck list');
     }
 
 
@@ -981,6 +1046,7 @@ console.log('background.js: allPrints message');
     assert(fetchLog.includes('https://data.scryfall.io/bulk/art-tags.json'), 'art bulk file downloaded');
 
     await edhrecThrottleTest();
+    await scryfallHoldTest();
     summary('test-background');
     process.exit(0);
   } catch (error) {

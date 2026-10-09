@@ -71,9 +71,26 @@
     const wantEdhrec = Boolean(s.edhrecSuggestions);
     const wantSearch = Boolean(s.deckSearch);
 
+    // A module that is on is applied; a module that is off is disabled, so anything it already
+    // put on the page comes off. Reporting `off: true` while the wrapped clean up button and the
+    // two toolbar buttons were still there was the page saying one thing and doing another: the
+    // settings page and the diagnostics both read "off" while the editor kept changing the deck.
+    const setModule = (module, wanted) => {
+      if (!module) return;
+      try {
+        if (wanted) module.apply(s);
+        else module.disable?.();
+      } catch (error) {
+        reportStatus({ problems: ['a deck module threw while being set: ' + (error && error.message || error)] });
+      }
+    };
+
     if (!wantCleanUp && !wantEdhrec && !wantSearch) {
       // Nothing is on. The hooks are deliberately not installed: a setting
       // that is off should leave Scryfall's own objects alone.
+      setModule(self.STK_DECK_CLEANUP, false);
+      setModule(self.STK_DECK_EDHREC, false);
+      setModule(self.STK_DECK_SEARCH, false);
       reportStatus({ off: true });
       return;
     }
@@ -85,9 +102,9 @@
     }
 
     adapter.install();
-    if (wantCleanUp && self.STK_DECK_CLEANUP) self.STK_DECK_CLEANUP.apply(s);
-    if (wantEdhrec && self.STK_DECK_EDHREC) self.STK_DECK_EDHREC.apply(s);
-    if (wantSearch && self.STK_DECK_SEARCH) self.STK_DECK_SEARCH.apply(s);
+    setModule(self.STK_DECK_CLEANUP, wantCleanUp);
+    setModule(self.STK_DECK_EDHREC, wantEdhrec);
+    setModule(self.STK_DECK_SEARCH, wantSearch);
     reportStatus();
   }
 

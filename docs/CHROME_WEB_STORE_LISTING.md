@@ -1,4 +1,4 @@
-# Chrome Web Store listing — Scryfall Toolkit 1.7.11
+# Chrome Web Store listing — Scryfall Toolkit 1.7.12
 
 Everything here is written from the shipped code, so that the answers given in the store
 console match what the extension actually does. Where a field needs a decision from the
@@ -107,8 +107,10 @@ public record that do not appear in the first. When the version below is submitt
 tag goes with it, and that is what makes the claim on the store's source line true of the
 build the reviewer is looking at.
 
-**Version to submit:** 1.2.0 (`manifest.json`, `package.json`, `package-lock.json` and the
-title of this file all say so, and a check fails if they ever say different things).
+**Version to submit:** the one in `manifest.json`, `package.json` and `package-lock.json`, which
+is also the title of this file. Those four are kept in step by a check; this line deliberately
+carries no number of its own, because it once said 1.2.0 while everything else had moved on and
+nothing looked at it.
 
 **Category:** Tools
 

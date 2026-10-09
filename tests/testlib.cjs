@@ -128,15 +128,21 @@ function createChrome(options = {}) {
     sendMessage(message, callback) {
       sentMessages.push(message);
       const route = routes[message.type];
-      Promise.resolve()
+      const answer = Promise.resolve()
         .then(() => {
           if (!route) throw new Error(`Unhandled message type: ${message.type}`);
           return route(message);
         })
         .then(
-          data => callback({ ok: true, data }),
-          error => callback({ ok: false, error: (error && error.message) || String(error) })
+          data => ({ ok: true, data }),
+          error => ({ ok: false, error: (error && error.message) || String(error) })
         );
+      // Chrome answers either through a callback or as a promise, whichever the caller asked
+      // for. The bridge in the content script uses the promise form, so this has to return one
+      // when there is no callback — a mock that only ever called back made the bridge read
+      // `.then` off undefined.
+      if (typeof callback === 'function') { answer.then(callback); return undefined; }
+      return answer;
     },
     onMessage: { addListener: fn => messageListeners.push(fn) },
     onInstalled: { addListener: fn => installedListeners.push(fn) },
@@ -338,7 +344,12 @@ function createPage(options) {
     // registered listeners from this window. A real window queues these as
     // tasks; delivering straight away is close enough for what is checked.
     postMessage: data => {
-      for (const listener of windowListeners.message || []) listener({ source: context, data });
+      // The source has to be the window the listener will compare against, which is the value
+      // `window` has *inside* the context — the sandbox object and the context's own global are
+      // not the same object, and a content script that checks `event.source !== window` would
+      // reject a message that came from its own window.
+      const source = vm.runInContext('window', context);
+      for (const listener of windowListeners.message || []) listener({ source, data });
     },
     HTMLElement: window.HTMLElement,
     Element: window.Element,

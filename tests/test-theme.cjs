@@ -721,10 +721,12 @@ async function darkThemeRuntime() {
     state: {
       darkTheme: true,
       settingsLanguage: 'ru',
+      setFiltersMigrated: true,
       setFilters: { showCaster: false }
     }
   });
-  page.script('src/core/i18n.js');
+  page.script('src/core/set-filters.js');
+page.script('src/core/i18n.js');
 page.script('src/core/theme.js');
   await sleep(40);
   const { document, mock } = page;
@@ -739,19 +741,36 @@ page.script('src/core/theme.js');
   assertEqual(document.querySelector('.prints-table thead th').textContent, 'Легально',
     'RU site language translates Scryfall table headers');
 
-  // A reader on the older shape, whose value has no `showCaster` at all: there `undefined`
-  // means "shown", which is what the old flat `false` meant too. Reading it as anything else
-  // would hide the marker for everyone who never touched the switch.
+  // A reader on the older shape, whose value has no Caster key at all: `undefined` means
+  // "shown", which is what the old flat `false` meant too. Reading it as anything else would
+  // hide the marker for everyone who never touched the switch.
   const older = createPage({
     url: 'https://scryfall.com/',
     html: '<!DOCTYPE html><html><body><div id="main"></div></body></html>',
-    state: { darkTheme: false, settingsLanguage: 'en', setFilters: { platforms: {} } }
+    state: { darkTheme: false, settingsLanguage: 'en', setFiltersMigrated: true, setFilters: { platforms: {} } }
   });
-  older.script('src/core/i18n.js');
+  older.script('src/core/set-filters.js');
+older.script('src/core/i18n.js');
 older.script('src/core/theme.js');
   await sleep(40);
   assert(!older.document.documentElement.classList.contains('stk-hide-caster'),
-    'a stored value from before the rename keeps the marker shown, which is what it had');
+    'a value with no Caster key at all keeps the marker shown, which is what it had');
+
+  // And the shape the raw read got wrong: 1.6.0–1.6.2 stored `caster`, meaning *hide*, and the
+  // theme used to read `showCaster` off the raw object, see `undefined`, and treat it as shown —
+  // the opposite of what the reader chose. Through the model it is hidden, which is the reader's
+  // answer, and this is the first paint after an update, before the page has migrated it.
+  const legacyCaster = createPage({
+    url: 'https://scryfall.com/',
+    html: '<!DOCTYPE html><html><body><div id="main"></div></body></html>',
+    state: { darkTheme: false, settingsLanguage: 'en', setFiltersMigrated: true, setFilters: { caster: true } }
+  });
+  legacyCaster.script('src/core/set-filters.js');
+  legacyCaster.script('src/core/i18n.js');
+  legacyCaster.script('src/core/theme.js');
+  await sleep(40);
+  assert(legacyCaster.document.documentElement.classList.contains('stk-hide-caster'),
+    'a stored `caster: true`, which meant hide, is read as hidden through the model');
 
   mock.fireChanges({
     darkTheme: { newValue: false },
@@ -825,7 +844,8 @@ async function purpleAfterStylesheetTest() {
   assert(!link.classList.contains('stk-brighter-purple'),
     'before the stylesheet arrives there is no dark purple to lift');
 
-  page.script('src/core/i18n.js');
+  page.script('src/core/set-filters.js');
+page.script('src/core/i18n.js');
 page.script('src/core/theme.js');
   await sleep(30);
   assertEqual(page.windowListenerCount('load'), 1,
@@ -846,7 +866,8 @@ async function systemThemeTest() {
     state: {},
     mediaDark: false
   });
-  page.script('src/core/i18n.js');
+  page.script('src/core/set-filters.js');
+page.script('src/core/i18n.js');
 page.script('src/core/theme.js');
   await sleep(30);
   const root = page.document.documentElement;
@@ -863,7 +884,8 @@ page.script('src/core/theme.js');
     state: { darkTheme: 'light' },
     mediaDark: true
   });
-  pinned.script('src/core/i18n.js');
+  pinned.script('src/core/set-filters.js');
+pinned.script('src/core/i18n.js');
 pinned.script('src/core/theme.js');
   await sleep(30);
   assert(!pinned.document.documentElement.classList.contains('stk-dark'),
@@ -885,7 +907,8 @@ async function pathClasses() {
       html: '<!DOCTYPE html><html><body><div id="main"></div></body></html>',
       state: {}
     });
-    page.script('src/core/i18n.js');
+    page.script('src/core/set-filters.js');
+page.script('src/core/i18n.js');
 page.script('src/core/theme.js');
     for (const cls of expected) {
       assert(page.document.documentElement.classList.contains(cls),
@@ -903,7 +926,8 @@ page.script('src/core/theme.js');
     html: '<!DOCTYPE html><html><body><div class="app-wrapper"></div></body></html>',
     state: {}
   });
-  tagger.script('src/core/i18n.js');
+  tagger.script('src/core/set-filters.js');
+tagger.script('src/core/i18n.js');
 tagger.script('src/core/theme.js');
   assert(tagger.document.documentElement.classList.contains('stk-tagger'), 'Tagger host is marked stk-tagger');
   for (const cls of ['stk-account-page', 'stk-info-page', 'stk-team-page', 'stk-bots-page', 'stk-blog-page']) {
@@ -914,7 +938,8 @@ tagger.script('src/core/theme.js');
     html: '<!DOCTYPE html><html><body><div id="main"></div></body></html>',
     state: {}
   });
-  mainSite.script('src/core/i18n.js');
+  mainSite.script('src/core/set-filters.js');
+mainSite.script('src/core/i18n.js');
 mainSite.script('src/core/theme.js');
   assert(!mainSite.document.documentElement.classList.contains('stk-tagger'), 'Scryfall itself is not marked as Tagger');
 }

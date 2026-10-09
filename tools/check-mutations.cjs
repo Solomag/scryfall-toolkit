@@ -51,6 +51,8 @@ const TARGETS = {
   optionsCss: path.join(ROOT, 'src/ui/options.css'),
   optionsHtml: path.join(ROOT, 'src/ui/options.html'),
   deck: path.join(ROOT, 'src/card-page/deck-lists.js'),
+  bridge: path.join(ROOT, 'src/deck-page/bridge.js'),
+  popup: path.join(ROOT, 'src/ui/popup.js'),
   worker: path.join(ROOT, 'src/background/worker.js')
 };
 const before = {};
@@ -239,10 +241,8 @@ const MUTATIONS = [
     name: 'the Caster class is toggled from the marker key without the inversion',
     file: 'theme',
     run: 'test-theme',
-    find: 'document.documentElement.classList.toggle(\'stk-hide-caster\',\n' +
-      '    !(changes.setFilters.newValue?.showCaster !== false));',
-    replace: 'document.documentElement.classList.toggle(\'stk-hide-caster\',\n' +
-      '    changes.setFilters.newValue?.showCaster !== false);',
+    find: '  document.documentElement.classList.toggle(\'stk-hide-caster\', next.showCaster === false);',
+    replace: '  document.documentElement.classList.toggle(\'stk-hide-caster\', next.showCaster !== false);',
     expect: 'storage change restores caster indicator'
   },
   {
@@ -679,6 +679,88 @@ const MUTATIONS = [
     replace: '      if (problems.length) {',
     expect: 'and the expected non-attachment is not listed under "what is wrong"'
   },
+  {
+    // Turning a feature off asking for its host: the interface demanding access in order to stop
+    // using the thing the access is for, and a refusal putting the switch back on.
+    name: 'turning a feature off still asks for its host',
+    file: 'options',
+    run: 'test-options',
+    find: '  return value ? (OPTIONAL_HOSTS[key] || []) : [];',
+    replace: '  return OPTIONAL_HOSTS[key] || [];',
+    expect: 'turning a feature off asks for no host at all'
+  },
+  {
+    // A feature that is off leaving its effect on the page: the wrapped clean up button and the
+    // two toolbar buttons stayed after the setting said off.
+    name: 'a feature that is off leaves its effect on the page',
+    file: 'bridge',
+    run: 'test-deck-modules',
+    find: '        else module.disable?.();',
+    replace: '        else void module;',
+    expect: 'turning the feature off takes the EDHREC button away'
+  },
+  {
+    // The in-flight key as a summary of the payload, so two decks of the same size and commander
+    // coalesce into one request.
+    name: 'two different decks coalesce into one EDHREC request',
+    file: 'worker',
+    run: 'test-background',
+    find: "  const key = 'RECS:' + JSON.stringify([[...commanders].sort(), [...cards].sort()]);",
+    replace: "  const key = 'RECS:' + commanders.join('|') + '#' + cards.length;",
+    expect: 'two decks of the same size and commander are two requests, not one'
+  },
+  {
+    // A profile from before the EUR box, loaded with the box ticked and the dropdown blocked.
+    name: 'the EUR pair is not reconciled on load',
+    file: 'options',
+    run: 'test-options',
+    find: '  if (euroSource.value === \'none\' && filters.prices.eur !== false) {\n' +
+      '    filters.prices.eur = false;\n' +
+      '    euroBox.checked = false;\n' +
+      '    saveFilters();\n' +
+      '  }',
+    replace: '',
+    expect: 'a source of "show nothing" with no EUR key of its own loads with the box cleared'
+  },
+  {
+    // CardTrader's own copy of the reader's answer outliving the token, so a new token redraws
+    // the box ticked against a stored off.
+    name: 'CardTrader keeps wanting the feature after the token is removed',
+    file: 'options',
+    run: 'test-options',
+    find: '      cardtraderWanted = false;\n',
+    replace: '',
+    expect: 'a new token does not bring back a switch the reader turned off'
+  },
+  {
+    // The popup inventing its own defaults, so a fresh profile shows the features that are on
+    // everywhere else as off.
+    name: 'the popup reads missing settings as off',
+    file: 'popup',
+    run: 'test-options',
+    find: "    darkTheme: 'auto', tags: true, clipboard: true,",
+    replace: "    darkTheme: 'auto', tags: null, clipboard: null,",
+    expect: 'on a fresh profile the popup shows the features that are on by default as on'
+  },
+  {
+    // The theme reading the raw marker key, so an old `caster` value is read as shown.
+    name: 'the theme reads the Caster marker off the raw key',
+    file: 'theme',
+    run: 'test-theme',
+    find: '    window.STK_SET_FILTERS.read({ setFilters, setFiltersMigrated }).filters.showCaster !== false;',
+    replace: '    setFilters?.showCaster !== false;',
+    expect: 'a stored `caster: true`, which meant hide, is read as hidden through the model'
+  },
+  {
+    // The bridge accepting any request name, so page code can reach worker requests the deck
+    // modules do not use.
+    name: 'the page bridge forwards any request name',
+    file: 'core',
+    run: 'test',
+    find: '      if (typeof name !== \'string\' || !BRIDGE_REQUESTS.has(name)) return reply(false, \'Unknown request\');',
+    replace: '      if (!/^[a-zA-Z]+$/.test(String(name))) return reply(false, \'Unknown request\');',
+    expect: 'a name outside the deck modules\' list is not forwarded'
+  },
 ];
 
 const RUNS = {
@@ -688,6 +770,7 @@ const RUNS = {
   'test-background': () => [path.join(ROOT, 'tests/test-background.cjs')],
   'test-model': () => [path.join(ROOT, 'tests/test-set-filters.cjs')],
   'test-options': () => [path.join(ROOT, 'tests/test-options.cjs')],
+  'test-deck-modules': () => [path.join(ROOT, 'tests/test-deck-modules.cjs')],
   'test-theme': () => [path.join(ROOT, 'tests/test-theme.cjs')],
   };
 

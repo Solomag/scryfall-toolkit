@@ -184,18 +184,6 @@
     });
   }
 
-  function addDeckTotalUpdateListener(sortChoice) {
-    scryfall.on('deck-total-count-updated', data => {
-      updateTotalsInHeadings(data.totalCount);
-      const db = deckbuilder();
-      if (!db) return;
-      db.flatSections.forEach(section => {
-        if (!(section in SECTIONS_WITH_HEADINGS)) return;
-        updateSubTotalsInHeadings(section, sortChoice);
-      });
-    });
-  }
-
   // --- wiring it to the clean up button -------------------------------------
 
   const SORTERS = {
@@ -203,43 +191,68 @@
     name: () => tools.sortByName()
   };
 
-  function modifyCleanUp(config) {
+  // The configuration in force right now. The wrapped button and the two handlers read it on
+  // every call rather than capturing it when the module was first applied: capturing it meant a
+  // changed sort, or a feature switched off, did not take effect until the page reloaded — while
+  // the settings page and the diagnostics both said it had. `null` means the feature is off.
+  let liveConfig = null;
+  let installed = false;
+  const headings = {};
+
+  function sortChoiceOf() {
+    const choice = liveConfig && liveConfig.sortEntriesPrimary;
+    return choice && SORTERS[choice] ? choice : null;
+  }
+
+  // Wrapped once, so turning the setting off and on again does not stack wrappers. The hooks are
+  // installed here rather than left to whoever calls this: a module should not depend on its
+  // caller having prepared Scryfall for it.
+  function install() {
     const db = deckbuilder();
     if (!db || typeof db.cleanUp !== 'function') {
       scryfall.report('Scryfall.deckbuilder.cleanUp is not available');
       return false;
     }
+    if (installed) return true;
+    installed = true;
 
-    const sortChoice = config.sortEntriesPrimary;
-    const sorter = sortChoice && SORTERS[sortChoice] ? SORTERS[sortChoice]() : null;
-
-    if (sorter) {
-      const headings = {};
-      if (config.insertSortingHeadings) addDeckTotalUpdateListener(sortChoice);
-
-      scryfall.on('deck-entries-updated', () => {
-        const target = deckbuilder();
-        if (!target) return;
-        target.flatSections.forEach(section => {
-          if (Array.isArray(target.entries[section])) target.entries[section].sort(sorter);
-        });
-        if (typeof target.$forceUpdate === 'function') {
-          try {
-            target.$forceUpdate();
-          } catch (error) {
-            scryfall.report('deckbuilder.$forceUpdate threw', error);
-          }
-        }
-        if (config.insertSortingHeadings) insertHeadings(sortChoice, headings);
+    scryfall.on('deck-entries-updated', () => {
+      const choice = sortChoiceOf();
+      if (!choice) return;
+      const sorter = SORTERS[choice]();
+      const target = deckbuilder();
+      if (!target) return;
+      target.flatSections.forEach(section => {
+        if (Array.isArray(target.entries[section])) target.entries[section].sort(sorter);
       });
-    }
+      if (typeof target.$forceUpdate === 'function') {
+        try {
+          target.$forceUpdate();
+        } catch (error) {
+          scryfall.report('deckbuilder.$forceUpdate threw', error);
+        }
+      }
+      if (liveConfig.insertSortingHeadings) insertHeadings(choice, headings);
+    });
+
+    scryfall.on('deck-total-count-updated', data => {
+      if (!liveConfig || !liveConfig.insertSortingHeadings) return;
+      updateTotalsInHeadings(data.totalCount);
+      const choice = sortChoiceOf();
+      const target = deckbuilder();
+      if (!choice || !target) return;
+      target.flatSections.forEach(section => {
+        if (!(section in SECTIONS_WITH_HEADINGS)) return;
+        updateSubTotalsInHeadings(section, choice);
+      });
+    });
 
     const original = db.cleanUp;
     db.cleanUp = function () {
       const args = arguments;
       const scope = this;
       return scryfall.getDeck().then(deck => {
-        if (config.cleanUpLandsInSingleton) return correctLandNonLandColumns(deck);
+        if (liveConfig && liveConfig.cleanUpLandsInSingleton) return correctLandNonLandColumns(deck);
       }).catch(error => {
         scryfall.report('reading the deck before clean up threw', error);
       }).then(() => original.apply(scope, args));
@@ -249,35 +262,48 @@
 
   // --- the outside interface ------------------------------------------------
 
-  let applied = false;
-
   function wanted(config) {
     return Boolean(config.cleanUpLandsInSingleton) ||
       Boolean(config.sortEntriesPrimary && config.sortEntriesPrimary !== 'none');
   }
+
+  // Whether the module is actually acting: the button is wrapped, the feature is on, and it has
+  // something to do. `wanted` alone is not enough — a page with no Scryfall on it wants the
+  // feature and cannot have it, and reporting "applied" there is what the fail-soft posture is
+  // meant to avoid.
+  const isApplied = () => installed && Boolean(liveConfig && wanted(liveConfig));
 
   function apply(config) {
     config = config || {};
     if (!tools || !scryfall) {
       return { applied: false, problems: ['the deck modules did not load in order'] };
     }
-    // The clean up button is wrapped once, so turning the setting off and on
-    // again does not stack wrappers. The hooks are installed here rather than
-    // left to whoever calls this: a module should not depend on its caller
-    // having prepared Scryfall for it.
-    if (!applied && wanted(config)) {
+    liveConfig = config;
+    if (wanted(config)) {
       scryfall.install();
       try {
-        applied = modifyCleanUp(config) === true;
+        install();
       } catch (error) {
         scryfall.report('wiring the clean up button failed', error);
+        installed = false;
       }
     }
-    return { applied: applied, problems: scryfall.status().problems };
+    return { applied: isApplied(), problems: scryfall.status().problems };
+  }
+
+  // The feature turned off: nothing of ours acts on the deck again. The wrapper and the handlers
+  // stay installed — the adapter has no way to remove one — but they read `liveConfig`, and with
+  // it null they only call Scryfall's own clean up. The headings this module drew are taken away
+  // so the table is Scryfall's again.
+  function disable() {
+    liveConfig = null;
+    Object.keys(headings).forEach(section => resetPreviousHeadings(headings, section));
+    resetDefaultHeadings();
   }
 
   self.STK_DECK_CLEANUP = {
     apply: apply,
-    status: () => ({ applied: applied, problems: scryfall ? scryfall.status().problems : [] })
+    disable: disable,
+    status: () => ({ applied: isApplied(), problems: scryfall ? scryfall.status().problems : [] })
   };
 })();

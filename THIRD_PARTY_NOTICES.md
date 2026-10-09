@@ -304,10 +304,10 @@ GET https://api.cardtrader.com/api/v2/products     → 401
 
 So the data is public in the sense that any account may read it — CardTrader's support said as
 much, below — but it is an account-bound API, and the account is the user's own. The extension
-asks for no token, stores none, and sends none; the CardTrader price source stays off until the
-user supplies a token they got themselves, and without one the background refuses the request
-rather than calling out and being turned away. The token is what makes the request; it is not a
-redistribution of anything.
+has no token of its own and asks for none. It stores the user's own token, in the browser, and
+sends it only to CardTrader's API; the price source stays off until the user supplies that token,
+and without one the background refuses the request rather than calling out and being turned away.
+The token is what makes the request; it is not a redistribution of anything.
 
 ### Their answer on the API
 

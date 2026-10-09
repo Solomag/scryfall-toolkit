@@ -234,26 +234,41 @@
     host.appendChild(button);
   }
 
-  let wired = false;
+  let wired = false;      // the feature is on, so the button belongs on the page
+  let watching = false;   // the elementReady handlers are registered
 
   function apply(config) {
     config = config || {};
     if (!scryfall || !bridge() || !results) {
       return { applied: false, problems: ['the deck modules did not load in order'] };
     }
-    if (!wired && config.deckSearch) {
+    if (config.deckSearch) {
       wired = true;
       edhrecAllowed = Boolean(config.edhrecSuggestions);
-      // Either of these can land first; adding the button is idempotent, so
-      // both are waited for rather than guessing which comes first.
-      scryfall.elementReady('.deckbuilder-toolbar', addButton);
-      scryfall.elementReady('.deckbuilder-toolbar-items-right', addButton);
+      if (!watching) {
+        watching = true;
+        // Either of these can land first; adding the button is idempotent, so both are waited
+        // for rather than guessing which comes first. The handler checks `wired`, so a feature
+        // turned off does not put the button back when a late element arrives.
+        const tryAdd = () => { if (wired) addButton(); };
+        scryfall.elementReady('.deckbuilder-toolbar', tryAdd);
+        scryfall.elementReady('.deckbuilder-toolbar-items-right', tryAdd);
+      }
+      addButton();
     }
     return { applied: wired, problems: scryfall.status().problems };
   }
 
+  // The feature turned off: take the button away. The element handlers stay registered — the
+  // adapter has no way to remove one — but they do nothing while `wired` is false.
+  function disable() {
+    wired = false;
+    document.getElementById('stk-search-button')?.remove();
+  }
+
   self.STK_DECK_SEARCH = {
     apply: apply,
+    disable: disable,
     status: () => ({ applied: wired, problems: scryfall ? scryfall.status().problems : [] })
   };
 })();

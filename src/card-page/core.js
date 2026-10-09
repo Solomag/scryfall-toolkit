@@ -182,7 +182,18 @@
         channel: 'scryfall-toolkit', version: 1, source: 'content', type: 'response',
         value: ok ? { id, value: result } : { id, error: String(result && result.message || result) }
       }, '*');
-      if (!/^[a-zA-Z]+$/.test(String(name))) return reply(false, 'Unknown request');
+      // Only the requests the deck modules actually make cross this bridge. The check that a
+      // message came "from this window" cannot tell our page-world module from any other script
+      // running on the same Scryfall page, so the list of names is what limits it — a regex
+      // over letters let page code reach every worker request, and the payload's spread came
+      // after `type`, so it could replace the type with one of its own. `cardtrader`, which
+      // carries the user's token, is deliberately not here: nothing the deck editor does needs
+      // it, and the card page reaches it through its own script.
+      const BRIDGE_REQUESTS = new Set([
+        'setDeckResultsView', 'cardBySet', 'cardImages', 'cardIdentity',
+        'scryfallSearch', 'edhrecRecs', 'edhrecCommander'
+      ]);
+      if (typeof name !== 'string' || !BRIDGE_REQUESTS.has(name)) return reply(false, 'Unknown request');
       // Which way results are shown is the page's business and this script's to
       // store; it is not a question for the background worker.
       if (name === 'setDeckResultsView') {
@@ -191,7 +202,8 @@
         chrome.storage.local.set({ deckResultsView: view }).catch(() => {});
         return reply(true, view);
       }
-      chrome.runtime.sendMessage({ type: name, ...(value || {}) })
+      // `type` last, so the payload cannot overwrite it.
+      chrome.runtime.sendMessage({ ...(value || {}), type: name })
         .then(result => {
           // The worker answers in an envelope: {ok, data} or {ok, error}. The
           // page modules want the data or the reason, not the wrapper — leaving

@@ -8,6 +8,65 @@ All releases: <https://github.com/Solomag/scryfall-toolkit/releases>
 
 ---
 
+### The release-blocking defects from the pre-release review
+
+A pre-release review of the tree found ten defects. All ten are fixed here. What follows is each,
+and what it was.
+
+**A 429 repeated at once.** After Scryfall answered 429, the worker set the thirty-second hold on
+every queue and then fetched the same URL again immediately, bypassing the wait — the comment and
+the documentation promised a pause the code did not take on the one request that needed it most.
+The retry now goes through the same wait as every other call, and it is limited to one.
+
+**Turning a feature off asked for its host.** `optionalHostsFor` returned a feature's hosts
+whatever the switch said, so unticking EDHREC or CardTrader asked for the access, and refusing put
+the switch back on: the feature could not be turned off. Turning a feature off now asks for
+nothing and saves the off.
+
+**A feature that was off kept acting.** The bridge reported `off: true` while the wrapped clean up
+button and the two toolbar buttons were still there — the settings page and the diagnostics read
+"off" while the editor kept changing the deck. Each module has a `disable()` now, and the bridge
+calls it when the feature is off; the wrapped button and the handlers read the current settings
+rather than the ones they were installed with, so a changed sort takes effect too.
+
+**Two different decks coalesced into one EDHREC request.** The in-flight key was the commanders and
+the *number* of cards, so two decks of the same size led by the same commander were one request and
+the second reader got the first deck's suggestions. The key carries the whole payload now.
+
+**The EUR box and its source disagreed on load, and a refused source rolled back to the wrong
+value.** A profile from before the EUR box carried "show nothing" with no EUR key of its own, and
+the model filled that key with its default (on); the source wins now and the pair is written back
+in step. And a refused permission rolls the dropdown back to the last value stored, not to whatever
+the page opened with.
+
+**A new CardTrader token redrew the switch against a stored off.** The reader's answer outlived the
+token's removal, so reconnecting turned the box back on. It goes with the token now.
+
+**The popup invented its own defaults.** It read every missing key as `null`, and `Boolean(null)`
+is false, so on a fresh profile it showed Tags and CardClip off while both are on everywhere else.
+It reads the same defaults as the full page, and an old boolean theme as the full page reads it.
+
+**The theme read the Caster marker off the raw key.** A stored `caster: true`, which meant hide,
+was read as `showCaster: undefined` and shown. The theme goes through the model now, which knows
+every old shape.
+
+**The page bridge forwarded any request name.** The check that a message came "from this window"
+cannot tell our page-world module from any other script on the page, and the payload's spread came
+after `type`, so it could replace it. The bridge forwards only the requests the deck modules make,
+and sets `type` last. The token-bearing `cardtrader` request is not among them.
+
+**And the release documents said two things that were not true.** The store listing carried a
+"Version to submit: 1.2.0" line that the version tool did not update; it carries no number of its
+own now, and says why. And the third-party notices said the extension "asks for no token, stores
+none, and sends none" while describing the user's own token — it now says plainly that it has no
+token of its own, stores the user's, and sends it only to CardTrader's API.
+
+**Checks:** `npm test` 2384 assertions across nine suites, `npm run render` 176 + 202,
+`npm run mutations` 59 of 59. Eight are new: the off-switch asking for its host, a feature left
+acting after it was turned off, two decks coalescing, the EUR pair on load, CardTrader's answer
+outliving its token, the popup's defaults, the theme's raw marker read, and the bridge forwarding
+any name.
+
 ### The permission chip reaches every feature, and the documents caught up
 
 **Every feature that takes an optional host now asks for it on its own row.** The inline

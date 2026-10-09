@@ -330,6 +330,46 @@ const card = (name, typeLine, id) => ({
         'messages from another window, another channel, another version or another sender are ignored');
     }
 
+    console.log('deck modules: turning a feature off takes its effect off the page');
+    {
+      const w = makeWorld({
+        deck: {
+          id: 'deck-off',
+          sections: { primary: ['commanders', 'nonlands'], secondary: [] },
+          entries: {
+            commanders: [{ id: 'c1', count: 1, section: 'commanders',
+              card_digest: { name: 'Atraxa, Praetors Voice', type_line: 'Legendary Creature — Phyrexian Angel' } }],
+            nonlands: []
+          }
+        },
+        html: `
+          <div class="deckbuilder-toolbar"><div class="deckbuilder-toolbar-items-right"></div></div>
+          <div class="deckbuilder-section"><h6 class="deckbuilder-section-title">Commanders</h6></div>
+          <div id="deckbuilder"></div>`
+      });
+      w.boot();
+      w.self.STK_BRIDGE = { request: () => Promise.resolve([]) };
+      w.run('src/deck-page/bridge.js');
+      w.fromPage({
+        channel: 'scryfall-toolkit', version: 1, source: 'content', type: 'settings',
+        value: { cleanUpLandsInSingleton: true, sortEntriesPrimary: 'none', insertSortingHeadings: false,
+          edhrecSuggestions: true, deckSearch: true }
+      });
+      await tick();
+      assert(w.document.getElementById('stk-edhrec-button'), 'the EDHREC button is placed while its feature is on');
+      assert(w.document.getElementById('stk-search-button'), 'and so is the Search button');
+
+      w.fromPage({ channel: 'scryfall-toolkit', version: 1, source: 'content', type: 'settings', value: {} });
+      await tick();
+      assertEqual(w.document.getElementById('stk-edhrec-button'), null,
+        'turning the feature off takes the EDHREC button away');
+      assertEqual(w.document.getElementById('stk-search-button'), null, 'and the Search button');
+      const last = w.self.posted[w.self.posted.length - 1].value;
+      assertEqual([last.off, last.cleanUp, last.edhrecSuggestions, last.deckSearch],
+        [true, false, false, false],
+        'and the report says nothing is on, which is now true of the page as well');
+    }
+
     console.log('deck-clean-up: a future Scryfall with no entries setter does not break');
     {
       const w = makeWorld({ opts: { entriesSetter: false } });
