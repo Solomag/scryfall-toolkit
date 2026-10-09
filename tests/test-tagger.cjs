@@ -21,7 +21,9 @@ const {
 // the only symptom was an undefined property where a clipboard should have been. A test
 // that does not load what the page loads is testing a different page.
 function loadPage(options) {
-  const page = createPage(options);
+  // English unless the case asks otherwise: the injected UI now follows the one language
+  // setting, and the test browser is Russian.
+  const page = createPage({ ...options, state: { settingsLanguage: 'en', ...options.state } });
   const fs = require('node:fs');
   const path = require('node:path');
   const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'manifest.json'), 'utf8'));

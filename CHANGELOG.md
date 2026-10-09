@@ -8,6 +8,28 @@ All releases: <https://github.com/Solomag/scryfall-toolkit/releases>
 
 ---
 
+### The experimental card is gone, and the interface language is one setting now
+
+**The whole "Prints table / Experimental" card was removed.** It held a grouped table that
+collected every printing of a card and split it by set, with folding groups and a full-page link,
+a switch for opening that link in the same tab, and a second language selector for the controls
+the extension adds to Scryfall and Tagger. All of it is gone from the extension, not merely hidden
+from the settings page: the grouped table and its three settings, the same-tab switch, and the
+site-language selector. The prints table is Scryfall's own again, and the **Prints table** place
+in Visibility still hides the rows of a platform the reader took out of it — that filter was never
+part of the grouped table, it marks Scryfall's own rows, and it is unchanged.
+
+**One language setting for the whole extension.** The removed selector was a second answer to a
+question the General section already asked. The controls the extension adds to Scryfall and Tagger
+now follow the **Settings language** choice — `Auto` resolves from the browser, so a Russian
+browser gets the Russian interface and a pinned English gets English everywhere. The theme script
+loads the language helper before it now, so the same resolution runs on the site and on the
+settings page.
+
+**Checks:** `npm test` 2332 assertions across nine suites, `npm run render` 176 + 202,
+`npm run mutations` 48 of 48. The render suite lost the grouped-table check with the feature it
+photographed; the prints-table platform filter is checked on the native rows instead.
+
 ### The deck tools are a list now, and the diagnostics moved out of the way
 
 **The Scryfall Deckbuilder section is a list of one-line features.** Each row is a switch and a

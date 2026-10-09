@@ -115,7 +115,7 @@
     });
     const labelOf = other => {
       const entry = FORMATS[other] || FORMATS.names;
-      return settings.siteLanguage === 'ru' ? entry.ru : entry.en;
+      return language === 'ru' ? entry.ru : entry.en;
     };
     let shownFormat = null;
     const paintMenu = format => {

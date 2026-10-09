@@ -127,7 +127,7 @@ const SHOTS = [
     // returned.
     file: 'additional.png',
     column: true,
-    storage: { finishBadges: true, printGrouping: true, printFoldGroups: false },
+    storage: { finishBadges: true },
     waitFor: '.stk-finish-header',
     // Every row has to have its badge, not just the first. Waiting for "a badge" is
     // satisfied by the current printing and photographs the rest as missing, which is a
@@ -154,15 +154,6 @@ const SHOTS = [
     pad: 0
   },
   {
-    file: 'prints.png',
-    // The prints column with every printing the card has, grouped by set — which is
-    // what a reader with the switch on is looking at, and what the reader cannot get
-    // from Scryfall's own page, which shows ten.
-    column: true,
-    storage: { printGrouping: true, printFoldGroups: false, printFullPageLink: true },
-    waitFor: '.stk-print-group-row',
-  },
-  {
     file: 'hide-extra.png',
     column: true,
     // The hiding group is one storage key, written the way the card page reads it and in the
@@ -172,19 +163,23 @@ const SHOTS = [
     // nothing else uses any more. A fixture that only works through the compatibility path is
     // a fixture that stops working the day that path goes.
     //
-    // Arena is out of the prints table and in everywhere else, so the picture shows the one
-    // state a shared list of places could not hold.
+    // What the caption promises: the digital sets gone and the dollar and ticket columns
+    // gone, with the paper sets and the euro column left. The prices are positive — a price
+    // is shown — so `false` is what hides one. (The storage used to keep every price true
+    // while the caption said they were hidden, from before the model was inverted, and the
+    // picture had drifted from its own words.)
     storage: {
       setFiltersMigrated: true,
       setFilters: {
         platforms: {
           paper: { show: true, areas: { prints: true, search: true, sets: true } },
-          arena: { show: true, areas: { prints: false, search: true, sets: true } },
-          mtgo: { show: true, areas: { prints: true, search: true, sets: true } }
+          arena: { show: false, areas: { prints: true, search: true, sets: true } },
+          mtgo: { show: false, areas: { prints: true, search: true, sets: true } }
         },
-        prices: { usd: true, tix: true, tcg: true, cardhoarder: true },
+        prices: { usd: false, tix: false, eur: true, tcg: true, cardhoarder: true, cardmarket: true },
         tokens: true,
-        caster: false
+        showCaster: false,
+        showStores: true
       }
     },
     waitFor: '.card-profile .prints > .prints-table'
@@ -205,16 +200,9 @@ const SHOTS = [
 function assertNoRepeatedPrinting(page, file) {
   const table = page.document.querySelector('.card-profile .prints > .prints-table');
   if (!table) return;
-  let group = '(none)';
-  let seen = new Map();
+  const seen = new Map();
   const repeated = [];
   for (const row of table.querySelectorAll('tbody tr')) {
-    const classes = row.className || '';
-    if (/\bstk-print-group-row\b/.test(classes)) {
-      group = (row.textContent || '').trim();
-      seen = new Map();
-      continue;
-    }
     const link = row.querySelector('a');
     if (!link) continue;
     // Keyed on what the reader sees, not on the card id — because the row that was
@@ -223,12 +211,12 @@ function assertNoRepeatedPrinting(page, file) {
     // reads "#2 · JA", so the same number twice is not the same label twice.
     const label = link.textContent.trim();
     if (!label) continue;
-    if (seen.has(label)) repeated.push(group + ' — "' + label + '"');
+    if (seen.has(label)) repeated.push('"' + label + '"');
     else seen.set(label, true);
   }
   if (repeated.length) {
-    throw new Error(file + ': ' + repeated.length + ' printings appear twice, each in its own group (' +
-      repeated.slice(0, 3).join('; ') + '). Either the table is adding what Scryfall already lists, ' +
+    throw new Error(file + ': ' + repeated.length + ' printings appear twice (' +
+      repeated.slice(0, 3).join('; ') + '). Either the page is adding what Scryfall already lists, ' +
       'or the data gives one printing an address the page does not use.');
   }
 }

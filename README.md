@@ -15,11 +15,6 @@ extension's panels on it, in this extension's dark theme. Not a mock-up and not 
 the card is Counterspell and the printings, prices, legalities and tags are the ones
 Scryfall and Tagger returned.
 
-**Printings grouped by set**, with a finish badge per row and the full-page link. Scryfall
-shows ten printings on its own; this collects all of them:
-
-![All of Counterspell's printings, grouped by set, with finish badges](assets/shots/prints.png)
-
 **Card and art tags** from Tagger, next to the printings:
 
 ![Counterspell's card tags and art tags](assets/shots/tags.png)
@@ -39,7 +34,7 @@ No card artwork appears in any of these pictures, and none ships inside the exte
 
 The settings page, top to bottom. Every section that changes what a Scryfall page shows
 carries a **?** beside its heading: press it and a real Scryfall card page opens over the
-settings, with the panel that switch turns on where it sits on the page. Five of the six
+settings, with the panel that switch turns on where it sits on the page. Four of the five
 are the whole right-hand column — the prints table and the tag tables under it — because
 a cut-out of one panel says what it looks like and nothing about where it goes.
 
@@ -77,12 +72,10 @@ The toolbar button opens a small popup with the five switches you reach for most
 | **General** | Settings language, theme |
 | **Tags** | Card/art tags, related cards, the Tagger link on search results |
 | **CardClip** | The clipboard, the copy format, the per-printing `+` |
-| **Prints table** | Grouping printings by set, folding groups, the full-list link |
 | **Visibility** | two columns: on the left a table with one row per platform — Paper, Arena, Magic Online — and a column per place: the platform's own **Show** box and its own boxes for the **Prints table**, **Search** and **Sets list**, with the Caster marker on its own under the table; and on the right, prices (USD, TIX, EUR), store links (TCGplayer, Cardhoarder, Cardmarket) under a switch for the whole **Buy This Card** block, CardTrader offers, and the EUR price source. Everything ticked means shown, and turning a platform — or the store block — off keeps the choices under it and brings them back; the **EUR** box and the EUR-source dropdown are two views of the same column, kept in step |
 | **Additional info** | A list of one-line features, each with its own switch and its settings behind a **Set up** button: the finish column, type and mana search, Commander popularity and Salt Meter |
 | **Legality** | The extra formats and their order |
 | **Scryfall Deckbuilder** | A list of one-line features, each with its own switch and a **?** for what it does and what it does not: No Prices, the token list, stacked cards, a per-card Commander check, EDHREC suggestions, deck search, and the improved cleanup — whose settings are behind its own **Set up**, collapsed until asked for |
-| **Experimental** | Settings still being worked on |
 | **Diagnostics** | The deck modules' own report, collapsed at the bottom of the page: whether a suitable editor page has been checked, whether the modules attached, and the technical detail behind it |
 
 ## FAQ

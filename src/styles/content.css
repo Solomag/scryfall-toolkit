@@ -138,37 +138,6 @@ html.stk-dark #stk-edhrec :is(.stk-stat-badge,.stk-edhrec-value,.stk-salt-meter,
 #main .prints > .prints-table tbody tr:hover .stk-native-print-add,#main .prints > .prints-table .stk-native-print-add:hover,#main .prints > .prints-table .stk-native-print-add:focus-visible,#main .prints > .prints-table .stk-native-print-add.stk-print-selected{opacity:1}
 #main .prints > .prints-table .stk-native-print-add:hover,#main .prints > .prints-table .stk-native-print-add:focus-visible{background:#4c4954}
 @media(hover:none){#main .prints > .prints-table .stk-native-print-add{opacity:1;pointer-events:auto}}
-/* Group headers reuse the native first-cell markup (its span takes the native
-   padding, line-height and alignment) so the whole label stays on one line. The
-   header carries no line of its own: its tinted background and the closing
-   stripe say where a group begins and ends. */
-#main .prints > .prints-table .stk-print-group-row td{padding:0;background:#efeaf4}
-#main .prints > .prints-table .stk-print-group-row td>span{font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-/* The arrow and the pointer belong to folding, which is a setting of its own. */
-#main .prints > .prints-table.stk-fold-groups .stk-print-group-row td{cursor:pointer}
-#main .prints > .prints-table.stk-fold-groups .stk-print-group-row td>span::before{content:"▾ ";font-size:11px}
-#main .prints > .prints-table.stk-fold-groups .stk-print-group-row.stk-group-collapsed td>span::before{content:"▸ "}
-/* Scryfall draws a hairline under every printing and closes the table with a
-   3px rule. The group stripe below takes that job over, so every native border
-   is cleared and only one separator is ever visible. */
-#main .prints > .prints-table tbody tr,
-#main .prints > .prints-table tbody tr:last-child{border-bottom:0!important;border-top:0!important}
-#main .prints > .prints-table tbody td{border-bottom:0!important;border-top:0!important}
-/* A light stripe closes the group, so its printings read apart from the rows
-   that stand on their own. */
-#main .prints > .prints-table tr.stk-group-end{border-bottom:0!important}
-#main .prints > .prints-table tr.stk-group-end td{border-bottom:2px solid #cfc3d6!important}
-#main .prints > .prints-table tr.stk-print-group-row.stk-group-folded-end{border-bottom:0!important}
-#main .prints > .prints-table tr.stk-print-group-row.stk-group-folded-end td{border-bottom:2px solid #cfc3d6!important}
-/* The set of the card being viewed gets a light accent so it stands out. */
-#main .prints > .prints-table .stk-print-group-row.stk-current-group td{background:#efe3f4;border-left:3px solid #8b6597}
-#main .prints > .prints-table tbody tr[hidden]{display:none!important}
-#main .prints > .prints-table .stk-print-status td{padding:8px 13px;font-size:12px}
-/* "Open on a new page" shares the native View-all line as its right half. */
-#main .prints .stk-print-new-page-line{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:7px 4px 6px 13px}
-#main .prints .stk-print-new-page-line>a{display:block;flex:0 1 auto;min-width:0;padding:0;line-height:14px;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
-#main .prints .stk-print-new-page-line>.stk-print-new-page{text-align:right;white-space:nowrap}
-#main .prints .stk-print-new-page-line.stk-print-line-end{justify-content:flex-end}
 @media(max-width:550px){#stk-edhrec{grid-template-columns:1fr;row-gap:6px}#stk-edhrec .stk-edhrec-item{grid-template-columns:68px minmax(0,1fr)}#stk-edhrec .stk-edhrec-salt{margin-left:0}}
 .stk-cardtrader-error{font-size:12px;opacity:.75}
 .stk-token-button,.stk-legality-button{margin:8px}

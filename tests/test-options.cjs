@@ -26,10 +26,10 @@ const read = file => fs.readFileSync(path.join(ROOT, file), 'utf8');
 const REQUIRED_IDS = [
   'status', 'formatList', 'openOptions', 'cardtraderToken', 'tokenStatus',
   'cardtraderTokenLabel', 'saveToken', 'removeToken', 'settingsLanguage',
-  'siteLanguage', 'usageColorMetric', 'usageCountThresholds',
+  'usageColorMetric', 'usageCountThresholds',
   'usagePercentThresholds', 'usageMediumDecks', 'usageHighDecks',
   'usageMediumPercent', 'usageHighPercent', 'saltMediumThreshold',
-  'saltHighThreshold', 'clipboard', 'printAddButtons', 'printPageSameTab', 'darkTheme',
+  'saltHighThreshold', 'clipboard', 'printAddButtons', 'darkTheme',
   'tags', 'cardTags', 'artTags', 'relationships', 'finishBadges',
   'cardtraderPrices', 'euroPriceSources', 'edhrecUsage',
   'edhrecSalt', 'showSaltScale', 'edhrecUsageDisplay',
@@ -45,7 +45,6 @@ const REQUIRED_IDS = [
   // STK_SET_FILTERS.PLATFORM_NAMES, its AREAS and its PRICE_GROUPS.
   'visibilityGroup', 'platformHead', 'platformBody', 'priceList', 'shotNotes',
   'setCaster', 'setTokens',
-  'printGrouping', 'printFoldGroups', 'printFullPageLink',
   // Additional info: a row per feature, and one panel per disclosure. The ids are here because
   // the page holds the panels in its own markup — unlike the platforms table, there is nothing
   // in the model that could draw them — and a panel whose id a button names but the page does
@@ -82,7 +81,12 @@ const REMOVED_IDS = [
   // And the two features that were cut, with the container that had nothing left to hold once
   // they were gone. Named here rather than left out of the list: an id that is gone from the
   // page by accident and gone on purpose look the same to a reader, and only one is a decision.
-  'cardNicknames', 'edhrecLink', 'extraSettingsToggle', 'extraSettingsPanel'
+  'cardNicknames', 'edhrecLink', 'extraSettingsToggle', 'extraSettingsPanel',
+  // And the experimental card that went as a whole: the grouped prints table, the fold line
+  // and the full-page link it configured, the same-tab link, and the second language setting.
+  // They are named here rather than left out: a control that is gone by accident and one that
+  // is gone by decision look the same to a reader, and only one of them is a decision.
+  'printGrouping', 'printFoldGroups', 'printFullPageLink', 'printPageSameTab', 'siteLanguage'
 ];
 
 // What the archive ships is not the same as what the working tree holds, so the
@@ -434,7 +438,7 @@ function popupTest() {
 // chain rather than the pieces of it.
 async function settingsLanguageChainTest() {
   console.log('settings: the language choice survives the round trip');
-  const page = await loadOptions({ settingsLanguage: 'auto', siteLanguage: 'en' });
+  const page = await loadOptions({ settingsLanguage: 'auto' });
   const select = page.document.getElementById('settingsLanguage');
   assertEqual(select.value, 'auto', 'storage: auto shows as auto');
 
@@ -455,7 +459,7 @@ async function settingsLanguageChainTest() {
   assertEqual(page.mock.state.settingsLanguage, 'en', 'choosing English stores English');
 
   // And a reload of a pinned choice shows the pin, not its outcome.
-  const pinned = await loadOptions({ settingsLanguage: 'en', siteLanguage: 'en' });
+  const pinned = await loadOptions({ settingsLanguage: 'en' });
   assertEqual(pinned.document.getElementById('settingsLanguage').value, 'en',
     'a pinned choice is shown as pinned');
 }
@@ -849,10 +853,9 @@ function sectionOrderTest() {
   const html = read('src/ui/options.html');
   const headings = [...html.matchAll(/<h2>([^<]+)<\/h2>/g)].map(match => match[1]);
   assertEqual(headings, ['Общее', 'Tags', 'CardClip', 'Видимость', 'Дополнительная информация',
-    'Легальность', 'Scryfall Deckbuilder', 'Издания', 'Экспериментальное', 'Диагностика',
-    'Авторы и сторонние проекты'],
-    'sections follow the agreed order, with the Prints group and Experimental before diagnostics ' +
-    'and the credits block');
+    'Легальность', 'Scryfall Deckbuilder', 'Диагностика', 'Авторы и сторонние проекты'],
+    'sections follow the agreed order, with the experimental card gone and diagnostics before ' +
+    'the credits block');
   // The installed extension has to say out loud what it is not, and where the
   // full notices are, because a reviewer reads the settings page and not the repo.
   const credits = html.slice(html.indexOf('<section class="credits">'));
@@ -893,9 +896,6 @@ function sectionOrderTest() {
   assertEqual(sectionOf('clipboard'), 'CardClip', 'the shared buffer moved to CardClip');
   assertEqual(sectionOf('exportFormat'), 'CardClip', 'the copy format stays in CardClip');
   assertEqual(sectionOf('printAddButtons'), 'CardClip', 'the per-printing plus button moved to CardClip');
-  assertEqual(sectionOf('printGrouping'), 'Издания', 'the grouped prints table has its own category');
-  assertEqual(sectionOf('printFoldGroups'), 'Издания', 'the fold line is configurable next to it');
-  assertEqual(sectionOf('printFullPageLink'), 'Издания', 'the full-page link is configurable next to it');
 // The visibility section. Its controls are all written by options.js at run time, so the
   // markup holds the table's head, its body, the price container and one checkbox — and the
   // section is that section, which has to be inside the Visibility category rather than a
@@ -1014,10 +1014,6 @@ function sectionOrderTest() {
     'and so are the settings that only matter while it is on');
   assertEqual(sectionOf('deckModuleStatus'), 'Диагностика',
     'and the report the modules give about themselves moved to Diagnostics at the bottom');
-  assertEqual(sectionOf('printPageSameTab'), 'Экспериментальное', 'the same-tab printings switch stays in Experimental');
-  assertEqual(sectionOf('siteLanguage'), 'Экспериментальное', 'the site language selector moved to the bottom');
-  assert(html.indexOf('id="siteLanguage"') > html.indexOf('id="deckTokens"'),
-    'the site language selector is the last control of the page');
   // Additional info is a list of features, not a pair of sub-categories: no fieldset, no legend,
   // one line per feature, and everything a feature needs beyond its switch behind its own button.
   const additional = html.slice(html.indexOf('<h2>Дополнительная информация</h2>'), html.indexOf('<h2>Легальность</h2>'));
@@ -1305,7 +1301,7 @@ async function deckbuilderSectionTest() {
   console.log('options.js: the deck tools are a list of features, not a form');
   const html = read('src/ui/options.html');
   const start = html.indexOf('<section id="deckbuilderGroup">');
-  const end = html.indexOf('<h2>Издания</h2>');
+  const end = html.indexOf('<p class="hint">После изменения настроек');
   assert(start >= 0 && end > start, 'the deck section has its own container');
   const section = html.slice(start, end);
 
@@ -1471,12 +1467,6 @@ async function settingsTest() {
   fireEvent(darkTheme, 'change');
   assertEqual(mock.state.darkTheme, 'dark', 'choosing the dark theme persists the mode as text');
   assertEqual(document.getElementById('status').textContent, 'Сохранено', 'save confirmed in Russian');
-
-  const sameTab = document.getElementById('printPageSameTab');
-  assertEqual(sameTab.checked, false, 'printPageSameTab starts unchecked');
-  sameTab.checked = true;
-  fireEvent(sameTab, 'change');
-  assertEqual(mock.state.printPageSameTab, true, 'the same-tab printings link setting persists');
 
   const exportFormat = document.getElementById('exportFormat');
   assertEqual(exportFormat.value, 'moxfield', 'export format defaults to with-sets');
@@ -2110,7 +2100,7 @@ function featureShotsTest() {
   const dir = path.join(ROOT, 'assets', 'shots');
   assert(fs.existsSync(dir), 'there is a folder of illustrations');
   const onDisk = fs.readdirSync(dir).filter(name => name.endsWith('.png')).sort();
-  assert(onDisk.length >= 6, 'and it holds one per illustrated section (' + onDisk.length + ')');
+  assert(onDisk.length >= 5, 'and it holds one per illustrated section (' + onDisk.length + ')');
 
   // The pictures are opened from a dialog rather than shown in the sections, so the
   // page carries only the buttons and the script carries the pictures. Named by
@@ -2177,7 +2167,7 @@ function featureShotsTest() {
     .filter(block => /\n\s*column: true,/.test(block.split(/\n\s*};/)[0]))
     .map(block => block.slice(0, block.indexOf("'")).trim())
     .sort();
-  assertEqual(declaredColumn, ['additional.png', 'hide-extra.png', 'legality.png', 'prints.png', 'tags.png'],
+  assertEqual(declaredColumn, ['additional.png', 'hide-extra.png', 'legality.png', 'tags.png'],
     'every picture that lives in the column is cropped as the whole column');
   assert(!declaredColumn.includes('cardclip.png'),
     'and the clipboard is not one of them, because it is a panel floating over the page rather than a part of the column');

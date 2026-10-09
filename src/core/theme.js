@@ -37,8 +37,8 @@ if (systemDark && systemDark.addEventListener) {
 // answers synchronously, so the class is set before the first paint and storage
 // simply corrects it a moment later.
 if (themeMode('auto') === 'dark') document.documentElement.classList.add('stk-dark');
-chrome.storage.local.get({ darkTheme: 'auto', siteLanguage: 'en', setFilters: null })
-  .then(({ darkTheme, siteLanguage, setFilters }) => {
+chrome.storage.local.get({ darkTheme: 'auto', settingsLanguage: 'auto', setFilters: null })
+  .then(({ darkTheme, settingsLanguage, setFilters }) => {
   // The Caster marker reads `setFilters.showCaster`, and the class is the opposite of it.
   //
   // It used to read a flat `hideCasterIndicator`, which nothing has written since the settings
@@ -48,8 +48,12 @@ chrome.storage.local.get({ darkTheme: 'auto', siteLanguage: 'en', setFilters: nu
   // flat key directly, which is the same fiction one level up: it proved the read and never the
   // write.
   document.documentElement.classList.toggle('stk-hide-caster', !(setFilters?.showCaster !== false));
-  document.documentElement.classList.toggle('stk-site-ru', siteLanguage === 'ru');
-  if (siteLanguage === 'ru') translateSiteControls();
+  // The site's own controls are translated for the same language the rest of the extension
+  // speaks. There used to be a separate setting for this; it is the General choice now, so
+  // "as in the browser" means the same thing on the settings page and on the site.
+  const siteRu = window.STK_I18N.resolveSettingsLanguage(settingsLanguage) === 'ru';
+  document.documentElement.classList.toggle('stk-site-ru', siteRu);
+  if (siteRu) translateSiteControls();
   applyTheme(darkTheme);
 });
 if (/^\/(?:settings|profile|decks|@[^/]+(?:\/decks)?|users|account|contact)(?:\/|$)/.test(location.pathname)) {
@@ -72,7 +76,10 @@ chrome.storage.onChanged.addListener(changes => {
   document.documentElement.classList.toggle('stk-hide-caster',
     !(changes.setFilters.newValue?.showCaster !== false));
 }
-  if (changes.siteLanguage) document.documentElement.classList.toggle('stk-site-ru', changes.siteLanguage.newValue === 'ru');
+  if (changes.settingsLanguage) {
+    document.documentElement.classList.toggle('stk-site-ru',
+      window.STK_I18N.resolveSettingsLanguage(changes.settingsLanguage.newValue) === 'ru');
+  }
   if (changes.darkTheme) applyTheme(changes.darkTheme.newValue);
 });
 

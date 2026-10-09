@@ -61,11 +61,10 @@
   self.STK_CONTENT = { on, reportFeature, context: arrived };
 
   const defaults = {
-    siteLanguage: 'en',
+    settingsLanguage: 'auto',
     clipboard: true, tags: true, cardTags: true, artTags: false, relationships: true,
-    printAddButtons: true, printPageSameTab: false,
+    printAddButtons: true,
     legalities: true, finishBadges: true, cardtraderPrices: false, euroPriceSources: 'cm',
-    printGrouping: false, printFoldGroups: false, printFullPageLink: false,
     edhrecUsage: false, edhrecSalt: false, showSaltScale: false, edhrecUsageDisplay: 'both',
     usageColorMetric: 'decks', usageMediumDecks: 50000, usageHighDecks: 100000,
     usageMediumPercent: 1, usageHighPercent: 2.6, saltMediumThreshold: 1, saltHighThreshold: 2,
@@ -211,7 +210,11 @@
     keys.forEach(key => { if (changes[key]) settings[key] = changes[key].newValue; });
     sendDeckSettings();
   });
-  const language = settings.siteLanguage === 'ru' ? 'ru' : 'en';
+  // One language setting for the whole extension now: the General choice, resolved. There
+  // used to be a second one for the site's injected controls, and a reader had to keep two
+  // answers about the same thing in step. `resolveSettingsLanguage` is the same resolution
+  // the settings page uses, so "as in the browser" means the same thing on both sides.
+  const language = window.STK_I18N.resolveSettingsLanguage(settings.settingsLanguage);
   const t = text => window.STK_I18N.t(text, language);
   const cardPath = location.pathname.match(/^\/card\/([^/]+)\/([^/]+)/);
   const cardPage = Boolean(cardPath && document.querySelector('.card-image') && document.querySelector('#main .prints-table'));
@@ -415,12 +418,11 @@
     }, 1000));
   }
   // Set by the stats panel so a re-arranged legality block can realign it.
-  //   // Four things are written to after they are made, by different files. They live on
+  //   // Three things are written to after they are made, by different files. They live on
   // one object so a write in one file is a read in another; a destructured name would
-  // not be, which is the only reason this is an object and not four plain lets.
+  // not be, which is the only reason this is an object and not three plain lets.
   const shared = {
     clipboardCards: Array.isArray(settings.cards) ? settings.cards : [],
-    finishesSettled: Promise.resolve(),
     enqueueCardTraderPrint: null,
     realignStatsPanel: null
   };
@@ -514,7 +516,6 @@
     ["legalities", () => cardPage, false],
     ["printFinishes", () => cardPage && settings.finishBadges, false],
     ["nativePrintButtons", () => cardPage && settings.clipboard && settings.printAddButtons, false],
-    ["expandedPrints", () => cardPage && settings.printGrouping, false],
     ["edhrecStats", () => cardPage && (settings.edhrecUsage || settings.edhrecSalt), false],
     ["priceFilter", () => settings.onlyCardmarket || settings.showStores === false, false],
     ["advancedPriceFilter", () => advancedPage, false],

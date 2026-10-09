@@ -10,8 +10,11 @@
  */
 // Share the Scryfall clipboard on Tagger without changing Tagger's own tagging UI.
 (async () => {
-  const settings = await chrome.storage.local.get({ clipboard: true, cards: [], exportFormat: 'moxfield', siteLanguage: 'en' });
-  const t = text => window.STK_I18N.t(text, settings.siteLanguage === 'ru' ? 'ru' : 'en');
+  const settings = await chrome.storage.local.get({ clipboard: true, cards: [], exportFormat: 'moxfield', settingsLanguage: 'auto' });
+  // One language for the whole extension: the General choice, resolved. There used to be a
+  // second one for the site's injected controls, and the two could disagree.
+  const language = window.STK_I18N.resolveSettingsLanguage(settings.settingsLanguage);
+  const t = text => window.STK_I18N.t(text, language);
   if (!settings.clipboard || document.getElementById('scryfall-toolkit-clipboard')) return;
   let cards = Array.isArray(settings.cards) ? settings.cards : [];
   const root = document.createElement('aside');
@@ -44,7 +47,7 @@
   const { entryKey, formatCard, clipboardText, FORMATS, otherFormat } = window.STK_CLIPBOARD_FORMAT;
   const formatLabel = format => {
     const entry = FORMATS[format] || FORMATS.names;
-    return settings.siteLanguage === 'ru' ? entry.ru : entry.en;
+    return language === 'ru' ? entry.ru : entry.en;
   };
   badge.className = 'stk-count';
   badge.setAttribute('aria-hidden', 'true');

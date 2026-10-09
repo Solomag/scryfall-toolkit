@@ -142,7 +142,10 @@ const MUTATIONS = [
     find: 'hiding.platforms[name]?.show === true && hiding.platforms[name]?.areas?.[area] === true);',
     replace: 'hiding.platforms[name]?.show === true &&\n' +
       '    hiding.platforms[\'paper\']?.areas?.[area] === true);',
-    expect: 'while the prints table has lost the Arena printing, because the reader took Arena out of it'
+    // The search dropdown is where one platform's place read for all three shows first: the
+    // Arena place is answered on the search surface, and reading Paper's instead keeps the
+    // Arena set in the list.
+    expect: 'one platform out of the search place takes its set out of the dropdown, leaving the Arena set'
   },
   {
     // And the other way: one platform's *switch* read for all three, which is what a reader
@@ -154,7 +157,10 @@ const MUTATIONS = [
       '    hiding.platforms[name]?.show === true && hiding.platforms[name]?.areas?.[area] === true);',
     replace: 'const platformsOn = area => PLATFORM_NAMES.filter(name =>\n' +
       '    hiding.platforms[name]?.show === true && hiding.platforms.arena?.areas?.[area] === true);',
-    expect: 'while the prints table has lost the Arena printing, because the reader took Arena out of it'
+    // The prints place is the surface that catches this one: Paper's place is switched off
+    // there alone, and reading Arena's instead keeps Paper in the table, so the paper rows
+    // never go.
+    expect: 'paper rows hidden by the place'
   },
   {
     // The one shared list of places becoming three is the migration this shape needed, and the

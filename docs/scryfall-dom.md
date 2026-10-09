@@ -233,9 +233,8 @@ Scryfall knows nothing about.
 | Class | Rules reaching for it | Part |
 | --- | --- | --- |
 | `.button-n` | 48 | `01-card-page`, `02-shared-pages`, `03-account-and-marketing`, `04-surfaces`, `06-shared-surfaces` |
-| `.prints-table` | 30 | `01-card-page`, `06-shared-surfaces` |
+| `.prints-table` | 21 | `01-card-page`, `06-shared-surfaces` |
 | `.select-n` | 15 | `01-card-page`, `04-surfaces`, `06-shared-surfaces` |
-| `.prints` | 12 | `01-card-page` |
 | `.inverted` | 10 | `01-card-page`, `04-surfaces`, `06-shared-surfaces` |
 | `.checklist` | 9 | `01-card-page`, `04-surfaces` |
 | `.deck-list-entry` | 9 | `02-shared-pages`, `03-account-and-marketing` |
@@ -245,6 +244,7 @@ Scryfall knows nothing about.
 | `.left-tray` | 7 | `02-shared-pages`, `03-account-and-marketing` |
 | `.current` | 6 | `01-card-page`, `04-surfaces`, `06-shared-surfaces` |
 | `.print-langs-item` | 6 | `01-card-page`, `04-surfaces`, `06-shared-surfaces` |
+| `.prints` | 6 | `01-card-page` |
 | `.deck-tray-option` | 5 | `02-shared-pages`, `03-account-and-marketing` |
 | `.dropdown-menu-item` | 5 | `06-shared-surfaces` |
 | `.dropdown-menu-items` | 5 | `02-shared-pages`, `03-account-and-marketing`, `06-shared-surfaces` |
@@ -452,7 +452,7 @@ name itself, without the leading `.` or `#`.
 | `currency-tix` | class | src/card-page/prints.js |
 | `currency-usd` | class | src/card-page/prints.js |
 | `currency-usd-promo` | class | src/card-page/prints.js |
-| `current` | class | src/card-page/legalities.js, src/card-page/prices.js, src/card-page/prints.js |
+| `current` | class | src/card-page/legalities.js, src/card-page/prices.js |
 | `deck-list` | class | src/card-page/deck-lists.js, src/core/theme.js |
 | `deck-list-entry` | class | src/card-page/deck-lists.js, src/core/theme.js |
 | `deck-list-entry-axial-data` | class | src/card-page/deck-lists.js |
@@ -465,7 +465,7 @@ name itself, without the leading `.` or `#`.
 | `modal-dialog-close` | class | src/deck-page/edhrec.js, src/deck-page/search.js |
 | `modal-dialog-content` | class | src/deck-page/edhrec.js |
 | `prints` | class | src/card-page/clipboard.js, src/card-page/prices.js, src/card-page/prints.js, src/card-page/tags.js |
-| `prints-all` | class | src/card-page/prints.js, src/core/theme.js |
+| `prints-all` | class | src/core/theme.js |
 | `prints-table` | class | src/card-page/clipboard.js, src/card-page/core.js, src/card-page/legalities.js, src/card-page/prices.js, src/card-page/prints.js, src/card-page/sets.js, src/card-page/tags.js, src/core/theme.js |
 | `search-controls` | class | src/card-page/sets.js, src/core/theme.js |
 | `select2-container` | class | src/card-page/sets.js |

@@ -242,7 +242,7 @@ const PANELS = [
     // Not a panel of its own: a badge is a glyph in a cell of Scryfall's prints table, in
     // as many cells as there are printings. So what has to hold is that each badge has a
     // size, says which finish it is, and does not sit on top of its neighbour.
-    storage: { finishBadges: true, printGrouping: true, printFoldGroups: false },
+    storage: { finishBadges: true },
     waitFor: '.stk-finish-header',
     waitCount: ['.stk-finish-badge', 2],
     ours: false,
@@ -281,27 +281,6 @@ const PANELS = [
       check(clashes === 0,
         'finish badges: and no two in the same row cover each other' +
         (clashes ? ' (' + clashes + ' pairs)' : ''));
-    }
-  },
-  {
-    name: 'prints grouping',
-    storage: { printGrouping: true, printFoldGroups: false, printFullPageLink: true },
-    waitFor: '.stk-print-group-row',
-    ours: false,
-    measure: { panel: '#main .prints > .prints-table', rows: '.stk-print-group-row',
-      labels: '.stk-print-group-row td > span' },
-    async extra(session, probed) {
-      // A group row truncates its label with an ellipsis on purpose, so overflow is not a
-      // failure here — a clipped label with no ellipsis is.
-      const clipped = probed.labels.filter(l => l.scrollWidth > l.clientWidth + 1);
-      const style = await session.evaluate(STYLE_OF('.stk-print-group-row td > span'));
-      const parsed = style ? JSON.parse(style) : null;
-      check(!clipped.length || (!!parsed && parsed.overflow === 'ellipsis'),
-        'prints grouping: a label too long for its cell is ellipsised rather than cut' +
-        (clipped.length ? ' (' + clipped.length + ' clipped)' : ''),
-        clipped.length ? null : 'no label is long enough to be clipped at this width');
-      check(!!parsed && parsed.whiteSpace === 'nowrap',
-        'prints grouping: and a group label stays on one line rather than wrapping the row');
     }
   },
   {

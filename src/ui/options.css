@@ -15,8 +15,6 @@ h1{font-size:28px;margin:0;font-weight:700}h2{margin:0 0 12px;color:#f0d5f3;font
 .hero p{margin:3px 0 0;color:#d7c8d8}
 main{max-width:880px;padding:22px 16px 35px;margin:auto}
 section{padding:18px;margin:0 0 15px;background:#2d2c34;border:1px solid #514858;border-radius:6px;box-shadow:0 3px 12px #0003}
-section.experimental{border-style:dashed;border-color:#7a6a55;background:#2f2b2c}
-section.experimental h2{color:#e8cf9e}
 label{display:block;margin:9px 0;cursor:pointer}input{accent-color:#aa85b5}
 /* The visibility section: two columns, a table on the left and four short lines on the right,
    told apart by headings and space rather than by frames. Its own padding is a little wider

@@ -9,14 +9,12 @@
  * are described in THIRD_PARTY_NOTICES.md. The MPL does not cover them.
  */
 const defaults = {
-  settingsLanguage: 'auto', siteLanguage: 'en',
+  settingsLanguage: 'auto',
   clipboard: true, printAddButtons: true, darkTheme: 'auto', tags: true, cardTags: true, artTags: false, relationships: true,
   finishBadges: true, cardtraderPrices: false, cardtraderToken: '', euroPriceSources: 'cm',
   edhrecUsage: false, edhrecSalt: false, showSaltScale: false, edhrecUsageDisplay: 'both',
   usageColorMetric: 'decks', usageMediumDecks: 50000, usageHighDecks: 100000,
   usageMediumPercent: 1, usageHighPercent: 2.6, saltMediumThreshold: 1, saltHighThreshold: 2,
-  printPageSameTab: false,
-  printGrouping: false, printFoldGroups: false, printFullPageLink: false,
   // Read with no default, for the reason given in src/core/set-filters.js: a default
   // here would make every old key look as though it had a value, and the migration
   // reads those keys to decide what the reader had chosen.
@@ -40,7 +38,7 @@ const defaults = {
 // one flag, the two category rules carry a list under them, and the four price kinds are
 // told apart by the model rather than by an id. A key-by-key save would have to be kept
 // in step with all three, and there is no test that could tell that it was not.
-const basicFields = ["clipboard", "printAddButtons", "printPageSameTab", "tags", "cardTags", "artTags", "relationships", "finishBadges", "cardtraderPrices", "euroPriceSources", "edhrecUsage", "edhrecSalt", "showSaltScale", "edhrecUsageDisplay", "usageColorMetric", "legalities", "exportFormat", "taggerSearchLinks", "cardSearchLinks", "deckNoPrices", "stackedDeckCards", "deckLegality", "deckCleanUpImprover", "cleanUpLandsInSingleton", "sortEntriesPrimary", "insertSortingHeadings", "edhrecSuggestions", "deckSearch", "printGrouping", "printFoldGroups", "printFullPageLink"];
+const basicFields = ["clipboard", "printAddButtons", "tags", "cardTags", "artTags", "relationships", "finishBadges", "cardtraderPrices", "euroPriceSources", "edhrecUsage", "edhrecSalt", "showSaltScale", "edhrecUsageDisplay", "usageColorMetric", "legalities", "exportFormat", "taggerSearchLinks", "cardSearchLinks", "deckNoPrices", "stackedDeckCards", "deckLegality", "deckCleanUpImprover", "cleanUpLandsInSingleton", "sortEntriesPrimary", "insertSortingHeadings", "edhrecSuggestions", "deckSearch"];
 // EDHREC and CardTrader are optional features, and so is the access they need.
 // Chrome has a place for exactly this: optional_host_permissions, granted only
 // when the user turns one of them on. Turning a switch off and on again is also
@@ -157,9 +155,7 @@ chrome.storage.local.get(defaults, values => {
   let language = window.STK_I18N.resolveSettingsLanguage(selected);
   const t = text => window.STK_I18N.t(text, language);
   const settingsLanguage = document.getElementById('settingsLanguage');
-  const siteLanguage = document.getElementById('siteLanguage');
   settingsLanguage.value = selected;
-  siteLanguage.value = values.siteLanguage === 'ru' ? 'ru' : 'en';
   window.STK_I18N.localizeOptions(language);
   // ---- CardTrader ------------------------------------------------------------------
   //
@@ -218,9 +214,6 @@ chrome.storage.local.get(defaults, values => {
     document.querySelectorAll('#formatList .format-item').forEach(row => { row.title = language === 'ru' ? `Перетащи ${formats.get(row.dataset.key)} в нужную колонку` : `Drag ${formats.get(row.dataset.key)} to either column`; });
     status.textContent = t('Сохранено');
     chrome.storage.local.set({ settingsLanguage: selected });
-  });
-  siteLanguage.addEventListener('change', () => {
-    chrome.storage.local.set({ siteLanguage: siteLanguage.value === 'ru' ? 'ru' : 'en' }, () => { status.textContent = t('Сохранено'); });
   });
   save.addEventListener('click', () => {
     const value = token.value.trim();
@@ -305,10 +298,6 @@ chrome.storage.local.get(defaults, values => {
     legality: {
       src: '../../assets/shots/legality.png',
       caption: 'Колонка страницы карты, у которой добавлены форматы, которых нет у Scryfall.'
-    },
-    prints: {
-      src: '../../assets/shots/prints.png',
-      caption: 'Вся колонка: все издания собраны в одной таблице и сгруппированы по сетам.'
     }
   };
   // The help that belongs to one feature rather than to a section: no picture, because what

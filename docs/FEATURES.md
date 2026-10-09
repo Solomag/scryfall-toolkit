@@ -61,17 +61,15 @@ ordered by relationship type and card name, and can be hidden independently.
 
 ## Prints
 
-Click **View all prints** in a card's Prints section to expand the remaining printings
-inside the native Prints table.
+The prints table is Scryfall's own. The extension adds one narrow column to it — the finish
+column, described under Additional info — and, with the clipboard on, a `+` on every printing
+row that adds that printing with its set code.
 
-- Rows are grouped by set with collapsible headers; the last row keeps a link to
-  Scryfall's own full page.
-- With the clipboard option on, every printing row — including the current one — shows a
-  `+` that adds that printing with its set code.
-- **Group printings by set** turns the grouped table off and leaves Scryfall's table
-  untouched. **Fold groups** removes the collapse arrows and the "Collapse all groups"
-  label. **Full printings link beside it** removes the extra link on the bottom line.
-- Opening the full list in the same tab is under **Experimental**.
+A grouped table that collected every printing of a card and split it by set, with folding
+and a full-page link, was removed in 1.7.9, together with the two settings that configured it
+and the switch that opened its links in the same tab. The platform filter on the prints table
+is unchanged: it still hides the rows of a platform the reader took out of the **Prints table**
+place, and leaves the printing being viewed alone.
 
 ## Extra format legalities
 
@@ -489,15 +487,12 @@ places are checked there too, which is the check one shared list of places could
 out of the sets index while it stays in the table and the search field, and the index hiding
 exactly the digital sets no kept client carries.
 
-They are not verified on the Prints table, and the reason is worth knowing before reading that as
-a gap in the feature. That table shows a window of ten sets around the printing being viewed, so
-the sets a platform rule would remove sit outside it for most cards, and the window widens only
-when "View all prints" is pressed — which no automated check can do to a page whose features have
-already run. So the Prints table's own behaviour is checked in the extension's unit tests, where
-the fixture supplies the API's answer directly. Those tests count the rows the table *builds*,
-rather than the group headers: a header can also be built from Scryfall's own rows, including the
-row for the printing being viewed, which is deliberately never hidden. So a group header is not
-a thing this rule controls and the built rows are.
+The Prints table is checked the same way, on the native rows: the filter marks the row of a
+printing whose set is not on a kept platform, and the printing being viewed is left alone even
+when its platform is not kept. A grouped table that rebuilt the list from the complete print
+list used to be a second surface for this rule; it was removed in 1.7.9, and the rule is
+answered on Scryfall's own rows again — which is where it always applied to a reader who never
+opened the grouped view.
 
 **Why there are no set names in this group any more.** Nothing on Scryfall says a set has a black
 border: a set object carries `code`, `name`, `set_type`, `digital`, `card_count`, `released_at` and

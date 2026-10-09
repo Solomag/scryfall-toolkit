@@ -138,6 +138,9 @@ async function themeTurnsOnTest(dir) {
     fs.readFileSync(path.join(dir, file), 'utf8'), page.context, { filename: file }
   );
 
+  // The manifest loads i18n.js before theme.js now, because the theme resolves the site
+  // language from the one language setting through it.
+  run('src/core/i18n.js');
   run('src/core/theme.js');
   await tick();
   const root = page.document.documentElement;
@@ -191,7 +194,7 @@ async function settingsPowerOnTest(dir) {
   const page = createPage({
     url: 'chrome-extension://smoke/options.html',
     html,
-    state: { settingsLanguage: 'en', siteLanguage: 'en' }
+    state: { settingsLanguage: 'en' }
   });
   const run = file => vm.runInContext(
     fs.readFileSync(path.join(dir, file), 'utf8'), page.context, { filename: file }
@@ -229,7 +232,7 @@ async function settingsPowerOnTest(dir) {
   // picture behind it looks to a reader like a feature that does not work, and the
   // packaged page is what a reviewer opens.
   const buttons = [...page.document.querySelectorAll('.shot-button')];
-  assert(buttons.length >= 6, `the settings page carries a "?" per illustrated section (${buttons.length})`);
+  assert(buttons.length >= 5, `the settings page carries a "?" per illustrated section (${buttons.length})`);
   const dialog = page.document.getElementById('shotDialog');
   assert(dialog, 'and a dialog to show the picture in');
   for (const button of buttons) {
@@ -798,7 +801,7 @@ function packagedArchiveTest() {
   assert(optionsScript, 'the settings script is in the archive, or there is nothing to check');
   const shotsDir = path.posix.dirname(optionsScript.split(path.sep).join('/'));
   const shotNames = [...read(optionsScript).matchAll(/src:\s*["']([^"']+\.png)["']/g)].map(m => m[1]);
-  assert(shotNames.length >= 6, `the settings script names the illustrations (${shotNames.length})`);
+  assert(shotNames.length >= 5, `the settings script names the illustrations (${shotNames.length})`);
   for (const written of shotNames) {
     const name = path.posix.normalize(path.posix.join(shotsDir, written));
     assert(!name.startsWith('..'), `the illustrations are not named outside the extension: ${written}`);

@@ -77,7 +77,7 @@ async function deckPageWith({ which, count = 5, tokens, state = {} }) {
   const page = createPage({
     url: 'https://scryfall.com/@reader/decks/abc123/build',
     html: DECK_HTML,
-    state: { deckLegality: true, deckTokens: true, clipboard: false, siteLanguage: 'en', ...state },
+    state: { deckLegality: true, deckTokens: true, clipboard: false, settingsLanguage: 'en', ...state },
     routes: {
       deckLegality: () => legalityAnswer(count),
       deckTokens: () => tokens || []

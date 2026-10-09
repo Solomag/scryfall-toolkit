@@ -221,10 +221,6 @@ function cssCheck() {
     'a buffered printing keeps its check mark on screen');
   assert(css.includes('@media(hover:none)'),
     'print buttons stay reachable on touch screens');
-  assert(css.includes('#main .prints > .prints-table .stk-print-group-row td{'),
-    'set group header rows styled');
-  assert(css.includes('#main .prints > .prints-table tbody tr[hidden]{display:none!important}'),
-    'collapsed group rows are display:none');
   assert(!css.includes('#stk-all-prints'),
     'detached prints panel styles removed');
   assert(/\.card-grid-item:has\(>\.stk-add\)/.test(css),
@@ -263,31 +259,6 @@ function cssCheck() {
     'print rows anchor their plus button');
   assert(css.includes('.stk-native-print-add{position:absolute;top:50%;right:-27px'),
     'print plus sits outside the name cell again');
-  assert(css.includes('.stk-print-new-page-line{display:flex'),
-    'new-page link shares the native printings line');
-  assert(css.includes('.stk-print-group-row td>span{'),
-    'group header label uses the native span-in-cell markup');
-  assert(css.includes('.stk-print-group-row.stk-current-group td{'),
-    'the set of the card being viewed is highlighted');
-  assert(css.includes('#main .prints > .prints-table tbody tr:last-child{border-bottom:0!important;border-top:0!important}'),
-    "Scryfall's own row hairlines and closing rule are gone, so no doubled separator is left");
-  assert(css.includes('#main .prints > .prints-table tbody td{border-bottom:0!important;border-top:0!important}'),
-    'the cells are cleared as well, should Scryfall ever draw a line on them');
-  assert(!/\.stk-print-group-row td\{[^}]*border-top/.test(css),
-    'a group header draws no line of its own, its background and the stripe say where it starts');
-  assert(css.includes('tr.stk-group-end{border-bottom:0!important}'),
-    "Scryfall's own hairline is cleared where the group stripe takes over");
-  assert(css.includes('tr.stk-group-end td{border-bottom:2px solid #cfc3d6!important}'),
-    'an open group is closed by a light stripe under its last row');
-  assert(css.includes('tr.stk-print-group-row.stk-group-folded-end{border-bottom:0!important}'),
-    "a folded group clears the original hairline at its own header");
-  assert(css.includes('tr.stk-print-group-row.stk-group-folded-end td{border-bottom:2px solid #cfc3d6!important}'),
-    'and closes the stripe there instead');
-  assert(!css.includes('tr.stk-group-row'), 'the folded stripe goes to the class group headers really carry');
-  assert(!css.includes('.stk-print-group-row td{') || !/\.stk-print-group-row td\{[^}]*user-select:none/.test(css),
-    'the group label stays selectable so it can be copied');
-  assert(css.includes('.stk-print-new-page-line.stk-print-line-end{justify-content:flex-end}'),
-    'a lone full-page link sits on the right of the line');
   assert(css.includes('.stk-tag-icon.icon-flipped svg{transform:scale(-1,1)}'),
     'flipped tag icons rule exists');
   // The tag icons live in their own file now, and this is about their file.
@@ -315,16 +286,6 @@ function cssCheck() {
     'spooky inversion removed so the flip button stays dark in both states');
   assert(theme.includes('html.stk-dark .card-actions .button-n{'),
     'dark repaint for the card-page action buttons');
-  assert(theme.includes('html.stk-dark .prints-table .stk-print-group-row td{background:#2a2835!important'),
-    'dark group header rows win over the light content rule');
-  assert(theme.includes('html.stk-dark .prints-table .stk-print-group-row.stk-current-group td{'),
-    'dark theme keeps the current group accent');
-  assert(theme.includes('html.stk-dark #main .prints > .prints-table tbody tr:last-child{border-bottom:0!important;border-top:0!important}'),
-    'the dark theme clears the native row hairlines as well, and outranks the light rule');
-  assert(theme.includes('html.stk-dark #main .prints > .prints-table tr.stk-group-end td{'),
-    'dark theme keeps the group closing stripe');
-  assert(theme.includes('html.stk-dark #main .prints > .prints-table tr.stk-print-group-row.stk-group-folded-end td{'),
-    'and the folded group stripe in the dark theme too');
   assert(theme.includes('html.stk-dark .prints-table :is(a,span).currency-eur{'),
     'dark theme recolors generated price spans too');
   assert(theme.includes('html.stk-dark .footer .footer-legal,html.stk-dark .footer .footer-legal p{color:#aaa8a6!important}'),
@@ -759,11 +720,12 @@ async function darkThemeRuntime() {
       </div></body></html>`,
     state: {
       darkTheme: true,
-      siteLanguage: 'ru',
+      settingsLanguage: 'ru',
       setFilters: { showCaster: false }
     }
   });
-  page.script('src/core/theme.js');
+  page.script('src/core/i18n.js');
+page.script('src/core/theme.js');
   await sleep(40);
   const { document, mock } = page;
   const root = document.documentElement;
@@ -783,9 +745,10 @@ async function darkThemeRuntime() {
   const older = createPage({
     url: 'https://scryfall.com/',
     html: '<!DOCTYPE html><html><body><div id="main"></div></body></html>',
-    state: { darkTheme: false, siteLanguage: 'en', setFilters: { platforms: {} } }
+    state: { darkTheme: false, settingsLanguage: 'en', setFilters: { platforms: {} } }
   });
-  older.script('src/core/theme.js');
+  older.script('src/core/i18n.js');
+older.script('src/core/theme.js');
   await sleep(40);
   assert(!older.document.documentElement.classList.contains('stk-hide-caster'),
     'a stored value from before the rename keeps the marker shown, which is what it had');
@@ -793,7 +756,7 @@ async function darkThemeRuntime() {
   mock.fireChanges({
     darkTheme: { newValue: false },
     setFilters: { newValue: { showCaster: true } },
-    siteLanguage: { newValue: 'en' }
+    settingsLanguage: { newValue: 'en' }
   });
   assert(!root.classList.contains('stk-dark'), 'storage change removes dark class');
   assert(!root.classList.contains('stk-hide-caster'), 'storage change restores caster indicator');
@@ -862,7 +825,8 @@ async function purpleAfterStylesheetTest() {
   assert(!link.classList.contains('stk-brighter-purple'),
     'before the stylesheet arrives there is no dark purple to lift');
 
-  page.script('src/core/theme.js');
+  page.script('src/core/i18n.js');
+page.script('src/core/theme.js');
   await sleep(30);
   assertEqual(page.windowListenerCount('load'), 1,
     'the repair is waiting for the load event, since no node will be added');
@@ -882,7 +846,8 @@ async function systemThemeTest() {
     state: {},
     mediaDark: false
   });
-  page.script('src/core/theme.js');
+  page.script('src/core/i18n.js');
+page.script('src/core/theme.js');
   await sleep(30);
   const root = page.document.documentElement;
   assert(!root.classList.contains('stk-dark'), 'a light system leaves Scryfall light while the theme is automatic');
@@ -898,7 +863,8 @@ async function systemThemeTest() {
     state: { darkTheme: 'light' },
     mediaDark: true
   });
-  pinned.script('src/core/theme.js');
+  pinned.script('src/core/i18n.js');
+pinned.script('src/core/theme.js');
   await sleep(30);
   assert(!pinned.document.documentElement.classList.contains('stk-dark'),
     'a light theme chosen by hand survives a dark system');
@@ -919,7 +885,8 @@ async function pathClasses() {
       html: '<!DOCTYPE html><html><body><div id="main"></div></body></html>',
       state: {}
     });
-    page.script('src/core/theme.js');
+    page.script('src/core/i18n.js');
+page.script('src/core/theme.js');
     for (const cls of expected) {
       assert(page.document.documentElement.classList.contains(cls),
         `${pathname} → ${cls}`);
@@ -936,7 +903,8 @@ async function pathClasses() {
     html: '<!DOCTYPE html><html><body><div class="app-wrapper"></div></body></html>',
     state: {}
   });
-  tagger.script('src/core/theme.js');
+  tagger.script('src/core/i18n.js');
+tagger.script('src/core/theme.js');
   assert(tagger.document.documentElement.classList.contains('stk-tagger'), 'Tagger host is marked stk-tagger');
   for (const cls of ['stk-account-page', 'stk-info-page', 'stk-team-page', 'stk-bots-page', 'stk-blog-page']) {
     assert(!tagger.document.documentElement.classList.contains(cls), `Tagger avoids ${cls}`);
@@ -946,7 +914,8 @@ async function pathClasses() {
     html: '<!DOCTYPE html><html><body><div id="main"></div></body></html>',
     state: {}
   });
-  mainSite.script('src/core/theme.js');
+  mainSite.script('src/core/i18n.js');
+mainSite.script('src/core/theme.js');
   assert(!mainSite.document.documentElement.classList.contains('stk-tagger'), 'Scryfall itself is not marked as Tagger');
 }
 

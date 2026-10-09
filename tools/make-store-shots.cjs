@@ -29,7 +29,7 @@ async function main() {
   const page = copyPage(
     path.join(ROOT, 'src', 'ui', 'options.html'),
     path.join(WORK, 'options.html'),
-    { storage: { settingsLanguage: LANGUAGE, siteLanguage: LANGUAGE } }
+    { storage: { settingsLanguage: LANGUAGE } }
   );
 
   const session = new Session();
