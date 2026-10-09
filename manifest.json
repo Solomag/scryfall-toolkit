@@ -3,7 +3,7 @@
   "options_page": "src/ui/options.html",
   "manifest_version": 3,
   "name": "Scryfall Toolkit",
-  "version": "1.7.7",
+  "version": "1.7.8",
   "description": "Scryfall clipboard, tags, legality, dark theme, optional CardTrader prices and EDHREC statistics.",
   "icons": {
     "16": "assets/icons/icon16.png",

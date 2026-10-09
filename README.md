@@ -81,8 +81,9 @@ The toolbar button opens a small popup with the five switches you reach for most
 | **Visibility** | two columns: on the left a table with one row per platform — Paper, Arena, Magic Online — and a column per place: the platform's own **Show** box and its own boxes for the **Prints table**, **Search** and **Sets list**, with the Caster marker on its own under the table; and on the right, prices (USD, TIX, EUR), store links (TCGplayer, Cardhoarder, Cardmarket) under a switch for the whole **Buy This Card** block, CardTrader offers, and the EUR price source. Everything ticked means shown, and turning a platform — or the store block — off keeps the choices under it and brings them back; the **EUR** box and the EUR-source dropdown are two views of the same column, kept in step |
 | **Additional info** | A list of one-line features, each with its own switch and its settings behind a **Set up** button: the finish column, type and mana search, Commander popularity and Salt Meter |
 | **Legality** | The extra formats and their order |
-| **Scryfall Deckbuilder** | No Prices, stacked cards, the token list, a Commander legality check, and the three opt-in tools above |
+| **Scryfall Deckbuilder** | A list of one-line features, each with its own switch and a **?** for what it does and what it does not: No Prices, the token list, stacked cards, a per-card Commander check, EDHREC suggestions, deck search, and the improved cleanup — whose settings are behind its own **Set up**, collapsed until asked for |
 | **Experimental** | Settings still being worked on |
+| **Diagnostics** | The deck modules' own report, collapsed at the bottom of the page: whether a suitable editor page has been checked, whether the modules attached, and the technical detail behind it |
 
 ## FAQ
 

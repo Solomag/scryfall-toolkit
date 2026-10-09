@@ -84,19 +84,28 @@ const OPTIONAL_HOST_NAMES = {
 //
 // So the check reports, and the button asks. A reader is told what is missing instead of
 // being handed a console line they cannot act on.
+// Which of one feature's hosts are missing, by host rather than by feature. `contains`
+// answers for a whole list at once, so a feature that needs two hosts would report
+// "missing" even when only one of them is — and one of them missing is the difference
+// between a feature that works and a feature that quietly falls back to something
+// blander. The distinction is the whole of the limited-mode note.
+function missingHostsFor(key) {
+  const hosts = OPTIONAL_HOSTS[key] || [];
+  if (!hosts.length || !chrome.permissions || !chrome.permissions.contains) return Promise.resolve([]);
+  return Promise.all(hosts.map(host => new Promise(resolve => {
+    chrome.permissions.contains({ origins: [host] }, has => {
+      // Reading lastError here matters for the same reason: an unchecked one is
+      // printed whether or not anybody looks at it.
+      void chrome.runtime.lastError;
+      resolve(has ? null : host);
+    });
+  }))).then(results => results.filter(Boolean));
+}
 function reconcileHostAccess(values) {
-  if (!chrome.permissions || !chrome.permissions.contains) return Promise.resolve([]);
   const checks = [];
   for (const [key, hosts] of Object.entries(OPTIONAL_HOSTS)) {
     if (!values[key] || !hosts.length) continue;
-    checks.push(new Promise(resolve => {
-      chrome.permissions.contains({ origins: hosts }, has => {
-        // Reading lastError here matters for the same reason: an unchecked one is
-        // printed whether or not anybody looks at it.
-        void chrome.runtime.lastError;
-        resolve(has ? null : key);
-      });
-    }));
+    checks.push(missingHostsFor(key).then(missing => missing.length ? key : null));
   }
   return Promise.all(checks).then(results => results.filter(Boolean));
 }
@@ -348,6 +357,53 @@ chrome.storage.local.get(defaults, values => {
         'Для цен CardTrader нужен личный токен, и задаётся он в строке «Предложения CardTrader» выше, в том же блоке магазинов.',
         'Включать саму галочку «Предложения CardTrader» для этого не обязательно: она добавляет ссылки CardTrader в блок покупки, а столбец работает и без них.'
       ]
+    },
+    deckNoPrices: {
+      caption: 'Режим без цен в меню колоды',
+      notes: [
+        'Добавляет в меню «Показывать» на странице колоды вариант «Без цен». Он скрывает цены и данные о ценах рядом с картами в списке колоды.'
+      ]
+    },
+    deckTokens: {
+      caption: 'Показывать создаваемые картами токены',
+      notes: [
+        'Добавляет на страницу колоды кнопку «Показать токены»: она собирает токены, которые создают карты этой колоды, и показывает их списком.',
+        'Кнопка появляется только там, где Scryfall уже показывает список карт колоды, — на странице колоды в Deckbuilder.'
+      ]
+    },
+    stackedDeckCards: {
+      caption: 'Отображать карты стопками',
+      notes: [
+        'Показывает карты колоды стопкой вместо развёрнутой сетки. Компактнее при большой колоде; видны имена и количества.'
+      ]
+    },
+    deckLegality: {
+      caption: 'Проверять допустимость карт в Commander',
+      notes: [
+        'Проверяет допустимость отдельных карт в Commander. Не проверяет цветовую идентичность колоды, её размер и ограничения на число копий.',
+        'Кнопка появляется на странице колоды. Формат не выбирается: редактор Scryfall собирает командные колоды.'
+      ]
+    },
+    edhrecSuggestions: {
+      caption: 'Рекомендации EDHREC в редакторе колод',
+      notes: [
+        'Добавляет в редактор колоды кнопку со списком карт, которые EDHREC советует для вашего командира, и с долей колод, где они встречаются.',
+        'Для полного списка нужен доступ к данным EDHREC. Без него показывается только страница командира, а не советы по вашей колоде.'
+      ]
+    },
+    deckSearch: {
+      caption: 'Поиск карт в редакторе',
+      notes: [
+        'Добавляет в редактор колоды поиск по синтаксису Scryfall: результаты и кнопку добавления карты в колоду.',
+        'Поиск можно ограничить цветами командира и скрыть шуточные карты.'
+      ]
+    },
+    deckCleanUp: {
+      caption: 'Улучшенная уборка колоды',
+      notes: [
+        'Дополняет кнопку Clean Up в редакторе колоды: переносит земли и не-земли в нужные колонки, сортирует карты и вставляет заголовки групп.',
+        'Сортировка и заголовки работают, если выбраны в настройках. Содержимое колоды не меняется — только порядок и колонки.'
+      ]
     }
   };
   const shotDialog = document.getElementById('shotDialog');
@@ -410,23 +466,45 @@ chrome.storage.local.get(defaults, values => {
   darkTheme.addEventListener('change', () => {
     chrome.storage.local.set({ darkTheme: darkTheme.value }, () => { status.textContent = t('Сохранено'); });
   });
-  // An enabled feature may be missing a host it needs, if the host was added
-  // after the user granted access. Chrome only answers a permission request
-  // from a click, so this is a button rather than something that fires on load.
-  const grant = document.getElementById('grantDeckHosts');
-  if (grant) {
-    grant.addEventListener('click', () => {
-      const missing = [...new Set(Object.values(OPTIONAL_HOSTS).flat())];
-      requestHostAccess(missing).then(answer => {
-        if (answer.granted) {
-          status.textContent = t('Доступ к хосту выдан — перезагрузи открытые страницы.');
+  // An enabled feature may be missing a host it needs, if the host was added after the
+  // user granted access. Chrome answers a permission request only from a click, so the
+  // page never asks on its own — a request made while loading is refused and printed as
+  // an unchecked error, which is the bug this page already fixed once.
+  //
+  // The one feature with a click of its own is EDHREC suggestions, whose row carries a
+  // chip that appears only while it is on without the access it needs. The chip says
+  // which of two cases it is: no access at all, or the partial access where EDHREC falls
+  // back to the commander page instead of advice about the deck. Every other feature is
+  // turned on from its own switch, and turning it off and on again is what re-asks.
+  const edhrecPermission = document.getElementById('edhrecSuggestPermission');
+  const edhrecPermissionText = document.getElementById('edhrecPermissionText');
+  const grantEdhrec = document.getElementById('grantEdhrecSuggest');
+  const edhrecBox = document.getElementById('edhrecSuggestions');
+  const refreshEdhrecPermission = () => {
+    if (!edhrecPermission) return;
+    if (!edhrecBox.checked) { edhrecPermission.hidden = true; return; }
+    missingHostsFor('edhrecSuggestions').then(missing => {
+      if (!missing.length) { edhrecPermission.hidden = true; return; }
+      const limited = missing.length < OPTIONAL_HOSTS.edhrecSuggestions.length;
+      edhrecPermissionText.textContent = t(limited ? 'Ограниченный режим' : 'Требуется разрешение');
+      edhrecPermission.hidden = false;
+    });
+  };
+  if (grantEdhrec) {
+    grantEdhrec.addEventListener('click', () => {
+      // Only this feature's hosts: asking for everything the extension might ever need
+      // is how a permission dialog comes to look like a demand.
+      requestHostAccess(OPTIONAL_HOSTS.edhrecSuggestions).then(answer => {
+        if (!answer.granted) {
+          // The browser refusing to ask at all is not the reader saying no, and
+          // saying "не выдан" for it would be a message about the wrong thing.
+          status.textContent = answer.reason
+            ? t('Браузер не дал спросить: ') + answer.reason
+            : t('Доступ не выдан.');
           return;
         }
-        // The browser refusing to ask at all is not the reader saying no, and
-        // saying "не выдан" for it would be a message about the wrong thing.
-        status.textContent = answer.reason
-          ? t('Браузер не дал спросить: ') + answer.reason
-          : t('Доступ не выдан.');
+        status.textContent = t('Доступ к хосту выдан — перезагрузи открытые страницы.');
+        refreshEdhrecPermission();
       });
     });
   }
@@ -435,11 +513,12 @@ chrome.storage.local.get(defaults, values => {
     // a reader who has EDHREC switched on and CardTrader switched off is missing one
     // host, and telling them that two are missing sends them looking for a switch that
     // is deliberately off. A storage key in the message would be worse than either.
-    if (!missing.length) return;
-    const named = [...new Set(missing.map(key => (OPTIONAL_HOST_NAMES[key] || key)))];
-    status.textContent = t('Не выдан доступ к хостам для: ') + named.join(', ') +
-      '. Нажми «Выдать доступ к хостам».';
-    if (grant) grant.classList.add('stk-needs-grant');
+    if (missing.length) {
+      const named = [...new Set(missing.map(key => (OPTIONAL_HOST_NAMES[key] || key)))];
+      status.textContent = t('Не выдан доступ к хостам для: ') + named.join(', ') +
+        '. Выключи и включи нужную функцию, чтобы запросить доступ.';
+    }
+    refreshEdhrecPermission();
   });
   for (const key of basicFields) {
     const element = document.getElementById(key);
@@ -465,12 +544,16 @@ chrome.storage.local.get(defaults, values => {
               : t('Доступ не выдан.');
             return;
           }
-          chrome.storage.local.set({ [key]: wanted }, () => { status.textContent = t('Сохранено'); });
+          chrome.storage.local.set({ [key]: wanted }, () => {
+            status.textContent = t('Сохранено');
+            if (key === 'edhrecSuggestions') refreshEdhrecPermission();
+          });
         });
         return;
       }
       chrome.storage.local.set({ [key]: wanted }, () => {
         status.textContent = t('Сохранено');
+        if (key === 'edhrecSuggestions') refreshEdhrecPermission();
       });
     });
   }
@@ -490,37 +573,65 @@ chrome.storage.local.get(defaults, values => {
     master.addEventListener('change', apply);
     apply();
   }
-  // The deck modules run against Scryfall's application internals, and every
-  // hook they need is optional. When one does not take, the module says so —
-  // and that report is the only way to tell "the feature is off" from "the
-  // feature could not attach", so it is shown here rather than left in storage.
+  // The deck modules run against Scryfall's application internals, and every hook they need is
+  // optional. When one does not take, the module says so — and that report is the only way to
+  // tell "the feature is off" from "the feature could not attach". It lives in the diagnostics
+  // section, behind a disclosure, because it is a place to read and not a step: nothing asks for
+  // anything to fill it, and opening it changes no setting.
+  //
+  // The state is named rather than left for the reader to infer, and the four are the four that
+  // matter: no editor page open (which is not an error — the modules do not run anywhere else),
+  // nothing checked yet, a module that works, and a real error on an editor page. A report is
+  // always about a page visited before this one, so it says which page that was.
+  const DECK_EDITOR_PATH = /^\/(?:@[^/]+\/decks\/|decks\/)/;
   const deckStatus = document.getElementById('deckModuleStatus');
   if (deckStatus) {
     chrome.storage.local.get({ deckModuleStatus: null }).then(({ deckModuleStatus }) => {
       const s = deckModuleStatus;
+      const lines = [];
+      const add = (text, className) => {
+        const p = document.createElement('p');
+        if (className) p.className = className;
+        p.textContent = text;
+        lines.push(p);
+      };
       if (!s) {
-        deckStatus.textContent = t('Открой редактор колоды с включённым модулем, и здесь появится его отчёт.');
+        add(t('Проверка ещё не выполнена: открой редактор колоды Scryfall с включённым модулем.'), 'diagnostic-state');
+        deckStatus.replaceChildren(...lines);
         return;
       }
-      const lines = [t('Страница') + ': ' + (s.page || '—')];
+      const problems = [...(s.problems || []), ...((s.scryfall && s.scryfall.problems) || [])];
+      const onEditorPage = DECK_EDITOR_PATH.test(s.page || '');
+      const applied = [s.cleanUp, s.edhrecSuggestions, s.deckSearch].filter(Boolean).length;
+      if (s.off) {
+        add(t('Проверка ещё не выполнена: ни один модуль редактора не включён.'), 'diagnostic-state');
+      } else if (!onEditorPage) {
+        add(t('Подходящая страница редактора не открыта. Это не ошибка: на других страницах Scryfall модули и не должны работать.'), 'diagnostic-state');
+      } else if (s.wired === false || problems.length) {
+        add(t('Обнаружена ошибка на странице редактора.'), 'diagnostic-state diagnostic-state-error');
+      } else if (applied) {
+        add(t('Модуль работает.'), 'diagnostic-state diagnostic-state-ok');
+      } else {
+        add(t('Проверка ещё не выполнена.'), 'diagnostic-state');
+      }
+      add(t('Данные последней проверки, страница') + ': ' + (s.page || '—'), 'diagnostic-where');
       const flags = [
         ['cleanUp', t('Очистка колоды')],
         ['edhrecSuggestions', t('Подсказки EDHREC')],
         ['deckSearch', t('Поиск Scryfall')]
       ];
-      lines.push(t('Подключено') + ': ' + flags.filter(([key]) => s[key]).map(([, label]) => label).join(', '));
+      add(t('Подключено') + ': ' + (flags.filter(([key]) => s[key]).map(([, label]) => label).join(', ') || '—'));
       const inner = s.scryfall || {};
-      lines.push(t('Внутренности Scryfall') + ': ' + [
+      add(t('Внутренности Scryfall') + ': ' + [
         inner.hasScryfall ? 'window.Scryfall ✓' : 'window.Scryfall ✗',
         inner.hasScryfallApi ? 'ScryfallAPI ✓' : 'ScryfallAPI ✗',
         inner.hooksInstalled ? 'hooks ✓' : 'hooks ✗'
       ].join(' · '));
-      if (inner.problems && inner.problems.length) {
-        lines.push(t('Что не так') + ':');
-        for (const problem of inner.problems) lines.push('— ' + problem);
+      if (problems.length) {
+        add(t('Что не так') + ':');
+        for (const problem of problems) add('— ' + problem, 'diagnostic-problem');
       }
-      deckStatus.textContent = lines.join('\n');
-      deckStatus.style.whiteSpace = 'pre-wrap';
+      deckStatus.replaceChildren(...lines);
     }).catch(() => {});
   }
   // --- the hiding group, drawn from the model -----------------------------------
@@ -886,6 +997,14 @@ for (const group of FILTERS.PRICE_GROUP_NAMES) {
       const open = panel.hidden;
       panel.hidden = !open;
       button.setAttribute('aria-expanded', String(open));
+      // Most disclosures keep the same word on their button, because "Настроить" is a
+      // name for what is behind it rather than a state. Diagnostics is the exception: it
+      // is the one a reader opens to look and closes again, so its button says which way
+      // it goes. The words are in the markup rather than invented here.
+      if (button.dataset.toggleText) {
+        const [closed, opened] = button.dataset.toggleText.split('|');
+        button.textContent = t(open ? opened : closed);
+      }
     });
   });
   // A reset is one feature's parameters and nothing else. It writes the same defaults the page

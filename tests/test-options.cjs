@@ -37,7 +37,9 @@ const REQUIRED_IDS = [
   'deckNoPrices', 'stackedDeckCards', 'deckLegality',
   'deckCleanUpImprover', 'cleanUpLandsInSingleton', 'sortEntriesPrimary',
   'insertSortingHeadings', 'edhrecSuggestions', 'deckSearch',
-  'deckModuleStatus', 'grantDeckHosts',
+  'deckModuleStatus', 'deckbuilderGroup', 'diagnosticsGroup', 'diagnosticsToggle',
+  'diagnosticsPanel', 'edhrecSuggestPermission', 'edhrecPermissionText',
+  'grantEdhrecSuggest', 'deckCleanUpToggle', 'deckCleanUpPanel',
   // The platforms table is written by options.js, so the page holds only its head, its body and
   // the price container. Every control in this section is drawn at run time from
   // STK_SET_FILTERS.PLATFORM_NAMES, its AREAS and its PRICE_GROUPS.
@@ -847,8 +849,10 @@ function sectionOrderTest() {
   const html = read('src/ui/options.html');
   const headings = [...html.matchAll(/<h2>([^<]+)<\/h2>/g)].map(match => match[1]);
   assertEqual(headings, ['Общее', 'Tags', 'CardClip', 'Видимость', 'Дополнительная информация',
-    'Легальность', 'Scryfall Deckbuilder', 'Издания', 'Экспериментальное', 'Авторы и сторонние проекты'],
-    'sections follow the agreed order, with the Prints group and Experimental before the credits block');
+    'Легальность', 'Scryfall Deckbuilder', 'Издания', 'Экспериментальное', 'Диагностика',
+    'Авторы и сторонние проекты'],
+    'sections follow the agreed order, with the Prints group and Experimental before diagnostics ' +
+    'and the credits block');
   // The installed extension has to say out loud what it is not, and where the
   // full notices are, because a reviewer reads the settings page and not the repo.
   const credits = html.slice(html.indexOf('<section class="credits">'));
@@ -1008,8 +1012,8 @@ function sectionOrderTest() {
     'the clean up improver is a deck option');
   assertEqual(sectionOf('sortEntriesPrimary'), 'Scryfall Deckbuilder',
     'and so are the settings that only matter while it is on');
-  assertEqual(sectionOf('deckModuleStatus'), 'Scryfall Deckbuilder',
-    'and the report the modules give about themselves');
+  assertEqual(sectionOf('deckModuleStatus'), 'Диагностика',
+    'and the report the modules give about themselves moved to Diagnostics at the bottom');
   assertEqual(sectionOf('printPageSameTab'), 'Экспериментальное', 'the same-tab printings switch stays in Experimental');
   assertEqual(sectionOf('siteLanguage'), 'Экспериментальное', 'the site language selector moved to the bottom');
   assert(html.indexOf('id="siteLanguage"') > html.indexOf('id="deckTokens"'),
@@ -1127,54 +1131,276 @@ const settle = () => new Promise(resolve => setTimeout(resolve, 0));
 // off, or it could not attach. The page world reports which, and settings is
 // where that report has to be readable.
 async function deckModuleStatusTest() {
-  console.log('options.js: the deck modules report what they found');
+  console.log('options.js: the deck modules report what they found, and diagnostics names the state');
+
+  // Closed when the page opens, and opening it changes nothing and asks for nothing. The
+  // report is a place to read, not a step: a reader who never opens it has lost nothing.
   const none = loadOptions({});
   await settle();
   const idle = none.document.getElementById('deckModuleStatus').textContent;
   assert(idle.length > 0, 'with nothing reported yet it says what to do');
   assert(!/decks\//.test(idle), 'and does not invent a page');
+  assert(/Проверка ещё не выполнена/.test(idle), 'and names the state rather than showing a blank report');
+  const toggle = none.document.getElementById('diagnosticsToggle');
+  const panel = none.document.getElementById('diagnosticsPanel');
+  assert(panel.hidden === true, 'diagnostics starts closed');
+  assertEqual(toggle.getAttribute('aria-expanded'), 'false', 'and says so to a screen reader');
+  const before = JSON.stringify(none.mock.state);
+  const asked = none.mock.permissions.requestCount;
+  toggle.click();
+  await settle();
+  assertEqual(panel.hidden, false, 'the button opens it');
+  assertEqual(toggle.getAttribute('aria-expanded'), 'true', 'and says so');
+  assertEqual(toggle.textContent, 'Скрыть', 'and the button says which way it goes');
+  toggle.click();
+  await settle();
+  assertEqual(panel.hidden, true, 'the second press closes it again');
+  assertEqual(JSON.stringify(none.mock.state), before, 'and none of that touched a setting');
+  assertEqual(none.mock.permissions.requestCount, asked, 'or asked for a permission');
 
-  const page = loadOptions({
+  // A report from a card page. The deck modules do not run there, and the adapter says so in
+  // its own words — but that is not an error, and the page must not call it one.
+  const card = loadOptions({
+    settingsLanguage: 'en',
+    deckModuleStatus: {
+      at: Date.now(),
+      page: '/card/tst/1/test-card',
+      scryfall: {
+        hasScryfall: false, hasScryfallApi: false, hooksInstalled: true,
+        problems: ['ScryfallAPI.decks is not available', 'Scryfall.deckbuilder is not available']
+      }
+    }
+  });
+  await settle();
+  const cardText = card.document.getElementById('deckModuleStatus').textContent;
+  assert(/no suitable editor page is open/i.test(cardText),
+    'a report from a card page is named as "no editor page open"');
+  assert(!/error was found/i.test(cardText), 'and not as an error, because it is not one');
+  assert(cardText.includes('/card/tst/1/test-card'),
+    'while the page it came from is still named, so the reader knows which check this is');
+
+  // A report from a real editor page with a problem in it. This one is an error, and the
+  // adapter's own words are kept — inside diagnostics, where the technical detail belongs.
+  const broken = loadOptions({
     settingsLanguage: 'en',
     deckModuleStatus: {
       at: Date.now(),
       page: '/decks/abc123/build',
-      cleanUp: true,
-      cardPreview: false,
+      cleanUp: false,
       edhrecSuggestions: true,
       deckSearch: false,
       scryfall: {
-        hasScryfall: true,
-        hasScryfallApi: true,
-        hooksInstalled: true,
+        hasScryfall: true, hasScryfallApi: true, hooksInstalled: true,
         problems: ['deckbuilder.entries is a computed property; the deck edits hook is not installed']
       }
     }
   });
   await settle();
-  const text = page.document.getElementById('deckModuleStatus').textContent;
-  assert(text.includes('/decks/abc123/build'), 'it names the page the report came from');
-  assert(text.includes('hooks'), 'whether the hooks into Scryfall took');
-  assert(text.includes('deckbuilder.entries is a computed property'),
-    'and what went wrong, in the adapter\'s own words');
-  assert(text.indexOf('/decks/abc123/build') < text.indexOf('deckbuilder.entries'),
+  const brokenText = broken.document.getElementById('deckModuleStatus').textContent;
+  assert(/error was found on the editor page/i.test(brokenText),
+    'a problem reported on an editor page is an error');
+  assert(brokenText.includes('deckbuilder.entries is a computed property'),
+    'and the adapter\'s own words are kept');
+  assert(brokenText.includes('hooks'), 'whether the hooks into Scryfall took');
+  assert(brokenText.indexOf('/decks/abc123/build') < brokenText.indexOf('deckbuilder.entries'),
     'with the page first and the problem after it');
+
+  // And a clean report from an editor page: a module that applied and no problems.
+  const works = loadOptions({
+    settingsLanguage: 'en',
+    deckModuleStatus: {
+      at: Date.now(), page: '/decks/abc123/build',
+      cleanUp: true, edhrecSuggestions: false, deckSearch: false,
+      scryfall: { hasScryfall: true, hasScryfallApi: true, hooksInstalled: true, problems: [] }
+    }
+  });
+  await settle();
+  assert(/the module is working/i.test(works.document.getElementById('deckModuleStatus').textContent),
+    'a clean report from an editor page with a module applied says it works');
+
+  // A report from an editor page where nothing was enabled says so rather than reading as a
+  // failure: the module was never asked to do anything.
+  const off = loadOptions({
+    settingsLanguage: 'en',
+    deckModuleStatus: { at: Date.now(), page: '/decks/abc123/build', off: true }
+  });
+  await settle();
+  assert(/no deck module is turned on/i.test(off.document.getElementById('deckModuleStatus').textContent),
+    'and a report with nothing enabled says so');
 }
 
-// Chrome answers a permission request only from a click, so the way to give
-// access has to be a thing the user can press. Without it a feature that needs
-// a newly added host falls back silently and nobody knows why.
+// Chrome answers a permission request only from a click, so the way to give access has to be a
+// thing the user can press. It is the chip on the feature's own row, it asks only for that
+// feature's hosts, and it is there only while the access is actually missing.
 async function grantHostsTest() {
-  console.log('options.js: there is a way to give the hosts a feature needs');
+  console.log('options.js: the permission chip asks for the feature\'s own hosts');
   const page = loadOptions({ edhrecSuggestions: true, settingsLanguage: 'en' });
   const { document, mock } = page;
   await settle();
-  const button = document.getElementById('grantDeckHosts');
-  assert(button, 'the deck section has a button for it');
-  button.dispatchEvent(new page.window.Event('click'));
   await settle();
-  const asked = (mock.permissions && mock.permissions.grantedOrigins) || [];
-  assert(asked.some(origin => String(origin).includes('edhrec.com')), 'and it asks for edhrec.com');
+  const chip = document.getElementById('edhrecSuggestPermission');
+  assert(chip && chip.hidden === false,
+    'the EDHREC suggestions row shows the chip while the access is missing');
+  assertEqual(document.getElementById('edhrecPermissionText').textContent, 'Permission needed',
+    'and says what it is');
+  assertEqual(mock.permissions.grantedOrigins, [], 'the chip has asked for nothing on its own');
+  document.getElementById('grantEdhrecSuggest').dispatchEvent(new page.window.Event('click'));
+  await settle();
+  await settle();
+  assertEqual([...mock.permissions.grantedOrigins].sort(),
+    ['https://edhrec.com/*', 'https://json.edhrec.com/*'],
+    'pressing it asks for both hosts the feature needs, and no others');
+  assert(chip.hidden === true, 'and the chip goes away once the access is granted');
+
+  // The limited mode: only part of the access. The commander page still loads, the advice
+  // about the deck does not, and "permission needed" would read as a feature that does not
+  // work at all — which is a different thing. The page is built by hand so the grant is in
+  // place before the script runs, which is what a reader who granted it earlier looks like.
+  const partial = createPage({
+    url: 'chrome-extension://scryfall-toolkit/options.html',
+    html: read('src/ui/options.html'),
+    state: { edhrecSuggestions: true, settingsLanguage: 'en' }
+  });
+  partial.mock.permissions.grantedOrigins.push('https://json.edhrec.com/*');
+  partial.script('src/core/set-filters.js');
+  partial.script('src/core/i18n.js');
+  partial.script('src/core/format-catalog.js');
+  partial.script('src/ui/options.js');
+  await settle();
+  await settle();
+  const pchip = partial.document.getElementById('edhrecSuggestPermission');
+  assert(pchip && pchip.hidden === false, 'a feature with only part of the access still shows the chip');
+  assertEqual(partial.document.getElementById('edhrecPermissionText').textContent, 'Limited mode',
+    'and names the limited mode rather than a feature that does not work');
+
+  // And with the access already there, no chip and no warning: a warning left standing after
+  // the access is granted is a warning a reader learns to ignore.
+  const granted = createPage({
+    url: 'chrome-extension://scryfall-toolkit/options.html',
+    html: read('src/ui/options.html'),
+    state: { edhrecSuggestions: true, settingsLanguage: 'en' }
+  });
+  granted.mock.permissions.grantedOrigins.push('https://json.edhrec.com/*', 'https://edhrec.com/*');
+  granted.script('src/core/set-filters.js');
+  granted.script('src/core/i18n.js');
+  granted.script('src/core/format-catalog.js');
+  granted.script('src/ui/options.js');
+  await settle();
+  await settle();
+  assert(granted.document.getElementById('edhrecSuggestPermission').hidden === true,
+    'and with the access already there the chip is not shown');
+  assert(!/EDHREC/.test(granted.document.getElementById('status').textContent),
+    'nor is anything named in the status line');
+}
+
+// The Scryfall Deckbuilder section: one line per feature, the settings that only matter while a
+// feature is on behind its own "Настроить", and nothing else. The paragraphs that used to stand
+// between the rows are behind each row's "?", and the technical story is in Diagnostics.
+//
+// Four claims, each a way the shape could be wrong while looking right: a row that is a slider
+// rather than a box (which the rework removed), a feature with a paragraph under it (which makes
+// the section a form), a disclosure that turns its feature on (which makes looking a decision),
+// and technical internals in the user-facing text (which belongs in Diagnostics).
+async function deckbuilderSectionTest() {
+  console.log('options.js: the deck tools are a list of features, not a form');
+  const html = read('src/ui/options.html');
+  const start = html.indexOf('<section id="deckbuilderGroup">');
+  const end = html.indexOf('<h2>Издания</h2>');
+  assert(start >= 0 && end > start, 'the deck section has its own container');
+  const section = html.slice(start, end);
+
+  // The seven features, each a row with a square box and a name. The ids are the settings the
+  // modules read; the names say what the feature does rather than what control it adds.
+  const rows = [...section.matchAll(/<div class="feature-row"[^>]*>[\s\S]*?<\/div>/g)];
+  assert(rows.length >= 7, 'the section is a list of feature rows (' + rows.length + ' found)');
+  for (const id of ['deckNoPrices', 'setTokens', 'stackedDeckCards', 'deckLegality',
+    'edhrecSuggestions', 'deckSearch', 'deckCleanUpImprover']) {
+    const at = section.indexOf(`id="${id}"`);
+    assert(at > 0, `${id} is in the section`);
+    assert(/class="stk-check"/.test(section.slice(Math.max(0, at - 90), at + 90)),
+      `${id} is a square box like the updated sections, not a slider`);
+  }
+  // No paragraph of explanation and no nested frame: the explanation is behind the "?" and
+  // the frame is what the rework removed.
+  assert(!/<p class="hint">/.test(section), 'no paragraph of explanation stands in the section');
+  assert(!/<fieldset/.test(section) && !/<legend/.test(section), 'and no fieldset or legend');
+  // The technical story is gone from the user-facing text. It lives in Diagnostics, where the
+  // URLs, the object names and the adapter's own words belong.
+  const optionsSource = read('src/ui/options.js');
+  const helpBlock = optionsSource.slice(
+    optionsSource.indexOf('const FEATURE_HELP'), optionsSource.indexOf('const shotDialog'));
+  for (const forbidden of ['window.Scryfall', 'window.ScryfallAPI', 'hooks', 'JSON', 'очередь',
+    'через разметку']) {
+    assert(!section.includes(forbidden), `the section does not mention ${forbidden}`);
+    assert(!helpBlock.includes(forbidden), `the feature help does not mention ${forbidden}`);
+  }
+  // The cleanup settings are behind the feature's own disclosure, collapsed when the page
+  // opens, and they are the three the module reads.
+  const panelAt = section.indexOf('<div class="feature-panel" id="deckCleanUpPanel" hidden>');
+  assert(panelAt > 0, 'the cleanup settings are in a panel that starts hidden');
+  for (const id of ['cleanUpLandsInSingleton', 'sortEntriesPrimary', 'insertSortingHeadings']) {
+    assert(section.indexOf(`id="${id}"`) > panelAt, `${id} is inside the cleanup panel`);
+  }
+  const toggleAt = section.indexOf('id="deckCleanUpToggle"');
+  const toggle = section.slice(toggleAt, toggleAt + 200);
+  assert(/aria-controls="deckCleanUpPanel"/.test(toggle) && /aria-expanded="false"/.test(toggle),
+    'and the button names the panel and starts collapsed');
+
+  // Runtime: the disclosure opens and closes without touching the feature or its values.
+  const page = loadOptions({
+    settingsLanguage: 'en',
+    deckCleanUpImprover: false,
+    cleanUpLandsInSingleton: true, sortEntriesPrimary: 'name', insertSortingHeadings: true
+  });
+  const { document, mock } = page;
+  await settle();
+  const q = id => document.getElementById(id);
+  assertEqual(q('deckCleanUpPanel').hidden, true, 'the cleanup panel starts closed');
+  const before = JSON.stringify(mock.state);
+  q('deckCleanUpToggle').click();
+  await settle();
+  assertEqual(q('deckCleanUpPanel').hidden, false, 'opening it shows the settings');
+  assertEqual(q('deckCleanUpToggle').getAttribute('aria-expanded'), 'true', 'and says so');
+  assertEqual(mock.state.deckCleanUpImprover, false, 'and opening it does not turn the feature on');
+  assertEqual([q('cleanUpLandsInSingleton').checked, q('sortEntriesPrimary').value,
+    q('insertSortingHeadings').checked], [true, 'name', true],
+    'and the saved values are drawn where the reader left them, whatever the switch says');
+  q('deckCleanUpToggle').click();
+  await settle();
+  assertEqual(q('deckCleanUpPanel').hidden, true, 'closing it hides them again');
+  assertEqual(mock.state.deckCleanUpImprover, false, 'and closing does not turn it off');
+  assertEqual(JSON.stringify(mock.state), before,
+    'and neither direction wrote to storage, so the panel is a disclosure and not a step');
+
+  // The switch is the whole of turning the feature on: it saves on its own, with the panel shut.
+  q('deckCleanUpImprover').checked = true;
+  fireEvent(q('deckCleanUpImprover'), 'change');
+  await settle();
+  assertEqual(mock.state.deckCleanUpImprover, true,
+    'and the switch saves without the panel ever being opened');
+
+  // Every help button in the section names an entry, and each opens by click — and it is a
+  // button, so it is reached by Tab and opened by Enter, which a `title` tooltip is not.
+  for (const button of document.querySelectorAll('#deckbuilderGroup .feature-help')) {
+    assert(!button.disabled, `the help named ${button.dataset.help} is an entry in the help table`);
+  }
+  document.querySelector('#deckbuilderGroup [data-help="deckLegality"]').click();
+  await settle();
+  assertEqual(document.getElementById('shotCaption').textContent, 'Check individual cards for Commander legality',
+    'the legality help names the feature it is about');
+  assert(/colour identity/.test(document.getElementById('shotNotes').textContent),
+    'and carries the limit that used to stand in the body: it does not check the deck as a whole');
+  assertEqual(document.getElementById('shotImage').hidden, true,
+    'and no picture, because what moved here is a paragraph');
+
+  // Both languages: the same rows, the names translated. A half-translated section is the
+  // worst case of a page that reads as finished.
+  const ru = loadOptions({ settingsLanguage: 'ru' });
+  const en = loadOptions({ settingsLanguage: 'en' });
+  assertEqual(ru.document.getElementById('deckLegality').parentElement.textContent.trim(),
+    'Проверять допустимость карт в Commander', 'the row reads its Russian name in Russian');
+  assertEqual(en.document.getElementById('deckLegality').parentElement.textContent.trim(),
+    'Check individual cards for Commander legality', 'and its English name in English');
 }
 
 async function formatListTest() {
@@ -2059,8 +2285,8 @@ async function hostAccessTest() {
   assert(/EDHREC/.test(status.textContent),
     'a feature that is on without its host is named in the status line (' +
       status.textContent.slice(0, 60) + ')');
-  assert(document.getElementById('grantDeckHosts').classList.contains('stk-needs-grant'),
-    'and the button that grants it is marked on the page');
+  assert(!document.getElementById('grantDeckHosts'),
+    'and there is no separate "grant host access" button: the row is where it is asked for');
 
   // A refusal must be read, or Chrome prints it as unchecked.
   mock.permissions.unchecked.length = 0;
@@ -2079,16 +2305,6 @@ async function hostAccessTest() {
     'saying the browser would not ask, which is not the reader saying no (' +
       status.textContent.slice(0, 60) + ')');
   mock.permissions.refuseWith = null;
-
-  // And the way that works: the button, from a click.
-  const grant = document.getElementById('grantDeckHosts');
-  grant.click();
-  await tick();
-  await tick();
-  assert(mock.permissions.grantedOrigins.includes('https://json.edhrec.com/*'),
-    'the button grants what the page said was missing');
-  assertEqual(mock.permissions.unchecked, [],
-    'and a refusal there is read as well');
 }
 
 // Additional info is a list of features, each with its own settings behind a button, and the
@@ -2310,6 +2526,7 @@ async function cardtraderRowTest() {
     await discoveredFormatsTest();
     await deckModuleStatusTest();
     await grantHostsTest();
+    await deckbuilderSectionTest();
     featureShotsTest();
     await featureRowsTest();
     await cardtraderRowTest();

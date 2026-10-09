@@ -202,35 +202,59 @@
 <div id="formatList"></div>
 <p class="hint">Перетащи формат в нужную позицию любой колонки; чекбокс скрывает его. Порядок на карте: слева направо, сверху вниз.</p>
 </fieldset>
-</section><section><h2>Scryfall Deckbuilder</h2>
-<label><input type="checkbox" id="deckNoPrices"> Режим «No Prices» в выпадающем списке колоды</label>
-<label><input type="checkbox" id="setTokens"> Список токенов, создаваемых картами колоды</label>
-<p class="hint">Кнопка Show Tokens на странице колоды находит токены, которые создают карты твоей колоды. Она появляется только там, где у Scryfall есть список карт колоды, — на странице колоды в Deckbuilder, и больше нигде.</p>
-<label><input type="checkbox" id="stackedDeckCards"> Карты колоды стопкой вместо развёрнутой сетки</label>
-<label><input type="checkbox" id="deckLegality"> Проверка легальности колоды в Commander</label>
-<p class="hint">Кнопка на странице колоды спрашивает у Scryfall легальность каждой карты отдельно и показывает те, которые Scryfall считает нелегальными в Commander. Это ответ на формат для каждой карты, а не проверка колоды целиком: цветовая идентичность командира, ограничение в 100 карт и правило одной копии для карт с надписью «только Commander» не проверяются, и панель говорит об этом рядом со списком. Формат не выбирается — редактор Scryfall собирает командные колоды, и это факт о странице, а не настройка.</p>
-
-<label><input type="checkbox" id="edhrecSuggestions"> Подсказки EDHREC в редакторе командных колод</label>
-<p class="hint">Кнопка EDHREC в панели инструментов открывает списки карт, которые EDHREC показывает для твоего командира, с процентом колод, где они встречаются. Данные берутся из открытого JSON EDHREC по их опубликованной политике — не чаще запроса в секунду и с кешем.</p>
-<label><input type="checkbox" id="deckSearch"> Поиск Scryfall прямо в редакторе колоды</label>
-<p class="hint">Кнопка Search в панели инструментов: запрос по языку Scryfall, выдача и добавление карты в колоду. Можно ограничить поиск цветами командира и убрать шуточные карты. Запросы идут через очередь Scryfall расширения.</p>
-<fieldset><legend>Что говорят модули редактора</legend>
-<p class="hint">Все четыре модуля работают через внутренний интерфейс Scryfall, а не через разметку. Пока они не проверены в живом редакторе, это единственный способ понять, принялись ли они: открой редактор колоды, а затем вернись сюда.</p>
-<div id="deckModuleStatus" class="hint"></div>
-<button type="button" id="grantDeckHosts">Выдать доступ к хостам</button>
-<p class="hint">Рекомендации EDHREC ходят на edhrec.com, а не только на их открытый JSON. Если доступа нет, они молча показывают страницу командира вместо советов по колоде. Кнопка запрашивает недостающее.</p>
-</fieldset>
-<fieldset><legend>Очистка колоды (Shambleshark)</legend>
-<label><input type="checkbox" id="deckCleanUpImprover"> Улучшенная кнопка Clean Up</label>
-<p class="hint">Модуль перенесён из Shambleshark. Он работает через внутренний интерфейс Scryfall — window.Scryfall и window.ScryfallAPI, — а не через разметку страницы, и потому стоит по умолчанию выключенным: пока он не проверен в живом редакторе колод, включать его стоит осознанно. Если Scryfall перепишет свой интерфейс, модуль перестанет работать, но редактор не сломается.</p>
-<label><input type="checkbox" id="cleanUpLandsInSingleton"> Перекладывать земли и не-земли по их колонкам</label>
-<label>Сортировка карт: <select id="sortEntriesPrimary">
+</section><section id="deckbuilderGroup"><h2>Scryfall Deckbuilder</h2>
+<!-- One line per feature: a switch and the feature's name on the left, its help and any
+     secondary action on the right. The paragraphs that used to stand between the rows are
+     behind each row's "?" now, and the settings that only mean something while a feature is on
+     are behind its own "Настроить" — collapsed when the page opens, whatever the feature is set
+     to. Nothing here is a second level: a panel holds fields and no other panel, and opening one
+     changes nothing. -->
+<div class="feature-list">
+<div class="feature-row">
+<label class="feature-main"><input type="checkbox" class="stk-check" id="deckNoPrices"> Режим без цен в меню колоды</label>
+<button type="button" class="feature-help" data-help="deckNoPrices" aria-haspopup="dialog" title="Что это">?</button>
+</div>
+<div class="feature-row">
+<label class="feature-main"><input type="checkbox" class="stk-check" id="setTokens"> Показывать создаваемые картами токены</label>
+<button type="button" class="feature-help" data-help="deckTokens" aria-haspopup="dialog" title="Что это">?</button>
+</div>
+<div class="feature-row">
+<label class="feature-main"><input type="checkbox" class="stk-check" id="stackedDeckCards"> Отображать карты стопками</label>
+<button type="button" class="feature-help" data-help="stackedDeckCards" aria-haspopup="dialog" title="Что это">?</button>
+</div>
+<div class="feature-row">
+<label class="feature-main"><input type="checkbox" class="stk-check" id="deckLegality"> Проверять допустимость карт в Commander</label>
+<button type="button" class="feature-help" data-help="deckLegality" aria-haspopup="dialog" title="Что это">?</button>
+</div>
+<!-- EDHREC suggestions need a host that is asked for only from a click. The permission chip is
+     that click: it appears only while the feature is on without the access it needs, and the
+     page never asks on its own. A limited mode is the case where only part of the access is
+     missing, and it says so rather than reading as a broken feature. -->
+<div class="feature-row">
+<label class="feature-main"><input type="checkbox" class="stk-check" id="edhrecSuggestions"> Рекомендации EDHREC в редакторе колод</label>
+<span class="feature-permission" id="edhrecSuggestPermission" hidden><span id="edhrecPermissionText">Требуется разрешение</span> <button type="button" class="feature-grant" id="grantEdhrecSuggest">Предоставить</button></span>
+<button type="button" class="feature-help" data-help="edhrecSuggestions" aria-haspopup="dialog" title="Что это">?</button>
+</div>
+<div class="feature-row">
+<label class="feature-main"><input type="checkbox" class="stk-check" id="deckSearch"> Поиск карт в редакторе</label>
+<button type="button" class="feature-help" data-help="deckSearch" aria-haspopup="dialog" title="Что это">?</button>
+</div>
+<div class="feature-row">
+<label class="feature-main"><input type="checkbox" class="stk-check" id="deckCleanUpImprover"> Улучшенная уборка колоды</label>
+<button type="button" class="feature-toggle" id="deckCleanUpToggle" aria-expanded="false" aria-controls="deckCleanUpPanel">Настроить</button>
+<button type="button" class="feature-help" data-help="deckCleanUp" aria-haspopup="dialog" title="Что это">?</button>
+</div>
+<div class="feature-panel" id="deckCleanUpPanel" hidden>
+<label class="feature-main"><input type="checkbox" class="stk-check" id="cleanUpLandsInSingleton"> Перекладывать земли и не-земли по их колонкам</label>
+<label for="sortEntriesPrimary">Сортировка карт</label>
+<select id="sortEntriesPrimary">
 <option value="none">Как решит Scryfall</option>
 <option value="card-type">По типу карты</option>
 <option value="name">По названию</option>
-</select></label>
-<label><input type="checkbox" id="insertSortingHeadings"> Заголовки групп при сортировке</label>
-</fieldset>
+</select>
+<label class="feature-main"><input type="checkbox" class="stk-check" id="insertSortingHeadings"> Заголовки групп при сортировке</label>
+</div>
+</div>
 </section>
 <section class="experimental">
 <div class="section-head"><h2>Издания</h2>
@@ -248,6 +272,17 @@
 </section>
 <p class="hint">После изменения настроек обнови открытые страницы Scryfall и Tagger. MoxTags продолжает работать отдельно на Moxfield.</p>
 <button id="openOptions" type="button">Открыть настройки во вкладке</button>
+<!-- Diagnostics: the report the deck modules give about themselves, moved off the deck section
+     and behind a disclosure. It is closed when the page opens, and opening it changes nothing
+     and asks for nothing — it is a place to read, not a step. The technical details (the page
+     path, the object names, the adapter's own words) live in here rather than in the feature
+     descriptions, which are about what a feature does and not how it reaches Scryfall. -->
+<section id="diagnosticsGroup"><div class="section-head"><h2>Диагностика</h2>
+<button type="button" class="feature-toggle" id="diagnosticsToggle" aria-expanded="false" aria-controls="diagnosticsPanel" data-toggle-text="Показать|Скрыть">Показать</button></div>
+<div class="feature-panel feature-panel-wide" id="diagnosticsPanel" hidden>
+<div id="deckModuleStatus" class="diagnostic-report"></div>
+</div>
+</section>
 <section class="credits"><h2>Авторы и сторонние проекты</h2>
 <p class="hint">Расширение независимо: оно не создано, не одобрено и не спонсировано Scryfall, Wizards of the Coast, EDHREC, CardTrader, Cardmarket или Moxfield. В сборке лежат файлы других проектов под лицензией MIT с сохранёнными уведомлениями: иконки — CardClip (Jacob Hearst), данные тегов — MoxTags v1.8.3 (Nate Finch), модуль очистки колоды — Shambleshark (Samuel Simões, Blade Barringer), дополнительные форматы — MTG Enhancements (notsonic). Полный список файлов и лицензий — в THIRD_PARTY_NOTICES.md и assets/licences/ внутри архива расширения.</p>
 </section>

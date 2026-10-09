@@ -366,7 +366,9 @@ const MUTATIONS = [
   },
   {
     // And a disclosure that writes to storage when it is opened, which would make looking at a
-    // panel a decision. The toggle handler is the only place that could.
+    // panel a decision. Every disclosure on the page goes through this one handler now, so the
+    // first test to open one — diagnostics, which is opened to be read — is the one that
+    // catches it, and the same handler covers the cleanup panel and the two in Additional info.
     name: 'opening a panel writes to storage',
     file: 'options',
     run: 'test-options',
@@ -377,7 +379,7 @@ const MUTATIONS = [
       '      panel.hidden = !open;\n' +
       '      chrome.storage.local.set({ finishBadges: true });\n' +
       '      button.setAttribute(\'aria-expanded\', String(open));',
-    expect: 'and none of that touched a setting, which is what makes the panel optional'
+    expect: 'and none of that touched a setting'
   },
   {
     // A reset that takes the whole section rather than its own feature's numbers. The two resets
@@ -581,6 +583,61 @@ const MUTATIONS = [
     replace: '<div class="pair-items"></div>\n' +
       '<label class="stores-row"><input type="checkbox" class="stk-check" id="setStores"> Показывать блок «Купить карту»</label>',
     expect: 'and the whole-block switch is above the shop boxes inside their group'
+  },
+
+  {
+    // A report from a card page read as an error. The deck modules do not run there, and the
+    // adapter says so in its own words — but that is not a failure of the feature.
+    name: 'a report from a card page is read as an error',
+    file: 'options',
+    run: 'test-options',
+    find: '      } else if (!onEditorPage) {\n' +
+      '        add(t(\'Подходящая страница редактора не открыта. Это не ошибка: на других страницах Scryfall модули и не должны работать.\'), \'diagnostic-state\');\n' +
+      '      } else if (s.wired === false || problems.length) {',
+    replace: '      } else if (s.wired === false || problems.length) {',
+    expect: 'a report from a card page is named as "no editor page open"'
+  },
+  {
+    // The permission chip asking for every host the extension might ever need rather than the
+    // ones this feature does. A permission dialog that lists a shop the reader never turned on
+    // is how a request comes to look like a demand.
+    name: 'the permission chip asks for every host',
+    file: 'options',
+    run: 'test-options',
+    find: '      requestHostAccess(OPTIONAL_HOSTS.edhrecSuggestions).then(answer => {',
+    replace: '      requestHostAccess([...new Set(Object.values(OPTIONAL_HOSTS).flat())]).then(answer => {',
+    expect: 'pressing it asks for both hosts the feature needs, and no others'
+  },
+  {
+    // The chip never hidden once the access is there, which is a warning a reader learns to
+    // ignore — and the requirement says the opposite.
+    name: 'the permission chip is never hidden',
+    file: 'options',
+    run: 'test-options',
+    find: '      if (!missing.length) { edhrecPermission.hidden = true; return; }',
+    replace: '      if (false) { edhrecPermission.hidden = true; return; }',
+    expect: 'and the chip goes away once the access is granted'
+  },
+  {
+    // Diagnostics standing open when the page loads. The report is a place to read, not a step,
+    // and a section that starts open is the form this rework exists to stop being.
+    name: 'diagnostics starts open',
+    file: 'optionsHtml',
+    run: 'test-options',
+    find: '<div class="feature-panel feature-panel-wide" id="diagnosticsPanel" hidden>',
+    replace: '<div class="feature-panel feature-panel-wide" id="diagnosticsPanel">',
+    expect: 'diagnostics starts closed'
+  },
+  {
+    // And the diagnostics button keeping the same word in both states, so it stops saying which
+    // way it goes. `aria-expanded` still carries it for a screen reader; the reader looking at
+    // the button does not.
+    name: 'the diagnostics button does not say which way it goes',
+    file: 'options',
+    run: 'test-options',
+    find: '        button.textContent = t(open ? opened : closed);',
+    replace: '        button.textContent = t(closed);',
+    expect: 'and the button says which way it goes'
   },
 ];
 

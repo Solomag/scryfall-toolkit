@@ -221,7 +221,7 @@
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'button-n stk-legality-button';
-    button.textContent = t('Проверить легальность');
+    button.textContent = t('Проверить карты в Commander');
     const dialog = document.createElement('dialog');
     dialog.id = 'stk-deck-legality';
     const close = document.createElement('button');
@@ -230,7 +230,7 @@
     close.textContent = t('Закрыть');
     close.addEventListener('click', () => dialog.close());
     const title = document.createElement('h2');
-    title.textContent = t('Легальность колоды');
+    title.textContent = t('Допустимость карт в Commander');
     const content = document.createElement('div');
     content.className = 'stk-legality-result';
     dialog.append(title, close, content);
@@ -246,7 +246,7 @@
     button.addEventListener('click', async () => {
       dialog.showModal();
       if (!pending) {
-        content.textContent = t('Проверяю легальность…');
+        content.textContent = t('Проверяю карты…');
         pending = request({ type: 'deckLegality', entries })
           .catch(error => { pending = null; throw error; });
       }

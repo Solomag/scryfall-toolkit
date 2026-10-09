@@ -8,6 +8,45 @@ All releases: <https://github.com/Solomag/scryfall-toolkit/releases>
 
 ---
 
+### The deck tools are a list now, and the diagnostics moved out of the way
+
+**The Scryfall Deckbuilder section is a list of one-line features.** Each row is a switch and a
+name — No Prices, the token list, stacked cards, the Commander check, EDHREC suggestions, deck
+search, improved cleanup — and what a feature does is behind its own "?". The paragraphs that used
+to stand between the rows are in those dialogs now, the boxes are the same square 18px ones the
+other rebuilt sections use rather than the page-wide sliders, and the two fieldsets are gone. The
+cleanup feature's settings are behind its row's **Настроить**, collapsed when the page opens:
+opening it changes nothing, closing it resets nothing, and neither direction touches the switch.
+
+**The Commander check says it checks cards, not the deck.** It was called "check the deck for
+Commander legality" while it asks Scryfall about each card in turn, which is a promise it cannot
+keep. It reads **Проверять допустимость карт в Commander** / **Check individual cards for
+Commander legality** now, its help states plainly what it does not check — the deck's colour
+identity, its size, and the limits on the number of copies — and the deck page's button and
+dialog title were brought into line. No new check was added.
+
+**The deck modules' report moved into a collapsed Diagnostics section at the bottom.** It used to
+be a fieldset in the middle of the deck section, mixed in with the settings; it is a place to read,
+not a step, so it starts closed and opening it changes no setting and asks for no permission. It
+names the state: no suitable editor page open, nothing checked yet, a module that works, or a real
+error on an editor page. A report from a card page is named as "no editor page open" and never as
+a failure, because the modules are not meant to run there; a report always names the page it came
+from, because it is always about a page visited before this one. The page path, the object names
+and the adapter's own words live in here now, out of the feature descriptions.
+
+**EDHREC suggestions ask for their access from their own row.** The "Grant host access" button is
+gone. A chip appears beside the feature only while it is on without the access it needs —
+**Требуется разрешение** when none of it is there, **Ограниченный режим** when only part of it is,
+since the commander page still loads while the deck-specific advice does not. The button in the
+chip asks only for this feature's hosts, and only from a click; the page never asks on its own, and
+opening a help dialog asks for nothing. Once the access is there, the chip and the warning are
+gone.
+
+**Checks:** `npm test` 2529 assertions across nine suites, `npm run render` 208 + 202,
+`npm run mutations` 48 of 48. Six are new: a report from a card page read as an error, the
+permission chip asking for every host, the chip never hidden, diagnostics starting open, its
+button not saying which way it goes, and a disclosure that writes to storage.
+
 ### The euro column gets a box, the block switch moves up, and two names say what they do
 
 **The EUR column is a switch in the price group now, not only a dropdown.** The dropdown beside the

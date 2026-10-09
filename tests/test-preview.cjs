@@ -168,8 +168,9 @@ async function deckLegalityTest() {
 
   const button = page.document.querySelector('.stk-legality-button');
   assert(button, 'the deck page has a button for it');
-  assertEqual(button.textContent, 'Check legality',
-    'and it says what it does, in the page language rather than the one it was written in');
+  assertEqual(button.textContent, 'Check cards for Commander',
+    'and it says what it does — check cards, not the deck — in the page language rather than ' +
+    'the one it was written in');
   button.dispatchEvent(new page.window.Event('click'));
   await sleep(60);
 
@@ -214,8 +215,8 @@ async function deckLegalityTest() {
   ru.document.querySelector('.stk-legality-button').dispatchEvent(new ru.window.Event('click'));
   await sleep(60);
   const ruText = ru.document.getElementById('stk-deck-legality').textContent;
-  assertEqual(ru.document.querySelector('.stk-legality-button').textContent, 'Проверить легальность',
-    'the button is Russian when the page is');
+  assertEqual(ru.document.querySelector('.stk-legality-button').textContent, 'Проверить карты в Commander',
+    'the button is Russian when the page is, and says it checks cards rather than the deck');
   assert(/цветовая идентичность командира/i.test(ruText),
     'and the limits are named in Russian too, not left in English');
   assert(/одной копии/i.test(ruText), 'all three of them');

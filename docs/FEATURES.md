@@ -177,10 +177,29 @@ page, and the Show Tokens button appears only where Scryfall itself lists a deck
 group until this release, which is where the price switches lived and not where this one
 belongs.
 
-**Deck legality check.** A button on a deck page asks Scryfall about each of the deck's
-cards and lists the ones it counts as not legal in Commander. Commander is not chosen: the
-editor on Scryfall builds commander decks, and that is a fact about the page rather than a
-setting, so there is nothing to pick from.
+**The settings page presents these as a list of one-line features.** Each row is a switch and a
+name, and the name says what the feature does rather than what control it adds. What it does, and
+the limits worth knowing, are behind the row's "?" — a button, so it opens by click and by
+keyboard and never on hover alone. The paragraphs that used to stand between the rows moved
+there; the technical story — the page path, the object names, the adapter's own words — lives in
+**Diagnostics**, a collapsed section at the bottom of the page. The cleanup feature's own
+settings are behind its row's **Настроить**, collapsed when the page opens: opening it changes
+nothing, closing it resets nothing, and neither direction touches the switch. The same square
+18px boxes the other rebuilt sections use are used here, rather than the page-wide slider.
+
+**Diagnostics is a place to read, not a step.** It is closed when the page opens, and opening it
+changes no setting and asks for no permission. It names the state rather than leaving it to be
+inferred: no editor page open (which is not an error — the modules do not run anywhere else),
+nothing checked yet, a module that works, or a real error on an editor page. A report is always
+about a page visited before the settings page, so it names which page that was. Absence of the
+deckbuilder on a card page is therefore reported as "no suitable editor page open", never as a
+failure of the feature.
+
+**Deck legality check.** A button on a deck page asks Scryfall about each of the deck's cards,
+one at a time, and lists the ones it counts as not legal in Commander. It checks **individual
+cards**, not the deck as a whole, and both the setting's name and the help say so. Commander is
+not chosen: the editor on Scryfall builds commander decks, and that is a fact about the page
+rather than a setting, so there is nothing to pick from.
 
 **What it does not check, and says so beside the answer:** the commander's colour
 identity, the hundred-card limit, and the one-copy rule for cards marked "Commander
@@ -221,6 +240,15 @@ name that parks a hidden iframe on edhrec.com and asks it for recommendations. T
 EDHREC's published JSON instead — the commander page's `cardlists` already carry what the
 feature shows — through the same queue and the same rate their data policy asks for. No
 frame, no page markup, no endpoint that was not already being used.
+
+**Its access is asked for from its own row, and only when it is missing.** The feature needs two
+hosts; if either is missing the row shows a chip — **Требуется разрешение** when none of the
+access is there, **Ограниченный режим** when only part of it is, because the commander page still
+loads while the deck-specific advice does not. The button in the chip is the only thing on the
+page that asks, and it asks only for this feature's hosts, from a click. The page never asks on
+its own — a request made while loading is refused by the browser and printed as an unchecked
+error, which is the bug the page already fixed once — and opening a help dialog asks for nothing.
+Once the access is there the chip and the warning are gone rather than left standing.
 
 **Scryfall search** *(off by default)*. A Search button in the deck editor's toolbar opens
 a query box in Scryfall's own syntax, lists what comes back, and puts a card in the deck.

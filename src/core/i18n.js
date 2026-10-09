@@ -218,6 +218,53 @@ const resolveSettingsLanguage = value => {
     '. Нажми «Выдать доступ к хостам».': '. Press “Grant host access”.',
     'Выдать доступ к хостам': 'Grant host access',
     'Рекомендации EDHREC ходят на edhrec.com, а не только на их открытый JSON. Если доступа нет, они молча показывают страницу командира вместо советов по колоде. Кнопка запрашивает недостающее.': 'EDHREC suggestions go to edhrec.com, not only to their public JSON. Without access they quietly show the commander\'s page instead of advice about your deck. This button asks for whatever is missing.',
+    // The deck tools are a list of one-line features now: a switch and a name, and what a
+    // feature does is behind its own "?". The names say what the feature does rather than
+    // what control it adds, and the paragraphs that used to stand between them are in the
+    // help entries below.
+    'Режим без цен в меню колоды': 'No Prices mode in the deck menu',
+    'Показывать создаваемые картами токены': 'Show tokens created by cards in the deck',
+    'Отображать карты стопками': 'Show deck cards as stacks',
+    'Проверять допустимость карт в Commander': 'Check individual cards for Commander legality',
+    'Рекомендации EDHREC в редакторе колод': 'EDHREC suggestions in the deck editor',
+    'Поиск карт в редакторе': 'Search cards in the deck editor',
+    'Улучшенная уборка колоды': 'Improved deck cleanup',
+    'Сортировка карт': 'Sort cards',
+    'Требуется разрешение': 'Permission needed',
+    'Ограниченный режим': 'Limited mode',
+    'Предоставить': 'Grant',
+    'Показать': 'Show',
+    'Скрыть': 'Hide',
+    'Диагностика': 'Diagnostics',
+    // The deck features' own help. Short, and about the result and its limits: the technical
+    // detail — the page path, the object names, the adapter's own words — lives in Diagnostics.
+    'Добавляет в меню «Показывать» на странице колоды вариант «Без цен». Он скрывает цены и данные о ценах рядом с картами в списке колоды.': 'Adds a “No Prices” choice to the “Show” menu on a deck page. It hides prices and the price data beside the cards in the deck list.',
+    'Добавляет на страницу колоды кнопку «Показать токены»: она собирает токены, которые создают карты этой колоды, и показывает их списком.': 'Adds a “Show Tokens” button to a deck page: it collects the tokens the deck’s cards create and shows them as a list.',
+    'Кнопка появляется только там, где Scryfall уже показывает список карт колоды, — на странице колоды в Deckbuilder.': 'The button appears only where Scryfall already shows the deck’s card list — on a deck page in Deckbuilder.',
+    'Показывает карты колоды стопкой вместо развёрнутой сетки. Компактнее при большой колоде; видны имена и количества.': 'Shows deck cards as stacks instead of the full grid. More compact for a large deck; names and counts are visible.',
+    'Проверяет допустимость отдельных карт в Commander. Не проверяет цветовую идентичность колоды, её размер и ограничения на число копий.': 'Checks individual cards for Commander legality. It does not check the deck’s colour identity, its size, or the limits on the number of copies.',
+    'Кнопка появляется на странице колоды. Формат не выбирается: редактор Scryfall собирает командные колоды.': 'The button appears on a deck page. The format is not chosen: Scryfall’s editor builds commander decks.',
+    'Добавляет в редактор колоды кнопку со списком карт, которые EDHREC советует для вашего командира, и с долей колод, где они встречаются.': 'Adds a button to the deck editor with the cards EDHREC suggests for your commander, and the share of decks that play each one.',
+    'Для полного списка нужен доступ к данным EDHREC. Без него показывается только страница командира, а не советы по вашей колоде.': 'The full list needs access to EDHREC’s data. Without it, only the commander’s page is shown, not advice about your deck.',
+    'Добавляет в редактор колоды поиск по синтаксису Scryfall: результаты и кнопку добавления карты в колоду.': 'Adds a search in Scryfall’s own syntax to the deck editor: results and a button that adds a card to the deck.',
+    'Поиск можно ограничить цветами командира и скрыть шуточные карты.': 'The search can be narrowed to the commander’s colours, and funny cards can be hidden.',
+    'Дополняет кнопку Clean Up в редакторе колоды: переносит земли и не-земли в нужные колонки, сортирует карты и вставляет заголовки групп.': 'Adds to the Clean Up button in the deck editor: it moves lands and nonlands into the right columns, sorts the cards and inserts group headings.',
+    'Сортировка и заголовки работают, если выбраны в настройках. Содержимое колоды не меняется — только порядок и колонки.': 'Sorting and headings work when they are chosen in the settings. The deck’s contents do not change — only the order and the columns.',
+    // Diagnostics. The state is named first and the technical detail is quieter, because the
+    // state is what a reader came for and the rest is what they copy into a bug report.
+    'Проверка ещё не выполнена: открой редактор колоды Scryfall с включённым модулем.': 'Not checked yet: open a Scryfall deck editor with a module turned on.',
+    'Проверка ещё не выполнена: ни один модуль редактора не включён.': 'Not checked yet: no deck module is turned on.',
+    'Подходящая страница редактора не открыта. Это не ошибка: на других страницах Scryfall модули и не должны работать.': 'No suitable editor page is open. That is not an error: the modules are not meant to run on other Scryfall pages.',
+    'Обнаружена ошибка на странице редактора.': 'An error was found on the editor page.',
+    'Модуль работает.': 'The module is working.',
+    'Проверка ещё не выполнена.': 'Not checked yet.',
+    'Данные последней проверки, страница': 'Data from the last check, page',
+    '. Выключи и включи нужную функцию, чтобы запросить доступ.': '. Turn the feature off and on again to request access.',
+    // The deck page's own labels, aligned with the setting's wording: the button checks cards,
+    // not the deck as a whole.
+    'Проверить карты в Commander': 'Check cards for Commander',
+    'Допустимость карт в Commander': 'Card legality in Commander',
+    'Проверяю карты…': 'Checking cards…',
     'После изменения настроек обнови открытые страницы Scryfall и Tagger. MoxTags продолжает работать отдельно на Moxfield.': 'Reload open Scryfall and Tagger tabs after changing settings. MoxTags continues to run separately on Moxfield.',
     'Открыть настройки во вкладке': 'Open settings in a tab',
     'Сохранить': 'Save', 'Удалить': 'Delete',

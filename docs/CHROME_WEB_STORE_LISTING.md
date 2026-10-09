@@ -1,4 +1,4 @@
-# Chrome Web Store listing — Scryfall Toolkit 1.7.7
+# Chrome Web Store listing — Scryfall Toolkit 1.7.8
 
 Everything here is written from the shipped code, so that the answers given in the store
 console match what the extension actually does. Where a field needs a decision from the
@@ -64,8 +64,8 @@ show, and the two had been disagreeing since before the extension had a release.
 > their own defaults and each can be switched off. EDHREC deck usage and Salt Meter
 > inside the legality block. CardTrader prices for the exact printing, using your own
 > personal access token. Finish badges, type and mana search links, set and
-> printing filters, a No Prices mode, a token list and a Commander legality check on deck
-> pages.
+> printing filters, a No Prices mode, a token list and a per-card Commander legality check
+> on deck pages.
 >
 > The legality check is the one of these whose answer is partial by construction: it asks
 > Scryfall about each card on its own and lists the ones Scryfall counts as not legal in
@@ -257,14 +257,14 @@ Ready in `store-assets/`, each exactly **1280×800** (PNG), in English:
 
 | File | What it shows |
 | --- | --- |
-| `store-assets/01-settings-01-of-05.png` | the header, General (settings language, theme), Tags with its per-tag switches, and CardClip with its export format |
-| `store-assets/02-settings-02-of-05.png` | the whole of Visibility, side by side: on the left the platforms table with one row per platform and a column per place, one platform switched off and one place switched off, and the Caster marker under the table; and on the right the prices (USD, TIX, EUR), the whole-block switch above the three shop boxes it governs, CardTrader unconnected, and the EUR source — whose dropdown ends in "show nothing" — followed by Additional info as a list of features |
-| `store-assets/03-settings-03-of-05.png` | the end of Additional info and Legality with the format grid |
-| `store-assets/04-settings-04-of-05.png` | the end of the format grid and Scryfall Deckbuilder, including the Commander legality check and the three opt-in deck tools with the host-access button |
-| `store-assets/05-settings-05-of-05.png` | the deck clean-up block, the Prints table section with Experimental below it, and Credits and third-party projects |
+| `store-assets/01-settings-01-of-05.png` | the header, General (settings language, theme), and Tags with its per-tag switches |
+| `store-assets/02-settings-02-of-05.png` | CardClip with its export format, and the whole of Visibility, side by side: on the left the platforms table with one row per platform and a column per place, one platform switched off and one place switched off, and the Caster marker under the table; and on the right the prices (USD, TIX, EUR), the whole-block switch above the three shop boxes it governs, CardTrader unconnected, and the EUR source — whose dropdown ends in "show nothing" |
+| `store-assets/03-settings-03-of-05.png` | Additional info as a list of one-line features with their "?", and Legality with the format grid |
+| `store-assets/04-settings-04-of-05.png` | Scryfall Deckbuilder as a list of one-line features with their "?" and the cleanup feature's **Set up** collapsed, then the start of the Prints table section |
+| `store-assets/05-settings-05-of-05.png` | the Prints table section with Experimental below it, the collapsed **Diagnostics** section, and Credits and third-party projects |
 
 All five come from one real capture of the settings page
-(`store-assets/settings-page-full.png`, 1280×3963), so nothing is repeated or cropped
+(`store-assets/settings-page-full.png`, 1280×3408), so nothing is repeated or cropped
 away between them. Each tile is scaled uniformly to 800 rows and the margins continue
 the page's own colour, so no screenshot is stretched.
 
@@ -293,12 +293,12 @@ working feature.
 **The heights move together, so a small change moves all five pictures.** The tile height
 is the page height divided by five and rounded up, so a section added since the pictures
 were last taken does not push one block down into the next tile - it changes the band for
-every tile, and moves the host-access button out of tile four and into tile five without a
+every tile, and moves the last section out of tile four and into tile five without a
 line of the settings page changing name. The row descriptions above were read off the
-pictures again after 1.7.6 for exactly that reason — Additional info lost two features and the
-secondary button that held the last of them, and the EUR source gained an option, which moved a
-boundary across every tile — and the height quoted in this document is checked against the PNG
-rather than trusted.
+pictures again after the deck section was rebuilt — its paragraphs went behind the rows' "?"
+and the deck-module report moved into a collapsed Diagnostics section at the bottom, which
+took the section from a form to a list and moved a boundary across every tile — and the height
+quoted in this document is checked against the PNG rather than trusted.
 
 **The row descriptions are read off the pictures, and they go stale the moment the page
 changes.** Two rounds of refactoring moved everything between them — the pictures went from

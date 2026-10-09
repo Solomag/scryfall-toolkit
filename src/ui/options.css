@@ -17,8 +17,6 @@ main{max-width:880px;padding:22px 16px 35px;margin:auto}
 section{padding:18px;margin:0 0 15px;background:#2d2c34;border:1px solid #514858;border-radius:6px;box-shadow:0 3px 12px #0003}
 section.experimental{border-style:dashed;border-color:#7a6a55;background:#2f2b2c}
 section.experimental h2{color:#e8cf9e}
-.experimental-sub{border-style:dashed;border-color:#7a6a55}
-.experimental-sub>legend{color:#e8cf9e}
 label{display:block;margin:9px 0;cursor:pointer}input{accent-color:#aa85b5}
 /* The visibility section: two columns, a table on the left and four short lines on the right,
    told apart by headings and space rather than by frames. Its own padding is a little wider
@@ -161,7 +159,8 @@ input[type=checkbox].stk-check:focus-visible{outline:2px solid #c9a4d5;outline-o
    and the fill to #232229, against an unticked box's #6a6070 on the card's own colour. */
 #visibilityGroup input[type=checkbox].stk-check:disabled,
 #visibilityGroup .pair-item input[type=checkbox].stk-check:disabled,
-#visibilityGroup .feature-row input[type=checkbox].stk-check:disabled{
+#visibilityGroup .feature-row input[type=checkbox].stk-check:disabled,
+#deckbuilderGroup input[type=checkbox].stk-check:disabled{
   background-color:#232229;border-color:#3b3642;opacity:1;cursor:default;
 }
 /* And the words beside them go quieter with them, which is the page's own rule for a label
@@ -222,14 +221,22 @@ button{background:#473b50;color:#f1e8f3;border:1px solid #88758d;border-radius:4
 .feature-state{flex:0 0 auto;font-size:13px;color:#bdb6c2;white-space:nowrap}
 /* Secondary by construction: outlined, on the card's own colour, and never the loudest thing
    in the row. The switch beside it is the decision; this is a way to look inside. */
-.feature-toggle,.feature-help,.feature-reset{
+.feature-toggle,.feature-help,.feature-reset,.feature-grant{
   flex:0 0 auto;background:transparent;border:1px solid #6b6474;color:#cfc8d8;
   border-radius:4px;cursor:pointer;font-size:13px;line-height:1;
 }
 .feature-toggle{padding:7px 10px}
-.feature-toggle:hover,.feature-help:hover,.feature-reset:hover{background:#3a3342;border-color:#88758d}
+.feature-toggle:hover,.feature-help:hover,.feature-reset:hover,.feature-grant:hover{background:#3a3342;border-color:#88758d}
 .feature-help{width:22px;height:22px;padding:0;border-radius:50%;font-weight:600}
 .feature-reset{padding:7px 10px}
+/* The permission chip on a feature that is on without the host access it needs. It is a fact
+   about the feature and a way to fix it in one place, and it appears only while the access is
+   actually missing — a warning left standing after the access is granted would be a warning a
+   reader learns to ignore. The button in it is the only thing on this page that asks for a
+   host, and it asks from a click, because the browser refuses anything else. */
+.feature-permission{flex:0 0 auto;display:flex;align-items:center;gap:6px;font-size:12px;color:#ffd76a;white-space:nowrap}
+.feature-permission[hidden]{display:none}
+.feature-grant{padding:4px 8px;font-size:12px}
 /* The panel belongs to the row above it, so it is indented from it by a little more than the
    box it sits under. `[hidden]` is written out because the page-wide `display` rules on the
    controls inside it would otherwise beat the browser's own hidden rule. */
@@ -249,9 +256,8 @@ button{background:#473b50;color:#f1e8f3;border:1px solid #88758d;border-radius:4
 /* CardTrader with no token. The switch is not drawn at all — there is nothing for it to turn
    on — and the row is the name, the state and the button. */
 .feature-main.is-unconnected input{display:none}
-/* The one button that belongs to the section rather than to a row. Under the list, on its own
-   line, so a reader who wants neither of its settings never has to read it. */
-.feature-more{margin-top:6px}
+/* A panel that belongs to a section rather than to a row, so it is not indented from a row it
+   does not sit under. Diagnostics is the one. */
 .feature-panel-wide{margin-left:0}
 /* The "?" next to a section heading, and the picture it opens. The illustrations
    are a reference and not a banner: they open over the settings at a size the panel
@@ -259,10 +265,6 @@ button{background:#473b50;color:#f1e8f3;border:1px solid #88758d;border-radius:4
 .section-head{display:flex;align-items:center;gap:8px}
 .section-head h2{flex:1 1 auto;margin:0}
 .shot-button{flex:0 0 auto;width:22px;height:22px;padding:0;border-radius:50%;border:1px solid #6b6474;background:#24252b;color:#cfc8d8;font:600 13px/1 system-ui,sans-serif;cursor:pointer}
-/* The button that grants host access, when a feature is on without the host it needs.
-   Marked rather than moved: the button lives in the deck section it grew up in, and a
-   reader who is told which hosts are missing is told where to press. */
-#grantDeckHosts.stk-needs-grant{border-color:#c9a227;color:#ffd76a;background:#2e2a1c}
 .shot-button:hover,.shot-button:focus-visible{background:#33313a;color:#fff;border-color:#9b93a8}
 /* The dialog scrolls. An illustration can be taller than the window — a card page's
    right column with a card that has printings in four dozen sets is several thousand
@@ -284,6 +286,17 @@ button{background:#473b50;color:#f1e8f3;border:1px solid #88758d;border-radius:4
    explanation of a section's rules now exists. */
 .shot-notes{margin:0 0 2px;padding-bottom:10px;border-bottom:1px solid #3a3644}
 .shot-notes p{margin:7px 0 0;color:#bdb6c2;font-size:13px;line-height:1.5}
+/* Diagnostics: the deck modules' own report. Each line is a paragraph, so a long problem wraps
+   rather than running off the card, and the state is the first line and the loudest. The
+   technical details are quieter than the state on purpose — they are what a reader copies into
+   a bug report, not what they came to read. */
+.diagnostic-report{font-size:13px;color:#cfc8d8}
+.diagnostic-report p{margin:0 0 8px}
+.diagnostic-report p:last-child{margin-bottom:0}
+.diagnostic-state{font-weight:600;color:#e9e5ee}
+.diagnostic-state-ok{color:#abdfb7}
+.diagnostic-state-error{color:#ffd76a}
+.diagnostic-where,.diagnostic-problem{color:#bdb6c2}
 .hint{font-size:12px;color:#bdb6c2;margin:12px 0 0}#status{color:#abdfb7;min-height:18px}
 .columns-header{display:grid;grid-template-columns:1fr 1fr;gap:8px;color:#bfb3c5;font-size:12px;margin:3px 0 7px}
 #formatList{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px 10px}
