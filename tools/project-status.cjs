@@ -32,22 +32,10 @@ const read = file => fs.readFileSync(path.join(ROOT, file), 'utf8');
 // "unresolved" once, explaining that it was removed, and that sentence is the opposite of
 // drift: it is the record of the fix.
 const FACTS = {
-  edhrecMark: {
-    value: 'nominative-use',
-    must: {
-      'THIRD_PARTY_NOTICES.md': ['nominative use',
-        'We have not asked for permission and have been given none'],
-      'docs/ROADMAP.md': ['Shipped, on nominative use']
-    },
-    forbidden: {
-      'THIRD_PARTY_NOTICES.md': [/^\s*unresolved/im, 'not cleared'],
-      // The README was the last document still carrying the old wording, and it was
-      // found by reading the rendered page after the notices had been fixed — which
-      // is the argument for putting the words in a check rather than in a reviewer's
-      // memory: a table of licences is exactly where a stale sentence hides.
-      'README.md': [/not cleared/i]
-    }
-  },
+  // `edhrecMark` used to be here: the EDHREC logo shipped for the icon-and-link control, on the
+  // same nominative-use basis as CardTrader's. The control was cut and the image with it, so the
+  // fact is gone rather than restated — a status saying this project ships a mark it no longer
+  // ships is the same kind of drift as one saying it does not ship a mark it does.
   cardTraderMark: {
     value: 'nominative-use',
     must: {

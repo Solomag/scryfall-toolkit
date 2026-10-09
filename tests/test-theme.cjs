@@ -92,7 +92,7 @@ function syntaxCheck() {
     'src/core/format-catalog.js', 'src/core/format-overrides.js', 'src/core/tag-icons.js',
     'src/card-page/tagger-clipboard.js',
     'assets/data/oracle-tags.js', 'assets/data/illustration-tags-1.js',
-    'assets/data/illustration-tags-2.js', 'assets/data/shambleshark-nicknames.js'
+    'assets/data/illustration-tags-2.js'
   ];
   const failures = [];
   for (const file of files) {
@@ -183,7 +183,10 @@ function iconCheck() {
   for (const icon of ['clip', 'duplicate', 'trash', 'cardtrader']) {
     assert(exists(`assets/icons/${icon}.svg`), `assets/icons/${icon}.svg bundled`);
   }
-  assert(exists('assets/icons/edhrec.png'), 'assets/icons/edhrec.png bundled');
+  // EDHREC's logo used to be here, for the icon-and-link control on the card page. The control
+  // was cut and the image went with it, so this now says it is *not* bundled — a build that
+  // quietly kept shipping it would be one nobody had removed.
+  assert(!exists('assets/icons/edhrec.png'), 'assets/icons/edhrec.png is not bundled any more');
   // Cardmarket's symbol, as they distribute it, from the file they publish for
   // dark backgrounds. Cropped from their horizontal lockup — the wordmark beside
   // it and the empty margin are what is gone, the artwork is theirs untouched.
@@ -738,7 +741,15 @@ function auditGapCheck() {
 }
 
 async function darkThemeRuntime() {
-  console.log('theme.js: dark theme and RU site language');
+  console.log('theme.js: dark theme, Caster marker and RU site language');
+  // The marker is stored inside `setFilters`, next to every other visibility switch, and this
+  // state is written the way the settings page writes it: `showCaster: false` is the box
+  // unticked.
+  //
+  // This test used to set a flat `hideCasterIndicator` key directly. That key has had no writer
+  // since the settings were folded into `setFilters`, so the assertion passed while the switch
+  // on the settings page changed nothing anybody read — the same fiction one level up, a test
+  // that proved the read and never the write.
   const page = createPage({
     url: 'https://scryfall.com/',
     html: `<!DOCTYPE html><html><body>
@@ -746,7 +757,11 @@ async function darkThemeRuntime() {
         <table class="prints-table"><thead><tr><th>Legal</th></tr></thead></table>
         <a href="/card/x/1">Link</a>
       </div></body></html>`,
-    state: { darkTheme: true, hideCasterIndicator: true, siteLanguage: 'ru' }
+    state: {
+      darkTheme: true,
+      siteLanguage: 'ru',
+      setFilters: { showCaster: false }
+    }
   });
   page.script('src/core/theme.js');
   await sleep(40);
@@ -762,14 +777,64 @@ async function darkThemeRuntime() {
   assertEqual(document.querySelector('.prints-table thead th').textContent, 'Легально',
     'RU site language translates Scryfall table headers');
 
+  // A reader on the older shape, whose value has no `showCaster` at all: there `undefined`
+  // means "shown", which is what the old flat `false` meant too. Reading it as anything else
+  // would hide the marker for everyone who never touched the switch.
+  const older = createPage({
+    url: 'https://scryfall.com/',
+    html: '<!DOCTYPE html><html><body><div id="main"></div></body></html>',
+    state: { darkTheme: false, siteLanguage: 'en', setFilters: { platforms: {} } }
+  });
+  older.script('src/core/theme.js');
+  await sleep(40);
+  assert(!older.document.documentElement.classList.contains('stk-hide-caster'),
+    'a stored value from before the rename keeps the marker shown, which is what it had');
+
   mock.fireChanges({
     darkTheme: { newValue: false },
-    hideCasterIndicator: { newValue: false },
+    setFilters: { newValue: { showCaster: true } },
     siteLanguage: { newValue: 'en' }
   });
   assert(!root.classList.contains('stk-dark'), 'storage change removes dark class');
   assert(!root.classList.contains('stk-hide-caster'), 'storage change restores caster indicator');
   assert(!root.classList.contains('stk-site-ru'), 'storage change restores EN site language');
+}
+
+// The page that writes the marker's key and the page that reads it, and nothing in between.
+// The Caster box was dead for as long as those two pages named different keys, and every test
+// of it passed: the one that read the key proved the read, and the one that ticked the box
+// proved the write, and neither asked whether they were the same key. So the pair is checked
+// here as a pair — the writer, the reader, and the flat key that no longer belongs to either.
+async function casterKeyIsWrittenWhereItIsRead() {
+  console.log('the Caster marker: one key, one writer, one reader');
+  // Comments are not code. Both files now *explain* the flat key in prose, and a check that
+  // counted prose would forbid the explanation of the defect — so the comments come out first,
+  // and what is left is what actually runs.
+  const codeOf = file => read(file)
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/^\s*\/\/.*$/gm, ' ');
+  const settings = codeOf('src/ui/options.js');
+  const theme = codeOf('src/core/theme.js');
+  const model = codeOf('src/core/set-filters.js');
+
+  assert(settings.includes('showCaster'),
+    'the settings page writes the marker under the key the card page reads');
+  assert(theme.includes('showCaster') && theme.includes('setFilters'),
+    'and the card page reads it out of the same object rather than out of a key of its own');
+  for (const [name, source] of [['the settings page', settings], ['the theme script', theme]]) {
+    assert(!/hideCasterIndicator/.test(source),
+      `${name} never reads or writes the flat key, which nothing has written since the settings ` +
+      'were folded into setFilters — that is how the switch came to be dead while looking fine');
+  }
+  // The key is renamed rather than reused, because a boolean cannot carry two senses. The
+  // model is where that decision is made, so it is asserted there: a value carrying
+  // `showCaster` is the new sense and one carrying `caster` is the old one.
+  assert(model.includes('showCaster') && model.includes('function invertCaster'),
+    'and the model is what tells the two senses apart, by the name of the key rather than by ' +
+    'a version number nobody writes');
+  assert(!/hideCasterIndicator/.test(read('src/ui/options.html')),
+    'and the settings page does not carry the old label either, so nothing on it still reads ' +
+    '"hide" where it now says "show"');
 }
 
 // The repair reads a link's colour to decide whether it is a dark purple. On a
@@ -901,6 +966,7 @@ async function pathClasses() {
     iconCheck();
     cssCheck();
     await darkThemeRuntime();
+    await casterKeyIsWrittenWhereItIsRead();
     await purpleAfterStylesheetTest();
     await systemThemeTest();
     await pathClasses();

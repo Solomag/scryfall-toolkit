@@ -31,7 +31,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
-const { workerTables, classify, shippedForeignOnly } = require('./worker-tables.cjs');
+const { classify, assertWorkerClassifies } = require('./worker-tables.cjs');
 
 const ROOT = path.join(__dirname, '..', '..') + path.sep;
 const CACHE = path.join(ROOT, 'dist', 'live-data');
@@ -280,51 +280,19 @@ async function clipboardCards(count = 3) {
   return cards;
 }
 
-// Which sets the extension classifies as digital, oversized, non-tournament or
-// foreign-black-border, so the "hide the extra" picture removes what it would
-// really remove.
+// Which sets the extension classifies as digital, so the platform picture removes
+// what it would really remove.
 //
-// The classification is not Scryfall's to ask for: the category endpoints answer
-// 404 now. It is the worker's own reading of /sets — a name pattern per black-border
-// category and per non-English category, a type list for the non-tournament ones, and
-// Scryfall's own `digital` flag.
-//
-// The patterns are read out of `worker.js` by `worker-tables.cjs` rather than copied here.
-// They were copied once, and the copy drifted: it matched a flat `foreignBlackBorder` array
-// by the words "foreign black border" in a set's name and had no `nonEnglish` at all — the
-// shape the extension had before 1.1.4, when the two rules were single on/off switches.
-// Nothing failed. Every sub-list came back empty, both rules hid nothing, and the sixth
-// settings illustration went on showing a picture of a filter the extension no longer has.
+// The classification is not Scryfall's to ask for: the category endpoints answer 404 now. It is
+// the worker's own reading of /sets, which is Scryfall's own `digital` flag and nothing else —
+// it used to be six lists, five of which belonged to settings that no longer exist.
 async function setCategories() {
   const data = await cachedGet('https://api.scryfall.com/sets');
   if (!Array.isArray(data.data)) throw new Error('the list of sets came back without one');
-  const tables = workerTables();
-  const categories = classify(data.data, tables);
-  // The measured list, narrowed to the sets this index serves — the same two steps the worker
-  // takes, in the same order, so a picture of this rule shows what the rule does.
-  const served = new Set(data.data.map(set => String(set.code).toLowerCase()));
-  categories.foreignOnly = shippedForeignOnly().filter(code => served.has(code));
-  if (!categories.foreignOnly.length) {
-    throw new Error('not one set came out as foreignOnly, so the classification in the ' +
-      'picture would be an empty claim');
-  }
-  // Every category, and every sub-list, must come out with something in it. An empty one
-  // hides nothing and looks complete, which is the whole failure this guards against.
-  for (const flag of ['digital', 'nonTournament', 'oversized']) {
-    if (!categories[flag].length) {
-      throw new Error('not one set came out as ' + flag +
-        ', so the classification in the picture would be an empty claim');
-    }
-  }
-  for (const [group, tables_] of [['foreignBlackBorder', 'border'], ['nonEnglish', 'nonEnglish']]) {
-    for (const key of Object.keys(tables[tables_])) {
-      if (!(categories[group][key] || []).length) {
-        throw new Error('no set came out as ' + group + '.' + key +
-          ', so the sub-list a reader can narrow to would be empty');
-      }
-    }
-  }
-  return categories;
+  assertWorkerClassifies();
+  // The guard against an empty list lives in `classify` itself, because that is where the
+  // classification is and a check that can be forgotten is a check that will be.
+  return classify(data.data);
 }
 
 module.exports = { heroCard, clipboardCards, setCategories, taggerEdges, taggerEdgesByOracle,

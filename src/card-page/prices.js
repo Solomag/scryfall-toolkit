@@ -53,13 +53,22 @@
       document.querySelector('#main .prints-table tbody tr.current a[data-card-id]')?.dataset.cardId;
     const links = document.querySelector('#stores .toolbox-links');
     if (!id || !links) return;
-    const sources = ['cm','ct','both'].includes(settings.euroPriceSources) ? settings.euroPriceSources : 'cm';
-    const showTable = sources !== 'cm';
+    const sources = ['cm','ct','both','none'].includes(settings.euroPriceSources) ? settings.euroPriceSources : 'cm';
+    const showTable = sources === 'ct' || sources === 'both';
     const table = document.querySelector('#main .prints > .prints-table');
     const eurIndex = [...(table?.querySelectorAll('thead th') || [])].findIndex(th => th.textContent.trim().toUpperCase() === 'EUR');
     if (table && eurIndex >= 0) {
       const heading = table.querySelectorAll('thead th')[eurIndex];
       const nativeEurCells = [...table.querySelectorAll('tbody tr')].map(row => row.children[eurIndex]);
+      // `none` is the reader saying they want no euro column at all, so the column goes and
+      // nothing replaces it. It is the same switch as the other three rather than a second one
+      // beside them: the source setting answers both questions about this column — whether it
+      // exists, and whose number is in it — which is why hiding Cardmarket does not answer
+      // either of them. Cardmarket is a shop there, and a shop is a link.
+      if (sources === 'none') {
+        heading.classList.add('stk-price-hidden');
+        for (const cell of nativeEurCells) cell?.classList.add('stk-price-hidden');
+      }
       if (sources === 'both') {
         heading.classList.add('stk-cm-price-header');
         heading.replaceChildren(priceHeading('cardmarket'));
@@ -217,18 +226,32 @@
   }
 
   function initPriceFilter() {
-    // Four switches, not one. `onlyCardmarket` was a single switch that turned the
-    // dollars, the tickets and both shops off together, which meant a reader who wanted
-    // no TCGplayer links but kept the dollar column had no way to say so.
+    // Separate switches, not one. `onlyCardmarket` was a single switch that turned the
+    // dollars, the tickets and every shop off together, which meant a reader who wanted no
+    // TCGplayer links but kept the dollar column had no way to say so.
     //
-    // The currencies and the shops are separate kinds because they are separate things on
-    // the page: a column of numbers, and a row of links. The card's own Cardmarket price
-    // is not a switch at all and is never hidden - it is the one price this extension has
-    // a reason to add.
+    // The currencies and the shops are separate kinds because they are separate things on the
+    // page: a column of numbers, and a row of links.
+    //
+    // Cardmarket is a shop here and nothing more. The euro column it prices is not this filter's
+    // business: whether that column exists is answered by the EUR source setting, which has a
+    // "show nothing" of its own, and answering it in two places would mean two controls for one
+    // question — the shape this file has been rewritten to get out of twice.
+    //
+    // `shops` maps a hostname to the model's key for it, and the filter reads the *value*. It
+    // read the key for a long time, which meant `prices.tcgplayer` was asked for and the model
+    // stores `tcg` — so the TCGplayer links were never hidden, and Cardhoarder's worked only
+    // because its hostname and its key happen to be the same word. Nothing caught it because
+    // nothing tested the links at all.
+    //
+    // The keys are positive: a price is shown unless the reader says otherwise, like every
+    // other switch in the settings. They were the negative booleans the model had left,
+    // and the lines below are where the sense is turned round — once, rather than at each
+    // of the places that asks.
     const currency = new Map([['USD', 'usd'], ['TIX', 'tix']]);
-    const shops = { tcgplayer: 'tcgplayer', cardhoarder: 'cardhoarder' };
-    const hideCurrency = kind => Boolean(kind && setFilters.prices[kind]);
-    const hiddenShops = Object.keys(shops).filter(shop => setFilters.prices[shop]);
+    const shops = { tcgplayer: 'tcg', cardhoarder: 'cardhoarder', cardmarket: 'cardmarket' };
+    const hideCurrency = kind => Boolean(kind) && setFilters.prices[kind] === false;
+    const hiddenShops = Object.keys(shops).filter(shop => setFilters.prices[shops[shop]] === false);
 
     for (const table of document.querySelectorAll('#main .prints-table')) {
       const headers = [...table.querySelectorAll('thead th')];
@@ -240,6 +263,11 @@
       }
     }
     const stores = document.querySelector('#stores');
+    // The whole block, before any of the per-shop work: a reader who buys nowhere wants the
+    // heading and the disclaimer gone as well, and hiding each shop leaves both behind. It also
+    // stops the per-shop loop below from mattering, which is the point — this is the general
+    // switch and the shops are the particular ones.
+    if (setFilters.showStores === false) stores?.classList.add('stk-price-hidden');
     if (hiddenShops.length) {
       for (const link of stores?.querySelectorAll('a[href]') || []) {
         let host;
@@ -265,19 +293,25 @@
 
   function initAdvancedPriceFilter() {
     const prices = setFilters.prices;
-    if (!prices.usd && !prices.tix) return;
+    // The euro option follows the EUR source rather than a price kind: `none` is the reader
+    // saying they want no euro price, and there is no shop switch that means that.
+    const noEuro = settings.euroPriceSources === 'none';
+    if (prices.usd !== false && prices.tix !== false && !noEuro) return;
     // The Prices filter on /advanced offers USD, Euros and MTGO Tickets per row. With a
     // currency hidden its option is dropped, because a filter that searches a currency
-    // you have said you do not want to see is the opposite of hiding it. Euros is
-    // renamed rather than dropped: it is the Cardmarket price, and the euro option is how
-    // a Cardmarket result is filtered on.
+    // you have said you do not want to see is the opposite of hiding it. The euro one is
+    // dropped for the same reason when the reader has said they want no euro column.
     const isCurrency = select => select.name && select.name.startsWith('price_') && !select.name.endsWith('_mode');
     const relabel = select => {
       if (select.dataset.stkPriceFiltered) return;
       select.dataset.stkPriceFiltered = '1';
       for (const option of [...select.querySelectorAll('option')]) {
-        if (prices[option.value]) option.remove();
-        else if (option.value === 'eur') option.textContent = 'Cardmarket (€)';
+        if (option.value === 'eur') {
+          if (noEuro) option.remove();
+          else option.textContent = 'Cardmarket (€)';
+          continue;
+        }
+        if (prices[option.value] === false) option.remove();
       }
     };
     for (const select of document.querySelectorAll('select[name^="price_"]')) {

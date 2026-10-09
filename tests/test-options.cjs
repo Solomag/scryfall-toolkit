@@ -32,18 +32,26 @@ const REQUIRED_IDS = [
   'saltHighThreshold', 'clipboard', 'printAddButtons', 'printPageSameTab', 'darkTheme',
   'tags', 'cardTags', 'artTags', 'relationships', 'finishBadges',
   'cardtraderPrices', 'euroPriceSources', 'edhrecUsage',
-  'edhrecSalt', 'showSaltScale', 'edhrecLink', 'edhrecUsageDisplay',
+  'edhrecSalt', 'showSaltScale', 'edhrecUsageDisplay',
   'legalities', 'exportFormat', 'taggerSearchLinks', 'cardSearchLinks',
-  'cardNicknames', 'deckNoPrices', 'stackedDeckCards', 'deckLegality',
+  'deckNoPrices', 'stackedDeckCards', 'deckLegality',
   'deckCleanUpImprover', 'cleanUpLandsInSingleton', 'sortEntriesPrimary',
   'insertSortingHeadings', 'edhrecSuggestions', 'deckSearch',
   'deckModuleStatus', 'grantDeckHosts',
-  'showPaper', 'showArena', 'showMtgo', 'paperDetails', 'paperPanel',
-  'showNonTournament', 'showOversized', 'showNoEnglishSets',
-  'showBorderFamilies', 'setBorderFamiliesList', 'nonEnglishMode',
-  'filterAreasGroup',
-  'setPrices', 'setCaster', 'setTokens',
-  'printGrouping', 'printFoldGroups', 'printFullPageLink'
+  // The platforms table is written by options.js, so the page holds only its head, its body and
+  // the price container. Every control in this section is drawn at run time from
+  // STK_SET_FILTERS.PLATFORM_NAMES, its AREAS and its PRICE_GROUPS.
+  'visibilityGroup', 'platformHead', 'platformBody', 'priceList', 'shotNotes',
+  'setCaster', 'setTokens',
+  'printGrouping', 'printFoldGroups', 'printFullPageLink',
+  // Additional info: a row per feature, and one panel per disclosure. The ids are here because
+  // the page holds the panels in its own markup — unlike the platforms table, there is nothing
+  // in the model that could draw them — and a panel whose id a button names but the page does
+  // not have is a button that does nothing.
+  'cardtraderRow', 'cardtraderMain', 'cardtraderToggle', 'cardtraderPanel',
+  'cardtraderTokenRow', 'cardtraderTokenActions', 'replaceToken',
+  'edhrecUsageToggle', 'edhrecUsagePanel', 'edhrecSaltToggle', 'edhrecSaltPanel',
+  'resetUsage', 'resetSalt'
 ];
 
 // The old flat keys are gone from the page, and this is what says so.
@@ -58,7 +66,21 @@ const REMOVED_IDS = [
   'setFiltersEnabled', 'setsGroup', 'setPlatformsAll', 'setPlatformsPaper',
   'setPlatformsArena', 'setPlatformsMtgo', 'setNonTournament', 'setOversized',
   'setForeignOnly', 'setForeignBlackBorder', 'setForeignBlackBorderList',
-  'setNonEnglish', 'setNonEnglishList', 'setPlatformsGroup'
+  'setNonEnglish', 'setNonEnglishList', 'setPlatformsGroup',
+  // The containers this section used before the rework, and the legend that told a reader which
+  // way round its four switches ran. The prices are two rows of boxes now rather than a
+  // vertical list, so the list it was built by is gone with it.
+  'setPrices', 'platformList',
+  // And the controls the two simplifications removed. They are named here rather than left
+  // out of the list: an id that is gone from the page by accident and gone on purpose look
+  // the same to a reader, and only one of them is a decision.
+  'paperDetails', 'showNonTournament', 'showOversized', 'showNoEnglishSets',
+  'showBorderFamilies', 'setBorderFamiliesList', 'showAncillary', 'ancillaryHint',
+  'nonEnglishMode', 'nonEnglishHint', 'paperPanel', 'filterAreasGroup',
+  // And the two features that were cut, with the container that had nothing left to hold once
+  // they were gone. Named here rather than left out of the list: an id that is gone from the
+  // page by accident and gone on purpose look the same to a reader, and only one is a decision.
+  'cardNicknames', 'edhrecLink', 'extraSettingsToggle', 'extraSettingsPanel'
 ];
 
 // What the archive ships is not the same as what the working tree holds, so the
@@ -100,8 +122,7 @@ function licenceAndPrivacyTest() {
       `${file} names its copyright holder`);
   }
   const thirdParty = [
-    'assets/data/oracle-tags.js', 'assets/data/illustration-tags-1.js', 'assets/data/illustration-tags-2.js',
-    'assets/data/shambleshark-nicknames.js'
+    'assets/data/oracle-tags.js', 'assets/data/illustration-tags-1.js', 'assets/data/illustration-tags-2.js'
   ];
   for (const file of thirdParty) {
     assert(!read(file).includes('Mozilla Public License'),
@@ -124,13 +145,18 @@ function licenceAndPrivacyTest() {
 
   console.log('licensing: the honest status of the third-party marks');
   const notices = read('THIRD_PARTY_NOTICES.md');
-  assert(/MPL-2\.0 notice does \*{0,2}not\*{0,2}\s+cover[\s\S]{0,160}icons\/edhrec\.png/.test(notices),
-    'the notices say the MPL does not cover the EDHREC mark');
+  assert(/MPL-2\.0 notice does \*{0,2}not\*{0,2}\s+cover[\s\S]{0,160}icons\/cardtrader\.svg/.test(notices),
+    'the notices say the MPL does not cover the CardTrader mark');
+  // EDHREC's logo used to ship for the icon-and-link control. That control is gone and so is the
+  // image, so the notices must no longer claim to ship it — a document naming a file that is not
+  // in the build is as wrong as one that omits a file that is.
+  assert(!/icons\/edhrec\.png/.test(notices) && !fs.existsSync(path.join(ROOT, 'assets/icons/edhrec.png')),
+    'and do not name the EDHREC logo, which went with the control that showed it');
 // The marks are shipped, on nominative use, by a recorded decision. So what the
   // notices have to say is the basis, and what they must not say is that a permission
   // exists. A notice that says "unresolved" beside a file we ship is a document
   // telling a reader we use something we have no right to use.
-  for (const mark of ['assets/icons/edhrec.png', 'assets/icons/cardtrader.svg']) {
+  for (const mark of ['assets/icons/cardtrader.svg']) {
     assert(notices.includes(mark), `the notices name ${mark}`);
   }
   assert(/have not asked for permission and\s+(?:have been granted|been given)\s+none/i.test(notices),
@@ -450,6 +476,7 @@ async function lastPlatformTest() {
   const page = await loadOptions({ setPlatforms: ['mtgo'] });
   await groupReady(page);
   const { document, mock } = page;
+  const F = page.context.STK_SET_FILTERS;
   const boxes = ['showPaper', 'showArena', 'showMtgo']
     .map(id => document.getElementById(id));
 
@@ -462,9 +489,12 @@ async function lastPlatformTest() {
   boxes[2].checked = false;
   fireEvent(boxes[2], 'change');
   await tick();
-  assertEqual(mock.state.setFilters.platforms,
-    { paper: false, arena: false, mtgo: false },
+  assertEqual(F.PLATFORM_NAMES.filter(name =>
+    mock.state.setFilters.platforms[name].show === true), [],
     'turning the last platform off is stored as that');
+  assertEqual(F.PLATFORM_NAMES.every(name =>
+    mock.state.setFilters.platforms[name].areas.prints === true), true,
+    'and each of the three keeps its own places, so switching it back is not a reset');
   assertEqual(boxes.map(box => box.checked), [false, false, false],
     'and the page shows that, rather than drawing all three and keeping one in storage');
   assertEqual(mock.state.setPlatforms, ['mtgo'],
@@ -484,7 +514,7 @@ async function optionalHostsTest() {
   console.log('settings: optional features ask for their host before saving');
   const page = await loadOptions({
     cardtraderPrices: false, euroPriceSources: 'cm',
-    edhrecUsage: false, edhrecSalt: false, edhrecLink: false
+    edhrecUsage: false, edhrecSalt: false
   });
   const { document, mock } = page;
   const select = document.getElementById('euroPriceSources');
@@ -629,13 +659,17 @@ function modelLabelsTest() {
   // table, so the page cannot be asked for a sentence it would then be found to be missing.
   // The check on the rendered page below would catch it anyway; this catches it earlier and
   // says which table is short.
-  const labels = ['FOREIGN_BLACK_BORDER', 'NON_ENGLISH_MODES', 'PRICE_KINDS', 'AREAS']
+  const labels = ['PRICE_KINDS', 'AREAS']
     .flatMap(table => {
       const block = new RegExp(`const ${table} = \\{[\\s\\S]*?\\n  \\};`).exec(filters);
       assert(block, `the model still declares ${table}, so the labels can be found in it`);
       return [...block[0].matchAll(/label: '([^']+)'/g)].map(match => match[1]);
     });
-  assert(labels.length >= 10, `the model's tables carry ${labels.length} labels to translate`);
+  // Seven rather than seventeen. The count is asserted as a floor and not a shape, because the
+// number of labels is not the point — what the point is, is that a model label which is not
+  // in the dictionary is a checkbox with an untranslatable name beside it, and that is
+  // invisible in the markup.
+  assert(labels.length >= 7, `the model's tables carry ${labels.length} labels to translate`);
   const untranslated = labels.filter(label => /[Ѐ-ӿ]/.test(label) && !i18n.includes("'" + label + "'"));
   assertEqual(untranslated, [],
     'every Russian label the model supplies is in the dictionary, so an English page is not half Russian');
@@ -652,28 +686,167 @@ function switchStyleTest() {
   assert(/label:has\(> input\[type=checkbox\]\)\s*\{[^}]*display:\s*flex/.test(css), 'the label puts the switch in a row with its text');
   assert(/input\[type=checkbox\]:disabled\s*\{[^}]*opacity/.test(css), 'a locked switch is dimmed');
   assert(/fieldset:disabled\s*\{[^}]*opacity/.test(css), 'and so is a locked block');
-// The platform rows and the detail panel, which the new shape introduced. The switch has to
-// keep its shape on a platform row — a pill is what tells a reader it is a switch and not a
-// label — and the panel it opens has to sit inside the row above it rather than as another
-// framed box, because the frame is what says "this is a group of settings" and nesting one
-// inside another says it twice for no extra meaning.
-assert(/\.platform-row\s*\{[^}]*display:\s*flex/.test(css),
-  'a platform switch and its details button share one row');
-assert(/\.platform-row>label\s*\{[^}]*display:\s*flex/.test(css),
-  'and the switch on that row keeps the switch shape rather than becoming a plain label');
-assert(/\.details-button\s*\{/.test(css),
-  'the details button has a class of its own so it can shrink to its label');
-assert(/\.sub-panel\s*\{[^}]*border:\s*0/.test(css),
-  "Paper's detail panel has no frame of its own, so the switch above it is what says which platform it belongs to");
-assert(/\.sub-panel\s*\{[^}]*border-left/.test(css),
-  "and a rule down the side takes the frame's place, which reads as belonging to the row above");
+// The visibility section's layout: a two-column grid, a table in the left of it and the prices
+// and the marker in the right.
+//
+// These are the things a reader would notice if they were wrong — a frame inside a frame, a
+// column of sliders beside a row of boxes, a table where the name and its boxes are so far
+// apart that the row stops reading as a row, a checkbox that still has a switch's knob in it.
+// The colours and the type are the page's own.
+assert(/#visibilityGroup\{[^}]*padding:24px/.test(css),
+  'the card is inset by 24px, because a table against an 18px edge looks like it is falling ' +
+  'out of the card rather than sitting in it');
+assert(/#visibilityGroup h3\{[^}]*color:#e4c7ea/.test(css),
+  'the sub-headings use the colour this page already used for a sub-heading, not a new one');
+assert(/#visibilityGroup h3\{[^}]*margin:0/.test(css),
+  'and carry no top margin of their own: each sits at the top of its own column, and a top ' +
+  'margin would push the two out of line with each other');
+// The grid. Two columns, the left one wider, 32px between them, and every track able to shrink.
+assert(/\.visibility-grid\{[^}]*display:grid/.test(css) &&
+    /\.visibility-grid\{[^}]*minmax\(0,1\.15fr\)[^}]*minmax\(0,1fr\)/.test(css) &&
+    /\.visibility-grid\{[^}]*gap:32px/.test(css),
+  'the card is two columns, the table\'s a little wider than the prices\', 32px apart');
+assert(/\.visibility-grid\{[^}]*align-items:start/.test(css),
+  'and the shorter column is not stretched to the taller one, so the card is as tall as its ' +
+  'contents and nothing is distributed down it');
+assert(/@media \(max-width:720px\)\{\.visibility-grid\{[^}]*minmax\(0,1fr\)\}\}/.test(css),
+  'and below the width where the two stop fitting, one column — not two squeezed ones');
+assert(/@media \(max-width:720px\)\{[\s\S]*?\.platform-table th\[scope=row\]\{[^}]*white-space:normal/.test(css),
+  'where the platform name is allowed to wrap and the columns come closer together, because ' +
+  'five headings of unbreakable words need more than a 420px card can give them');
+// And it has to come *after* the rules it overrides. A media query adds no specificity, so a
+// narrow-window rule written above the rule it means to replace simply loses — the file still
+// contains it, it still reads correctly, and the heading stays clipped. That was a real defect
+// here, found by looking at the page after the tests had passed.
+assert(css.search(/@media \(max-width:720px\)\{\s*\.platform-table thead th/) >
+    css.indexOf('.platform-table thead th{'),
+  'the narrow-window rules sit after the table rules they override, because a media query adds ' +
+  'no specificity and written above them they lose silently');
+assert(!/\.visibility-grid\{[^}]*min-height/.test(css) &&
+    !/\.visibility-column\{[^}]*min-height/.test(css),
+  'with no minimum height on either the grid or a column, because the card is as tall as what ' +
+  'is in it');
+// The table. Compact by content, not by width; 40px rows; the name column left in its heading
+// as well as in its rows.
+assert(/\.platform-table\{[^}]*border-collapse:collapse/.test(css),
+  'the platforms table is a real table, collapsed rather than spaced');
+assert(!/\.platform-table\{[^}]*[;{]width:100%/.test(css),
+  'and is sized by its content rather than stretched: five columns across the card put the ' +
+  'boxes so far apart that the row stops reading as a row');
+assert(/\.platform-table tbody tr\{[^}]*height:40px/.test(css),
+  'a row is 40px tall — the box has the whole of it to be pressed in and none of it is padding');
+assert(/\.platform-table tbody tr\{[^}]*padding/.test(css) === false,
+  'and a row carries no padding of its own');
+assert(/\.platform-table th\[scope=row\]\{[^}]*text-align:left/.test(css),
+  'the platform name is named once, down the left');
+assert(/\.platform-table th,\.platform-table td\{[^}]*text-align:center/.test(css),
+  'and every box is centred in its own column');
+assert(/\.platform-table thead th:first-child\{[^}]*text-align:left/.test(css),
+  'including the heading over the name column, which sits on the same edge as the names it names');
+assert(/\.stk-cell-check\{[^}]*height:40px/.test(css) && /\.stk-cell-check\{[^}]*cursor:pointer/.test(css),
+  'the target is the cell rather than the glyph, so the whole row-height of it is pressable');
+assert(/\.stk-cell-check\{[^}]*margin:0/.test(css),
+  'and it carries no margin of its own, because the page\'s 9px on every label would otherwise ' +
+  'add 18px of nothing to a 40px row and put the rows 58px apart');
+// A platform that is off. The row is not faded; only the name goes a shade quieter, and the
+// three places it governs keep a border rather than fading to nothing.
+assert(!/tr\.is-off\{[^}]*opacity/.test(css),
+  'a switched-off platform does not fade its whole row: the name and the platform\'s own box ' +
+  'are what the reader uses to turn it back on');
+assert(/tr\.is-off th\[scope=row\]\{[^}]*color:#b9b2c4/.test(css),
+  'the name goes a shade quieter and stays readable, rather than disappearing');
+assert(/#visibilityGroup input\[type=checkbox\]\.stk-check:disabled,[^}]*\{[^}]*border-color:#3b3642/.test(css) &&
+    !/#visibilityGroup input\[type=checkbox\]\.stk-check:disabled,[^}]*\{[^}]*opacity:\./.test(css),
+  'and the disabled places keep a border and a recessed fill instead of an opacity, ' +
+  'because a control that has faded to nothing reads as a fault rather than as a state');
+// And the difference from a box that is merely unticked has to be visible, because that
+// difference is the whole message. An unticked box is #6a6070 on the card's own colour; a
+// disabled one is #3b3642 on #232229, which is a grey nobody has to compare two screenshots to
+// see. This was reported as too subtle once, which is why it is asserted rather than eyeballed.
+assert(/input\[type=checkbox\]\.stk-check\{[^}]*border:1px solid #6a6070/.test(css),
+  'an unticked box wears the lighter border');
+assert(/#visibilityGroup input\[type=checkbox\]\.stk-check:disabled,[^}]*\{[^}]*background-color:#232229/.test(css),
+  'and a disabled one is dark enough to be told apart from it at a glance');
+assert(/#visibilityGroup label\.stk-cell-check:has\(> input\[type=checkbox\]\.stk-check:disabled\)\{[^}]*opacity:1/.test(css),
+  'while the platform name keeps its colour, because it is what the reader uses to turn the row ' +
+  'back on — and every other label around a disabled box goes quiet with it');
+// The boxes themselves: 18x18 squares, no switch left in them. One class for every square box
+// on the page rather than one set of rules per section, so a reader can tell a checkbox from a
+// switch without working out which part of the settings they are looking at.
+assert(/input\[type=checkbox\]\.stk-check\{[^}]*appearance:none/.test(css) &&
+    /input\[type=checkbox\]\.stk-check\{[^}]*width:18px/.test(css) &&
+    /input\[type=checkbox\]\.stk-check\{[^}]*height:18px/.test(css),
+  'every square box on the page is an 18x18 control rather than a slider');
+assert(/input\[type=checkbox\]\.stk-check\{[^}]*border-radius:4px/.test(css),
+  'with the brief\'s 4px corners rather than the switch\'s pill');
+assert(/input\[type=checkbox\]\.stk-check\{[^}]*background-image:none/.test(css) &&
+    /input\[type=checkbox\]\.stk-check:checked\{[^}]*background-image:none/.test(css),
+  'and the switch knob\'s gradient cleared in the base rule *and* in :checked: left in either ' +
+  'one, it paints a grey circle in the middle of the box, which is what an unticked box here ' +
+  'used to look like');
+assert(/input\[type=checkbox\]\.stk-check\{[^}]*background-color:transparent/.test(css) &&
+    !/input\[type=checkbox\]\.stk-check\{[^}]*border-radius:1[0-9]px/.test(css),
+  'unticked is empty rather than grey: nothing but a thin border on the card\'s own colour');
+assert(/input\[type=checkbox\]\.stk-check:checked\{[^}]*background-color:#7b5c8c/.test(css),
+  'and ticked is the page\'s own purple');
+assert(/input\[type=checkbox\]\.stk-check:checked::after\{/.test(css),
+  'with a tick drawn on it, so checked still reads as checked at 18px');
+assert(/input\[type=checkbox\]:focus-visible\{outline:2px solid #c9a4d5/.test(css) &&
+    /input\[type=checkbox\]\.stk-check:focus-visible\{outline:2px solid #c9a4d5/.test(css),
+  'keyboard focus is visible on both the square boxes and the page\'s own switches, and never removed');
+// The selector carries the attribute *and* the class, because `.stk-check` alone ties with the
+// page-wide `input[type=checkbox]` on specificity and would then depend on where in the file
+// this block happens to sit.
+assert(/input\[type=checkbox\]\.stk-check\{/.test(css),
+  'and the class is written together with the attribute, so the square rules cannot lose to the ' +
+  'switch rules by file order');
+// The prices: a caption, and under it the boxes it names. No caption column, and no grid any
+// more — a caption beside its boxes needs a column as wide as the longest caption, and that
+// column is empty on every other row.
+assert(/\.pair-caption\{[^}]*margin:0 0 8px/.test(css),
+  'each price caption sits 8px above the boxes it names');
+assert(/\.pair-group\{[^}]*margin:0 0 16px/.test(css),
+  'and the two groups are 16px apart');
+assert(/\.pair-items\{[^}]*display:flex/.test(css) && /\.pair-items\{[^}]*flex-wrap:wrap/.test(css),
+  'with the boxes able to sit on one line or wrap under each other');
+assert(!/\.pair-caption\{[^}]*grid-column/.test(css) && !/\.pair-row\{/.test(css),
+  'and no caption column at all, which is the wide grey gap removed rather than restyled');
+assert(/\.caster-row\{[^}]*margin:24px/.test(css),
+  'the Caster marker is 24px under the prices, with no heading of its own over one box');
+// Additional info: a row per feature, the settings behind a button, and the panel indented.
+assert(/\.feature-row\{[^}]*min-height:40px/.test(css) && /\.feature-row\{[^}]*display:flex/.test(css),
+  'a feature row is 40px tall and lays its label and its buttons out on one line');
+assert(/\.feature-main\{[^}]*flex:1 1 auto/.test(css),
+  'the label takes the free space, which is what puts every "Настроить" on the same right edge');
+// And it does not restate the layout the page's own label rule already gives a label holding a
+// checkbox. That rule is more specific, so a `gap:10px` here would be a number the browser never
+// uses — a rule that reads as if it were doing something and is not.
+assert(!/\.feature-main\{[^}]*\bgap:/.test(css) && !/\.feature-main\{[^}]*\bdisplay:/.test(css),
+  'and does not restate the flex, the centring or the gap, which come from the page-wide label rule');
+assert(/\.feature-panel\{[^}]*margin:2px 0 12px 28px/.test(css),
+  'a panel is indented from the row it belongs to, which is how a reader sees what it belongs to');
+assert(/\.feature-panel\[hidden\]\{display:none\}/.test(css),
+  'and hidden really hides it: the page sets `display` on the controls inside, which would beat ' +
+  'the browser\'s own rule for the hidden attribute');
+assert(/\.feature-panel select\{[^}]*max-width:260px/.test(css),
+  'a select in a panel is capped in width rather than stretched across the card');
+assert(/\.feature-main\.is-unconnected input\{display:none\}/.test(css),
+  'and CardTrader without a token hides its switch rather than disabling it');
+assert(/\.shot-notes\{[^}]*border-bottom/.test(css),
+  'and the notes that used to sit on the page now have a place in the "?" dialog');
+const dialogMarkup = read('src/ui/options.html');
+assert(dialogMarkup.indexOf('id="shotCaption"') < dialogMarkup.indexOf('id="shotImage"'),
+  'above the picture rather than below it: the pictures are a screen tall, so a dialog that ' +
+  'opens on one puts the only explanation this page now has below the fold');
+assert(!/\.platform-block\{/.test(css) && !/\.sub-panel\{/.test(css),
+  'the two rules that drew a vertical line beside a platform\'s places are gone');
 }
 
 function sectionOrderTest() {
   console.log('options.html: section order and grouping');
   const html = read('src/ui/options.html');
   const headings = [...html.matchAll(/<h2>([^<]+)<\/h2>/g)].map(match => match[1]);
-  assertEqual(headings, ['Общее', 'Tags', 'CardClip', 'Скрытие лишнего', 'Дополнительная информация',
+  assertEqual(headings, ['Общее', 'Tags', 'CardClip', 'Видимость', 'Дополнительная информация',
     'Легальность', 'Scryfall Deckbuilder', 'Издания', 'Экспериментальное', 'Авторы и сторонние проекты'],
     'sections follow the agreed order, with the Prints group and Experimental before the credits block');
   // The installed extension has to say out loud what it is not, and where the
@@ -689,11 +862,24 @@ function sectionOrderTest() {
     'assets/licences/'
   ]) assert(credits.includes(statement), `credits block states: ${statement}`);
   // Every control belongs to the section the user asked for.
+  //
+  // Two ways of asking, because the page has both shapes. A section may carry its own id, and
+  // then "the nearest heading above the id" answers with the *previous* section's heading —
+  // the wrong answer rather than a missing one, which reads as though the control had been
+  // moved. And one section holds two headings, so "the first heading in the enclosing section"
+  // answers with the wrong one of the two. So: when the id is on the section tag itself, read
+  // that section's own first heading; otherwise read the last heading above the control.
   const sectionOf = id => {
     const at = html.indexOf(`id="${id}"`);
-    const before = html.slice(0, at);
-    const heading = [...before.matchAll(/<h2>([^<]+)<\/h2>/g)].pop();
-    return heading ? heading[1] : null;
+    if (at < 0) return null;
+    const open = html.lastIndexOf('<section', at);
+    const openTag = open < 0 ? '' : html.slice(open, html.indexOf('>', open) + 1);
+    if (openTag.includes(`id="${id}"`)) {
+      const heading = /<h2>([^<]+)<\/h2>/.exec(html.slice(open, html.indexOf('</section>', at)));
+      return heading ? heading[1] : null;
+    }
+    const headings = [...html.slice(0, at).matchAll(/<h2>([^<]+)<\/h2>/g)];
+    return headings.length ? headings[headings.length - 1][1] : null;
   };
   assertEqual(sectionOf('settingsLanguage'), 'Общее', 'the settings language sits in Общее');
   assertEqual(sectionOf('darkTheme'), 'Общее', 'the theme selector sits in Общее');
@@ -706,50 +892,95 @@ function sectionOrderTest() {
   assertEqual(sectionOf('printGrouping'), 'Издания', 'the grouped prints table has its own category');
   assertEqual(sectionOf('printFoldGroups'), 'Издания', 'the fold line is configurable next to it');
   assertEqual(sectionOf('printFullPageLink'), 'Издания', 'the full-page link is configurable next to it');
-  // The visibility group: the three platforms, the areas, and the prices. There is no
-  // master switch and no "all platforms" row, and both absences are checked — a control
-  // that is only not in the markup by accident comes back the next time someone tidies up.
-  assertEqual(sectionOf('showPaper'), 'Скрытие лишнего', 'the platforms live in the hiding category');
-  assertEqual(sectionOf('showArena'), 'Скрытие лишнего', 'and so does the second one');
-  assertEqual(sectionOf('showMtgo'), 'Скрытие лишнего', 'and the third');
-  // The areas are drawn by options.js rather than written out, so the section is the fieldset
-  // that holds them — and the fieldset has to be inside the visibility group, not a sibling
-  // of it, or the areas end up in a section of their own with no heading above them.
-  assertEqual(sectionOf('filterAreasGroup'), 'Скрытие лишнего',
-    'the areas are one group of their own, inside the same section');
-  assertEqual(sectionOf('setPrices'), 'Скрытие лишнего', 'the price switches are one group of their own');
-  assertEqual(sectionOf('setCaster'), 'Скрытие лишнего', 'the Caster marker stays in Hide extras');
-  assertEqual(sectionOf('setTokens'), 'Скрытие лишнего', 'and the deck tokens, which the model groups with them');
+// The visibility section. Its controls are all written by options.js at run time, so the
+  // markup holds the table's head, its body, the price container and one checkbox — and the
+  // section is that section, which has to be inside the Visibility category rather than a
+  // sibling of it, or the platforms end up in a category of their own with no heading.
+  //
+  // The ids that are absent are absent on purpose, and the removal list and the runtime block
+  // below each say so. A control that is gone from the page by accident and one that is gone by
+  // decision look identical to a reader.
+  assertEqual(sectionOf('visibilityGroup'), 'Видимость',
+    'the section is the visibility one, which is what it is now called');
+  assertEqual(sectionOf('platformHead'), 'Видимость', 'and the table head sits inside it');
+  assertEqual(sectionOf('platformBody'), 'Видимость', 'as does the table body');
+  assertEqual(sectionOf('priceList'), 'Видимость', 'and the two price rows');
+  // The visibility section's own markup, for the assertions about its arrangement.
+  const group = html.slice(html.indexOf('<section id="visibilityGroup"'),
+    html.indexOf('<h2>Дополнительная информация</h2>'));
+  // The sub-headings are in the markup, not written: they are the section's own structure and a
+  // model has nothing to say about them. There are two, one over each column — the Caster row
+  // and the CardTrader row have none, because a heading over a row is a level of structure that
+  // holds nothing.
+  assertEqual([...html.matchAll(/<h3>([^<]+)<\/h3>/g)]
+    .filter(match => ['Платформы', 'Цены и ссылки', 'Интерфейс'].includes(match[1]))
+    .map(match => match[1]), ['Платформы', 'Цены и ссылки'],
+  'the section has exactly the two sub-headings, in that order, and no Interface heading left');
+  assertEqual(sectionOf('setCaster'), 'Видимость',
+    'and the Caster row sits under the prices in the right column, with no heading of its own');
+  assertEqual(sectionOf('cardtraderPanel'), 'Видимость',
+    'as does CardTrader, with the prices it fills');
+  // The two columns are real elements, and each holds the one heading that belongs to it. This
+  // is the arrangement the whole rework is about: a wrong nesting here puts the table under the
+  // prices, which is a page that still works and reads in the wrong order.
+  assert(/<div class="visibility-grid">[\s\S]*<div class="visibility-column">\s*<h3>Платформы<\/h3>/
+    .test(group), 'the first column is the platforms, under its own heading');
+  assert(/<h3>Цены и ссылки<\/h3>[\s\S]*id="priceList"[\s\S]*id="setStores"[\s\S]*id="cardtraderPrices"[\s\S]*id="euroPriceSources"[\s\S]*id="setCaster"[\s\S]*<\/div>\s*<\/div>\s*<\/section>/
+    .test(group),
+  'and the second holds, in order: the prices, the whole-block switch, CardTrader with the ' +
+  'stores it belongs to, the EUR source and the marker — all inside it, which is where a reader ' +
+  'looks for a price');
+  // The deck tokens moved out of the hiding group and into the Deckbuilder section, which is
+  // where they always belonged and were not. The switch adds one button to one page — the deck
+  // page, where Scryfall lists the deck's cards — and nowhere else on the site; it was in the
+  // hiding group only because that group used to hold the price and token switches together.
+  assertEqual(sectionOf('setTokens'), 'Scryfall Deckbuilder',
+    'the deck tokens sit with the deck tools, because that is the only page they appear on');
   assert(!html.includes('id="setFiltersEnabled"') && !html.includes('id="setPlatformsAll"'),
     'the master switch and the all-platforms row are both gone from the markup');
-  // Paper's categories sit inside the panel its own button opens, and the areas sit outside
-  // it — which is the whole arrangement: what is shown, then what is shown within Paper, then
-  // where the rules apply. `filterAreasGroup` is the anchor for the areas now, because the
-  // switches inside it are written by options.js rather than sitting in the markup.
-  assert(html.indexOf('id="paperDetails"') < html.indexOf('id="showNonTournament"') &&
-    html.indexOf('id="showNonTournament"') < html.indexOf('id="filterAreasGroup"'),
-    'Paper\'s detail categories are drawn after its button and before the areas');
-  assert(html.indexOf('id="showPaper"') < html.indexOf('id="paperDetails"') &&
-    html.indexOf('id="showArena"') < html.indexOf('id="filterAreasGroup"'),
-    'the platforms and their details are the first thing in the group');
-  // The areas are not written out. A literal row here would be a fourth copy of three names,
-  // and the switch-count check further up would not notice it: it counts rows in the rendered
-  // page, and a literal is rendered as well as a written one.
-  assert(!html.includes('id="areaPrints"'),
-    'and the area switches are not written out, so the model is their only source');
-  // Only Paper gets a details button. Arena and Magic Online have nothing to put behind one,
-  // and a button that opens an empty panel is a promise this build cannot keep.
-  assert(html.includes('id="paperDetails"'), 'Paper has a details button');
-  assert(!html.includes('id="arenaDetails"') && !html.includes('id="mtgoDetails"'),
-    'and the two digital platforms do not, because there is nothing to put in one');
+  // Nothing in the table is written out, so a fourth platform or a fourth place is one entry in
+  // the model and nothing here. The check that the ids are absent is what says so: a literal
+  // row would be a second copy of three names with nothing to notice when they differ.
+  assert(!html.includes('id="showPaper"') && !html.includes('id="showArena"') &&
+    !html.includes('id="showMtgo"'),
+    'the three platform switches are not written out, so the model is their only source');
+  assert(!html.includes('id="showPaper-prints"') && !html.includes('id="showArena-search"'),
+    'and neither are the nine places, which are the same three names three times over');
+  assert(!html.includes('id="price-usd"') && !html.includes('id="price-tcg"'),
+    'and the four prices, which the model groups into two rows');
+  // The section holds no fieldset at all. Three frames inside a frame says "a group of related
+  // settings" three times, and by the third the reader is looking at frames rather than at what
+  // is in them; headings and space say it once.
+  assert(!/<fieldset/.test(group) && !/<legend/.test(group),
+    'and no fieldset or legend anywhere in it, so nothing is drawn as a nested frame');
+  assert(!/<p class="hint">/.test(group),
+    'and no paragraph of explanation on the page: the notes are in the "?" dialog instead');
+  // The controls the markup holds, which is the four that are not drawn from a table: the
+  // Caster marker, the whole "Buy This Card" block, and CardTrader's switch and token field.
+  // Everything else in the section — the platforms table, the nine places and the five prices —
+  // is written by options.js from the model.
+  assertEqual([...group.matchAll(/<input[^>]*id="([A-Za-z0-9_-]+)"/g)].map(match => match[1]).sort(),
+    ['cardtraderPrices', 'cardtraderToken', 'setCaster', 'setStores'],
+    'and exactly the four controls the model cannot draw for it');
+  // No platform has a button to open settings, and there is no disclosure over the three
+  // places: twelve boxes standing open is the whole shape, and a button over nine of them would
+  // be a click for nothing.
+  assert(!html.includes('paperDetails') && !html.includes('arenaDetails') &&
+    !html.includes('mtgoDetails'),
+    'no platform has a settings button, because a button that opens an empty panel is a ' +
+    'promise this build cannot keep');
   assertEqual(sectionOf('finishBadges'), 'Дополнительная информация', 'the finish column moved to Additional info');
   assertEqual(sectionOf('cardSearchLinks'), 'Дополнительная информация', 'type and mana search moved to Additional info');
-  assertEqual(sectionOf('cardNicknames'), 'Дополнительная информация', 'card nicknames moved to Additional info');
   assertEqual(sectionOf('edhrecUsage'), 'Дополнительная информация', 'EDHREC is a sub-category of Additional info');
-  assertEqual(sectionOf('cardtraderPrices'), 'Дополнительная информация', 'CardTrader is a sub-category of Additional info');
-  assertEqual(sectionOf('setTokens'), 'Скрытие лишнего',
-    'the deck token switch moved to the hiding group, which is where the model keeps it');
-assertEqual(sectionOf('deckNoPrices'), 'Scryfall Deckbuilder', 'the other deck options share one category');
+  assertEqual(sectionOf('cardtraderPrices'), 'Видимость',
+    'CardTrader moved to Visibility, with the prices it fills: it adds a euro column to the ' +
+    'prints table and a link to the store block, and it was in Additional info only because that ' +
+    'section used to hold every switch that was not about sets');
+  assertEqual(sectionOf('setStores'), 'Видимость',
+    'and the general switch over the store block sits with the shops it governs');
+  assertEqual(sectionOf('setTokens'), 'Scryfall Deckbuilder',
+    'the deck token switch moved into the deck tools, which is the only page it appears on');
+  assertEqual(sectionOf('deckNoPrices'), 'Scryfall Deckbuilder', 'the other deck options share one category');
   assertEqual(sectionOf('deckLegality'), 'Scryfall Deckbuilder',
     'the legality check is a deck tool and sits with the deck tools, not with the hiding rules');
   assertEqual(sectionOf('deckCleanUpImprover'), 'Scryfall Deckbuilder',
@@ -762,10 +993,77 @@ assertEqual(sectionOf('deckNoPrices'), 'Scryfall Deckbuilder', 'the other deck o
   assertEqual(sectionOf('siteLanguage'), 'Экспериментальное', 'the site language selector moved to the bottom');
   assert(html.indexOf('id="siteLanguage"') > html.indexOf('id="deckTokens"'),
     'the site language selector is the last control of the page');
-  // EDHREC and CardTrader are grouped, not separate sections of their own.
+  // Additional info is a list of features, not a pair of sub-categories: no fieldset, no legend,
+  // one line per feature, and everything a feature needs beyond its switch behind its own button.
   const additional = html.slice(html.indexOf('<h2>Дополнительная информация</h2>'), html.indexOf('<h2>Легальность</h2>'));
-  assertEqual([...additional.matchAll(/<legend>([^<]+)<\/legend>/g)].map(match => match[1]), ['EDHREC', 'CardTrader'],
-    'EDHREC and CardTrader are labelled sub-categories inside Additional info');
+  assert(!/<fieldset/.test(additional) && !/<legend/.test(additional),
+    'Additional info holds no fieldset and no legend, so nothing in it is drawn as a frame');
+  const rows = [...additional.matchAll(/<div class="feature-row"[^>]*>[\s\S]*?<\/div>/g)];
+  assert(rows.length >= 4,
+    'the section is a list of feature rows, one per feature (' + rows.length + ' found)');
+  // Every disclosure is a button that names the panel it opens, and the panel is a sibling.
+  // A button whose `aria-controls` names nothing is a button that does nothing, and it looks
+  // exactly like one that works.
+  const toggles = [...additional.matchAll(/id="([A-Za-z]+Toggle)"[^>]*aria-controls="([A-Za-z]+)"/g)];
+  assertEqual(toggles.map(match => match[2]), ['edhrecUsagePanel', 'edhrecSaltPanel'],
+    'the two disclosures name their panels, in the order the section reads');
+  for (const [, , panel] of toggles) {
+    assert(additional.includes(`id="${panel}"`), `and the panel ${panel} is in the markup`);
+  }
+  // Collapsed when the page opens, whatever the feature is set to. A panel that starts open
+  // makes the section a form again, which is the thing this shape exists to stop being.
+  assertEqual([...additional.matchAll(/<div class="feature-panel[^>]*>/g)]
+    .filter(match => !/hidden/.test(match[0])).length, 0,
+  'every panel starts hidden, whatever the feature it belongs to is set to');
+  // The panels hold the fields that used to stand in the body, and nothing is left standing
+  // outside one: a threshold outside a panel is a threshold with no button to explain it.
+  //
+  // Containment is worked out by counting div tags rather than by looking for the next `</div>`,
+  // because a panel holds divs of its own — a threshold row is a div — and the first close tag
+  // after a field is the end of the row it is in, not the end of the panel.
+  const closeOfDiv = (text, open) => {
+    const re = /<div\b|<\/div>/g;
+    re.lastIndex = open;
+    let depth = 0;
+    let match;
+    while ((match = re.exec(text))) {
+      depth += match[0] === '</div>' ? -1 : 1;
+      if (depth === 0) return match.index;
+    }
+    return -1;
+  };
+  for (const id of ['edhrecUsageDisplay', 'usageColorMetric', 'usageMediumDecks', 'usageHighDecks',
+    'usageMediumPercent', 'usageHighPercent', 'showSaltScale', 'saltMediumThreshold',
+    'saltHighThreshold']) {
+    const at = additional.indexOf(`id="${id}"`);
+    const panel = additional.lastIndexOf('<div class="feature-panel', at);
+    assert(panel >= 0 && at < closeOfDiv(additional, panel),
+      `${id} sits inside a panel rather than in the list`);
+  }
+  // And the two that left. CardTrader is a price feature — it adds a euro column and a store
+  // link — so it lives with the prices now, and the EUR source with the shops it chooses
+  // between. A price setting in a list of things that are not prices is a setting nobody looks
+  // for where it is.
+  for (const id of ['euroPriceSources', 'cardtraderPrices', 'cardtraderToken', 'cardtraderPanel']) {
+    assert(!additional.includes(`id="${id}"`), `${id} is not in Additional info at all`);
+    assertEqual(sectionOf(id), 'Видимость', `${id} sits in Visibility`);
+  }
+  // The one help icon the list carries, and the help the panels carry. `data-help` names an
+  // entry in the page's own help table, and a name the table does not have disables the button
+  // rather than opening an empty dialog. CardTrader's is in Visibility now, with the row it
+  // explains, and the section-wide check below still counts it.
+  const helps = [...additional.matchAll(/data-help="([a-z]+)"/g)].map(match => match[1]);
+  assertEqual(helps, ['finishes', 'usage', 'salt'],
+    'each feature that has more to say than its name carries a help button');
+  // The one that used to be here and is not: the nicknames feature was cut, so its row and its
+  // help went with it. A "?" whose feature is gone is a button that explains nothing.
+  assert(!additional.includes('data-help="nicknames"'),
+    'and the nicknames help is gone with the feature it explained');
+  // The long paragraphs are gone from the body. Every one of them is in the help table instead,
+  // which is what `untranslatedTextTest` above cannot see: a paragraph moved into the dialog is
+  // still a paragraph, and one left behind is a paragraph nobody reads.
+  assert(!/<p class="hint">/.test(additional),
+    'and no paragraph of explanation stands in the section: the long ones are behind a "?"');
 }
 
 function loadOptions(state) {
@@ -944,23 +1242,25 @@ async function settingsTest() {
 }
 
 async function setPlatformsTest() {
-  console.log('options.js: three platform switches, no master');
+  console.log('options.js: three platform switches, no master, each with its own three places');
   const page = await groupReady(loadOptions({}));
   const { document, mock } = page;
+  const F = page.context.STK_SET_FILTERS;
   const boxes = ['showPaper', 'showArena', 'showMtgo'].map(id => document.getElementById(id));
+  const kept = () => F.PLATFORM_NAMES.filter(name =>
+    mock.state.setFilters.platforms[name].show === true);
   assertEqual(boxes.map(box => box.checked), [true, true, true],
     'every platform starts shown, which is what a default has to mean');
 
   // Each change is fired on its own, because a switch that also wrote the other two would
-// pass a test that unticked two and fired once — which is what this test did for years.
-boxes[1].checked = false;
-fireEvent(boxes[1], 'change');
-await tick();
-boxes[2].checked = false;
-fireEvent(boxes[2], 'change');
-await tick();
-assertEqual(mock.state.setFilters.platforms, { paper: true, arena: false, mtgo: false },
-    'leaving Paper alone is stored as the only platform');
+  // pass a test that unticked two and fired once — which is what this test did for years.
+  boxes[1].checked = false;
+  fireEvent(boxes[1], 'change');
+  await tick();
+  boxes[2].checked = false;
+  fireEvent(boxes[2], 'change');
+  await tick();
+  assertEqual(kept(), ['paper'], 'leaving Paper alone is stored as the only platform');
 
   // All three off is a choice, not a state to be rescued. The earlier build put a master
   // above these and quietly restored them, which meant unchecking the last one appeared to
@@ -968,25 +1268,32 @@ assertEqual(mock.state.setFilters.platforms, { paper: true, arena: false, mtgo: 
   boxes[0].checked = false;
   fireEvent(boxes[0], 'change');
   await tick();
-  assertEqual(mock.state.setFilters.platforms, { paper: false, arena: false, mtgo: false },
-    'and turning the last one off is stored as that, rather than undone');
+  assertEqual(kept(), [], 'and turning the last one off is stored as that, rather than undone');
   assertEqual(boxes.map(box => box.checked), [false, false, false], 'the boxes show it');
 
-  // The requirement that a platform keeps its own settings while it is off. The switch and
-  // the detail panel write different fields, and this is what proves neither rewrites the
-  // other: a change made while Paper is off is still there when it comes back.
-  const oversized = document.getElementById('showOversized');
-  oversized.checked = false;
-  fireEvent(oversized, 'change');
+  // The requirement that a platform keeps its own places while it is off. The switch and the
+  // three switches under it write different keys, and this is what proves neither rewrites
+  // the other: a place changed while Paper is off is still there when it comes back.
+  const paperSets = document.getElementById('showPaper-sets');
+  paperSets.checked = false;
+  fireEvent(paperSets, 'change');
   await tick();
-  assertEqual(mock.state.setFilters.paper.oversized, false,
-    "Paper's own categories are still editable while Paper is off");
+  assertEqual(mock.state.setFilters.platforms.paper.areas.sets, false,
+    "Paper's own places are still editable while Paper is off");
+  assertEqual(kept(), [], 'and changing one of them did not switch Paper back on');
   boxes[0].checked = true;
   fireEvent(boxes[0], 'change');
   await tick();
-  assertEqual(mock.state.setFilters.platforms.paper, true, 'Paper comes back');
-  assertEqual(mock.state.setFilters.paper.oversized, false,
-    'and its categories are exactly as they were left');
+  assertEqual(kept(), ['paper'], 'Paper comes back');
+  assertEqual(mock.state.setFilters.platforms.paper.areas,
+    { prints: true, search: true, sets: false },
+    'and its places are exactly as they were left');
+  // Nothing dims anything, and there is nothing to dim with: a switch that writes one key and
+  // nine switches under it stay operable, because a disabled control is one the reader cannot
+  // answer with — and the three places are the only record of what comes back with the switch.
+  assert(!document.getElementById('visibilityGroup').disabled,
+    'and nothing dims them, because there is no master switch to dim anything with');
+  assert(!paperSets.disabled, 'including the place that is switched off itself');
 
   const stored = await groupReady(loadOptions({
     setFilters: { platforms: { paper: false, arena: false, mtgo: true } },
@@ -1002,143 +1309,280 @@ assertEqual(mock.state.setFilters.platforms, { paper: true, arena: false, mtgo: 
 }
 
 // The hiding group, drawn from the model. The point of these is that the page cannot
-// drift away from src/core/set-filters.js: a list the page shows and the model does not
+// The visibility section, drawn from the model. The point of these is that the page cannot
+// drift away from src/core/set-filters.js: a column the page shows and the model does not
 // store is a switch that looks on and does nothing, which is the defect this whole
-// group was rebuilt to end.
+// section was rebuilt to end.
 async function hidingGroupTest() {
-  console.log('options.js: the hiding group is the model, drawn and not retyped');
+  console.log('options.js: the visibility section is the model, drawn and not retyped');
   const page = await groupReady(loadOptions({ settingsLanguage: 'en' }));
   const { document, mock, context } = page;
   const F = context.STK_SET_FILTERS;
+  const t = context.STK_I18N.t;
+  const q = id => document.getElementById(id);
 
-  // Every row under a category comes from the model's own table, and nothing else.
-  // Checked both ways: a row the model has and the page did not draw is a rule the
-  // reader cannot set, and a row the page drew and the model has not is a rule that
-  // cannot be stored.
-  const rowsOf = containerId => [...document.getElementById(containerId)
-    .querySelectorAll('input[data-which]')].map(box => box.dataset.which);
-  assertEqual(rowsOf('setBorderFamiliesList'), Object.keys(F.FOREIGN_BLACK_BORDER),
-    'one row per Foreign Black Border family in the model, and no others');
-  // The non-English rule has no list at all any more, and that is the point of the
-  // redesign: Portal, Secret Lair and the rest were three categories of a set name, and
-  // the question the reader actually has is about a printing rather than a set.
-  assert(!document.getElementById('setNonEnglishList'),
-    'the non-English rule has no category list, so there is nothing to re-derive');
-  assertEqual(rowsOf('setPrices'), Object.keys(F.PRICE_KINDS),
-    'one row per price kind in the model, and no others');
+  // The shape first: a table of platforms, because a reader asking two questions about one
+  // platform — "out of the dropdown, but still in the table" — needs a column and a row, and a
+  // stack of three blocks with a disclosure under each cannot hold both answers at once.
+  const heads = [...document.getElementById('platformHead').querySelectorAll('th')];
+  assertEqual(heads.map(cell => cell.textContent),
+    ['Platform', 'Show', 'Prints table', 'Search', 'Sets list'],
+    'the five column headings are the model\'s own words, in the model\'s order');
+  assert(heads.every(cell => cell.getAttribute('scope') === 'col'),
+    'and every one of them is a column header, so a screen reader says the column when a box in it ' +
+    'is reached rather than leaving the reader to count');
 
-  // Prices are told apart, which is the whole reason they are four switches. Ticking one
-  // must not touch the other three — the bug that made `onlyCardmarket` a single switch
-  // was that there was no way to say it.
-  const priceBox = kind => document.getElementById('setPrices-' + kind);
-  priceBox('tcg').checked = true;
+  const rows = [...document.getElementById('platformBody').querySelectorAll('tr')];
+  assertEqual(rows.length, F.PLATFORM_NAMES.length, 'one row per platform in the model, and no others');
+  for (const [index, name] of F.PLATFORM_NAMES.entries()) {
+    const row = rows[index];
+    const label = row.querySelector('th');
+    assertEqual(label.textContent, F.PLATFORM_LABELS[name],
+      `the row for ${name} is named with the platform, not with a setting`);
+    assertEqual(label.getAttribute('scope'), 'row',
+      `and it is a row header, so it is read out with each box in the row rather than once at the top`);
+    // The platform's own box and its three places: four controls, all of them from the model.
+    const places = [...row.querySelectorAll('input[data-which]')];
+    assertEqual(places.map(box => box.dataset.which), F.AREA_NAMES,
+      `${name} has one place per area in the model, in the model's order`);
+    assertEqual(row.querySelectorAll('input[data-kind=show]').length, 1,
+      `and exactly one box of its own for ${name}`);
+    assertEqual(places.every(box => box.checked), true,
+      `every place starts in force, like every other switch on a page nobody has touched`);
+    // Every cell of the row, against every heading above it — in order, by column.
+    //
+    // This is the assertion that was missing when the Show box was prepended instead of
+    // appended: every id was right, every box behaved, and the table drew each control under
+    // the heading for the column to its left. Reading boxes by id cannot see that; reading the
+    // row left to right against the header can, and it is the only reading that describes what
+    // the page looks like.
+    assertEqual([...row.children].map(cell => {
+      const box = cell.querySelector('input');
+      return box ? box.dataset.which || 'show' : cell.textContent.trim();
+    }),
+      [F.PLATFORM_LABELS[name], 'show', ...F.AREA_NAMES],
+      `the ${name} row has a cell for each heading, in the headings' order, so no box is drawn ` +
+      'under the wrong column');
+  }
+
+  // Checked means shown, everywhere in the table, with no exception to remember. The columns
+  // are not labelled "hide", the boxes are not inverted, and a default is everything ticked —
+  // so the page can be read with no knowledge of this file at all.
+  assertEqual([q('showPaper').checked, q('showArena').checked, q('showMtgo').checked], [true, true, true],
+    'Paper starts shown, and the two digital platforms start shown too');
+
+  // Every box is named by what it does, in words that include the platform. Twelve checkboxes
+  // are twelve anonymous targets otherwise, and the row header is not enough: a screen reader
+  // announces a row header once, so three of the four boxes in it would go by unsaid.
+  for (const name of F.PLATFORM_NAMES) {
+    const platform = F.PLATFORM_LABELS[name];
+    assertEqual(q('show' + name[0].toUpperCase() + name.slice(1)).getAttribute('aria-label'),
+      `${platform}: show`, `${name} is announced by its name and what its own box is for`);
+    for (const area of F.AREA_NAMES) {
+      const box = q('show' + name[0].toUpperCase() + name.slice(1) + '-' + area);
+      // `t` and not the model's own string: the model holds Russian and the page is English, so
+      // comparing against the model would pass only if the name were never translated. The
+      // language is named rather than left to the default, which is Russian.
+      assertEqual(box.getAttribute('aria-label'), `${platform}: ${t(F.AREAS[area].aria, 'en')}`,
+        `${name}'s ${area} box is announced by name and purpose, not by its column alone`);
+      assert(!/[А-Яа-я]/.test(box.getAttribute('aria-label')),
+        'and in the page language rather than the model\'s');
+    }
+  }
+
+  // The two answers a reader who wants Arena in the table but out of the dropdown has to be
+  // able to give, and they are two boxes on one row. With one shared list of places this was
+  // impossible: the same three boxes would have moved all three platforms, or answering about
+  // one place would have moved the other two.
+  const arenaSearch = q('showArena-search');
+  const arenaPrints = q('showArena-prints');
+  arenaSearch.checked = false;
+  fireEvent(arenaSearch, 'change');
+  await tick();
+  assertEqual(mock.state.setFilters.platforms.arena.areas.search, false,
+    'one place of one platform is stored on its own');
+  assertEqual(mock.state.setFilters.platforms.arena.areas.prints, true,
+    'the same platform keeps its other places');
+  assertEqual(mock.state.setFilters.platforms.paper.areas.search, true,
+    'and Paper keeps all of its own, which is the whole point of the shape');
+  assertEqual(mock.state.setFilters.platforms.mtgo.areas.search, true,
+    'as does Magic Online');
+  arenaPrints.checked = false;
+  fireEvent(arenaPrints, 'change');
+  await tick();
+  assertEqual(mock.state.setFilters.platforms.arena.areas,
+    { prints: false, search: false, sets: true },
+    'and the third place is untouched by the two that were changed');
+  assertEqual(mock.state.setFilters.platforms.paper.areas,
+    { prints: true, search: true, sets: true },
+    'while Paper is still entirely in force, so the page can be in two states at once');
+
+  // A platform switched off: its own box is empty, its three place boxes are empty and out of
+  // reach, and its row is dimmed. That is the page saying what is in force.
+  //
+  // None of it is allowed to reach the stored value. The three places are what the reader
+  // chose, and a page that empties them because the platform is off would throw the choice
+  // away — which is the one thing "turning a platform off keeps its settings" must not mean.
+  const arena = q('showArena');
+  arena.checked = false;
+  fireEvent(arena, 'change');
+  await tick();
+  assertEqual(mock.state.setFilters.platforms.arena.show, false,
+    'the platform box stores its own key');
+  assertEqual(mock.state.setFilters.platforms.arena.areas,
+    { prints: false, search: false, sets: true },
+    'and leaves its three places exactly as they were, while it is off');
+  assertEqual(arena.checked, false, 'and its own box is drawn empty');
+  assertEqual(arena.disabled, false,
+    'while the platform box stays operable, because it is the only way back and a disabled ' +
+    'control that is the only way out of a state is a trap');
+  assertEqual([...rows[1].querySelectorAll('input[data-which]')]
+    .map(box => [box.checked, box.disabled]),
+    [[false, true], [false, true], [false, true]],
+    'its three place boxes are drawn empty and disabled, and the one that is still on in the ' +
+    'stored value is drawn empty too — the boxes say what is in force, not what is stored');
+
+  // Re-enabling brings the places back as they were, rather than as the defaults. This is the
+  // case where the two answers above survive: a reader who turns Arena off for a moment and
+  // back on has not asked to have Arena's places reset.
+  arena.checked = true;
+  fireEvent(arena, 'change');
+  await tick();
+  assertEqual(mock.state.setFilters.platforms.arena.show, true, 'the platform comes back');
+  assertEqual(mock.state.setFilters.platforms.arena.areas,
+    { prints: false, search: false, sets: true },
+    'with all three of its own choices intact, which is what came back with it');
+  assertEqual([...rows[1].querySelectorAll('input[data-which]')]
+    .map(box => [box.checked, box.disabled]), [[false, false], [false, false], [true, false]],
+    'and the boxes show those choices again, editable');
+
+  // A reader who unticks all three places on a platform that is on has said so. Nothing puts
+  // them back, and nothing moves the platform's own box either — the page has no opinion about
+  // a choice like that, and one that tidied it up would be a setting the reader cannot set.
+  for (const id of ['showPaper-prints', 'showPaper-search', 'showPaper-sets']) {
+    q(id).checked = false;
+    fireEvent(q(id), 'change');
+  }
+  await tick();
+  assertEqual(mock.state.setFilters.platforms.paper.areas,
+    { prints: false, search: false, sets: false }, 'all three places of a shown platform can be off');
+  assertEqual(q('showPaper').checked, true, 'and the platform box is not moved on the reader\'s behalf');
+  for (const id of ['showPaper-prints', 'showPaper-search', 'showPaper-sets']) {
+    q(id).checked = true;
+    fireEvent(q(id), 'change');
+  }
+  await tick();
+
+  // And the model hands the page back exactly what the page stored, so the page and the
+  // rules cannot disagree about what a reader chose.
+  const stored = mock.state.setFilters;
+  assertEqual(F.effective(stored).platforms.arena.areas,
+    stored.platforms.arena.areas,
+    'the model reads the page\'s own value back');
+  assertEqual(Object.keys(stored.platforms.arena).sort(), ['areas', 'show'],
+    'and a platform holds nothing but a box and its three places');
+
+  // The prices: two groups rather than four switches, because a currency is a column of numbers
+  // and a shop is a link. Positive, like everything else here, and the assertion is in the
+  // direction that matters — unticking one turns that one off and leaves the other three on.
+  //
+  // Read as caption-then-boxes, which is the arrangement: a caption beside its boxes needs a
+  // column as wide as the longest caption and that column is empty on every other row.
+  const priceList = document.getElementById('priceList');
+  const priceGroups = [...priceList.querySelectorAll('.pair-group')];
+  assertEqual(priceGroups.map(row => row.querySelector('.pair-caption').textContent),
+    ['Prices', 'Store links'],
+    'the two groups are the model\'s two, in the model\'s order, each with its own caption');
+  assertEqual(priceGroups.map(row => [...row.querySelectorAll('.pair-items input[data-which]')]
+    .map(box => box.dataset.which)),
+    [['usd', 'tix'], ['tcg', 'cardhoarder', 'cardmarket']],
+    'and each holds the kinds the model put in it, so a kind cannot be left out of a group');
+  assert(priceGroups.every(group => group.firstElementChild.classList.contains('pair-caption')),
+    'with the caption above the boxes rather than beside them, so there is no empty column ' +
+    'between a label and the control it labels');
+  assertEqual([...priceList.querySelectorAll('input')].map(box => box.checked),
+    [true, true, true, true, true],
+    'all five start shown, which is what a default has to mean');
+  assertEqual([...priceList.querySelectorAll('input')]
+    .map(box => box.getAttribute('aria-label')),
+    ['USD: show', 'TIX: show', 'TCGplayer: show', 'Cardhoarder: show', 'Cardmarket: show'],
+    'and each is announced by its name and what it is for, the shop that owns the euro column included');
+  const priceBox = kind => q('price-' + kind);
+  priceBox('tcg').checked = false;
   fireEvent(priceBox('tcg'), 'change');
   await tick();
   assertEqual(mock.state.setFilters.prices,
-    { usd: false, tix: false, tcg: true, cardhoarder: false },
-    'hiding one kind of price hides that one alone');
-
-  // Foreign Black Border is per family, and positive: a family that is shown is a family
-  // that is left alone, so unticking one stores `false` for that family alone.
-  const fbb = document.getElementById('setBorderFamiliesList-fbb');
-  fbb.checked = false;
-  fireEvent(fbb, 'change');
+    { usd: true, tix: true, tcg: false, cardhoarder: true, cardmarket: true },
+    'unticking one kind of price turns that one off alone');
+  assertEqual(mock.state.setFilters.platforms.paper.areas.prints, true,
+    'and touching a price touches no platform');
+  // Cardmarket is the one shop that also owns a column — the native EUR one — so its switch is
+  // the answer to both "hide the Cardmarket links" and "hide the euro price", which is what one
+  // button for one shop has to mean.
+  priceBox('cardmarket').checked = false;
+  fireEvent(priceBox('cardmarket'), 'change');
   await tick();
-  assertEqual(mock.state.setFilters.paper.foreignBlackBorder,
-    { '4bb': true, fbb: false, bchr: true },
-    'unticking one family stores that family off and leaves the other two on');
-  assertEqual(F.effective(mock.state.setFilters).paper.foreignBlackBorder.fbb, false,
-    'and the model hands the page the same thing, so the page and the rules cannot disagree');
-
-  // And the list stays open while a family is off. It was hidden whenever the category switch
-  // was on, and the switch is on whenever *any* family is shown — so a reader who had chosen
-  // "everything except FBB" was shown a category that read as simply on, with no way to see
-  // that one of three families was hidden. The setting was applied correctly and was
-  // invisible, which is the state a reader cannot act on.
-  assertEqual(document.getElementById('showBorderFamilies').checked, true,
-    'the category switch reads as on, because two of its three families are shown');
-  assertEqual(document.getElementById('setBorderFamiliesList').hidden, false,
-    'and the list under it is open, so the one hidden family is visible rather than implied');
-  // With every family shown there is nothing in the list to decide, and leaving it open would
-  // be three switches that all agree — so this is the one state where hiding it is right.
-  const allShown = await groupReady(loadOptions({
-    setFiltersMigrated: true,
-    setFilters: { paper: { foreignBlackBorder: { '4bb': true, fbb: true, bchr: true } } }
-  }));
-  assertEqual(allShown.document.getElementById('setBorderFamiliesList').hidden, true,
-    'and it closes again once every family is shown');
-
-  // The non-English rule is one select with three positions, and the middle one is not the
-  // opposite of either end — so it is checked by value rather than by being on or off.
-  const mode = document.getElementById('nonEnglishMode');
-  assertEqual([...mode.options].map(option => option.value), Object.keys(F.NON_ENGLISH_MODES),
-    'one option per position in the model, in the model\'s order');
-  assertEqual(mode.value, 'all', 'and it starts at All, which shows everything');
-  mode.value = 'analogue';
-  fireEvent(mode, 'change');
+  assertEqual(mock.state.setFilters.prices.cardmarket, false,
+    'and Cardmarket can be hidden on its own, which is what a reader who does not trade there ' +
+    'needs');
+  priceBox('cardmarket').checked = true;
+  fireEvent(priceBox('cardmarket'), 'change');
   await tick();
-  assertEqual(mock.state.setFilters.paper.nonEnglish, 'analogue',
-    'the middle position is stored as itself and not flattened into a switch');
-  assertEqual(mock.state.setFilters.paper.nonEnglish !== 'none', true,
-    'which is what makes it different from the third');
-
-  // The areas, drawn from the model, and the requirement that a rule on with no area chosen
-  // removes nothing.
-  const areasGroup = document.getElementById('filterAreasGroup');
-  const areaRows = [...areasGroup.querySelectorAll('input[data-which]')].map(box => box.dataset.which);
-  assertEqual(areaRows, Object.keys(F.AREAS),
-    'one row per area in the model, and no others');
-  const area = document.getElementById('filterAreasGroup-sets');
-  area.checked = false;
-  fireEvent(area, 'change');
+  // And the box reads back what it stored, which is the half an inverted group gets wrong: the
+  // page writes "shown" and reads "hidden", or the other way round, and the boxes end up showing
+  // the opposite of what the page is doing.
+  priceBox('tcg').checked = true;
+  fireEvent(priceBox('tcg'), 'change');
   await tick();
-  assertEqual(mock.state.setFilters.areas.sets, false,
-    'one area is stored on its own');
-  assertEqual(mock.state.setFilters.areas.prints, true, 'and the other two are untouched');
+  assertEqual([...priceList.querySelectorAll('input')].map(box => box.checked),
+    [true, true, true, true, true],
+    'and ticking it back shows all five again rather than leaving one stuck');
 
-  // Paper's categories: positive, and each one about a whole category.
-  const before = JSON.parse(JSON.stringify(mock.state.setFilters));
-  const nonTournament = document.getElementById('showNonTournament');
-  nonTournament.checked = false;
-  fireEvent(nonTournament, 'change');
+  // The Caster marker. Its old switch read "hide" and this one reads "show", so the stored key
+  // was renamed rather than inverted in place — the rename is what lets the migration tell the
+  // two senses apart, and a rename that were done as a bare inversion would flip the marker for
+  // every reader on the first page load after an update.
+  assertEqual(q('setCaster').checked, true, 'the Caster marker starts shown');
+  assertEqual(q('setCaster').parentElement.textContent.trim(), 'Show Caster ON indicator',
+    'and it says what the box does, in the page language');
+  q('setCaster').checked = false;
+  fireEvent(q('setCaster'), 'change');
   await tick();
-  assertEqual(mock.state.setFilters.paper.nonTournament, false,
-    'a category that is switched off is stored as off');
-  assertEqual(F.effective(mock.state.setFilters).paper.nonTournament, false,
-    'and the model agrees, so a page drawing it as on would be visibly wrong');
+  assertEqual(mock.state.setFilters.showCaster, false, 'unticking it stores "not shown"');
+  q('setCaster').checked = true;
+  fireEvent(q('setCaster'), 'change');
+  await tick();
+  assertEqual(mock.state.setFilters.showCaster, true, 'and ticking it back stores "shown"');
 
-  // Paper's detail panel is a disclosure, closed to begin with, and the areas sit outside
-  // it. Nothing dims anything any more, because there is no master to dim with — which is
-  // checked by asking whether the blocks are still usable, not by asking for a flag.
-  assertEqual(document.getElementById('paperPanel').hidden, true,
-    "Paper's categories start closed, so the main screen is three lines and an areas group");
-  click(document.getElementById('paperDetails'));
-  assertEqual(document.getElementById('paperPanel').hidden, false,
-    'and the button opens them');
-  assertEqual(document.getElementById('paperDetails').getAttribute('aria-expanded'), 'true',
-    'telling a screen reader what it just did');
-  assert(!document.getElementById('visibilityGroup').disabled,
-    'nothing is dimmed, because there is no master switch to dim anything with');
-  assert(!document.getElementById('filterAreasGroup').disabled,
-    'and the areas are usable whatever Paper is doing');
-  assertEqual(before.paper.nonTournament, true,
-    'the state before this block is the default, so the change above really was stored');
-
-  // The labels under the switches are the model's own strings, translated by the same
-  // walk that translates the rest of the page. An English page that says a Russian sentence
-  // beside a select is a page that is half in one language — and the middle position's
-  // explanation is the one that has to survive translation, since it is the only place the
-  // reader is told what "English analogue" means.
-  // The English page is the one this block loads, so "translated" means the option and the
-  // hint say it in English rather than carrying the Russian through unchanged. Asserting it
-  // against the model's Russian label would be asserting the opposite of what is wanted.
-  assertEqual(mode.options[1].textContent, 'Only without an English analogue',
-    'the middle option is drawn in the page language, not the model\'s');
-  assert(/only where the same card has no English/.test(document.getElementById('nonEnglishHint').textContent),
-    'and the hint under it says what the middle position means (' +
-      document.getElementById('nonEnglishHint').textContent.trim().slice(0, 60) + '…)');
-  assert(!/[А-Яа-я]/.test(document.getElementById('nonEnglishHint').textContent),
-    'with no Russian left in it');
+  // The whole "Buy This Card" block. It is not a price kind — it is the container the three shop
+  // links live in — so it is stored on its own key, and the box is the general switch over the
+  // shops the group above it lists one by one.
+  assertEqual(q('setStores').checked, true, 'the store block starts shown');
+  assertEqual(q('setStores').parentElement.textContent.trim(), 'Show the “Buy This Card” block',
+    'and it names the block rather than a shop, because that is what it hides');
+  q('setStores').checked = false;
+  fireEvent(q('setStores'), 'change');
+  await tick();
+  assertEqual(mock.state.setFilters.showStores, false,
+    'unticking it stores that the whole block is hidden');
+  assertEqual(mock.state.setFilters.prices,
+    { usd: true, tix: true, tcg: true, cardhoarder: true, cardmarket: true },
+    'and it turns no shop off in storage: the block is the general switch and the shops are the ' +
+    'particular ones, so hiding the block does not lose the reader\'s per-shop choices');
+  // What the reader sees instead: a shop is a link inside that block, so with the block hidden
+  // its box has nowhere to be shown and is drawn off and out of reach. The two currencies are
+  // columns and are not in the block, so they are left alone.
+  assertEqual([...priceList.querySelectorAll('input')].map(box => [box.checked, box.disabled]),
+    [[true, false], [true, false], [false, true], [false, true], [false, true]],
+    'and the three shop boxes are drawn empty and disabled while the block is off');
+  q('setStores').checked = true;
+  fireEvent(q('setStores'), 'change');
+  await tick();
+  assertEqual(mock.state.setFilters.showStores, true, 'and ticking it back stores "shown"');
+  assertEqual([...priceList.querySelectorAll('input')].map(box => [box.checked, box.disabled]),
+    [[true, false], [true, false], [true, false], [true, false], [true, false]],
+    'with the shops back as the reader left them, which is what drawing them from the stored ' +
+    'values rather than writing to them buys');
 
   // The old flat keys are gone from the page. A control that still wrote one of them
   // would look exactly like the new one and stop hiding anything, because nothing
@@ -1163,6 +1607,7 @@ async function hidingMigrationTest() {
     hideNonTournamentSets: true,
     hideForeignBlackBorder: true,
     hideNonEnglishPrints: true,
+    hideOversizedSets: true,
     onlyCardmarket: true,
     hideCasterIndicator: true,
     deckTokens: false,
@@ -1176,34 +1621,63 @@ async function hidingMigrationTest() {
     'the same shape the card page would have stored, key for key');
   assertEqual(mock.state.setFiltersMigrated, true, 'and the flag is written, so it is not done twice');
 
-  assertEqual([document.getElementById('showNonTournament').checked,
-    document.getElementById('nonEnglishMode').value,
-    document.getElementById('setCaster').checked], [false, 'none', true],
-    'and every one of them is drawn as the reader left it — inverted where the old words were "hide"');
-  assertEqual([...document.getElementById('setBorderFamiliesList').querySelectorAll('input')]
-    .map(box => box.checked), [false, false, false],
-    'with all three border families off, which is what the old single switch meant');
-  assertEqual([...document.getElementById('setPrices').querySelectorAll('input')].map(box => box.checked),
-    [true, true, true, true], 'including four price kinds from the one switch that used to hide them');
-  assertEqual(document.getElementById('setTokens').checked, false,
-    'and the deck tokens, whose old switch was positive');
+  // What the reader is shown. The platform whitelist was the only one of the old switches
+  // with somewhere to go; the four set rules had none, and a page that drew them would be
+  // offering a setting nothing reads.
   assertEqual([document.getElementById('showPaper').checked,
-    document.getElementById('showArena').checked], [true, false],
-    'and the platform list, which was a whitelist');
+    document.getElementById('showArena').checked,
+    document.getElementById('showMtgo').checked], [true, false, false],
+    'and the platform list is drawn as the whitelist left it');
+  assertEqual([...document.getElementById('platformBody').querySelectorAll('input[data-which]')]
+    .slice(0, 3).map(box => box.checked), [true, true, true],
+    'with all three of its places in force, because that old shape named no place');
+  // Arena was off in that old whitelist, and its three places are drawn with it — not kept at
+  // their defaults and shown as if they were live. What they hold underneath is not thrown away.
+  assertEqual([...document.getElementById('platformBody').querySelectorAll('tr')[1]
+    .querySelectorAll('input[data-which]')].map(box => [box.checked, box.disabled]),
+    [[false, true], [false, true], [false, true]],
+    'and the two platforms that were off are drawn dimmed and out of reach, with their places intact');
+  assertEqual(mock.state.setFilters.platforms.arena.areas,
+    { prints: true, search: true, sets: true },
+    'while the stored places under them are untouched, so the platforms come back as they were');
+  assertEqual([...document.getElementById('priceList').querySelectorAll('input')].map(box => box.checked),
+    [false, false, false, false, true],
+    'and the kinds that one switch used to turn off are all drawn as off — which is what ' +
+    '"only Cardmarket" meant — while Cardmarket itself, the one price it kept, stays ticked');
+  // The marker used to be stored as "hide". Its box now reads "show", so a reader who had it
+  // hidden is drawn with it unticked. Reading the old boolean the new way round would have
+  // drawn it ticked — a box that looks like the setting they had, meaning the opposite.
+  assertEqual(document.getElementById('setCaster').checked, false,
+    'and the Caster marker, which was stored as a hide and is now a "show" box drawn empty');
+  assertEqual(mock.state.setFilters.showCaster, false,
+    'stored the way the box reads, which is the opposite of what the old key said');
+  assert(document.getElementById('setTokens').checked === false,
+    'and the deck tokens, whose old switch was positive');
+  // The four removed rules are not on the page and nothing of them is in what was stored, so
+  // a reader who had every one of them on gets every set back. That is the one part of the
+  // migration that cannot be carried across: "hide this set" is not a thing this shape can
+  // say, and answering it any other way would be inventing a setting.
+  assertEqual(Object.keys(mock.state.setFilters).sort(),
+    ['platforms', 'prices', 'showCaster', 'showStores', 'tokens'],
+    'and nothing from any of the four removed rules is left in the stored shape');
+  assert(!('caster' in mock.state.setFilters),
+    'and the key that stored the marker the other way round is gone rather than kept beside it');
 
-  // A reader who has already migrated to the previous shape must not be migrated twice, and
-  // their choices must survive the change of words. This is the case the shape rewrite is
-  // most likely to lose: a stored `sets` block written by 1.1.4–1.3.0 is neither the flat
-  // booleans of the first migration nor the positive shape of this one.
+  // A reader already migrated to one of the earlier nested shapes must not be migrated twice,
+  // and their platform choice must survive the change of words. This is the case the reduction
+  // is most likely to lose: a stored block written by 1.1.4–1.3.0 or by 1.4.x–1.5.x is neither
+  // the flat booleans of the first migration nor the per-platform shape of this one.
   const stale = await groupReady(loadOptions({
     ...old, setFiltersMigrated: true,
     setFilters: {
       setsEnabled: true,
+      platforms: { paper: true, arena: false, mtgo: true },
+      areas: { prints: false, search: true, sets: true },
       sets: {
         nonTournament: true,
         oversized: false,
-        foreignOnly: false,
-        foreignBlackBorder: { surfaces: 'off', which: ['4bb', 'fbb', 'bchr'] },
+        foreignOnly: true,
+        foreignBlackBorder: { surfaces: 'sets-prints', which: ['4bb'] },
         nonEnglish: { surfaces: 'sets-prints', which: ['portal', 'secret-lair', 'other'] }
       }
     }
@@ -1212,19 +1686,59 @@ async function hidingMigrationTest() {
   // value already marked migrated is not written back, so storage still holds the old
   // shape and asking `effective()` about it would test the stored value rather than the
   // migration.
-  assertEqual(stale.document.getElementById('showNonTournament').checked, false,
-    'a stored hide is drawn as not-shown');
-  assertEqual(stale.document.getElementById('showOversized').checked, true,
-    'and a stored not-hide is drawn as shown');
-  assertEqual(stale.document.getElementById('showNoEnglishSets').checked, true,
-    'including the measured foreign-only switch, which was stored as a hide');
-  assertEqual(stale.document.getElementById('nonEnglishMode').value, 'none',
-    'and the non-English rule keeps the position that hides, because that is what it was set to');
-  assertEqual([...stale.document.getElementById('setBorderFamiliesList').querySelectorAll('input')]
-    .map(box => box.checked), [true, true, true],
-    'with every border family shown, which is what a rule that was off meant');
-  assertEqual(F.upgrade(stale.mock.state.setFilters).paper.nonTournament, false,
-    'and the model reads that stored value the same way the page drew it');
+  assertEqual(
+    ['showPaper', 'showArena', 'showMtgo'].map(id => stale.document.getElementById(id).checked),
+    [true, false, true], 'the 1.1.4 platform switches are drawn as stored');
+  assertEqual(
+    ['showPaper-prints', 'showPaper-search', 'showPaper-sets']
+      .map(id => stale.document.getElementById(id).checked),
+    [false, true, true],
+    'and its one shared list of places is drawn on every platform, unchanged — the reader ' +
+    'made one answer, not three');
+
+  // The same reader one shape later, from 1.4.x–1.5.x, where the shared list still existed and
+  // Paper carried five rules that are gone.
+  const newer = await groupReady(loadOptions({
+    ...old, setFiltersMigrated: true,
+    setFilters: {
+      platforms: { paper: true, arena: true, mtgo: false },
+      areas: { prints: true, search: false, sets: true },
+      paper: {
+        ancillary: false,
+        nonEnglish: 'analogue',
+        nonTournament: true, oversized: true, noEnglishSets: false,
+        foreignBlackBorder: { '4bb': false, fbb: false, bchr: false }
+      }
+    }
+  }));
+  assertEqual(
+    ['showPaper', 'showArena', 'showMtgo'].map(id => newer.document.getElementById(id).checked),
+    [true, true, false], 'and the 1.4.x platform switches are drawn as stored');
+  assertEqual(
+    ['showArena-search', 'showArena-prints', 'showArena-sets']
+      .map(id => newer.document.getElementById(id).checked),
+    [false, true, true],
+    'with that build\'s single list of places spread over all three platforms, Magic Online ' +
+    'included — a platform that is switched off keeps the places it had, so it comes back ' +
+    'as it was rather than as the defaults');
+
+  // Storage still holds the old shapes, and that is correct: a value already marked migrated
+  // is not written back, because writing a half-translated one back would destroy the very
+  // thing that says which of the two older shapes this reader is on. The page drew this
+  // shape's answer from it and left the original alone.
+  assertEqual(Object.keys(stale.mock.state.setFilters).sort(),
+    ['areas', 'platforms', 'sets', 'setsEnabled'],
+    'and the 1.1.4 value is left in storage rather than half-rewritten');
+
+  // Both stored values are still in their old shape, so asking the model to read them is
+  // asking about the migration, and it has to give the same answer the page drew above. Two
+  // readers, two old shapes, one model, and the page and the model agreeing on both.
+  const staleStored = F.upgrade(stale.mock.state.setFilters);
+  assertEqual([staleStored.platforms.arena.show, staleStored.platforms.paper.areas.prints],
+    [false, false], 'and the model reads the 1.1.4 value the same way the page drew it');
+  const newerStored = F.upgrade(newer.mock.state.setFilters);
+  assertEqual([newerStored.platforms.mtgo.show, newerStored.platforms.arena.areas.search],
+    [false, false], 'and the 1.4.x value too');
 }
 
 async function lockedDependentsTest() {
@@ -1321,7 +1835,11 @@ function featureShotsTest() {
   assert(!/<figure/.test(html) && !/assets\/shots\//.test(html),
     'and no picture is laid out in the body of the page any more');
 
-  const shots = [...script.matchAll(/^\s{4}'?([a-z-]+)'?:\s*\{\s*$/gm)].map(match => match[1]);
+  // Read out of the `SHOTS` object only. `FEATURE_HELP` below it has the same shape — a name, a
+  // brace, a caption — and a regex that walked the whole file would count the help entries as
+  // pictures and then look for a PNG named "salt".
+  const shotsBlock = script.slice(script.indexOf('const SHOTS = {'), script.indexOf('const FEATURE_HELP'));
+  const shots = [...shotsBlock.matchAll(/^\s{4}'?([a-z-]+)'?:\s*\{\s*$/gm)].map(match => match[1]);
   const named = [...script.matchAll(/src: '\.\.\/\.\.\/assets\/shots\/([a-z-]+\.png)'/g)]
     .map(match => match[1]).sort();
   assertEqual(named.length, shots.length, 'every entry in the list of pictures names a file');
@@ -1429,13 +1947,21 @@ function featureShotsTest() {
   assert(!/numDecks:\s*\d+|potentialDecks:\s*\d+/.test(code),
     'and no deck counts are written down, which are the numbers we cannot fetch');
 
-  // The caption of each picture is translated like every other string on the page.
-  const captions = [...script.matchAll(/caption: '([^']+)'/g)].map(match => match[1]);
+  // The caption of each picture is translated like every other string on the page, and so is
+  // every help entry — a caption is read by the same reader, and an English page with a Russian
+  // paragraph behind one "?" is half in one language for exactly the thing that was moved there
+  // to be read carefully.
+  const captions = [...shotsBlock.matchAll(/caption: '([^']+)'/g)].map(match => match[1]);
   assertEqual(captions.length, named.length,
     'every illustration has a caption, and every caption has an illustration');
+  const helpBlock = script.slice(script.indexOf('const FEATURE_HELP'), script.indexOf('const shotDialog'));
+  const helpText = [...helpBlock.matchAll(/'([^']{5,})'/g)].map(match => match[1]);
+  assert(helpText.length >= 10,
+    'the help table carries a caption and its paragraphs (' + helpText.length + ' strings)');
   const i18n = read('src/core/i18n.js');
-  const untranslated = captions.filter(text => !i18n.includes(text));
-  assertEqual(untranslated, [], 'and every caption is in the dictionary, so an English page is not half Russian');
+  const untranslated = [...captions, ...helpText].filter(text => !i18n.includes(text));
+  assertEqual(untranslated, [], 'and every caption and every help paragraph is in the dictionary, ' +
+    'so an English page is not half Russian');
 }
 
 // The bug a reader reported, and the two things it was made of.
@@ -1499,6 +2025,199 @@ async function hostAccessTest() {
     'and a refusal there is read as well');
 }
 
+// Additional info is a list of features, each with its own settings behind a button, and the
+// settings work whether or not the button has ever been pressed.
+//
+// Three claims, and each of them is a way this shape could be wrong while looking right: a
+// panel that starts open (which makes the section a form again), a disclosure that writes to
+// storage (which would make opening a panel a decision), and a reset that takes the whole
+// section with it instead of its own feature's numbers.
+async function featureRowsTest() {
+  console.log('options.js: Additional info is a list of features, each with its own panel');
+  const page = await groupReady(loadOptions({
+    finishBadges: true,
+    edhrecUsage: true, edhrecSalt: false,
+    edhrecUsageDisplay: 'percent', usageColorMetric: 'percent',
+    usageMediumPercent: 3, usageHighPercent: 9,
+    showSaltScale: true, saltMediumThreshold: 1.5, saltHighThreshold: 3
+  }));
+  const { document, mock } = page;
+  const q = id => document.getElementById(id);
+  // The two disclosures this section has left. CardTrader's moved to Visibility with the prices
+  // it fills, and the "Дополнительные настройки" button went with the last setting it held.
+  const panels = ['edhrecUsagePanel', 'edhrecSaltPanel'];
+  const toggles = ['edhrecUsageToggle', 'edhrecSaltToggle'];
+
+  // Collapsed when the page opens, whatever the feature is set to. One of these two is on and
+  // has been configured, and its panel is still shut: the panel is about changing the numbers,
+  // and a reader who has already chosen them does not need it.
+  for (const panel of panels) assert(q(panel).hidden === true, `${panel} starts collapsed`);
+  for (const toggle of toggles) {
+    assertEqual(q(toggle).getAttribute('aria-expanded'), 'false',
+      `${toggle} tells a screen reader it is collapsed, and the panel is what says otherwise`);
+    assertEqual(q(toggle).getAttribute('aria-controls'), panels[toggles.indexOf(toggle)],
+      'and names the panel it opens, so the two cannot come apart');
+  }
+
+  // The switch on the row is the whole of turning a feature on: it saves on its own, with no
+  // panel opened and nothing else visited.
+  q('finishBadges').checked = false;
+  fireEvent(q('finishBadges'), 'change');
+  await tick();
+  assertEqual(mock.state.finishBadges, false,
+    'a feature switch saves without its panel ever being opened');
+
+  // Opening and closing writes nothing at all. This is the assertion that keeps "Настроить" a
+  // disclosure rather than a step: a reader who opens a panel to look at it has changed nothing,
+  // and one who never opens it has lost nothing.
+  const before = JSON.stringify(mock.state);
+  q('edhrecUsageToggle').click();
+  await tick();
+  assertEqual(q('edhrecUsagePanel').hidden, false, 'the button opens its own panel');
+  assertEqual(q('edhrecUsageToggle').getAttribute('aria-expanded'), 'true', 'and says so');
+  assertEqual(q('edhrecSaltPanel').hidden, true, 'and only its own panel');
+  q('edhrecUsageToggle').click();
+  await tick();
+  assertEqual(q('edhrecUsagePanel').hidden, true, 'the second press closes it again');
+  assertEqual(q('edhrecUsageToggle').getAttribute('aria-expanded'), 'false', 'and says so');
+  assertEqual(JSON.stringify(mock.state), before,
+    'and none of that touched a setting, which is what makes the panel optional');
+
+  // What is stored is what the panel shows, so a reader who set these numbers once finds them
+  // where they left them rather than at the defaults.
+  assertEqual(q('edhrecUsageDisplay').value, 'percent', 'the panel shows the saved display format');
+  assertEqual(q('usageColorMetric').value, 'percent', 'and the saved colouring metric');
+  assertEqual([q('usageMediumPercent').value, q('usageHighPercent').value], ['3', '9'],
+    'and the saved thresholds, not the defaults');
+  assertEqual([q('saltMediumThreshold').value, q('saltHighThreshold').value], ['1.5', '3'],
+    'and the Salt ones, in the panel that is shut');
+
+  // A reset is that feature's numbers and nothing else. The popularity reset must not touch the
+  // Salt ones, must not touch the switches, and must not touch the other feature's block.
+  q('resetUsage').click();
+  await tick();
+  assertEqual([mock.state.edhrecUsageDisplay, mock.state.usageColorMetric], ['both', 'decks'],
+    'the popularity reset restores the display format and the metric');
+  assertEqual([mock.state.usageMediumPercent, mock.state.usageHighPercent], [1, 2.6],
+    'and the percentage thresholds');
+  assertEqual(mock.state.usageMediumDecks, 50000, 'and the deck-count ones, which it did not show');
+  assertEqual([mock.state.saltMediumThreshold, mock.state.saltHighThreshold], [1.5, 3],
+    'while the Salt thresholds are exactly where the reader left them');
+  assertEqual(mock.state.edhrecUsage, true,
+    'and the switch is not moved: "these numbers are wrong" is not "turn this off"');
+  q('resetSalt').click();
+  await tick();
+  assertEqual([mock.state.showSaltScale, mock.state.saltMediumThreshold, mock.state.saltHighThreshold],
+    [false, 1, 2], 'and the Salt reset restores its own three');
+  assertEqual([mock.state.edhrecUsageDisplay, mock.state.usageColorMetric], ['both', 'decks'],
+    'without reaching into the popularity settings the other reset had just put back');
+
+  // The help. It is the same dialog the section "?" uses, so a reader who has opened one has
+  // opened them all — and it is a button, so it is reached by Tab and opened by Enter, which a
+  // `title` tooltip is not. Every one of them is checked as wired, because a `data-help` that
+  // names nothing leaves the button disabled and looking exactly like one that works — and
+  // CardTrader's moved sections this round, which is when a name gets typed wrong.
+  for (const button of document.querySelectorAll('.feature-help')) {
+    assert(!button.disabled,
+      `the help named ${button.dataset.help} is an entry in the page's help table`);
+  }
+  document.querySelector('[data-help="finishes"]').click();
+  await tick();
+  assertEqual(document.getElementById('shotCaption').textContent, 'Столбец отделки изданий',
+    'the feature help names the feature it is about');
+  assertEqual(document.getElementById('shotImage').hidden, true,
+    'and carries no picture, because what moved here is a paragraph');
+  assert(/фойл/.test(document.getElementById('shotNotes').textContent),
+    'with the explanation that used to stand in the body of the page');
+  document.querySelector('.shot-button[data-shot="additional"]').click();
+  await tick();
+  assertEqual(document.getElementById('shotImage').hidden, false,
+    'while a section "?" still shows its picture, in the same dialog');
+}
+
+// CardTrader is the one feature that cannot work without being set up, so its row has a second
+// shape. Without a token the switch is not offered at all — a switch that turns on a request
+// that cannot be made is a switch that lies — and with one it appears, and the token becomes
+// something to replace or remove rather than something still to find.
+async function cardtraderRowTest() {
+  console.log('options.js: CardTrader asks for what it needs before it offers a switch');
+  const page = await groupReady(loadOptions({ cardtraderPrices: false }));
+  const { document, mock } = page;
+  const q = id => document.getElementById(id);
+
+  assertEqual(q('tokenStatus').textContent, 'Не подключено',
+    'with no token the row says so rather than showing a switch that would do nothing');
+  assertEqual(q('cardtraderToggle').textContent, 'Подключить', 'and the button offers to connect');
+  assert(q('cardtraderMain').classList.contains('is-unconnected'),
+    'and the switch is hidden, not merely disabled: it is not a control the reader may not have');
+  assertEqual(q('cardtraderTokenRow').hidden, false, 'the field is what the row is asking for');
+
+  q('cardtraderToggle').click();
+  await tick();
+  assertEqual(q('cardtraderPanel').hidden, false, 'and the panel opens on it');
+  q('cardtraderToken').value = 'ct-token-1';
+  q('saveToken').click();
+  await tick();
+  assertEqual(mock.state.cardtraderToken, 'ct-token-1', 'saving stores the token');
+  assertEqual(q('tokenStatus').textContent, 'Токен сохранён ✓',
+    'and the row says the token is saved — saved, not verified, because this page asks ' +
+    'CardTrader nothing and cannot know more than that');
+  assert(!q('cardtraderMain').classList.contains('is-unconnected'),
+    'the switch appears once there is something for it to turn on');
+  assertEqual(q('cardtraderToggle').textContent, 'Настроить', 'and the button becomes a disclosure');
+  assertEqual(q('cardtraderToken').value, '',
+    'the field is emptied, so a stored token is never on screen');
+  assertEqual(q('cardtraderTokenRow').hidden, true, 'and put away');
+  assertEqual(q('cardtraderTokenActions').hidden, false, 'with replace and remove in its place');
+
+  // Replacing is a second step, and the two ways to lose a token by accident are both closed:
+  // closing the panel while the field is open, and pressing save with it empty.
+  q('replaceToken').click();
+  assertEqual(q('cardtraderTokenRow').hidden, false, 'replacing shows the field again');
+  q('cardtraderToggle').click();
+  await tick();
+  assertEqual(mock.state.cardtraderToken, 'ct-token-1',
+    'closing the panel with the field open does not delete the token');
+  q('cardtraderToggle').click();
+  await tick();
+  q('saveToken').click();
+  await tick();
+  assertEqual(mock.state.cardtraderToken, 'ct-token-1',
+    'and an empty field saved does not delete it either');
+
+  q('removeToken').click();
+  await tick();
+  assert(!('cardtraderToken' in mock.state), 'removing deletes the stored token');
+  assertEqual(q('tokenStatus').textContent, 'Не подключено', 'and the row goes back to asking');
+  assertEqual(mock.state.cardtraderPrices, false,
+    'and the switch is put back off, because a feature that cannot reach anything is not on');
+
+  // And the second thing the box is drawn from: the block its links go in. CardTrader adds a
+  // link to the "Buy This Card" block, so with that block hidden there is nowhere for the link
+  // to be — the box is emptied and taken out of reach like the three shops beside it, and what
+  // the reader chose is kept rather than written off.
+  const hidden = await groupReady(loadOptions({ cardtraderToken: 'ct-token-1', cardtraderPrices: true }));
+  const d = hidden.document;
+  const box = d.getElementById('cardtraderPrices');
+  assertEqual(box.checked, true, 'with a token and the block shown, the box is on');
+  const block = d.getElementById('setStores');
+  block.checked = false;
+  fireEvent(block, 'change');
+  await tick();
+  assertEqual(box.checked, false, 'hiding the store block empties the CardTrader box');
+  assertEqual(box.disabled, true, 'and takes it out of reach, because its link has nowhere to go');
+  assertEqual(hidden.mock.state.setFilters.cardtraderPrices, undefined,
+    'while the reader\'s own answer for it is not written off: storage is not touched');
+  assertEqual(d.getElementById('tokenStatus').textContent, 'Токен сохранён ✓',
+    'and the token is still there, so the row still says so');
+  block.checked = true;
+  fireEvent(block, 'change');
+  await tick();
+  assertEqual([box.checked, box.disabled], [true, false],
+    'and the block coming back brings the box back as the reader had it');
+}
+
+
 (async () => {
   try {
     htmlIdCheck();
@@ -1526,6 +2245,8 @@ async function hostAccessTest() {
     await deckModuleStatusTest();
     await grantHostsTest();
     featureShotsTest();
+    await featureRowsTest();
+    await cardtraderRowTest();
     summary('test-options');
     process.exit(0);
   } catch (error) {

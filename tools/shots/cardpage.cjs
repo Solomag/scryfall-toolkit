@@ -124,7 +124,6 @@ async function buildSetsPage({ data, storage = {}, routes: overrides = {}, waitF
   await page.script('src/core/i18n.js');
   await page.script('src/core/format-catalog.js');
   await page.script('src/core/tag-icons.js');
-  await page.script('assets/data/shambleshark-nicknames.js');
   await page.cardPage();
   await sleep(200);
   if (waitFor) await waitForSelector(page, waitFor);
@@ -170,7 +169,6 @@ async function buildCardPage({ data, storage = {}, routes: overrides = {}, waitF
   await page.script('src/core/i18n.js');
   await page.script('src/core/format-catalog.js');
   await page.script('src/core/tag-icons.js');
-  await page.script('assets/data/shambleshark-nicknames.js');
   await page.cardPage();
   await sleep(150);
   if (waitFor) await waitForSelector(page, waitFor);
@@ -269,4 +267,4 @@ function themeCss() {
 }
 
 module.exports = { fixture, buildCardPage, setsFixture, buildSetsPage, routesFor,
-  waitForSelector, waitForCount, reveal, renderableHtml, themeCss };
+  waitForSelector, waitForCount, reveal, renderableHtml, themeCss, shippedPlatforms };

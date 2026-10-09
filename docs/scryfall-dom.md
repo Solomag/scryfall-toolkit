@@ -464,9 +464,8 @@ name itself, without the leading `.` or `#`.
 | `marketing-features-item-image` | class | src/core/theme.js |
 | `modal-dialog-close` | class | src/deck-page/edhrec.js, src/deck-page/search.js |
 | `modal-dialog-content` | class | src/deck-page/edhrec.js |
-| `prints` | class | src/card-page/card.js, src/card-page/clipboard.js, src/card-page/prices.js, src/card-page/prints.js, src/card-page/tags.js |
+| `prints` | class | src/card-page/clipboard.js, src/card-page/prices.js, src/card-page/prints.js, src/card-page/tags.js |
 | `prints-all` | class | src/card-page/prints.js, src/core/theme.js |
-| `prints-info-section` | class | src/card-page/card.js |
 | `prints-table` | class | src/card-page/clipboard.js, src/card-page/core.js, src/card-page/legalities.js, src/card-page/prices.js, src/card-page/prints.js, src/card-page/sets.js, src/card-page/tags.js, src/core/theme.js |
 | `search-controls` | class | src/card-page/sets.js, src/core/theme.js |
 | `select2-container` | class | src/card-page/sets.js |

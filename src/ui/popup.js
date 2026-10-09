@@ -33,7 +33,6 @@
 const OPTIONAL_HOSTS = {
   edhrecUsage: ['https://json.edhrec.com/*'],
   edhrecSalt: ['https://json.edhrec.com/*'],
-  edhrecLink: ['https://json.edhrec.com/*'],
   cardtraderPrices: ['https://api.cardtrader.com/*']
 };
 // Asks for a host. Only ever from inside a click, and the refusal is always read.

@@ -1,15 +1,9 @@
-// The visibility settings, their migration, and the English-analogue comparison.
+// The visibility settings, their migration, and the per-platform areas.
 //
-// Migration is the part that can take something away from a reader who never asked: it
-// reads settings written by older builds and has to arrive at the same behaviour. So
-// every one of these asserts the behaviour after migrating, not just the shape, and each
-// of the two rules that moved is named as a rule that moved.
-//
-// The shape itself was rewritten twice — the words "hide" became "show", and two surface
-// selectors per rule became one shared list of areas — so this file also checks that the
-// third spelling cannot be confused with either of the first two. Two migrations that
-// disagree about which shape they are looking at is how a reader who hid a third of their
-// sets quietly gets all of them back.
+// Migration is the part that can take something away from a reader who never asked: it reads
+// settings written by four older builds and has to arrive at something defensible. The shape
+// itself has been rewritten four times, and this is the fourth — the shortest — so the
+// migrations are the test, not an afterthought to them.
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
@@ -31,22 +25,39 @@ function defaultsTest() {
   const d = F.defaults();
   assertEqual(Object.keys(d.platforms), ['paper', 'arena', 'mtgo'],
     'the three platforms, and Paper is one of them alongside the digital ones');
-  assertEqual(Object.keys(d.areas), ['prints', 'search', 'sets'],
-    'the three places a filter can apply, one shared list for every rule');
-  assertEqual(d.platforms, { paper: true, arena: true, mtgo: true },
-    'every platform is shown, which is what a default has to mean');
-  assertEqual(d.areas, { prints: true, search: true, sets: true },
-    'and every area is in force, because filtering nothing is the same as showing everything');
-  assertEqual(d.paper.nonTournament, true, 'non-tournament printings are shown');
-  assertEqual(d.paper.oversized, true, 'oversized ones are shown');
-  assertEqual(d.paper.noEnglishSets, true, 'and so are sets with no English printing');
-  assertEqual(d.paper.foreignBlackBorder, { '4bb': true, fbb: true, bchr: true },
-    'all three Foreign Black Border families are shown');
-  assertEqual(d.paper.nonEnglish, 'all', 'the language rule starts at All, which hides nothing');
-  assertEqual(d.prices, { usd: false, tix: false, tcg: false, cardhoarder: false },
-    'all four price kinds stay by default');
-  assert(!('setsEnabled' in d), 'there is no master switch, so there is no field for one');
-  assert(!('sets' in d), 'and nothing is stored under the old group name');
+  assertEqual(d.platforms.paper, { show: true, areas: { prints: true, search: true, sets: true } },
+    'a platform is one switch and its own three places, all shown');
+  assertEqual(d.platforms.mtgo.areas, { prints: true, search: true, sets: true },
+    'and the same shape for every platform rather than one of them being special');
+  assertEqual(Object.keys(F.AREAS), ['prints', 'search', 'sets'],
+    'the three places a platform can apply to');
+
+  // And nothing else. This shape has three rules in it and two of them are gone; the whole
+  // point of the reduction is that a reader cannot reach a third one.
+  assert(!('paper' in d), 'there is no Paper group: Paper is a platform, like the other two');
+  assert(!('areas' in d), 'and no shared list of places — each platform has its own');
+  for (const gone of ['ancillary', 'nonEnglish', 'noEnglishSets', 'setsEnabled', 'foreignOnly']) {
+    assert(!JSON.stringify(d).includes(gone), `the defaults have no "${gone}" anywhere in them`);
+  }
+  assertEqual(Object.keys(d.platforms.paper).sort(), ['areas', 'show'],
+    'and a platform holds exactly a switch and its places');
+  assertEqual(d.prices, { usd: true, tix: true, tcg: true, cardhoarder: true, cardmarket: true },
+    'every price kind stays and is shown: two currencies and three shops, one of which owns the ' +
+    'euro column — and the shops are the ones that used to be negative');
+  assertEqual(Object.keys(d.prices).filter(kind => !['usd', 'tix', 'tcg', 'cardhoarder', 'cardmarket'].includes(kind)), [],
+    'and there is no price kind beyond those five, so the settings page cannot draw a box the ' +
+    'model has nowhere to store');
+  // Three more switches, all positive: the deck tokens, the Caster marker and the whole "Buy
+  // This Card" block. The Caster one used to be the last negative key in the model — `caster`
+  // meant *hide*, while its label on the settings page now says "show" — so it is `showCaster`
+  // here, and the rename is what lets the migration tell the two senses apart.
+  assertEqual([d.tokens, d.showCaster, d.showStores], [true, true, true],
+    'and so do the three outside the group');
+  assert(!('caster' in d), 'and the key that used to mean the opposite is gone');
+  assertEqual(Object.keys(d).sort(),
+    ['platforms', 'prices', 'showCaster', 'showStores', 'tokens'],
+    'and the whole shape is these five things, which is a change worth stating rather than ' +
+    'leaving a reader to find');
 
   // Every switch in the model is positive. A single field with the opposite sense is the
   // whole reason this file exists, and it cannot be seen by reading the defaults — so it is
@@ -60,54 +71,143 @@ function defaultsTest() {
   };
   walk(d, 'filters');
   const negative = positives.filter(trail => /hide/i.test(trail));
-  assertEqual(negative, [],
-    'no stored boolean is named as a hide: ' + negative.join(', '));
-  // The families are named after Scryfall's own sets, which are called Foreign Black Border,
-  // so their name says what they are rather than what to do with them. That distinction is
-  // worth a check of its own, because the field holding them sits next to a switch that once
-  // meant the opposite of its own name.
-  assertEqual(F.paper?.nonEnglish, undefined, 'the model keeps no switch under a name it cannot mean');
-  assert(positives.length >= 14, `and the model has ${positives.length} switches, all positive`);
+  assertEqual(negative, [], 'no stored boolean is named as a hide: ' + negative.join(', '));
+  // Twelve platform switches, five price ones and three outside both. The count is asserted
+  // because a thirteenth would be a rule somebody added without deciding what it means here.
+  assertEqual(positives.length, 12 + 5 + 3,
+    `the model has ${positives.length} switches and all of them are positive`);
+}
 
-  // The three positions of the language rule, in the order the interface draws them, because
-  // the middle one is not the opposite of either end and therefore cannot be reached by
-  // flipping a switch.
-  assertEqual(Object.keys(F.NON_ENGLISH_MODES), ['all', 'analogue', 'none'],
-    'the language rule has three positions, and the middle one is a mode of its own');
-  assert(F.NON_ENGLISH_MODES.analogue.label !== F.NON_ENGLISH_MODES.all.label &&
-    F.NON_ENGLISH_MODES.analogue.label !== F.NON_ENGLISH_MODES.none.label,
-    'which is why it is a named position rather than a boolean');
+function perPlatformTest() {
+  console.log('set-filters: the places belong to the platform, not to the group');
+  const F = load();
 
-  // Foreign Black Border is per family, and a family that is not named in storage keeps its
-  // default rather than becoming hidden. A fourth family added to the model has to work
-  // without a line anywhere else, and this is what says so.
-  assertEqual(Object.keys(F.FOREIGN_BLACK_BORDER), ['4bb', 'fbb', 'bchr'],
-    'the three families Scryfall names that way');
-  assertEqual(F.normalise({ paper: { foreignBlackBorder: { fbb: false } } }).paper.foreignBlackBorder,
-    { '4bb': true, fbb: false, bchr: true }, 'one family off leaves the other two on');
+  // The case the shape exists for. A reader who wants Arena out of the search dropdown and
+  // Arena left in the card page's table: one platform, two answers, and the model can say so.
+  const split = F.normalise({
+    platforms: {
+      arena: { show: true, areas: { prints: true, search: false, sets: false } }
+    }
+  });
+  const on = area => F.PLATFORM_NAMES.filter(name =>
+    split.platforms[name].show === true && split.platforms[name].areas[area] === true);
+  assertEqual(on('prints'), ['paper', 'arena', 'mtgo'], 'the prints table still has Arena');
+  assertEqual(on('search'), ['paper', 'mtgo'], 'the search dropdown has lost it');
+  assertEqual(on('sets'), ['paper', 'mtgo'], 'and so has the sets index');
+  assert(split.platforms.arena.show === true,
+    'while the platform switch itself is untouched — the reader did not turn Arena off, they ' +
+    'answered two questions about places');
+
+  // And the other direction: a platform off everywhere stays off everywhere, with nothing to
+  // bring back. The three places of a switched-off platform are still stored, which is what
+  // "turning a platform off keeps its settings" has to mean when there is no other gate.
+  const off = F.normalise({ platforms: { mtgo: { show: false } } });
+  assertEqual(F.PLATFORM_NAMES.filter(n => off.platforms[n].show === true),
+    ['paper', 'arena'], 'the platform is off');
+  assertEqual(off.platforms.mtgo.areas, { prints: true, search: true, sets: true },
+    'and its three places are exactly as they were, because nothing rewrote them');
+
+  // Every one of the nine independently. A switch that moved two of them at once would be a
+  // reader's choice silently doubled, and "which one" is the only question this group asks.
+  for (const platform of F.PLATFORM_NAMES) {
+    for (const area of F.AREA_NAMES) {
+      const one = F.normalise({ platforms: { [platform]: { areas: { [area]: false } } } });
+      const on = name => one.platforms[name].show === true && one.platforms[name].areas[area] === true;
+      assertEqual(on(platform), false, `${platform} is out of ${area} alone`);
+      assertEqual(F.PLATFORM_NAMES.filter(name => on(name)),
+        F.PLATFORM_NAMES.filter(name => name !== platform),
+        `and the other two platforms are still in ${area}`);
+    }
+  }
+
+  // A platform off on every place is a legal, empty state, and the model can hold it.
+  const nowhere = F.normalise({
+    platforms: {
+      arena: { show: true, areas: { prints: false, search: false, sets: false } },
+      mtgo: { show: false, areas: { prints: false, search: false, sets: false } }
+    }
+  });
+  assertEqual(F.PLATFORM_NAMES.filter(n => nowhere.platforms[n].show && nowhere.platforms[n].areas.prints),
+    ['paper'], 'one platform left on the table is one platform');
+  assertEqual(Object.keys(nowhere.platforms.mtgo.areas).length, 3,
+    'and the platform nobody kept still has its three places stored, for when it comes back');
 }
 
 function malformedTest() {
   console.log('set-filters: a malformed object is completed, not replaced');
   const F = load();
-  const half = F.normalise({ platforms: { arena: false }, paper: { oversized: false } });
-  assertEqual(half.platforms, { paper: true, arena: false, mtgo: true },
-    'a platform left out keeps its default rather than becoming false');
-  assertEqual(half.paper.oversized, false, 'and a switch that is there is kept');
-  assertEqual(half.paper.nonTournament, true, 'while its neighbour keeps its default');
-  assertEqual(F.normalise({ paper: { nonEnglish: 'yes' } }).paper.nonEnglish, 'all',
-    'a value that is not one of the three positions is not accepted as one');
-  assertEqual(F.normalise({ paper: { nonEnglish: 'none' } }).paper.nonEnglish, 'none',
-    'and the position this build does have is taken as it stands');
-  assertEqual(F.normalise({ paper: { oversized: 'yes' } }).paper.oversized, true,
-    'a switch that is not a boolean does not switch anything off');
+  const half = F.normalise({
+    platforms: { arena: { show: false }, mtgo: { areas: { sets: false } } }
+  });
+  assertEqual(half.platforms.arena.show, false, 'a platform switch that is there is kept');
+  assertEqual(half.platforms.arena.areas, { prints: true, search: true, sets: true },
+    'and its three places are filled in rather than left absent');
+  assertEqual(half.platforms.mtgo.areas, { prints: true, search: true, sets: false },
+    'a place that is there is kept and its neighbours keep their defaults');
+  assertEqual(half.platforms.paper.areas, { prints: true, search: true, sets: true },
+    'and a platform left out entirely keeps the defaults');
+  assertEqual(F.normalise({ platforms: { arena: { areas: { sets: 'no' } } } })
+    .platforms.arena.areas.sets, true,
+    'a value that is not a boolean does not switch anything off');
+  assertEqual(F.normalise({ platforms: { arena: 'yes' } }).platforms.arena.show, true,
+    'a platform stored as something this build cannot read is shown, not hidden');
+
+  // A platform stored as a bare boolean is the shape two builds wrote. It is read rather than
+  // dropped, because dropping it would silently hand a reader every platform back.
+  const bare = F.normalise({ platforms: { paper: false, arena: true, mtgo: false } });
+  assertEqual([bare.platforms.paper.show, bare.platforms.arena.show, bare.platforms.mtgo.show],
+    [false, true, false], 'a bare boolean is read as the platform switch');
+  assertEqual(bare.platforms.paper.areas, { prints: true, search: true, sets: true },
+    'and its three places are the defaults, because a bare boolean named no place');
+
   assertEqual(F.normalise('not an object'), F.defaults(),
     'something that is not an object at all is the defaults');
-  assertEqual(F.normalise(undefined).paper.nonEnglish, 'all',
-    'and so is nothing at all');
+  assertEqual(F.normalise(undefined).platforms.paper.show, true, 'and so is nothing at all');
 }
 
-function migrationTest() {
+function removedFieldsTest() {
+  console.log('set-filters: the removed settings are still in storage and are not read');
+  const F = load();
+  // A reader on 1.4 or 1.5 has every one of these in their stored object. Each must be
+  // inert: a setting the interface no longer offers has to stop affecting the result rather
+  // than keep working through a field nobody removed, which is the difference between a
+  // removal and a hiding.
+  const stored = {
+    platforms: { paper: true, arena: true, mtgo: true },
+    areas: { prints: true, search: true, sets: true },
+    paper: {
+      nonTournament: false,
+      oversized: false,
+      noEnglishSets: false,
+      foreignBlackBorder: { '4bb': false, fbb: false, bchr: false },
+      nonEnglish: 'none'
+    },
+    prices: {}, tokens: true, caster: false
+  };
+  const out = F.upgrade(stored);
+  assertEqual(Object.keys(out.platforms.paper).sort(), ['areas', 'show'],
+    'nothing from the old shape survives into a platform');
+  assert(!('paper' in out), 'and the group holding five of the removed rules is gone too');
+  assertEqual(out.platforms.paper.show, true, 'the platforms pass through');
+  assertEqual(out.platforms.paper.areas, { prints: true, search: true, sets: true },
+    'and the one shared list of places became all three platforms, unchanged');
+  // The five removed rules had nothing to migrate into. They are read nowhere, so a reader
+  // who had every one of them on gets every set back — which is the only answer available,
+  // because "hide this set" is not a thing this shape can say.
+  assertEqual(F.normalise(stored).platforms.paper.show, true,
+    'the removed rules are not read by normalise, which is what runs on every later page load');
+  // Asked of the field itself rather than of the object above: a removed rule read once more
+  // would have nowhere to write — a platform has a switch and three places — so the only place
+  // it could go wrong quietly is into a place. That is what this asks.
+  assertEqual(F.normalise({ platforms: { arena: { ancillary: false, nonEnglish: 'none' } } })
+    .platforms.arena.areas, { prints: true, search: true, sets: true },
+    'and a removed rule cannot reach a place either, which is the only thing left it could do');
+  assertEqual(F.upgrade({ paper: { nonTournament: false, oversized: false, noEnglishSets: false } })
+    .platforms.paper.areas, { prints: true, search: true, sets: true },
+    'nor by the migration, which is the one path that runs exactly once');
+}
+
+function flatMigrationTest() {
   console.log('set-filters: migration from the flat switches of 1.0 and earlier');
   const F = load();
 
@@ -115,188 +215,239 @@ function migrationTest() {
   assertEqual(untouched.filters, F.defaults(), 'nothing set means the defaults');
   assertEqual(untouched.migrated, true, 'and it counts as a first run, so it gets written back');
 
-  // The five flat switches, one at a time, and every one of them is inverted: the old words
-  // were "hide" and these are "show". Getting this backwards is the single worst thing a
-  // migration can do, because it turns a reader's tidying into its opposite.
-  assertEqual(F.read({ hideNonTournamentSets: true }).filters.paper.nonTournament, false,
-    'hideNonTournamentSets becomes the category switched off');
-  assertEqual(F.read({ hideNonTournamentSets: false }).filters.paper.nonTournament, true,
-    'and an explicit false becomes the category shown');
-  assertEqual(F.read({ hideOversizedSets: true }).filters.paper.oversized, false,
-    'hideOversizedSets becomes the category switched off');
-  assertEqual(F.read({ hideForeignOnlySets: true }).filters.paper.noEnglishSets, false,
-    'the measured foreign-only switch becomes the category switched off');
-  assertEqual(F.read({ hideCasterIndicator: true }).filters.caster, true,
-    'hideCasterIndicator becomes the caster marker');
+  assertEqual(F.read({ hideDigitalSets: true }).filters.platforms.mtgo.show, false,
+    'hideDigitalSets turns Magic Online off');
+  assertEqual(F.read({ hideDigitalSets: true }).filters.platforms.arena.show, false,
+    'and Arena too, since that was what it meant');
+  assertEqual(F.read({ hideDigitalSets: true }).filters.platforms.paper.show, true,
+    'while Paper is left alone');
+
+  assertEqual(F.PLATFORM_NAMES.filter(n => F.read({ setPlatforms: ['paper'] }).filters.platforms[n].show),
+    ['paper'], 'a paper-only whitelist keeps Paper');
+  assertEqual(F.PLATFORM_NAMES.filter(n =>
+    F.read({ setPlatforms: ['paper', 'arena'] }).filters.platforms[n].show),
+  ['paper', 'arena'], 'and keeps each platform separately');
+  assertEqual(F.PLATFORM_NAMES.filter(n =>
+    F.read({ setPlatforms: ['nonsense'] }).filters.platforms[n].show),
+  F.PLATFORM_NAMES, 'a whitelist naming nothing recognisable falls back to showing everything, not nothing');
+
+  // Every place keeps its default through this migration: the flat shape had no places, so
+  // there is no reader's choice to carry and nothing to invent.
+  assertEqual(F.read({ hideDigitalSets: true }).filters.platforms.arena.areas,
+    { prints: true, search: true, sets: true },
+    'the places are the defaults, because the old shape named none');
+
+  // The one price switch that existed before 1.1.2 said "only Cardmarket", which is the four
+  // other kinds off. In the positive shape that is four false, and the migration is the only
+  // place the inversion happens — a reader who had it on sees the same page either way.
+  //
+  // Cardmarket is the one price it must leave alone, and this is the assertion that says so: the
+  // euro column *is* Cardmarket's price, and a migration that walked the model's price keys
+  // instead of naming the four would hide the very shop the switch is named after. That is a real
+  // defect this test was written for, not a hypothetical one.
+  assertEqual(F.read({ onlyCardmarket: true }).filters.prices,
+    { usd: false, tix: false, tcg: false, cardhoarder: false, cardmarket: true },
+    'onlyCardmarket becomes the four other price kinds off together, and leaves Cardmarket');
+  assertEqual(F.read({}).filters.prices, { usd: true, tix: true, tcg: true, cardhoarder: true, cardmarket: true },
+    'and with nothing set they are all on, so a first run hides nothing');
+  // The euro switch under the name it had for one unreleased build, before it moved from the
+  // currencies to the shops. Read rather than dropped: it is the same setting with a better name,
+  // and a reader who hid it in that build should not find the column back. The fixture is that
+  // build's shape — per-platform places, positive prices — because that is the only shape that
+  // could carry the old key.
+  const from172 = platform => ({
+    platforms: { paper: { show: true, areas: { prints: true, search: true, sets: true } } },
+    prices: { usd: true, tix: true, eur: false, tcg: true, cardhoarder: true, ...platform }
+  });
+  assertEqual(F.read({ setFilters: from172({}), setFiltersMigrated: true }).filters.prices.cardmarket,
+    false, 'the euro switch under its old key is read as the Cardmarket switch');
+  assertEqual(F.read({ setFilters: from172({ cardmarket: true }), setFiltersMigrated: true })
+    .filters.prices.cardmarket, true,
+  'and the new key wins when both are there, so an old key cannot undo a choice made since');
+  // The Caster marker, whose old switch read "hide" and whose label now reads "show". This is
+  // the inversion the requirement is about: a reader who had the marker hidden keeps it hidden,
+  // and a reader who had it visible keeps it visible. Reading it the other way round flips the
+  // marker for every reader on the first page load after an update.
+  assertEqual(F.read({ hideCasterIndicator: true }).filters.showCaster, false,
+    'hideCasterIndicator becomes the marker off, because the switch now says show');
+  assertEqual(F.read({ hideCasterIndicator: false }).filters.showCaster, true,
+    'and its false becomes the marker on');
+  assertEqual(F.read({}).filters.showCaster, true,
+    'with nothing stored the marker is shown, which is what a reader who never touched it had');
   assertEqual(F.read({ deckTokens: false }).filters.tokens, false,
     'deckTokens was a positive switch, so only its false carries over');
-  assertEqual(F.read({ deckTokens: true }).filters.tokens, true,
-    'and an explicit true stays on');
 
-  // Foreign Black Border became per family, so a single old switch becomes three new ones.
-  // The old switch hid every family, so all three are off — and the list under it, when
-  // there was one, narrows that.
-  assertEqual(F.read({ hideForeignBlackBorder: true }).filters.paper.foreignBlackBorder,
-    { '4bb': false, fbb: false, bchr: false },
-    'the old single switch becomes all three families off');
-  assertEqual(F.read({
-    hideForeignBlackBorder: true,
-    setFilters: { sets: { foreignBlackBorder: { which: ['fbb'] } } }
-  }).filters.paper.foreignBlackBorder, { '4bb': true, fbb: false, bchr: true },
-    'a stored list under it narrows that to the families it named');
-  assertEqual(F.read({ hideForeignBlackBorder: false }).filters.paper.foreignBlackBorder,
-    { '4bb': true, fbb: true, bchr: true }, 'an explicit false leaves every family shown');
+  // The five removed rules have no target. Not read, not moved, not turned into anything: the
+  // new shape has one kind of switch and it says which platform, and a set is on one.
+  for (const key of ['hideNonTournamentSets', 'hideOversizedSets', 'hideForeignOnlySets',
+    'hideForeignBlackBorder', 'hideNonEnglishPrints']) {
+    const before = F.defaults();
+    const after = F.read({ [key]: true }).filters;
+    assertEqual(after.platforms, before.platforms, `${key} reaches no platform at all`);
+  }
 
-  // The language rule became three positions, and a reader who was hiding has to land on the
-  // position that hides. Choosing 'analogue' for them would show rows they had asked to lose,
-  // and choosing 'all' would be the same thing with more steps.
-  assertEqual(F.read({ hideNonEnglishPrints: true }).filters.paper.nonEnglish, 'none',
-    'the old switch becomes the position that hides every non-English printing');
-  assertEqual(F.read({ hideNonEnglishPrints: false }).filters.paper.nonEnglish, 'all',
-    'an explicit false becomes All, not the default by accident');
-  assert(F.read({ hideNonEnglishPrints: true }).filters.paper.nonEnglish !== 'analogue',
-    'and never the middle position, which did not exist when the choice was made');
-
-  // onlyCardmarket was one switch that turned all four price kinds off at once.
-  assertEqual(F.read({ onlyCardmarket: true }).filters.prices,
-    { usd: true, tix: true, tcg: true, cardhoarder: true },
-    'onlyCardmarket becomes all four price kinds together');
-
-  // The platform whitelist and the digital switch were opposites. Both land in the same
-  // place, and the whitelist wins because it is the more specific of the two.
-  assertEqual(F.read({ hideDigitalSets: true }).filters.platforms,
-    { paper: true, arena: false, mtgo: false }, 'hideDigitalSets turns off Arena and Magic Online');
-  assertEqual(F.read({ setPlatforms: ['paper'] }).filters.platforms,
-    { paper: true, arena: false, mtgo: false }, 'and a paper-only whitelist says the same');
-  assertEqual(F.read({ setPlatforms: ['paper', 'arena'] }).filters.platforms,
-    { paper: true, arena: true, mtgo: false }, 'a whitelist keeps each platform separately');
-  assertEqual(F.read({ setPlatforms: ['paper'], hideDigitalSets: false }).filters.platforms,
-    { paper: true, arena: false, mtgo: false },
-    'with both present the whitelist wins, being the more specific of the two');
-  assertEqual(F.read({ setPlatforms: ['nonsense'] }).filters.platforms,
-    { paper: true, arena: true, mtgo: true },
-    'a whitelist with nothing recognisable in it falls back to showing everything, not nothing');
-  assertEqual(F.read({ setPlatforms: [] }).filters.platforms,
-    { paper: true, arena: true, mtgo: true },
-    'and so does an empty one, because three unchecked switches are a newer thing than this');
+  const shut = F.read({ hideOversizedSets: true, setFilters: { setsEnabled: false } });
+  assertEqual(shut.filters, F.defaults(), 'a closed master puts everything back to showing');
 }
 
 function upgradeTest() {
-  console.log('set-filters: migration from the negative shape of 1.1.4 to 1.3.0');
+  console.log('set-filters: migration from the three earlier nested shapes');
   const F = load();
 
-  // The shape that shipped last: `sets` holding three hides and two rules that carry a
-  // surface. Every field in it is inverted, and that has to be recognised as its own shape
-  // rather than fed to normalise, which would return the defaults and hand the reader back
-  // every set they had hidden.
-  const negative = {
-    setsEnabled: true,
+  // 1.4.x and 1.5.0: positive platform booleans, a shared list of places, and five rules
+  // under `paper` that have nowhere to go.
+  const from15 = {
     platforms: { paper: true, arena: false, mtgo: true },
+    areas: { prints: false, search: true, sets: true },
+    paper: {
+      ancillary: false,
+      nonEnglish: 'analogue',
+      nonTournament: true, oversized: true, noEnglishSets: false,
+      foreignBlackBorder: { '4bb': false, fbb: false, bchr: false }
+    },
     prices: { usd: false, tix: true, tcg: false, cardhoarder: false },
-    tokens: false,
     caster: true,
+    tokens: false,
+    caster: true
+  };
+  const up = F.upgrade(from15);
+  assertEqual(F.PLATFORM_NAMES.filter(n => up.platforms[n].show), ['paper', 'mtgo'],
+    'the platform switches pass through, one of them off');
+  assertEqual(up.platforms.arena.areas, { prints: false, search: true, sets: true },
+    'the one shared list became every platform, unchanged — the reader made one answer, not three');
+  assertEqual(up.platforms.paper.areas, { prints: false, search: true, sets: true },
+    'including Paper, so the same single choice reaches all three');
+  assert(up.platforms.arena.areas.prints === false && up.platforms.arena.show === false,
+    'and a platform that is off keeps the places it had, so it comes back as it was');
+  // The prices are inverted, because the two earlier nested shapes stored them the other way
+  // round. The fixture below stores tix off and the rest on; after the migration it is tix
+  // shown and the rest off, which is the same page. Read the wrong way round and a reader who
+  // had every price on gets every price hidden on their first page load.
+  assertEqual(up.prices, { usd: true, tix: false, tcg: true, cardhoarder: true, cardmarket: true },
+    'the price switches outside the group, each inverted from how that shape stored it — and ' +
+    'Cardmarket arrives at the default, because no shape that old had a key for it');
+  // `caster: true` in that shape meant *hide*, so it becomes the marker off. The prices are
+  // inverted too, which is the other inversion this model has done, and both are in the same
+  // branch because that is the shape that stored both the old way round.
+  assertEqual([up.tokens, up.showCaster], [false, false],
+    'and the two others, with the Caster marker inverted from hide to show');
+
+  // The three platforms must not share one object. If they did, the settings page writing
+  // one of them would change the other two, and nothing in the page could tell.
+  assert(up.platforms.paper.areas !== up.platforms.arena.areas,
+    'the three areas objects are separate, or one switch would move all three platforms');
+  assert(up.platforms.paper.areas !== up.platforms.mtgo.areas, 'and the third is separate too');
+
+  // 1.1.4 to 1.3.0: negative switches under `sets`, and a master beside them.
+  const from11 = {
+    setsEnabled: true,
+    platforms: { paper: true, arena: true, mtgo: true },
+    prices: {}, tokens: true, caster: false,
+    areas: { prints: true, search: false, sets: true },
     sets: {
-      nonTournament: true,
-      oversized: false,
-      foreignOnly: true,
+      nonTournament: true, oversized: false, foreignOnly: true,
       foreignBlackBorder: { surfaces: 'sets-prints', which: ['4bb', 'fbb', 'bchr'] },
       nonEnglish: { surfaces: 'prints', which: ['portal', 'secret-lair', 'other'] }
     }
   };
-  const up = F.upgrade(negative);
-  assertEqual(up.paper.nonTournament, false, 'a stored hide becomes a stored not-show');
-  assertEqual(up.paper.oversized, true, 'and a stored not-hide becomes a stored show');
-  assertEqual(up.paper.noEnglishSets, false,
-    'the measured foreign-only switch, which was stored as a hide');
-  assertEqual(up.paper.foreignBlackBorder, { '4bb': false, fbb: false, bchr: false },
-    'an active border rule with all three families named switches all three off');
-  assertEqual(up.paper.nonEnglish, 'none',
-    'the language rule keeps the position that hides, because that is what it was set to');
-  assertEqual(up.platforms, { paper: true, arena: false, mtgo: true },
-    'the platforms were already positive and pass through unchanged');
-  assertEqual(up.tokens, false, 'and so do the switches outside the group');
+  const old = F.upgrade(from11);
+  assertEqual(F.PLATFORM_NAMES.filter(n => old.platforms[n].show), F.PLATFORM_NAMES,
+    'the platforms were already positive and pass through');
+  assertEqual(old.platforms.paper.areas, { prints: true, search: false, sets: true },
+    'and the shared list becomes three, the search place still off');
+  assert(!('paper' in old), 'nothing from the old group survives');
 
-  // The two halves of the old border rule read as one thing. An inactive rule with a list
-  // under it hides nothing, which is what 'off' meant, and reading the list on its own
-  // would hide all three families for a reader who had the rule switched off.
-  assertEqual(F.upgrade({
-    sets: { foreignBlackBorder: { surfaces: 'off', which: ['4bb', 'fbb', 'bchr'] } }
-  }).paper.foreignBlackBorder, { '4bb': true, fbb: true, bchr: true },
-    "a border rule that was off leaves every family shown, whatever list sits under it");
-
-  // The old rule that only ever applied to the prints table keeps that area rather than
-  // gaining the other two: the areas list was new, and adding a surface the reader had
-  // chosen would hide a set they had chosen to keep.
-  assertEqual(F.upgrade({ sets: { nonEnglish: { surfaces: 'prints' } } }).areas,
-    { prints: true, search: true, sets: true },
-    'an old rule named one surface and the new list covers all three by default');
-  assertEqual(F.upgrade({ sets: { nonEnglish: { surfaces: 'sets-prints' } } }).areas,
-    { prints: true, search: true, sets: true },
-    'and one that named two gets the third rather than losing either of its own');
-
-  // The old boolean spelling of the language rule, from the build before the surface select.
-  assertEqual(F.upgrade({ sets: { nonEnglish: { on: true } } }).paper.nonEnglish, 'none',
-    'the old boolean maps to the position that hides');
-  assertEqual(F.upgrade({ sets: { nonEnglish: { on: false } } }).paper.nonEnglish, 'all',
-    'and its false maps to All');
-
-  // The master, off. It meant no rule below it was applying, which in the positive shape is
-  // every switch at its default. Arriving there by putting five switches back is what this
-  // does; keeping a gate is what it does not, because a gate has no meaning once every
-  // switch says the same thing.
-  const shut = F.upgrade({
+  const shutOld = F.upgrade({
     setsEnabled: false,
-    sets: {
-      nonTournament: true,
-      foreignOnly: true,
-      foreignBlackBorder: { surfaces: 'sets-prints', which: ['4bb'] },
-      nonEnglish: { surfaces: 'sets-prints' }
-    }
+    areas: { prints: false, search: false, sets: false },
+    sets: { nonTournament: true, nonEnglish: { surfaces: 'sets-prints' } }
   });
-  assertEqual(shut.paper.nonTournament, true, 'a closed master puts every rule back to showing');
-  assertEqual(shut.paper.noEnglishSets, true, 'including the measured one');
-  assertEqual(shut.paper.foreignBlackBorder, { '4bb': true, fbb: true, bchr: true },
-    'and every border family');
-  assertEqual(shut.paper.nonEnglish, 'all', 'and the language rule back to All');
-  assert(!('setsEnabled' in shut), 'and the master itself is gone from the stored shape');
+  assertEqual(shutOld, F.defaults(),
+    'a closed master puts everything back to showing, in the old shape too — including the ' +
+    'places, which is the one a reader would otherwise keep a stale answer to');
 
-  // A value already in the positive shape must pass through untouched, which is what stops a
-  // reader from being migrated twice and losing a choice they had already made.
-  const positive = { platforms: { paper: false, arena: true, mtgo: true },
-    areas: { prints: false, search: true, sets: true },
-    paper: { oversized: false, nonEnglish: 'analogue', foreignBlackBorder: { '4bb': true, fbb: false, bchr: true } } };
-  const kept = F.upgrade(positive);
-  assertEqual(kept.platforms, positive.platforms, 'the platforms come through as they stand');
-  assertEqual(kept.areas, positive.areas, 'and so do the areas, including one that is off');
-  assertEqual(kept.paper,
-    { nonTournament: true, oversized: false, noEnglishSets: true,
-      foreignBlackBorder: { '4bb': true, fbb: false, bchr: true }, nonEnglish: 'analogue' },
-    'and the Paper block is completed rather than replaced: what it left out keeps a default');
-  assertEqual(kept.paper.nonEnglish, 'analogue', 'the middle position survives a round trip');
-  assertEqual(kept.paper.foreignBlackBorder.fbb, false, 'and so does one family being off');
-  // And a value in neither shape is completed rather than inverted: there is nothing in it
-  // saying "hide", so treating it as the negative shape would switch five things off.
-  const neither = { platforms: { arena: false } };
-  assertEqual(F.upgrade(neither).platforms, { paper: true, arena: false, mtgo: true },
-    'a value in neither shape keeps the one thing it says and defaults the rest');
-  assertEqual(F.upgrade(neither).paper, F.defaults().paper,
-    'rather than being read as the negative shape and having every switch turned round');
+  // A value in neither shape is completed rather than read as the oldest one. Reading it as
+  // the old shape would reset a master nobody had.
+  const neither = F.upgrade({ platforms: { arena: { show: false } } });
+  assertEqual(neither.platforms.arena.show, false,
+    'a value in neither shape keeps the one thing it says');
+  assertEqual(neither.platforms.paper.show, true, 'and defaults the rest');
+  assertEqual(neither.platforms.paper.areas, { prints: true, search: true, sets: true },
+    'with all three places at their defaults, because it named none');
 
-  // `read` picks the right one of the two, and only does it once.
-  const once = F.read({ hideOversizedSets: true });
+  // `read` picks the right path and does it once.
+  const once = F.read({ hideDigitalSets: true });
   assertEqual(once.migrated, true, 'a first run is one to be migrated');
-  assertEqual(once.filters.paper.oversized, false, 'and the old switch becomes a new one');
+  assertEqual(once.filters.platforms.mtgo.show, false, 'and the old switch becomes the platform');
   const twice = F.read({ setFilters: once.filters, setFiltersMigrated: true });
   assertEqual(twice.migrated, false, 'a migrated reader is recognised as one');
-  assertEqual(twice.filters.paper.oversized, false, 'and keeps what they had chosen');
-  assertEqual(F.read({ hideOversizedSets: false, setFilters: once.filters, setFiltersMigrated: true })
-    .filters.paper.oversized, false,
-    'a stale flat switch does not undo the choice the reader already migrated');
-  // A reader who has the negative shape and the flag is recognised as migrated still gets
-  // the negative shape translated, which is the case this rewrite was most likely to lose.
-  const fromNegative = F.read({ setFilters: negative, setFiltersMigrated: true });
-  assertEqual(fromNegative.filters.paper.nonTournament, false,
-    'the flag says do not migrate again, and the shape is still translated');
+  assertEqual(twice.filters.platforms.mtgo.show, false, 'and keeps what they had chosen');
+  assertEqual(F.read({ hideDigitalSets: false, setFilters: once.filters, setFiltersMigrated: true })
+    .filters.platforms.mtgo.show, false,
+    'a stale flat switch does not undo a choice the reader already migrated');
+  assertEqual(F.read({ setFilters: from15, setFiltersMigrated: true }).filters.platforms.arena.show,
+    false, 'a reader whose stored value is the previous shape is translated, not reset');
+
+  // The current shape is read back unchanged, prices included. This is the expensive direction
+  // to get wrong: a reader who had every price on would find every price hidden on their first
+  // page load after an update, and the four switches on the settings page — which read the
+  // stored value — would all be unticked while every price was still on the page.
+  const current = F.read({
+    setFiltersMigrated: true,
+    setFilters: {
+      platforms: { paper: { show: true, areas: { prints: true, search: true, sets: false } } },
+      prices: { usd: true, tix: false, tcg: true, cardhoarder: true, cardmarket: false }
+    }
+  });
+  assertEqual(current.filters.prices, { usd: true, tix: false, tcg: true, cardhoarder: true, cardmarket: false },
+    'a value already in the current shape keeps its prices exactly as stored, the hidden ' +
+    'Cardmarket column included');
+  assertEqual(current.filters.platforms.paper.areas.sets, false,
+    'and keeps its places, which the branch that spreads a shared list would have overwritten');
+  assertEqual(F.upgrade({ prices: { usd: false } }).prices.usd, true,
+    'while the older shapes are still inverted: a stored "hide USD" becomes "USD not shown"');
+
+  // A value this build wrote itself: everything it stores, and nothing changed. Said as an
+  // equality of the whole object rather than field by field, because a field-by-field reading
+  // only covers the fields somebody thought of — and a `normalise` that looked for the old
+  // `caster` would pass every field it checks and still hand the reader the default marker.
+  const own = {
+    platforms: {
+      paper: { show: true, areas: { prints: true, search: false, sets: true } },
+      arena: { show: false, areas: { prints: false, search: true, sets: false } },
+      mtgo: { show: true, areas: { prints: true, search: true, sets: true } }
+    },
+    prices: { usd: false, tix: true, tcg: false, cardhoarder: true, cardmarket: false },
+    tokens: false,
+    showCaster: false,
+    showStores: false
+  };
+  assertEqual(F.upgrade(own), own, 'the current shape is read back exactly as it was stored');
+  assertEqual(F.read({ setFilters: own, setFiltersMigrated: true }).filters.showCaster, false,
+    'including the marker, which is the one value that has changed sense in this file\'s life');
+
+  // 1.6.0 to 1.6.2 is the awkward one: the current layout — per-platform places, positive
+  // prices — with the Caster key still named `caster` and still meaning *hide*. It is
+  // indistinguishable from the current shape except by that key, which is why the key was
+  // renamed rather than a version number added: a stored version can be missing or wrong, and
+  // then a reader's settings are read as the wrong shape. A key either is there or is not.
+  const from162 = {
+    platforms: { paper: { show: true, areas: { prints: true, search: false, sets: true } } },
+    prices: { usd: true, tix: false, tcg: true, cardhoarder: true, cardmarket: true },
+    caster: true
+  };
+  const out162 = F.upgrade(from162);
+  assertEqual(out162.showCaster, false,
+    'a stored "hide the marker" from 1.6.x stays hidden, so relabelling it changes nothing');
+  assertEqual(out162.prices, from162.prices,
+    'and its prices are left alone, because that shape already stored them positively');
+  assertEqual(out162.platforms.paper.areas, { prints: true, search: false, sets: true },
+    'as are its places');
+  assert(!('caster' in out162), 'with the old key gone rather than left beside the new one');
+  assertEqual(F.upgrade({ ...from162, caster: false }).showCaster, true,
+    'and the other direction: a reader who had the marker visible keeps it visible');
+  assertEqual(F.upgrade({ ...from162, caster: undefined }).showCaster, true,
+    'while a value that never stored the key arrives at the default, which is shown');
 }
 
 function platformTest() {
@@ -306,21 +457,15 @@ function platformTest() {
   // Measured 2026-10-04 on Scryfall: every printing carries `games`, and a paper printing
   // carries "paper" in it. VMA's 171 printings are `["mtgo"]` and four are
   // `["mtgo","arena"]`, which is the case a set-level answer gets wrong.
-  const vmaMtgoOnly = { lang: 'en', games: ['mtgo'] };
-  const vmaBoth = { lang: 'en', games: ['mtgo', 'arena'] };
-  const paperSetArena = { lang: 'en', games: ['paper', 'mtgo', 'arena'] };
-  const paperOnly = { lang: 'en', games: ['paper'] };
-
-  assertEqual(F.printingOnPlatform(paperOnly, all), true, 'everything shown keeps everything');
-  // The requirement, stated as a test: turning Arena off must not lose a printing that is
-  // still on a platform the reader kept.
-  assertEqual(F.printingOnPlatform(paperSetArena, ['paper', 'mtgo']), true,
-    'a printing that is on paper as well as Arena survives turning Arena off');
-  assertEqual(F.printingOnPlatform(vmaMtgoOnly, ['arena']), false,
+  assertEqual(F.printingOnPlatform({ lang: 'en', games: ['paper'] }, all), true,
+    'everything shown keeps everything');
+  assertEqual(F.printingOnPlatform({ lang: 'en', games: ['paper', 'mtgo', 'arena'] }, ['paper', 'mtgo']),
+    true, 'a printing that is on paper as well as Arena survives Arena being off');
+  assertEqual(F.printingOnPlatform({ lang: 'en', games: ['mtgo'] }, ['arena']), false,
     'a Magic Online printing is gone when only Arena is kept');
-  assertEqual(F.printingOnPlatform(vmaBoth, ['arena']), true,
+  assertEqual(F.printingOnPlatform({ lang: 'en', games: ['mtgo', 'arena'] }, ['arena']), true,
     'while the four that are also on Arena stay, because they are');
-  assertEqual(F.printingOnPlatform(paperOnly, ['arena', 'mtgo']), false,
+  assertEqual(F.printingOnPlatform({ lang: 'en', games: ['paper'] }, ['arena', 'mtgo']), false,
     'and a paper printing is gone when Paper is off, which is what turning Paper off means');
 
   // A printing that cannot be placed is shown. Hiding on an inability to place is the one
@@ -330,192 +475,15 @@ function platformTest() {
   assertEqual(F.printingOnPlatform({ lang: 'en', games: [] }, ['paper']), true,
     'and so is one with an empty list');
   assertEqual(F.printingOnPlatform(null, ['paper']), true, 'and so is nothing at all');
-  assertEqual(F.printingOnPlatform(paperOnly, []), false,
+  assertEqual(F.printingOnPlatform({ lang: 'en', games: ['paper'] }, []), false,
     'while a printing that says where it is, against nothing kept, is hidden');
-
-  // No master anywhere: three switches that can all be off is a state the model has to be
-  // able to hold, because the page can produce it.
-  assertEqual(F.printingOnPlatform(paperOnly, []), false,
-    'no platform kept hides every printing that says where it is');
-}
-
-function analogueTest() {
-  console.log('set-filters: what counts as the same picture');
-  const F = load();
-  const key = F.pictureKey;
-
-  // One printing, and one field changed at a time, so each part of the key is shown to take
-  // part rather than being present in the object and doing nothing.
-  const base = { lang: 'en', art: ['art-1'], frame: '2015', frameEffects: [],
-    borderColor: 'black', fullArt: false, games: ['paper'] };
-  assertEqual(key(base), key({ ...base }), 'a printing is the same picture as itself');
-  assert(key(base) !== key({ ...base, art: ['art-2'] }), 'a different artwork is a different picture');
-  assert(key(base) !== key({ ...base, frame: '1997' }),
-    'a different base frame is a different picture: modern against retro');
-  assert(key(base) !== key({ ...base, frameEffects: ['inverted'] }),
-    'a different frame effect is a different picture');
-  assert(key(base) !== key({ ...base, borderColor: 'borderless' }),
-    'a different border colour is a different picture: black against white against borderless');
-  assert(key(base) !== key({ ...base, fullArt: true }),
-    'a full-art treatment is a different picture from the plain version of the same art');
-  assertEqual(key({ ...base, frameEffects: ['inverted', 'etched'] }),
-    key({ ...base, frameEffects: ['etched', 'inverted'] }),
-    'and the order two effects arrive in does not decide it');
-  assert(key({ ...base, frameEffects: ['inverted', 'etched'] }) !== key(base),
-    'while a second effect at all does: one frame effect is not two');
-
-  // Multi-faced cards. Measured 2026-10-04: a double-faced card carries its illustrations on
-  // its faces and its own `illustration_id` is absent, so the artwork of a card is the sorted
-  // list of its faces' illustrations and nothing else.
-  const dfc = { lang: 'en', art: ['face-a', 'face-b'], frame: '2015', frameEffects: [],
-    borderColor: 'borderless', fullArt: false, games: ['paper'] };
-  assertEqual(key(dfc), key({ ...dfc, art: ['face-b', 'face-a'] }),
-    'the two faces in either order are the same card');
-  assert(key(dfc) !== key({ ...dfc, art: ['face-a'] }),
-    "and a card is not the same picture as one of its own faces");
-  assert(key(dfc) !== key({ ...dfc, art: ['face-a', 'face-c'] }),
-    'a different back face is a different picture');
-
-  // A printing with nothing known about it must not match a printing that does know. Both
-  // produce empty parts, so this is the case where a careless join would compare them equal.
-  assert(key({ lang: 'en' }) !== key(base),
-    'a printing with no recorded treatment matches nothing that has one');
-}
-
-function analogueRuleTest() {
-  console.log('set-filters: which non-English printings are redundant, and which stay');
-  const F = load();
-  const en = over => ({ lang: 'en', art: ['art-1'], frame: '2015', frameEffects: [],
-    borderColor: 'black', fullArt: false, games: ['paper'], set: 'en1', ...over });
-  const ja = over => ({ lang: 'ja', art: ['art-1'], frame: '2015', frameEffects: [],
-    borderColor: 'black', fullArt: false, games: ['paper'], set: 'ja1', ...over });
-
-  // The same picture in English on paper.
-  const pictures = F.englishPictures([en()]);
-  assertEqual(F.redundantAgainst(ja(), pictures), true,
-    'an English paper printing with the same art and treatment makes it redundant');
-
-  // The four expected behaviours, each one on a printing that really exists in that shape.
-  // The names are Scryfall's, and each was measured rather than assumed.
-  const retroEn = en({ frame: '2015' });
-  const retroJa = ja({ frame: '1997' });
-  assertEqual(F.redundantAgainst(retroJa, F.englishPictures([retroEn])), false,
-    "the same art only in a modern frame on the English side, retro on the other: kept");
-
-  const blackEn = en({ borderColor: 'black' });
-  const whiteJa = ja({ borderColor: 'white' });
-  assertEqual(F.redundantAgainst(whiteJa, F.englishPictures([blackEn])), false,
-    'the same art and frame only with a black border on the English side, white on the other: kept');
-
-  const borderlessJa = ja({ borderColor: 'borderless', frame: '2015' });
-  assertEqual(F.redundantAgainst(borderlessJa, F.englishPictures([en()])), false,
-    'a borderless treatment absent from the English side: kept');
-
-  const noArtAtAll = ja({ art: ['art-2'] });
-  assertEqual(F.redundantAgainst(noArtAtAll, F.englishPictures([en()])), false,
-    'artwork that does not appear on the English side at all: kept');
-
-  // The English analogue has to be one the reader can see, and has to be paper. These are
-  // three separate refusals and each of them would let the rule hide a row against a
-  // printing that is not there.
-  assertEqual(F.redundantAgainst(ja(), F.englishPictures([en({ games: ['mtgo'] })])), false,
-    'an English Magic Online printing is not a Paper analogue');
-  assertEqual(F.redundantAgainst(ja(), F.englishPictures([en({ set: 'vintage' })], p => p.set !== 'vintage')), false,
-    'an English printing the reader has filtered out is not an analogue');
-  assertEqual(F.redundantAgainst(ja(), F.englishPictures([en({ art: [] })])), false,
-    'an English printing with no artwork recorded is not evidence of anything');
-  assertEqual(F.redundantAgainst(ja(), F.englishPictures([])), false,
-    'no English printing at all means nothing to be redundant with');
-  assertEqual(F.redundantAgainst(ja({ art: [] }), pictures), false,
-    'a printing with no artwork recorded cannot be compared, so it stays');
-
-  // The set name and the collector number are not part of the picture. This is the case the
-  // requirement names outright, and it is the reason the key is built from treatment fields
-  // and nothing else.
-  assertEqual(F.redundantAgainst(ja({ set: 'sld', number: '123' }), F.englishPictures([en({ set: 'znc', number: '999' })])), true,
-    'a different set and a different number do not make a printing unique');
-
-  // An English printing is never redundant against itself, whatever the mode says.
-  assertEqual(F.redundantAgainst(en(), pictures), false,
-    'an English printing is not judged by the language rule');
-
-  // Order independence. Scryfall returns printings in its own order, and the analogue of a
-  // printing is regularly the row before it, so this is not a detail: a rule that only
-  // looked at printings it had already passed would hide nothing.
-  const list = [ja(), en()];
-  assertEqual(F.redundantAgainst(list[0], F.englishPictures(list)), true,
-    'the analogue may come after the printing being tested');
-  assertEqual(F.redundantAgainst(list[0], F.englishPictures([...list].reverse())), true,
-    'and the order of the whole list does not matter either');
-  assertEqual(F.redundantAgainst(ja({ lang: 'ru' }), F.englishPictures(list)), true,
-    'the same picture in Russian is as redundant as the same picture in Japanese');
-}
-
-function intersectionTest() {
-  console.log('set-filters: a rule on with no area chosen removes nothing');
-  const F = load();
-  // The two halves of the answer, asked the way the pages ask them: the rule wants to
-  // remove something, and the surface is in force. Neither alone removes anything, and the
-  // pair is the only thing that can remove anything — which is the whole of the requirement
-  // that "where to apply" is one shared answer rather than a tree.
-  const ruleWants = f => !f.paper.nonTournament || !f.paper.oversized || !f.paper.noEnglishSets ||
-    Object.values(f.paper.foreignBlackBorder).some(show => show !== true);
-  const languageWants = f => f.paper.nonEnglish !== 'all';
-
-  const base = F.defaults();
-  assertEqual([ruleWants(base), languageWants(base)],
-    [false, false], 'with nothing switched off no rule wants to remove anything');
-
-  const offOversized = F.normalise({ paper: { oversized: false } });
-  assertEqual([ruleWants(offOversized), languageWants(offOversized)],
-    [true, false], 'switching a category off is the rule wanting something, on its own');
-
-  const noAreas = F.normalise({ areas: { prints: false, search: false, sets: false },
-    paper: { oversized: false, nonEnglish: 'none' } });
-  assertEqual([ruleWants(noAreas), languageWants(noAreas)],
-    [true, true], 'and the areas are a separate answer, with a rule on and nowhere to act');
-  assertEqual(Object.values(noAreas.areas).some(Boolean), false,
-    'every area off is a state the model can hold, because the page can produce it');
-  assertEqual(Object.values(noAreas.areas).some(Boolean), false,
-    'so a rule that is on with no area chosen is on with nowhere to act');
-
-  // Every combination of "All" and something else, to say the property rather than three
-  // examples of it: a rule only acts where an area says so.
-  let combinations = 0;
-  for (const want of [false, true]) {
-    for (const areas of [{ prints: true, search: true, sets: true },
-      { prints: false, search: false, sets: false },
-      { prints: true, search: false, sets: false }]) {
-      const filters = F.normalise({
-        paper: { oversized: !want, nonEnglish: want ? 'none' : 'all' },
-        areas
-      });
-      const acts = filters.paper.oversized === false || filters.paper.nonEnglish === 'none';
-      assertEqual(acts, want, 'a rule acts wherever an area is in force');
-      combinations += 1;
-    }
-  }
-  assertEqual(combinations, 6, 'across the three shapes tried and both answers');
-
-  // And the parts of the old shape are gone from the model, so a feature file asking for one
-  // by name fails rather than quietly getting a value of the wrong sense.
-  assert(!('SURFACES' in F), 'the surface names are gone: there is one list of areas now');
-  assert(!('reachesSets' in F) && !('reachesPrints' in F) && !('anySurface' in F),
-    'and with them the three functions each surface asked, which is how 1.1.0 answered the');
-  assert(!('withoutSets' in F) && !('withSets' in F),
-    'the gate helpers are gone too, because there is no gate to open and shut');
-  assert(!('NON_ENGLISH' in F),
-    'and the non-English categories, which were set names and the question is about a printing');
-  assert(F.LEGACY_KEYS.includes('setFiltersMigrated') && F.LEGACY_KEYS.includes('hideNonEnglishPrints'),
-    'while the old storage keys are still named, so a page can clear them on purpose');
 }
 
 defaultsTest();
+perPlatformTest();
 malformedTest();
-migrationTest();
+removedFieldsTest();
+flatMigrationTest();
 upgradeTest();
 platformTest();
-analogueTest();
-analogueRuleTest();
-intersectionTest();
 summary('test-set-filters');

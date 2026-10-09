@@ -165,22 +165,22 @@ const SHOTS = [
   {
     file: 'hide-extra.png',
     column: true,
-    // The hiding group is one storage key, written the way the card page reads it and in
-    // the shape the model has now. It was still writing `on: true` after the mode came
-    // back, which still worked — normalise maps the old boolean onto 'sets-prints' — so
-    // the picture was right while the tool was describing a shape the settings page no
-    // longer writes. A fixture that only works through the compatibility path is a
-    // fixture that stops working the day that path goes.
+    // The hiding group is one storage key, written the way the card page reads it and in the
+    // shape the model has now. It was writing `on: true` when the mode came back, and later a
+    // `sets` block that the settings page had stopped writing — both still worked, because the
+    // migration reads them, so the picture was right while the tool was describing a shape
+    // nothing else uses any more. A fixture that only works through the compatibility path is
+    // a fixture that stops working the day that path goes.
+    //
+    // Arena is out of the prints table and in everywhere else, so the picture shows the one
+    // state a shared list of places could not hold.
     storage: {
       setFiltersMigrated: true,
       setFilters: {
-        setsEnabled: true,
-        platforms: { paper: true, arena: false, mtgo: false },
-        sets: {
-          nonTournament: true,
-          oversized: true,
-          foreignBlackBorder: { surfaces: 'sets-prints', which: ['4bb', 'fbb', 'bchr'] },
-          nonEnglish: { surfaces: 'sets-prints', which: ['portal', 'secret-lair', 'other'] }
+        platforms: {
+          paper: { show: true, areas: { prints: true, search: true, sets: true } },
+          arena: { show: true, areas: { prints: false, search: true, sets: true } },
+          mtgo: { show: true, areas: { prints: true, search: true, sets: true } }
         },
         prices: { usd: true, tix: true, tcg: true, cardhoarder: true },
         tokens: true,

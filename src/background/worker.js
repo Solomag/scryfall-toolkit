@@ -10,45 +10,16 @@
  */
 // Bundled compact tag data originates from MoxTags v1.8.3 (MIT).
 importScripts("../../assets/data/set-platforms.js");
-importScripts("../../assets/data/set-foreign-only.js");
 importScripts("../core/format-overrides.js");
 const cache = new Map();
 const traderCache = new Map();
 let digitalSetRequest;
 
-// A printing's artwork, as the list of its illustrations, one per face.
-//
-// Scryfall puts `illustration_id` on a single-faced card and on each face of a multi-faced
-// one, and the card's own copy is *absent* when there is more than one face — measured on
-// Delver of Secrets, whose faces carry different illustrations and whose top level carries
-// neither of them. So the artwork of a card is read off its faces when it has them, and off
-// itself when it does not, and never off `card_faces[0]`: a double-faced card compared by its
-// front face alone would call two cards the same picture whenever their fronts matched.
-//
-// Sorted, so that two printings whose faces are in a different order compare equal, and a
-// card with no artwork information at all comes out as an empty list rather than as a missing
-// field — which the comparison treats as "cannot tell" and therefore leaves visible.
-function cardArt(card) {
-  if (Array.isArray(card.card_faces) && card.card_faces.length) {
-    return card.card_faces
-      .map(face => face.illustration_id || null)
-      .sort();
-  }
-  return card.illustration_id ? [card.illustration_id] : [];
-}
 let setPlatformRequest;
 // The bundled snapshot answers almost every digital set; Scryfall's own index
 // never says which client carries one. See assets/data/set-platforms.js.
 const bundledSetPlatforms = self.__STK_SET_PLATFORMS || {};
 delete self.__STK_SET_PLATFORMS;
-// The dated list of sets with printings and no English printing among them, measured by
-// `npm run set-rules`. Unlike the platform snapshot this one cannot refresh itself: the sets
-// it is about are a subset of every set Scryfall serves, so "the ones we do not know" is most
-// of Scryfall and looking each up would be a thousand requests a day for every reader. It is
-// narrowed to the codes /sets still serves below, so a set Scryfall drops leaves the answer.
-const bundledForeignOnly = Array.isArray(self.__STK_SET_FOREIGN_ONLY)
-  ? [...self.__STK_SET_FOREIGN_ONLY] : [];
-delete self.__STK_SET_FOREIGN_ONLY;
 // Marketplace calls are spaced 1.1s apart by CardTrader's own expectations, and
 // the moment until which the next one must wait is kept in storage: a global
 // would reset to zero when the worker is unloaded and let the next start burst.
@@ -708,26 +679,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
             // paper printing carries "paper" in it — so "is this printing somewhere I keep"
             // can be answered per printing. Answering it per set is what made turning off
             // Arena lose the paper printing of a set that was on both.
-            games: Array.isArray(card.games) ? card.games.slice().sort() : [],
-            // What makes two printings of one card the same picture rather than the same
-            // card, which is the whole of the "only without an English analogue" rule.
-            //
-            // `illustration_id` is the artwork; `frame`, `frame_effects`, `border_color` and
-            // `full_art` are the treatment around it. A reprint that shares all five with an
-            // English printing is a row showing a picture the reader is already looking at.
-            //
-            // `art` is reduced rather than passed whole: every face of a multi-faced card
-            // carries its own illustration, and the card's own `illustration_id` is absent on
-            // a double-faced card — measured on Delver of Secrets, whose two faces have
-            // different ones. Reducing to a sorted list of per-face ids means the comparison
-            // asks "does this printing have the same art, face for face", which is the
-            // question, instead of asking about a field that is missing exactly when a card
-            // has more than one face.
-            art: cardArt(card),
-            frame: card.frame ?? null,
-            frameEffects: Array.isArray(card.frame_effects) ? card.frame_effects.slice().sort() : [],
-            borderColor: card.border_color ?? null,
-            fullArt: card.full_art === true
+            games: Array.isArray(card.games) ? card.games.slice().sort() : []
           })));
           const next = response.has_more && response.next_page ? new URL(response.next_page) : null;
           if (next && (next.protocol !== 'https:' || next.hostname !== 'api.scryfall.com' || next.pathname !== '/cards/search')) throw new Error('Invalid next page');
@@ -860,149 +812,36 @@ async function getJSON(url, options = {}) {
   return response.json();
 }
 
-// Which sets hold an oversized printing.
+// Which sets Scryfall calls digital. One list, and it is the only one this worker builds.
 //
-// Oversized is not a property of a set. Scryfall's set object has no field for it — the
-// flag is on the printing (`oversized`), and those printings sit inside ordinary sets: a
-// Planechase plane, a Magic Online promo, a Commander release, a promo from 2009. So the
-// list has to come from asking for the printings.
+// Everything else this file used to answer with is gone with the settings that read it: the
+// non-tournament types, the oversized walk, the two border categories, the two non-English
+// categories and a measured list of thirty-four codes. Six lists and five pages of requests to
+// produce an answer the reader could not have asked for.
 //
-// The rule this replaces read /oversiz/i in the set name and matched a few code
-// prefixes. Measured against Scryfall on 2026-10-02 it found 14 of the 38 sets that
-// actually hold an oversized printing, and nothing that was not one. So it was too
-// narrow rather than wrong, which is the worst shape of bug to have: the setting looked
-// like it worked, it worked on the sets that had "Oversized" written on them, and the
-// other twenty-four stayed visible with nothing to say why.
-//
-// A set can be oversized and something else at once — a Vintage Championship is both
-// memorabilia and oversized, and Magic Online Promos are digital and oversized — so the
-// categories are collected independently rather than down one chain of else-if.
-async function oversizedSetCodes() {
-  const codes = new Set();
-  // 726 oversized printings at the time of writing, which is five pages. The bound stops
-  // a misbehaving response turning this into an endless walk, and is far above what the
-  // data needs.
-  for (let page = 1; page <= 25; page++) {
-    const result = await scryfallJSON(
-      `https://api.scryfall.com/cards/search?q=${encodeURIComponent('is:oversized')}&unique=prints&page=${page}`);
-    for (const card of result?.data || []) {
-      const code = String(card.set || '').toLowerCase();
-      if (/^[a-z0-9_-]+$/.test(code)) codes.add(code);
-    }
-    if (!result?.has_more) return [...codes];
-  }
-  throw new Error('The oversized printing walk did not finish');
-}
-
-// Which sets carry which name, split by the categories the settings page offers.
-//
-// The settings page has a list under each of these two rules — which of 4BB, FBB and
-// BCHR, which of Portal, Secret Lair and the rest — and a list cannot narrow a single
-// flat answer. So the index answers per category and the page's list picks which of them
-// to merge. A flat list here would have made the sub-lists decorative.
-//
-// The names are Scryfall's own, read off /sets on 2026-10-03: "Fourth Edition Foreign
-// Black Border" is 4bb, "Foreign Black Border" is fbb — a set of its own, not Future
-// Sight, which is fut and has no border edition — and "Chronicles Foreign Black Border"
-// is bchr. Matched as prefixes rather than whole strings so a set Scryfall renames into
-// the same family is still found.
-//
-// And unlike the non-English names below, this rule was checked against Scryfall rather
-// than only read off it. "Foreign black border" is a claim that can be falsified: such a
-// set has no English printing at all, and asking `e:<code> lang:en` settles it. Measured
-// on 2026-10-03, all three sets the patterns name have no English printing, and they are
-// the only three sets Scryfall names Foreign Black Border — so the rule is complete for the
-// families it claims, which is not something reading the names could have told us.
-const BORDER_SET_NAMES = {
-  '4bb': /^Fourth Edition Foreign Black Border/i,
-  fbb: /^Foreign Black Border/i,
-  bchr: /^Chronicles Foreign Black Border/i
-};
-// Portal, Portal Second Age, Portal Three Kingdoms and Portal Three Kingdoms Promos;
-// every Secret Lair set (Drop, Countdown, Ultimate Edition, Promo, Showcase Planes).
-//
-// There is no name for the third non-English category, which is every other set that
-// prints a language besides English. Finding those means walking their printings and
-// reading each one's language — the oversized walk, repeated — so this list does not
-// contain it and the rule reaches that category on the Prints table only, where a
-// printing says which language it is.
-//
-// Which walk is not obvious, and getting it wrong is quiet. Measured on 2026-10-03:
-// `lang:!en` is not a negation Scryfall honours. On m21, which has no foreign printing in
-// its own sets, `e:m21 lang:!en` returns all 397 printings — the same as no term at all —
-// so a rule built on it would call every set a foreign-language set and find nothing
-// wrong with the answer. `lang:en` is honoured, and is refused outright when nothing
-// matches, which is what makes it usable: `e:4bb lang:en` is refused because the border
-// sets have no English printing at all, and that refusal is the answer rather than a
-// failure. Written here because the first attempt at this measurement used `lang:!en` and
-// got a confident number out of a term that was not doing the job.
-const NON_ENGLISH_SET_NAMES = {
-  portal: /^Portal\b/i,
-  'secret-lair': /^Secret Lair/i
-};
-
+// A rule that nothing asks for is a rule that still runs, still costs a request and still has
+// to be right, and this one cost five pages of `is:oversized` every time the day turned over.
+// What is left is a single boolean Scryfall publishes on the set itself.
 function loadSetCategories() {
   if (!digitalSetRequest) digitalSetRequest = (async () => {
     const { digitalSetIndex } = await chrome.storage.local.get('digitalSetIndex');
-    // The shape is part of the key. A flat border list was cached by an earlier build and
-    // it is still there for a day after an update; serving it would hand the page an array
-    // where it expects per-category answers, and every sub-list would come back empty
-    // without anything failing.
-    //
-    // Each list added to this answer has to be named here too, for the same reason and with
-    // the same consequence if it is forgotten: a cache written before a list existed still
-    // passes a guard that only knows about the older ones, the missing list arrives as
-    // undefined, and the rule that reads it hides nothing while looking switched on.
+    // The shape is part of the key. A cache written by a build that answered with more lists
+    // than this one does is still there for a day after an update, and serving it would hand
+    // the page fields it no longer reads — which is harmless. The other direction is the one
+    // that matters, and it is why the list is named rather than assumed.
     const cached = digitalSetIndex?.categories;
-    const cacheIsCurrent = cached && !Array.isArray(cached.foreignBlackBorder) &&
-      cached.foreignBlackBorder && typeof cached.foreignBlackBorder === 'object' &&
-      cached.nonEnglish && typeof cached.nonEnglish === 'object' &&
-      Array.isArray(cached.foreignOnly) &&
+    const cacheIsCurrent = cached && Array.isArray(cached.digital) &&
       digitalSetIndex.expires > Date.now();
     if (cacheIsCurrent) return cached;
     try {
       const result = await scryfallJSON('https://api.scryfall.com/sets',
         {headers:{Accept:'application/json'},credentials:'omit'});
       if (!Array.isArray(result?.data) || result.has_more) throw new Error('Incomplete set index');
-      const categories = {digital:[],nonTournament:[],oversized:[],foreignOnly:[],foreignBlackBorder:{},nonEnglish:{}};
+      const categories = { digital: [] };
       for (const set of result.data) {
         if (!/^[a-z0-9_-]+$/i.test(set.code || '')) continue;
-        const code = set.code.toLowerCase();
-        const name = set.name || '';
-        if (set.digital === true) categories.digital.push(code);
-        for (const [key, pattern] of Object.entries(BORDER_SET_NAMES)) {
-          if (pattern.test(name)) (categories.foreignBlackBorder[key] ||= []).push(code);
-        }
-        for (const [key, pattern] of Object.entries(NON_ENGLISH_SET_NAMES)) {
-          if (pattern.test(name)) (categories.nonEnglish[key] ||= []).push(code);
-        }
-        // A set Scryfall calls one of these four types cannot hold a card a Commander deck could
-        // play, and that is what makes them junk rather than their name: measured on
-        // 2026-10-03, these are the only four set types where a search for
-        // `e:<set> format=commander` returns nothing, while every other type has cards in
-        // its first two sets that Commander accepts. Ask Scryfall instead of reading names
-        // and the answer is a type; read names and it is a list of exceptions that grows.
-        //
-        // This used to add nine code prefixes to the four types. All eleven of those codes
-        // are `memorabilia` sets - 30th Anniversary, the Collectors' Editions, the World
-        // Championship Decks - so the alternation caught nothing the type list did not, on
-        // any of the 1,053 sets Scryfall serves. It read like a second, independent way of
-        // catching memorabilia sets and was not one, which is worth noticing the next time
-        // a second condition is added to a rule like this.
-        if (['memorabilia', 'minigame', 'vanguard', 'token'].includes(set.set_type)) {
-          categories.nonTournament.push(code);
-        }
+        if (set.digital === true) categories.digital.push(String(set.code).toLowerCase());
       }
-      // Thrown rather than swallowed: an index that came back with an empty oversized
-      // list would hide nothing and look complete, which is the failure being fixed
-      // here. Letting it propagate lands in the catch below, which serves the previous
-      // index whole rather than a partial one.
-      categories.oversized = await oversizedSetCodes();
-      // The bundled list, narrowed to the sets this answer to /sets actually names. A code
-      // Scryfall has retired stays in the file — it is a measurement of a day — but must not
-      // stay in the answer, where it would name a set that no longer exists.
-      const served = new Set(result.data.map(set => String(set.code).toLowerCase()));
-      categories.foreignOnly = bundledForeignOnly.filter(code => served.has(code));
       await chrome.storage.local.set({ digitalSetIndex:{ categories, expires:Date.now() + 24 * 3600000 } });
       return categories;
     } catch (error) {
@@ -1012,6 +851,7 @@ function loadSetCategories() {
   })().finally(() => { digitalSetRequest = null; });
   return digitalSetRequest;
 }
+
 
 // Scryfall answers 10 requests a second, so a burst of set lookups earns a 429.
 // The walk is sequential on purpose: it keeps the platform index cheap without

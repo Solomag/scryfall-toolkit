@@ -7,7 +7,30 @@
 // draws what they left) and the suites had never been asked. And a Secret Lair name pattern
 // that no longer matched anything would have been reported as covered by everything, because
 // the tools that classify sets each kept their own copy of the patterns — the copy that
-// drifted, and the reason `tools/shots/worker-tables.cjs` exists.
+// drifted, and the reason `tools/shots/worker-tables.cjs` exists. Both patterns are gone with
+// the rules that read them, and the three that replaced the border-family ones below are about
+// the shape's own new failure: nine switches where there used to be three, so the obvious
+// mistake is reading one platform's answer for all three, and it is silent.
+//
+// The five added for the Caster marker are about a narrower version of the same thing: a
+// boolean whose sense changed, where the key was renamed so the two can be told apart, and
+// where every wrong reading is silent. The marker's polarity on the card page, the migration
+// that renames it, the shape read back through the wrong key, and the two ways a platform that
+// is switched off could quietly throw its reader's choices away — all of them draw a page and
+// change nothing a reader would be shown.
+//
+// The four after those are the settings page's layout, and they are caught by reading a
+// stylesheet rather than by rendering it. Each removes a rule a requirement names — the
+// narrow-window block in the wrong place, the border on a switched-off platform's places, the
+// switch's knob left in an unticked box, the two columns collapsing — and the assertion that
+// fails is the one that names it. That is weaker than a rendering and it is not pretended
+// otherwise: nothing in this repository draws the settings page and checks it.
+//
+// The eight after those are the same page's behaviour, and they are real: a panel that starts
+// open, a disclosure that writes to storage, a reset that takes the other feature's numbers with
+// it, a feature that offers its switch before it has what it needs. Each of them leaves a page
+// that works and reads correctly, which is why they are mutations rather than tests that cannot
+// fail — and the euro column's two are the price that had no switch at all until this round.
 //
 // So each mutation names the check that must notice it, and this file fails if none does.
 const fs = require('node:fs');
@@ -21,8 +44,12 @@ const TARGETS = {
   setsPage: path.join(ROOT, 'src/card-page/sets.js'),
   core: path.join(ROOT, 'src/card-page/core.js'),
   prints: path.join(ROOT, 'src/card-page/prints.js'),
+  prices: path.join(ROOT, 'src/card-page/prices.js'),
   options: path.join(ROOT, 'src/ui/options.js'),
   model: path.join(ROOT, 'src/core/set-filters.js'),
+  theme: path.join(ROOT, 'src/core/theme.js'),
+  optionsCss: path.join(ROOT, 'src/ui/options.css'),
+  optionsHtml: path.join(ROOT, 'src/ui/options.html'),
   deck: path.join(ROOT, 'src/card-page/deck-lists.js'),
   worker: path.join(ROOT, 'src/background/worker.js')
 };
@@ -39,53 +66,20 @@ const MUTATIONS = [
       'width:100%!important;height:auto!important}',
     expect: 'icon-sized rather than filling its cell'
   },
-  {
-    // The rule that decides whether the whole set filter runs at all. Written as "some
-    // family is shown is false" it is true only when every family is off, so narrowing the
-    // category to a single family stood the entire feature down: untick 4BB, leave the other
-    // two on, and not one row moved. This shipped for one run before a render check asked
-    // about a single family, which is the second time this line has been the wrong way round.
-    name: 'the set filter stands down when one border family is left on',
+{
+    // Whether anything is hidden at all, which is what decides whether the set index is fetched
+    // and whether the feature boots. With one rule there is one line here, and reading it the
+    // wrong way round stands the whole feature down: the page looks filtered and nothing moves.
+    name: 'the boot decision reads the rule as still on',
     file: 'core',
-    run: 'render-card',
-    find: '.some(show => show !== true);',
-    replace: '.some(show => show === false && Object.values(settings.showForeignBlackBorder).every(() => false));',
-    expect: 'leaving one family on keeps every one of its sets'
+    run: 'test',
+    find: 'return filteringOn(\'prints\') || filteringOn(\'sets\') || filteringOn(\'search\');',
+    replace: 'return !(filteringOn(\'prints\') || filteringOn(\'sets\') || filteringOn(\'search\'));',
+    expect: 'the one digital set the index places on Arena is marked'
   },
   {
-    // And the same question asked of the set index rather than of the boot decision, which
-    // is a second copy of the same gate in a different file.
-    name: 'the sets index stops narrowing the border category',
-    file: 'sets',
-    run: 'render-card',
-    find: 'const borderOff = Object.entries(settings.showForeignBlackBorder || {})\n        .filter(([, show]) => show !== true)',
-    replace: 'const borderOff = Object.entries(settings.showForeignBlackBorder || {})\n        .filter(([, show]) => show === false && Object.keys(settings.showForeignBlackBorder).every(k => false))',
-    expect: 'leaving one family on keeps every one of its sets'
-  },
-  {
-    // The analogue comparison, which decides whether a translated printing is redundant.
-    // Compare only the frame and the art is the rule working for most cards, so a check that
-    // only used same-art-same-frame examples would not notice; this one uses a printing whose
-    // only difference is the border colour.
-    name: 'the English-analogue comparison forgets the border colour',
-    file: 'model',
-    run: 'test-model',
-    find: "      printing?.borderColor || '',",
-    replace: "      '',",
-    expect: 'a different border colour is a different picture'
-  },
-  {
-    // And the full-art treatment, which is the same kind of difference one field further down.
-    name: 'the English-analogue comparison forgets the full-art treatment',
-    file: 'model',
-    run: 'test-model',
-    find: "      printing?.fullArt === true ? 'full' : ''",
-    replace: "      ''",
-    expect: 'a full-art treatment is a different picture from the plain version'
-  },
-  {
-    // The per-printing platform. Answering it from the set is what made turning Arena off
-    // lose the paper printing of a set that was on both, and this is the line that moved.
+    // The per-printing platform. Answering it from the set is what made turning Arena off lose
+    // the paper printing of a set that was on both, and this is the line that moved.
     name: 'a printing is placed by its set rather than by itself',
     file: 'model',
     run: 'test-model',
@@ -101,160 +95,464 @@ const MUTATIONS = [
     replace: 'if (sidebar) return sidebar;\n    if (shown(sidebar)) return sidebar;',
     expect: 'not the unreachable one inside the hidden sidebar'
   },
-  {
-    // A name pattern that stops matching. Nothing in the extension notices: no sub-list
-    // comes back, every row stays, and the feature reads as a switch that does nothing —
-    // which is how the drifted copy in the tools went unnoticed for three releases. What
-    // catches it is the completeness check: nine sets on Scryfall say Portal or Secret Lair
-    // and a pattern that matches none of them is a rule with a hole, which nothing about the
-    // sets it does match would ever show.
-    name: 'the Secret Lair name pattern stops matching anything',
-    file: 'worker',
-    run: 'set-rules',
-    find: "'secret-lair': /^Secret Lair/i",
-    replace: "'secret-lair': /^Secret Lairs and Things/i",
-    expect: 'every set Scryfall names Portal or Secret Lair is matched'
-  },
-  {
-    // And the same in the other direction: a pattern that matches too much. Widened to
-    // /^Fourth Edition/, the rule also claims `4ed` — an ordinary English set with hundreds
-    // of English printings — and the sweep contradicts it against the API rather than
-    // against a copy of itself.
-    name: 'the black border pattern is widened to an ordinary English set',
-    file: 'worker',
-    run: 'set-rules',
-    find: "'4bb': /^Fourth Edition Foreign Black Border/i",
-    replace: "'4bb': /^Fourth Edition/i",
-    expect: '4bb/4ed'
-  },
-  {
-    // The measured list is dropped from the answer the worker gives. The rule then reads
-    // `undefined`, hides nothing, and looks switched on — which is the failure this whole
+{
+    // The worker's answer stops naming the digital sets. The rule that reads it then sees an
+    // empty list, removes nothing, and looks switched on — which is the failure this whole
     // shape of bug has been about, and the reason the cache guard in `loadSetCategories`
-    // names every list rather than the ones that existed when it was written.
-    name: 'the worker stops answering with the foreign-only list',
+    // names the list rather than assuming it.
+    name: 'the worker stops answering with the digital sets',
     file: 'worker',
     run: 'test-background',
-    find: "categories.foreignOnly = bundledForeignOnly.filter(code => served.has(code));",
-    replace: "categories.foreignOnly = [];",
-    expect: 'set categories are classified correctly'
+    find: 'if (set.digital === true) categories.digital.push(String(set.code).toLowerCase());',
+    replace: 'if (set.digital === true) { /* Scryfall says digital; nothing is recorded */ }',
+    expect: 'the worker answers with the digital sets and nothing else'
   },
   {
-    // And the same list not reaching the page that acts on it, which is where the drifted
-    // copy in this repository's own tools hid for three releases: the fixture had no
-    // `foreignOnly` at all, every sub-list came back empty, and both rules hid nothing while
-    // the render check reported the feature as covered.
-    name: 'the card page stops asking for the foreign-only list',
-    file: 'setsPage',
-    run: 'test',
-    find: "...(settings.showNoEnglishSets ? [] : categories.foreignOnly || [])",
-    replace: "...([])",
-    expect: 'foreign-only'
-  },
-  {
-    // The worker stops carrying the treatment fields the analogue rule compares. The rows
-    // still arrive and the table still draws them, so the only symptom is that the rule stops
-    // removing anything and the mode reads as chosen. A print list with no `art` in it is
-    // exactly what "cannot compare, therefore keep" says, so this is the failure that the
-    // comparison's own safety net hides.
-    name: 'the worker stops carrying the treatment fields',
+    // The five pages of `is:oversized` the worker used to walk on every rebuild of the day.
+    // Nothing reads the list it produces, so a walk creeping back in costs a reader a thousand
+    // requests a day and buys an answer nobody asked for — and the fixture routes the request
+    // so that it shows up as pages in a log the test asserts is empty.
+    name: 'the worker walks the oversized printings again',
     file: 'worker',
     run: 'test-background',
-    find: 'art: cardArt(card),',
-    replace: 'art: [],',
-    expect: 'scryfall print fields are renamed for the content script, art and treatment included'
+    find: 'const result = await scryfallJSON(\'https://api.scryfall.com/sets\',',
+    replace: 'await oversizedSetCodes();\n      const result = await scryfallJSON(\'https://api.scryfall.com/sets\',',
+    expect: 'the worker answers with the digital sets and nothing else'
   },
   {
-    // The artwork of a multi-faced card, which lives in the worker rather than in the model:
-    // taking the card's own `illustration_id` reads as null for a double-faced card, because
-    // Scryfall leaves it off and puts the illustrations on the faces. Every DFC's art then
-    // compares as empty and the rule quietly does nothing for the cards that needed it most.
-    name: 'the artwork of a multi-faced card is read off the wrong place',
+    // The three treatment fields the analogue comparison needed, which nothing reads now. A
+    // build that puts one back would be answering a question the settings page does not offer,
+    // and the payload would grow on every card page for it.
+    name: 'the worker starts sending a treatment field again',
     file: 'worker',
     run: 'test-background',
-    find: '.map(face => face.illustration_id || null)',
-    replace: '.map(face => card.card_faces[0].illustration_id || null)',
-    expect: 'a double-faced printing carries one illustration per face'
+    find: 'games: Array.isArray(card.games) ? card.games.slice().sort() : []',
+    replace: 'games: Array.isArray(card.games) ? card.games.slice().sort() : [],\n' +
+      '            frame: card.frame ?? null',
+    expect: 'scryfall print fields are renamed for the content script'
   },
   {
-    // And the areas list. One area off is the ordinary state of a reader who wants the sets
-    // index untouched, and a gate that ignores it hides rows on a surface they excluded.
-    name: 'the areas list is ignored and every surface is filtered',
+    // The places are per platform, and the mutation that matters is one platform's place being
+    // read for all three. With one shared list the whole group was a single answer and this was
+    // impossible to get wrong; with nine switches, reading the wrong platform's three is the
+    // obvious mistake and it is silent — the page is drawn and the wrong sets are gone.
+    name: 'every platform reads one platform\'s places',
     file: 'core',
     run: 'test',
-    find: 'const filteringOn = area => settings.filterAreas?.[area] === true;',
-    replace: 'const filteringOn = area => true;',
-    expect: 'leaving the sets index off leaves it alone'
+    find: 'hiding.platforms[name]?.show === true && hiding.platforms[name]?.areas?.[area] === true);',
+    replace: 'hiding.platforms[name]?.show === true &&\n' +
+      '    hiding.platforms[\'paper\']?.areas?.[area] === true);',
+    expect: 'while the prints table has lost the Arena printing, because the reader took Arena out of it'
   },
   {
-    // The same answer asked of the grouped table rather than of the boot decision. This is
-    // the one that held for the wrong reason for a release: the language rule was gated on the
-    // area and the four category rules were not, and the only thing keeping them quiet was
-    // that nothing else wanted the set index. Turning a platform off wants it, so four rules
-    // reached a surface the reader had excluded, and the same settings gave two different
-    // answers depending on an unrelated switch.
-    name: 'the grouped table ignores the prints area for its category rules',
-    file: 'prints',
+    // And the other way: one platform's *switch* read for all three, which is what a reader
+    // would see if "keep Arena everywhere" quietly became "keep Arena on the table only".
+    name: 'one platform\'s switch is read for all three',
+    file: 'core',
     run: 'test',
-    find: 'const excluded = printsWantedForTable ? new Set([',
-    // Not `new Set([` without the guard: that leaves `]) : new Set();` behind and the file
-    // stops parsing, which fails the run without testing anything. `syntaxOnly` below is what
-    // stops such a mutation being counted as a caught one.
-    replace: 'const excluded = true ? new Set([',
-    expect: 'with the prints area off it still removes nothing once the platform filter'
+    find: 'const platformsOn = area => PLATFORM_NAMES.filter(name =>\n' +
+      '    hiding.platforms[name]?.show === true && hiding.platforms[name]?.areas?.[area] === true);',
+    replace: 'const platformsOn = area => PLATFORM_NAMES.filter(name =>\n' +
+      '    hiding.platforms[name]?.show === true && hiding.platforms.arena?.areas?.[area] === true);',
+    expect: 'while the prints table has lost the Arena printing, because the reader took Arena out of it'
   },
   {
-    // The area gate on the *language* rule, which is the sibling of the one above and was
-    // already correct. A gate can be right for the wrong reason, so it is mutated rather than
-    // assumed covered by the check above.
+    // The one shared list of places becoming three is the migration this shape needed, and the
+    // mistake it can make is losing the reader's answer: writing it to one platform instead of
+    // all three would quietly reset the other two on their next page load.
+    name: 'the shared list of places reaches one platform only',
+    file: 'model',
+    run: 'test-model',
+    find: '        areas: { ...areas }\n      };',
+    // Not `if (platform !== 'paper') return;`: that leaves the other two platforms with no
+    // `areas` at all, and the suite then dies with a TypeError instead of an assertion. A
+    // mutation has to break a claim, not the run.
+    replace: '        areas: platform === \'paper\' ? { ...areas } :\n' +
+      '          { ...defaults().platforms[platform].areas }\n      };',
+    expect: 'the one shared list became every platform, unchanged'
+  },
+  {
+    // The price inversion, in the one place it happens. Reading the current shape's prices as
+    // if they were the old shape's would hide every price a reader had switched on, on their
+    // first page load after an update — and the four boxes on the settings page, which read
+    // the stored value, would all be unticked while every price was still on the page.
+    name: 'the model inverts the prices of a value already in the current shape',
+    file: 'model',
+    run: 'test-model',
+    find: '    if (typeof input.showCaster === \'boolean\') return normalise(input);',
+    replace: '    if (typeof input.showCaster === \'boolean\') return normalise({ ...input, prices: invertPrices(input.prices) });',
+    expect: 'a value already in the current shape keeps its prices exactly as stored'
+  },
+  {
+    // And the other direction: the current shape read without inverting, which is what a build
+    // that forgot the change entirely looks like. A reader who had prices hidden would find
+    // them all shown instead.
+    name: 'the older shapes keep their prices un-inverted',
+    file: 'model',
+    run: 'test-model',
+    // The 1.4.x branch specifically, named by the `const out =` in front of it: both older
+    // branches invert, and `String.replace` rewrites only the first match, so a mutation
+    // written against the bare line would land on the other one and prove nothing about this.
+    find: '    const out = normalise({\n      platforms: input.platforms,\n' +
+      '      prices: invertPrices(input.prices),',
+    replace: '    const out = normalise({\n      platforms: input.platforms,\n' +
+      '      prices: input.prices,',
+    expect: 'the price switches outside the group, each inverted from how that shape stored it'
+  },
+  {
+    // The Caster marker, whose switch stopped reading "hide". The key was renamed rather than
+    // the boolean flipped in place, because a stored boolean cannot carry two senses and a
+    // reader who had the marker hidden would find it shown on the first page load after an
+    // update. This is the line that does the renaming.
+    name: 'the 1.6.x branch keeps the Caster marker the old way round',
+    file: 'model',
+    run: 'test-model',
+    find: '        showCaster: typeof input.caster === \'boolean\' ? !input.caster : undefined',
+    replace: '        showCaster: typeof input.caster === \'boolean\' ? input.caster : undefined',
+    expect: 'a stored "hide the marker" from 1.6.x stays hidden, so relabelling it changes nothing'
+  },
+  {
+    // And `normalise` reading the old key, which is the other half: the branches above write
+    // `showCaster`, and a `normalise` that looked for `caster` would discard it and land every
+    // reader on the default — the marker shown, whatever they had chosen.
     //
-    // The case it is checked against has the language rule as the *only* rule acting. Every
-    // other category switch is on, so with the gate gone nothing else would hide the Japanese
-    // printing and the fixture would pass — measuring the fixture rather than the gate, which
-    // is what the first version of this mutation did.
-    name: 'the language rule is not gated on the prints area',
-    file: 'prints',
-    run: 'test',
-    find: "const languageMode = printsWantedForTable ? settings.nonEnglishMode : 'all';",
-    replace: "const languageMode = settings.nonEnglishMode;",
-    expect: 'the language rule at None takes nothing out while the prints area is off'
+    // Named by the assertion that fires, not by the one about the current shape. A suite stops
+    // at its first failure, so an `expect` naming a later assertion reports "not caught" for a
+    // mutation that was caught three assertions earlier.
+    name: 'the current shape is read through the key it no longer stores',
+    file: 'model',
+    run: 'test-model',
+    find: '    if (typeof input.showCaster === \'boolean\') out.showCaster = input.showCaster;',
+    replace: '    if (typeof input.caster === \'boolean\') out.showCaster = input.caster;',
+    expect: 'and the two others, with the Caster marker inverted from hide to show'
   },
   {
-    // The fallback that put three platforms back when the kept list came back empty. A reader
-    // who unticks all three was shown a settings page with three unticked switches and a
-    // Scryfall page with everything on it, and only the settings page was ever checked.
-    name: 'an empty kept-platform list is read as three platforms',
-    file: 'core',
-    run: 'test',
-    find: 'const platformFilterOn = chosenPlatforms.size < PLATFORM_NAMES.length;',
-    replace: 'if (!chosenPlatforms.size) for (const n of PLATFORM_NAMES) chosenPlatforms.add(n);\n' +
-      '  const platformFilterOn = chosenPlatforms.size < PLATFORM_NAMES.length;',
-    expect: 'with every platform switched off every set on the index is hidden'
+    // The polarity on the card page. The model stores "show" and the class is its opposite, so
+    // reading the key the other way round hides the marker for every reader who left the box
+    // ticked — and the box is ticked by default, so that is everyone.
+    name: 'the Caster class is toggled from the marker key without the inversion',
+    file: 'theme',
+    run: 'test-theme',
+    find: 'document.documentElement.classList.toggle(\'stk-hide-caster\',\n' +
+      '    !(changes.setFilters.newValue?.showCaster !== false));',
+    replace: 'document.documentElement.classList.toggle(\'stk-hide-caster\',\n' +
+      '    changes.setFilters.newValue?.showCaster !== false);',
+    expect: 'storage change restores caster indicator'
   },
   {
-    // The list of Foreign Black Border families, hidden whenever the category switch was on.
-    // A reader who had chosen "everything except FBB" was shown a category reading as simply
-    // on, with no way to see that one of its three families was hidden: the setting applied
-    // correctly and was invisible, which is the one state a reader cannot act on.
-    name: 'a narrowed border category hides the list that shows the narrowing',
+    // A platform switched off, and the page tidying up after itself: writing the three places
+    // as they are drawn rather than as they are stored. The stored value would then say the
+    // places were off, and the platform would come back empty — the one thing "turning a
+    // platform off keeps its settings" must not mean, and a mutation that is invisible on the
+    // settings page because that page is showing the tidied value.
+    name: 'a platform that is off writes its places into storage',
     file: 'options',
     run: 'test-options',
-    find: 'borderList.hidden = borderFamilies.every(key => filters.paper.foreignBlackBorder[key] !== false);',
-    replace: 'borderList.hidden = borderSwitch.checked || borderFamilies.every(' +
-      'key => filters.paper.foreignBlackBorder[key] !== false);',
-    expect: 'and the list under it is open, so the one hidden family is visible'
+    find: '      box.checked = on && filters.platforms[name].areas[area] !== false;\n' +
+      '      box.disabled = !on;',
+    replace: '      box.checked = filters.platforms[name].areas[area] !== false;\n' +
+      '      filters.platforms[name].areas[area] = box.checked;\n' +
+      '      box.disabled = !on;',
+    expect: 'and leaves its three places exactly as they were, while it is off'
   },
   {
-    // The print list as the answer to "is this row translated". Scryfall writes the language
-    // into most links and not into six of a thousand — sld/ph, acr/grc, pinv/la — and those
-    // rows stayed on the page with the rule switched on. Measured on 1762 printings.
-    name: 'a row is called translated only by the shape of its link',
-    file: 'sets',
+    // And the boxes staying clickable while the platform is off. The reader could then answer a
+    // question about a platform that is not in force, and the answer would be stored as though
+    // it applied — which is the same silent loss with a different trigger.
+    name: 'the places of a platform that is off are still editable',
+    file: 'options',
+    run: 'test-options',
+    find: '      box.checked = on && filters.platforms[name].areas[area] !== false;\n' +
+      '      box.disabled = !on;',
+    replace: '      box.checked = on && filters.platforms[name].areas[area] !== false;\n' +
+      '      box.disabled = false;',
+    expect: 'its three place boxes are drawn empty and disabled'
+  },
+  {
+    // A removed rule still being read is the failure the removal was supposed to prevent, and it
+    // is silent in the worst way: the page is drawn, the storage still holds the field, and
+    // nothing says the setting stopped working.
+    name: 'the model reads a removed rule again',
+    file: 'model',
+    run: 'test-model',
+    find: 'if (typeof stored.show === \'boolean\') out.platforms[platform].show = stored.show;',
+    replace: 'if (typeof stored.show === \'boolean\') out.platforms[platform].show = stored.show;\n' +
+      '      if (stored.ancillary === false) out.platforms[platform].areas.prints = false;',
+    expect: 'the removed rules are not read by normalise'
+  },
+  {
+    // The narrow-window rules written above the rules they override. This is the defect the
+    // rework actually shipped and the tests actually passed with: a media query adds no
+    // specificity, so the block lost to the base rule below it, the file still contained it, and
+    // the heading stayed clipped mid-word on a phone. The mutation puts a second copy of the
+    // block in front of the base rule, which is what writing it in the wrong place looks like.
+    name: 'the narrow-window table rules are written above the rules they override',
+    file: 'optionsCss',
+    run: 'test-options',
+    find: '.platform-table{border-collapse:collapse}',
+    replace: '@media (max-width:720px){\n' +
+      '  .platform-table thead th{padding:0 4px 6px;font-size:11px}\n' +
+      '}\n.platform-table{border-collapse:collapse}',
+    expect: 'the narrow-window rules sit after the table rules they override'
+  },
+  {
+    // The places of a platform that is switched off, losing the border that makes them readable.
+    // Without it they fall back to the page-wide rule that dims a disabled switch to an opacity,
+    // which is the state the brief says they must not be in — and the contrast against an
+    // unticked box is the whole message, so losing the border loses that too.
+    name: 'the disabled places of a switched-off platform lose their border',
+    file: 'optionsCss',
+    run: 'test-options',
+    find: '  background-color:#232229;border-color:#3b3642;opacity:1;cursor:default;',
+    replace: '  background-color:#232229;opacity:1;cursor:default;',
+    expect: 'and the disabled places keep a border and a recessed fill instead of an opacity'
+  },
+  {
+    // The switch's knob coming back on an unticked box. The page draws it as a radial gradient in
+    // `background-image`, and a rule that only recolours the box leaves the gradient standing —
+    // which is a grey circle in the middle of a square, the exact thing the brief asks about.
+    name: 'the switch knob is left in the unticked box',
+    file: 'optionsCss',
+    run: 'test-options',
+    find: '  background-color:transparent;background-image:none;background-repeat:no-repeat;',
+    replace: '  background-color:transparent;background-repeat:no-repeat;',
+    expect: 'and the switch knob\'s gradient cleared in the base rule *and* in :checked'
+  },
+  {
+    // And the grid going back to one column, which is the whole of the layout this round is
+    // about: the card is 880px wide and the settings are four short lines, so one column leaves
+    // two thirds of it empty.
+    name: 'the two columns collapse to one at every width',
+    file: 'optionsCss',
+    run: 'test-options',
+    find: '.visibility-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:32px;align-items:start}',
+    replace: '.visibility-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:32px;align-items:start}',
+    expect: 'the card is two columns, the table\'s a little wider than the prices\', 32px apart'
+  },
+  {
+    // The shop that owns a column, gone from the model the settings page draws its boxes from.
+    // Nothing else would notice: the page would draw four price boxes and look exactly as it did
+    // before, and the euro column would have no switch again.
+    name: 'the Cardmarket switch is gone from the model again',
+    file: 'model',
+    run: 'test-options',
+    find: '    cardhoarder: { label: \'Cardhoarder\', group: \'links\' },\n' +
+      '    cardmarket: { label: \'Cardmarket\', group: \'links\' }',
+    replace: '    cardhoarder: { label: \'Cardhoarder\', group: \'links\' }',
+    expect: 'and each holds the kinds the model put in it'
+  },
+  {
+    // And the migration that walks the model's price keys instead of naming the four. Cardmarket
+    // *is* the euro column, so the old "only Cardmarket" switch would hide the very shop it is
+    // named after — a reader who had it on would lose the euro column on their first page load
+    // after an update, silently.
+    name: 'the only-Cardmarket migration hides the euro column it is named after',
+    file: 'model',
+    run: 'test-model',
+    find: '      for (const price of [\'usd\', \'tix\', \'tcg\', \'cardhoarder\']) out.prices[price] = false;',
+    replace: '      for (const price of Object.keys(out.prices)) out.prices[price] = false;',
+    expect: 'onlyCardmarket becomes the four other price kinds off together, and leaves Cardmarket'
+  },
+  {
+    // A disclosure that starts open. The section would still work and every setting in it would
+    // still be right, which is why this is worth a mutation: it makes the section a form to fill
+    // in again, and that is the thing this shape exists to stop being.
+    name: 'a panel starts open instead of collapsed',
+    file: 'optionsHtml',
+    run: 'test-options',
+    find: '<div class="feature-panel" id="edhrecUsagePanel" hidden>',
+    replace: '<div class="feature-panel" id="edhrecUsagePanel">',
+    expect: 'every panel starts hidden, whatever the feature it belongs to is set to'
+  },
+  {
+    // And a disclosure that writes to storage when it is opened, which would make looking at a
+    // panel a decision. The toggle handler is the only place that could.
+    name: 'opening a panel writes to storage',
+    file: 'options',
+    run: 'test-options',
+    find: '      const open = panel.hidden;\n' +
+      '      panel.hidden = !open;\n' +
+      '      button.setAttribute(\'aria-expanded\', String(open));',
+    replace: '      const open = panel.hidden;\n' +
+      '      panel.hidden = !open;\n' +
+      '      chrome.storage.local.set({ finishBadges: true });\n' +
+      '      button.setAttribute(\'aria-expanded\', String(open));',
+    expect: 'and none of that touched a setting, which is what makes the panel optional'
+  },
+  {
+    // A reset that takes the whole section rather than its own feature's numbers. The two resets
+    // are the only controls here that write more than one key, so they are the only place this
+    // can go wrong — and the numbers it would take with it are the other feature's.
+    name: 'the popularity reset reaches into the Salt settings',
+    file: 'options',
+    run: 'test-options',
+    find: '  resetFeature(\'resetUsage\', [\'edhrecUsageDisplay\', \'usageColorMetric\',',
+    replace: '  resetFeature(\'resetUsage\', [\'saltMediumThreshold\', \'edhrecUsageDisplay\', \'usageColorMetric\',',
+    expect: 'while the Salt thresholds are exactly where the reader left them'
+  },
+  {
+    // CardTrader offering its switch before it has the token that makes it work. The switch would
+    // save, the card page would ask for prices, and the worker would refuse — a feature that
+    // looks on and does nothing, which is the state the requirement names.
+    name: 'CardTrader offers its switch without a token',
+    file: 'options',
+    run: 'test-options',
+    find: '    cardtraderMain.classList.toggle(\'is-unconnected\', !stored);',
+    replace: '    cardtraderMain.classList.toggle(\'is-unconnected\', false);',
+    expect: 'and the switch is hidden, not merely disabled'
+  },
+  {
+    // A feature row's label restating the layout the page's own label rule already gives it. The
+    // page rule is more specific, so the number here is one the browser never uses — a rule that
+    // reads as if it were doing something and is not, which is the class of mistake this file
+    // keeps finding.
+    name: 'the feature row restates a layout the page already gives it',
+    file: 'optionsCss',
+    run: 'test-options',
+    find: '.feature-main{flex:1 1 auto;min-width:0;margin:0;font-size:14px;color:#e9e5ee;cursor:pointer}',
+    replace: '.feature-main{display:flex;align-items:center;gap:10px;flex:1 1 auto;min-width:0;margin:0;font-size:14px;color:#e9e5ee;cursor:pointer}',
+    expect: 'and does not restate the flex, the centring or the gap'
+  },
+  {
+    // The bug a reader reported, restored: the shop map read by its key instead of by its value.
+    // `tcgplayer` is the hostname and `tcg` is the model's key, so the TCGplayer links were never
+    // hidden — and Cardhoarder's worked only because its hostname and its key are the same word,
+    // which is why one case passing is not the group passing.
+    name: 'the shop map is read by its key instead of by its model key',
+    file: 'prices',
     run: 'test',
-    find: 'const foreignPrinting = translatedByList ||',
-    replace: 'const foreignPrinting = false ||',
-    expect: 'a Filipino printing whose link names no language is hidden under None'
-  }
+    find: '    const hiddenShops = Object.keys(shops).filter(shop => setFilters.prices[shops[shop]] === false);',
+    replace: '    const hiddenShops = Object.keys(shops).filter(shop => setFilters.prices[shop] === false);',
+    expect: 'turning TCGplayer off hides the TCGplayer link, which it did not do before'
+  },
+  {
+    // And the advanced search filter dropping the euro option for the wrong reason — or not at
+    // all. The option is Scryfall's `eur` and the source is one of four words, so the two are
+    // compared as words; a filter that treats them as the same thing leaves the euro search
+    // standing when the reader has said they want no euro price.
+    name: 'the advanced price filter ignores the EUR source',
+    file: 'prices',
+    run: 'test',
+    find: '        if (option.value === \'eur\') {\n' +
+      '          if (noEuro) option.remove();\n' +
+      '          else option.textContent = \'Cardmarket (€)\';\n' +
+      '          continue;\n' +
+      '        }',
+    replace: '        if (option.value === \'eur\') {\n' +
+      '          option.textContent = \'Cardmarket (€)\';\n' +
+      '          continue;\n' +
+      '        }',
+    expect: 'and the euro search goes with the EUR source being "show nothing"'
+  },
+  {
+    // The euro switch's old key, dropped rather than read. A reader who hid the euro column in
+    // the build that stored `eur` would find it back on their first page load, silently.
+    name: 'the euro switch under its old key is dropped',
+    file: 'model',
+    run: 'test-model',
+    find: '    if (typeof input.prices?.cardmarket !== \'boolean\' && typeof input.prices?.eur === \'boolean\') {\n' +
+      '      out.prices.cardmarket = input.prices.eur;\n' +
+      '    }',
+    replace: '    void input.prices;',
+    expect: 'the euro switch under its old key is read as the Cardmarket switch'
+  },
+  {
+    // The general switch over the store block, doing nothing. A reader who hid the whole block
+    // would keep the heading, the disclaimer and the three links — the switch would save and
+    // change nothing on the page, which is the shape of bug this file keeps finding.
+    name: 'the whole store block is never hidden',
+    file: 'prices',
+    run: 'test',
+    find: '    if (setFilters.showStores === false) stores?.classList.add(\'stk-price-hidden\');',
+    replace: '    void setFilters.showStores;',
+    expect: 'and hiding it hides the whole block, heading and all'
+  },
+  {
+    // And the same switch never booting the feature that would hide it. `priceFilter` is gated on
+    // "something is hidden", and the block is not a price kind, so it cannot be found by walking
+    // them — a reader who hid the block and nothing else gets a switch that saves and does nothing.
+    name: 'the store block switch does not boot the price filter',
+    file: 'core',
+    run: 'test',
+    find: '["priceFilter", () => settings.onlyCardmarket || settings.showStores === false, false],',
+    replace: '["priceFilter", () => settings.onlyCardmarket, false],',
+    expect: 'and hiding it hides the whole block, heading and all'
+  },
+  {
+    // And the model forgetting the key, which is where the settings page reads its boxes from.
+    // The switch would be drawn, save, and be read back as the default on the next load.
+    name: 'the store block switch is not read back',
+    file: 'model',
+    run: 'test-model',
+    find: '    if (typeof input.showStores === \'boolean\') out.showStores = input.showStores;',
+    replace: '    void input.showStores;',
+    expect: 'the current shape is read back exactly as it was stored'
+  },
+  {
+    // The block switch leaving the shop boxes in reach. A reader could then answer about a shop
+    // whose link is inside a hidden block, and the answer would be stored as though it applied —
+    // the same silent loss as the platform case, one section over.
+    name: 'the shop boxes stay in reach while the block is hidden',
+    file: 'options',
+    run: 'test-options',
+    find: '      box.disabled = !on;\n' +
+      '      box.checked = on && filters.prices[kind] !== false;',
+    replace: '      box.disabled = false;\n' +
+      '      box.checked = on && filters.prices[kind] !== false;',
+    expect: 'and the three shop boxes are drawn empty and disabled while the block is off'
+  },
+  {
+    // And the block switch writing the shops off as it goes, which loses the reader's choices:
+    // turning the block back on would bring back three unticked shops rather than the three they
+    // had chosen.
+    name: 'the block switch writes the shops off instead of drawing them off',
+    file: 'options',
+    run: 'test-options',
+    find: '      box.disabled = !on;\n' +
+      '      box.checked = on && filters.prices[kind] !== false;',
+    replace: '      box.disabled = !on;\n' +
+      '      box.checked = on && filters.prices[kind] !== false;\n' +
+      '      filters.prices[kind] = box.checked;',
+    expect: 'and it turns no shop off in storage'
+  },
+  {
+    // And CardTrader, which is the fourth link in that block: left in reach while the block is
+    // hidden, a reader could switch on a feature whose link has nowhere to be shown.
+    name: 'CardTrader stays in reach while the store block is hidden',
+    file: 'options',
+    run: 'test-options',
+    find: '    cardtraderBox.disabled = !connected || !block;',
+    replace: '    cardtraderBox.disabled = !connected;',
+    expect: 'and takes it out of reach, because its link has nowhere to go'
+  },
+  {
+    // The EUR source's "show nothing" doing nothing. The column would stay on the page with a
+    // dropdown that says it is gone, and the reader who picked it has no other switch for it —
+    // the shop boxes answer a different question.
+    name: 'the EUR source "show nothing" leaves the euro column on the page',
+    file: 'prices',
+    run: 'test',
+    find: '      if (sources === \'none\') {\n' +
+      '        heading.classList.add(\'stk-price-hidden\');\n' +
+      '        for (const cell of nativeEurCells) cell?.classList.add(\'stk-price-hidden\');\n' +
+      '      }',
+    replace: '      if (sources === \'none\' && false) {\n' +
+      '        heading.classList.add(\'stk-price-hidden\');\n' +
+      '        for (const cell of nativeEurCells) cell?.classList.add(\'stk-price-hidden\');\n' +
+      '      }',
+    expect: 'and "show nothing" as the EUR source hides the euro column'
+  },
+  {
+    // And the disabled contrast going back to the grey nobody noticed. This was reported from
+    // use — "the difference in brightness is too subtle" — and the fix is a colour, which is
+    // exactly the kind of thing that drifts back without a check that names the number.
+    name: 'the disabled boxes go back to a grey nobody notices',
+    file: 'optionsCss',
+    run: 'test-options',
+    find: '  background-color:#232229;border-color:#3b3642;opacity:1;cursor:default;',
+    replace: '  background-color:#292830;border-color:#3b3642;opacity:1;cursor:default;',
+    expect: 'and a disabled one is dark enough to be told apart from it at a glance'
+  },
 ];
 
 const RUNS = {
@@ -264,8 +562,8 @@ const RUNS = {
   'test-background': () => [path.join(ROOT, 'tests/test-background.cjs')],
   'test-model': () => [path.join(ROOT, 'tests/test-set-filters.cjs')],
   'test-options': () => [path.join(ROOT, 'tests/test-options.cjs')],
-  'set-rules': () => [path.join(ROOT, 'tools/check-set-name-rules.cjs')]
-};
+  'test-theme': () => [path.join(ROOT, 'tests/test-theme.cjs')],
+  };
 
 function restore(key) {
   fs.writeFileSync(TARGETS[key], before[key], 'utf8');

@@ -126,9 +126,12 @@ const ORACLE_BULK = Array.from({ length: 110 }, (_, i) => ({ slug: `tag-${i}`, o
 const ART_BULK = Array.from({ length: 110 }, (_, i) => ({ slug: `art-${i}`, illustration_ids: [`99999999-9999-4999-8999-${String(i).padStart(12, '0')}`] }));
 
 const fetchLog = [];
+// Every page of the oversized walk this run asked for. It was five a day, and it is now
+// never: the only list this worker builds is the digital flag, so an empty log is the shape
+// of the answer rather than a gap in the fixture.
 const oversizedPages = [];
 let registryBehavior = 'ok';
-let oversizedBehavior = 'ok';
+let setsBehavior = 'ok';
 
 // The bundled tag snapshot is read as text and parsed, the way upstream ships
 // it: a global assignment whose value is JSON.
@@ -155,14 +158,16 @@ async function fetchMock(url, init) {
   }
   if (target === 'https://data.scryfall.io/bulk/oracle-tags.json') return jsonResponse(ORACLE_BULK);
   if (target === 'https://data.scryfall.io/bulk/art-tags.json') return jsonResponse(ART_BULK);
-  if (target === 'https://api.scryfall.com/sets') return jsonResponse(setsResponse);
-  // The oversized walk. OPCA is the point of it: a Planechase plane set whose name has
-  // nothing in it to guess from, and WHO is a Commander release. Neither has "oversized"
-  // written anywhere, so neither could ever have been found by reading set names.
+  if (target === 'https://api.scryfall.com/sets') {
+    if (setsBehavior === 'fail') return { ok: false, status: 500, json: async () => ({}) };
+    return jsonResponse(setsResponse);
+  }
+  // The oversized walk. It is still routed so that asking for one is a visible failure rather
+  // than an unhandled fetch: the worker must not ask, and the test above asserts that it does
+  // not, so a walk creeping back in would show up as pages in that log rather than as a hang.
   if (target.startsWith('https://api.scryfall.com/cards/search?q=is%3Aoversized')) {
     const page = Number(new URL(target).searchParams.get('page'));
     oversizedPages.push(page);
-    if (oversizedBehavior === 'fail') return { ok: false, status: 500, json: async () => ({}) };
     if (page === 1) {
       return jsonResponse({ has_more: true, data: [
         { set: 'opca', name: 'Planechase Anthology Planes', oversized: true },
@@ -328,8 +333,8 @@ page.context.importScripts = (...files) => {
       ? file.slice(1)
       : path.posix.normalize(path.posix.join(workerDir, file));
     // The worker's own two directories, and nothing else. `assets/data/` is outside `src/`
-    // and has to be named: the platform and foreign-only snapshots are loaded this way and
-    // are the data the worker cannot answer without. This used to skip `assets/data/`
+    // and has to be named: the platform snapshot is loaded this way and is the data the
+    // worker cannot answer without. This used to skip `assets/data/`
     // outright — the tag bulk used to be imported here and stopped being — and in doing so
     // it silently emptied `bundledSetPlatforms` for every test in this file, so the platform
     // snapshot was never exercised by any of them and nothing said so.
@@ -763,82 +768,61 @@ async function edhrecThrottleTest() {
     assertEqual(fallback.data.card.map(item => item.name), ['aggro', 'combo'], 'fallback returns bundled card tags');
     assertEqual(fallback.data.art.map(item => item.name), ['sky'], 'fallback returns bundled art tags');
 
-    console.log('background.js: setCategories caching');
+console.log('background.js: setCategories caching');
     const categories = await send({ type: 'setCategories' });
-    // OPCA and WHO come from the printings and have nothing in their names to guess
-    // from; OCMD does have "Oversized" on it, and under the old name rule it was
-    // classified as oversized *instead of* memorabilia, because the two were one chain
-    // of else-if. A set can be both, and hiding it as oversized must not stop it from
-    // being hidden as non-tournament when that switch is on too.
-    assertEqual(categories.data, {
-      digital: ['mtgo', 'vma'], nonTournament: ['ocmd', 'token', 'cei'],
-      oversized: ['opca', 'who', 'ocmd'],
-      // Non-tournament is decided by `set_type` and nothing else, which is what the
-      // measurement supports: on 2026-10-03 the four types in the rule were the only four
-      // where `e:<set> format=commander` returns nothing. A set that merely sounds like
-      // memorabilia is not one, and the old code list would have caught `cei` under a
-      // `expansion` type that Scryfall does not give it.
-      //
-      // Per category, not one flat list: the settings page has a list under this rule
-      // and a list cannot narrow a single answer. `4bb` is under its own category and
-      // nowhere else, which is what makes unticking it on the settings page mean
-      // anything at all.
-      // The measured list of sets with printings and no English printing among them, shipped
-      // as a dated snapshot because there is no short list of candidates to look up. `4bb`
-      // is in it and this fixture's `/sets` serves `4bb`, so it comes through — which is the
-      // narrowing being tested: the file holds 34 codes and the answer holds the ones this
-      // index names.
-      foreignOnly: ['4bb'],
-      foreignBlackBorder: { '4bb': ['4bb'] },
-      nonEnglish: {}
-    }, 'set categories are classified correctly');
-    // And the narrowing, from the other side: a code in the snapshot that this index does
-    // not serve must not appear in the answer, or the filter would go on naming a set
-    // Scryfall has retired.
-    assert(!categories.data.foreignOnly.includes('wmkm'),
-      'a set the snapshot names but this index does not is not in the answer');
-    assert(!categories.data.nonTournament.includes('trc'),
-      'a set whose name reads like a product but whose type is commander is not junk');
-    assertEqual(oversizedPages, [1, 2], 'the oversized list is walked until Scryfall says there is no more');
+    // One list, and the assertion is on the whole object rather than one field, so a list
+    // coming back is a failure here rather than a field nobody reads.
+    //
+    // It used to answer with six: the digital flag, the non-tournament types, the oversized
+    // walk, two border categories, two non-English categories, and a dated snapshot of
+    // thirty-four codes narrowed against `/sets`. Five of the six belonged to settings that no
+    // longer exist, and one of them — the oversized walk — cost five pages of `is:oversized`
+    // every time the day turned over to produce an answer the reader could not ask for.
+    assertEqual(categories.data, { digital: ['mtgo', 'vma'] },
+      'the worker answers with the digital sets and nothing else');
+    assertEqual(oversizedPages, [],
+      'and it asks for no oversized printings at all, which is five pages it used to ask for');
     assertEqual(setsFetches(), 1, 'first setCategories call fetched /sets once');
     assert(mock.state.digitalSetIndex && mock.state.digitalSetIndex.expires > Date.now(),
       'set index persisted with a future expiry');
     const cachedCategories = await send({ type: 'setCategories' });
     assertEqual(cachedCategories.data, categories.data, 'second call answers from the stored index');
     assertEqual(setsFetches(), 1, 'second setCategories call performed no fetch');
-    assertEqual(oversizedPages, [1, 2], 'and did not walk the printings again');
     const digitalOnly = await send({ type: 'digitalSets' });
     assertEqual(digitalOnly.data, ['mtgo', 'vma'], 'digitalSets returns only the digital list');
     assertEqual(setsFetches(), 1, 'digitalSets also answers from cache');
 
-    // When the oversized walk fails there are two things it must not do.
-    //
-    // It must not carry on with an empty list. The index would look complete, hide
-    // nothing, and give no sign that the twenty-four sets it should have found were
-    // missing - which is the failure being fixed here, reproduced.
-    //
-    // And it must not throw away a good previous index in order to complain about a bad
-    // fetch. So with an index in hand the old one is served whole, and with none the
-    // request fails loudly.
-    console.log('background.js: an oversized walk that fails');
-    oversizedBehavior = 'fail';
+    // The five lists that are gone have to stay gone. A rule that nothing asks for is a rule
+    // that still runs, still costs a request and still has to be right, and a reader who had
+    // one of them on gets those sets back with the settings that removed it.
+    for (const gone of ['nonTournament', 'oversized', 'foreignOnly', 'foreignBlackBorder', 'nonEnglish']) {
+      assert(!(gone in categories.data),
+        `the worker answers with no ${gone}, because no setting reads it`);
+    }
+
+    // A failed `/sets` still fails loudly, and a previous index is still served whole rather
+    // than half-rebuilt. The oversized walk used to be the thing that could fail here; the
+    // set index itself can fail on its own account, and the two behaviours have to survive
+    // the walk's departure rather than being assumed along with it.
+    console.log('background.js: a set index that fails');
+    setsBehavior = 'fail';
     delete mock.state.digitalSetIndex;
-    const walkFailure = await send({ type: 'setCategories' });
-    assertEqual(walkFailure.ok, false,
-      'with no index to fall back on, a failed oversized walk fails the request');
-    assert(walkFailure.error, 'and says so, rather than answering with an empty list');
+    const indexFailure = await send({ type: 'setCategories' });
+    assertEqual(indexFailure.ok, false,
+      'with no index to fall back on, a failed set index fails the request');
+    assert(indexFailure.error, 'and says so, rather than answering with an empty list');
     assertEqual(mock.state.digitalSetIndex, undefined,
-      'and does not store an index with an empty oversized list in it');
+      'and does not store an index with an empty digital list in it');
 
     // Seeded with the categories themselves, not with the response envelope: send()
     // wraps what the worker returns, so `categories` is { ok, data }, and storing that
     // as the index would nest one envelope inside another and hand the fallback's
     // caller a response where it expected a list.
     mock.state.digitalSetIndex = { categories: categories.data, expires: Date.now() - 1 };
-    const walkFailureCached = await send({ type: 'setCategories' });
-    assertEqual(walkFailureCached.data, categories.data,
+    const indexFailureCached = await send({ type: 'setCategories' });
+    assertEqual(indexFailureCached.data, categories.data,
       'a previous index is served whole rather than half-rebuilt');
-    oversizedBehavior = 'ok';
+    setsBehavior = 'ok';
     delete mock.state.digitalSetIndex;
 
     console.log('background.js: setPlatforms message');
@@ -915,7 +899,7 @@ async function edhrecThrottleTest() {
     const tooMany = await send({ type: 'finishes', ids: Array.from({ length: 76 }, () => FIN_ID_1) });
     assertEqual(tooMany, { ok: false, error: 'Invalid printing IDs' }, 'more than 75 ids are rejected');
 
-    console.log('background.js: allPrints message');
+console.log('background.js: allPrints message');
     const badOracle = await send({ type: 'allPrints', oracleId: 'nope' });
     assertEqual(badOracle, { ok: false, error: 'Invalid Oracle ID' }, 'malformed oracle id is rejected');
     const allPrints = await send({ type: 'allPrints', oracleId: CARD_ID });
@@ -927,37 +911,23 @@ async function edhrecThrottleTest() {
       set: 'tst', setName: 'Test Set', number: '1', lang: 'en',
       digital: false, finishes: ['nonfoil'], prices: { eur: '1.00' },
       image: 'https://cards.scryfall.io/normal/front/a/aa/test.jpg',
-      games: ['arena', 'mtgo', 'paper'],
-      art: ['99999999-9999-4999-8999-999999999999'],
-      frame: '2015', frameEffects: [], borderColor: 'black', fullArt: false
-    }, 'scryfall print fields are renamed for the content script, art and treatment included');
+      games: ['arena', 'mtgo', 'paper']
+    }, 'scryfall print fields are renamed for the content script');
     assertEqual(allPrints.data.prints[1].image, null, 'a printing without art reports no image');
 
-    // The five fields the "only without an English analogue" rule compares, and the two
-    // things they have to be for it to work: present when Scryfall has them, and absent as a
-    // value rather than as a property when it does not.
+    // The treatment fields — `art`, `frame`, `frame_effects`, `border_color`, `full_art` — were
+    // carried here for one rule: whether a foreign printing has an English counterpart of the
+    // same picture. That rule is gone, and so are they.
     //
-    // A printing with no artwork in Scryfall's answer comes back with an empty list rather
-    // than without the field, because a missing property and an empty one would then mean
-    // different things to the two places that read it.
-    assertEqual(allPrints.data.prints[1].art, [],
-      'a printing with no illustration comes back with an empty art list, not without the field');
-    assertEqual(allPrints.data.prints[1].frame, null,
-      'and no frame as null, so the comparison can read it without asking whether it is there');
-    assertEqual(allPrints.data.prints[1].borderColor, null, 'likewise for the border colour');
-
-    // Multi-faced cards. Scryfall puts `illustration_id` on each face and not on the card
-    // when there is more than one face, so the artwork of the printing is the list of its
-    // faces' illustrations. Reading `card_faces[0]` instead would call two cards the same
-    // picture whenever their fronts matched and their backs did not.
-    const facesPrints = await send({ type: 'allPrints', oracleId: FACES_PRINTS_ID });
-    assertEqual(facesPrints.data.prints[0].art,
-      ['66666666-6666-4666-8666-666666666666', '77777777-7777-4777-8777-777777777777'],
-      'a double-faced printing carries one illustration per face, sorted');
-    assertEqual(facesPrints.data.prints[0].frame, '2015',
-      'and the frame from the card, which is the only place it is recorded');
-    assertEqual(facesPrints.data.prints[0].borderColor, 'borderless',
-      'as it does the border colour, which is also only on the card');
+    // They are checked as *absences* rather than simply not being mentioned, because a field
+    // nobody reads is still sent on every card page, still cached, and is the thing a later
+    // build reaches for when it needs a comparison nobody has agreed to. The artwork in
+    // particular had a comment three paragraphs long explaining how to read it off a
+    // multi-faced card, and all of it was for a rule that is not on the page.
+    for (const gone of ['art', 'frame', 'frameEffects', 'borderColor', 'fullArt']) {
+      assert(!(gone in allPrints.data.prints[0]),
+        `and the worker no longer sends ${gone}, which no setting reads`);
+    }
     const evilPage = await send({ type: 'allPrints', oracleId: EVIL_PRINTS_ID });
     assertEqual(evilPage, { ok: false, error: 'Invalid next page' }, 'next_page from a foreign host is rejected');
 

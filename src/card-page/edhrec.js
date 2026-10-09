@@ -60,20 +60,6 @@
       const panel = document.createElement('div');
       panel.id = 'stk-edhrec';
       panel.className = 'stk-edhrec-rows';
-      if (!settings.edhrecLink) panel.classList.add('stk-no-source');
-      let source;
-      if (settings.edhrecLink) {
-        source = document.createElement('a');
-        source.href = stats.url;
-        source.target = '_blank';
-        source.rel = 'noopener noreferrer';
-        source.className = 'stk-edhrec-source';
-        const logo = document.createElement('img');
-        logo.src = chrome.runtime.getURL('assets/icons/edhrec.png');
-        logo.alt = 'EDHREC';
-        source.append(logo);
-        source.title = t('Открыть статистику карты на EDHREC');
-      }
       if (hasUsage) {
         const usage = document.createElement('div');
         usage.className = 'stk-edhrec-item stk-edhrec-usage';
@@ -112,7 +98,6 @@
           value.append(percentage);
         }
         value.title = language === 'ru' ? `${number.format(stats.numDecks)} из ${number.format(stats.potentialDecks)} подходящих по цветовой идентичности колод EDHREC (${percent})` : `${number.format(stats.numDecks)} of ${number.format(stats.potentialDecks)} color-identity-eligible EDHREC decks (${percent})`;
-        if (source) label.append(source);
         usage.append(value, label);
         if (display === 'both') usage.append(fraction);
         panel.append(usage);
@@ -131,7 +116,6 @@
         salt.className = `stk-salt-meter stk-stat-badge stk-salt-${tier}`;
         salt.textContent = stats.salt.toFixed(2) + (settings.showSaltScale ? ' / 4' : '');
         salt.title = t('Средняя оценка раздражающего эффекта карты по опросу EDHREC; не мера силы карты');
-        if (source) label.append(source);
         item.append(salt, label);
         panel.append(item);
       }

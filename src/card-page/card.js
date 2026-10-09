@@ -9,7 +9,7 @@
  * are described in THIRD_PARTY_NOTICES.md. The MPL does not cover them.
  */
 
-// Card nicknames and the type and mana search links.
+// The type and mana search links.
 // Loaded after content-core.js: everything this file needs is on self.STK_CONTENT, and
 // nothing here is needed by the files around it. What runs, and in which order, is
 // decided in content-core.js — where this file sits in the manifest does not decide it.
@@ -47,17 +47,6 @@
     shared
   } = await self.STK_CONTENT.context;
 
-  function initCardNicknames() {
-    const entry = window.STK_NICKNAMES?.find(item => item.setCode === identity.set && item.collectorNumber === identity.number);
-    if (!entry) return;
-    const parent = document.querySelector('#main .prints-info-section') || document.querySelector('#main .prints');
-    if (!parent) return;
-    const line = document.createElement('div');
-    line.className = 'prints-info-section-note stk-card-nickname';
-    line.textContent = `${entry.source}: “${entry.nickname.join(' // ')}”`;
-    parent.append(line);
-  }
-
   function initCardSearchLinks() {
     const typeLine = document.querySelector('#main .card-text-type-line');
     if (typeLine) {
@@ -88,6 +77,5 @@
   }
 
 
-  self.STK_CONTENT.on("cardNicknames", () => initCardNicknames());
   self.STK_CONTENT.on("cardSearchLinks", () => initCardSearchLinks());
 })();

@@ -8,6 +8,459 @@ All releases: <https://github.com/Solomag/scryfall-toolkit/releases>
 
 ---
 
+### Two features cut, a "show nothing" for the euro column, and a disabled box you can see
+
+**The disabled boxes were too quiet to read.** A box that is merely unticked wears `#6a6070` on the
+card's own colour and one that is out of reach wore `#5b5462` on `#292830` — two shades apart, which
+is a difference a reader has to compare two screenshots to find. It is `#3b3642` on `#232229` now,
+and the words beside it go quiet with it: the page's own rule for a label around a disabled switch
+was being overridden for the whole section, and it is overridden only in the platforms table now,
+where the name is what the reader uses to turn the row back on.
+
+**The euro column has a "show nothing".** The EUR source dropdown chose whose number fills the
+column and could not say "no column at all"; the only way to be rid of it was to hide Cardmarket,
+which is a shop and not the same question. It is a fourth option now — Cardmarket, CardTrader,
+both, or nothing — and it is the *only* control for that column, because answering one question in
+two places is the shape this project has spent three releases getting out of. Hiding Cardmarket is
+what it sounds like: its links. The advanced search follows the source rather than a shop, so
+picking "nothing" drops the euro option there too.
+
+**Two features are gone.**
+
+- **Historical card names** — the line under the prints table showing what Scryfall previewed a card
+  as before it was renamed. A switch whose purpose nobody could state, carrying a 396-record data
+  file from somebody else for it. The file, its manifest entry, the feature, the row and the help
+  all go; Shambleshark stays credited for the deck clean-up module, which is still here.
+- **Show the EDHREC icon and link** — the last setting in the **Дополнительные настройки** panel.
+  With it gone the panel held nothing, so the button went too: a button over an empty panel is a
+  promise this build cannot keep. EDHREC's logo is out of the build with it, and the notices say so
+  rather than naming a file that is no longer shipped.
+
+**And the finish column says what it is.** Its row read "Колонка обработки карты", which is not
+what the feature does — it shows a printing's finish — so it reads **Столбец отделки изданий** and
+carries a "?" explaining the column, because a name alone was clearly not enough.
+
+**Checks:** `npm test` 2423 assertions across nine suites, `npm run render` 208 + 202,
+`npm run mutations` 40 of 40. Two are new: the EUR source's "show nothing" leaving the column on
+the page, and the disabled boxes drifting back to a grey nobody notices.
+
+### The block switch reaches the shops, and CardTrader is one of them
+
+**Hiding the "Buy This Card" block now takes the shop boxes out of reach.** A shop is a link inside
+that block, so with the block hidden there is nowhere for it to be shown and its box has nothing to
+say. The three shops are drawn empty and disabled while the block is off — the platform pattern, and
+for the same reason: the boxes are drawn from the reader's per-shop choices and do not write to
+them, so turning the block off and on again brings the shops back as they were rather than resetting
+them.
+
+**CardTrader is the fourth link in that block, and it is treated like one.** Its switch adds
+CardTrader links to the store block — the euro *column* is the EUR source's business, not this
+switch's — so with the block hidden its box is emptied and disabled too, while the token state and
+the **Настроить** button stay reachable: the token is still needed for the EUR source. The reader's
+own answer for it is kept in a variable rather than read back from the box, because the box is
+emptied while the block is hidden and an emptied box is not an answer.
+
+It also moved up, to sit with the stores it belongs to, above the EUR source rather than below it.
+
+**And the EUR source says what it needs.** Choosing CardTrader as the source needs the token, which
+is not obvious from a dropdown of three names, so it carries its own "?" — and that help says the
+thing the reader would otherwise have to guess: ticking **Предложения CardTrader** is not required
+for it, because that switch is about the buy-block links and the column works without them.
+
+**Checks:** `npm test` 2443 assertions across nine suites, `npm run render` 208 + 202,
+`npm run mutations` 39 of 39. Three are new: the shop boxes staying in reach, the block switch
+writing the shops off instead of drawing them off, and CardTrader staying in reach with the block
+hidden.
+
+### CardTrader goes where the prices are, and the whole "Buy This Card" block has a switch
+
+**CardTrader's offers moved to Visibility.** They add a euro column to the prints table and a link
+to the store block, which makes them a price feature, and they were in Additional info only because
+that section used to hold every switch that was not about sets. With them goes the last of the
+price settings: the EUR source moved there in the round before, and now the row that fills it sits
+under it. Additional info is five features, its own secondary button, and nothing about money.
+
+**And the block itself has a switch.** Scryfall's card page has one `#stores` column headed "Buy
+This Card", holding the three shop links; the per-shop switches empty it and leave the heading and
+the column behind, which is not what a reader who buys nowhere wants. `showStores` hides the
+container, heading and all, and it is a general switch rather than a fourth shop: it sits under the
+group it governs, it turns no shop off on its own, and the per-shop choices are still there when it
+is switched back on.
+
+It is not a price kind, so it cannot be found by walking `prices` — and `priceFilter` is gated on
+"something is hidden", which is computed from exactly that walk. Left out of the gate, a reader who
+hid the block and nothing else would have got a switch that saves and does nothing. That is the
+same shape of bug as the TCGplayer one, one function away, and it has a mutation of its own.
+
+**Checks:** `npm test` 2434 assertions across nine suites, `npm run render` 208 + 202,
+`npm run mutations` 36 of 36. Three are new: the block never hidden, the block's switch never
+booting the feature that hides it, and the model not reading the key back.
+
+### The shop links were never hidden, and Cardmarket has a switch
+
+**A reader reported that the TCGplayer switch does nothing, and it did nothing.** `initPriceFilter`
+keeps a map of shop hostnames to the model's key for each — `{ tcgplayer: 'tcg', … }` — and the
+filter read the *key* of that map as if it were the model's key. So it asked for
+`prices.tcgplayer`, the model stores `tcg`, the answer was `undefined`, and the TCGplayer links
+were never hidden. Cardhoarder's worked, because its hostname and its key are the same word.
+
+**Nothing caught it because nothing tested it.** The card-page fixture's store list was empty and
+no test had ever looked at `stk-price-hidden` — not for the links and not for the columns either.
+There is a test now: it names what is hidden rather than counting it, and it covers each shop and
+each currency on its own, because a test of one shop would have passed on the one that happened to
+work.
+
+**Cardmarket is a shop, and it is the shop that also owns a column.** Scryfall's native euro column
+*is* Cardmarket's price, so "hide Cardmarket" has to mean two things — the column and the
+cardmarket.com link — to be one button rather than two. Its switch therefore sits with the other
+shops, and it is the one kind that appears in both halves of the filter: the EUR header is matched
+to it, and so is the hostname. It was briefly `eur`, in the currencies, in a build that was never
+released; a value from that build is read under the new name rather than dropped, and the new key
+wins if both are present.
+
+**The EUR source moved to the prices it chooses between.** It says which shop's euro price the
+column carries, and it was in the other section with the card-page features — a price setting in a
+list of things that are not prices. It sits under the shops now. The advanced search filter also
+maps Scryfall's option values (`eur`) to the model's keys (`cardmarket`) instead of assuming they
+are the same word, which is the same mismatch as the one above, in a second file.
+
+**Checks:** `npm test` 2416 assertions across nine suites, `npm run render` 208 + 202,
+`npm run mutations` 33 of 33. Four are new and three of them are this defect: the shop map read by
+its key, the euro column losing its switch, and the advanced filter assuming the option value is
+the model key. The fourth is the old `eur` key being dropped rather than read.
+
+### The euro column has a switch, and Additional info is a list of features
+
+**The euro column was the one price with no switch at all.** USD, TIX, TCGplayer and Cardhoarder
+each had one; the EUR column — Cardmarket's price, the one Scryfall draws natively — could only be
+got rid of by pointing the euro source at CardTrader, which is not the same thing and is not what
+a reader who simply does not trade in euros is asking for. It is a fifth price kind now, in the
+same group as USD and TIX, because it is a currency and not a shop: it is a column of numbers in
+the same table, and the key is `eur` rather than `cardmarket` because the column is what is hidden
+and Cardmarket is whose price it is.
+
+Two things had to change with it, and one of them was a defect the change exposed:
+
+- The advanced search filter dropped USD and TIX options when their columns were hidden and
+  *renamed* the euro one rather than dropping it, on the reasoning that Cardmarket is the one price
+  this extension has a reason to add. It drops it now like the others, and the guard that decided
+  whether to touch the select at all counts three currencies instead of two.
+- The CardTrader column and the native euro column are the same column, and the euro source
+  setting decides whose number goes in it. The new switch decides whether the column exists, so it
+  wins: with EUR hidden, `both` does not relabel the column as Cardmarket's and the fallback that
+  un-hides it when a CardTrader printing has no offer does not run.
+- **The old "only Cardmarket" switch walked the model's price keys to turn them all off.** With a
+  euro key in the model that would have hidden the very price the switch is named after — a reader
+  who had it on would have lost the euro column on their first page load after an update, silently.
+  It names the four kinds it governed instead. That is a real defect this round introduced and
+  caught, not a hypothetical one.
+
+The Caster marker also moved: it is its own line under the prices now rather than indented under
+the store links, which read as though it belonged to that group.
+
+**Additional info was two fieldsets standing open with every threshold, select and token field in
+them.** That says "fill this in" about seven settings, every one of which works untouched. It is a
+list of one-line features now, each with its own switch, and the settings behind the feature's own
+button:
+
+- **Колонка обработки карты**, **Поиск по типу и мана-стоимости** — a switch and nothing else.
+- **Исторические названия карт** — a switch and the one help button the list carries, which is
+  where the examples went.
+- **Популярность в Commander** — a switch and **Настроить**, opening the display format, the
+  colouring metric, both pairs of thresholds with their units, and **Вернуть стандартные
+  настройки**.
+- **Salt Meter** — the same shape: the «/4» scale, its two thresholds, its own reset.
+- **Предложения CardTrader** — see below.
+- **Дополнительные настройки** — one secondary button at the bottom for the two settings that
+  belong to the section rather than to a row: the EDHREC icon and link, and the EUR price sources.
+
+Every panel is collapsed when the page opens, whatever the feature is set to. Opening one writes
+nothing: the settings inside were saved when they were last edited and they work while the panel is
+shut, which is the whole of "the button is optional". One level of disclosure, no nested menus, no
+dialog and nothing that has to be visited. Each reset restores its own feature's numbers from the
+same `defaults` object a fresh install is filled from, and does not move the switch — "these numbers
+are wrong" is not "turn this off".
+
+**CardTrader is the one row whose shape depends on what it has.** Without a token there is nothing
+for it to fetch, so the row is the feature's name, **Не подключено** and **Подключить** — with the
+switch hidden rather than disabled, because a disabled switch says "this exists and you may not have
+it" and this one does not exist yet. With a token the switch appears, the state reads **Токен
+сохранён ✓**, and the button becomes **Настроить**, opening **Заменить токен** and **Удалить
+токен**. The new-token field appears only when replacing, closing the panel with it open does not
+delete anything, an empty field saved does not either, and the stored token is never on screen —
+the field is emptied the moment it is stored, and it is a password field even then.
+
+The status says **saved**, not **working**, and that is the honest reading: nothing on this page
+asks CardTrader anything, so the only thing it can report is what is stored. The project has no
+connection check to borrow — the only request that would answer the question is the one a card page
+makes — so none was invented.
+
+**The paragraphs moved behind a "?" rather than being deleted.** The examples of historical names,
+the explanation of the thresholds and the colours, and what the token is for are one click away in
+the same dialog the section "?" opens, which is a `<button>` and so reachable by Tab and opened by
+Enter. The dialog now takes an entry with no picture, because what moved there is a paragraph.
+
+**Checks:** `npm test` 2402 assertions across nine suites, `npm run render` 208 + 202,
+`npm run mutations` 29 of 29. Nine of the new mutations are about this shape's own failures:
+a panel that starts open, a disclosure that writes to storage, a reset that takes the other
+feature's numbers, a feature offering its switch before it has what it needs, the euro column
+losing its switch or its migration hiding it, and a label restating a layout the page already
+gives it.
+
+### The visibility section is two columns, and the boxes are boxes
+
+This is the second half of the entry below and it supersedes its layout: the section is not
+three stacks under three headings, it is two columns under two, and the boxes are 18×18 squares
+rather than compact pills.
+
+**Two columns.** The table on the left, the prices and the marker on the right, the left one a
+little wider than the right, 32px between them. The card is 880px wide and the settings are four
+short lines, so one column left two thirds of the card empty and made the reader scroll past
+nothing. Below 720px the right column goes under the left rather than either being squeezed.
+
+**Compact, and not stretched.** A table row is 40px with no padding of its own above or below it,
+and the name column is left-aligned in its heading as well as in its rows, so the word sits over
+the names it names. The table is not given `max-width:100%`: clamping it to its column squeezes
+the columns below their min-content width and the headings are then clipped mid-word — "Список
+сетов" reading as "Списо / сето". Left at its natural width it overflows its wrapper instead, and
+the wrapper scrolls, so nothing is ever cut off. On a narrow window the column padding comes in,
+the heading type drops a point and the platform name is allowed to wrap, which is what keeps it
+from having to scroll at 420px.
+
+**A platform that is off is not a faded row.** Its name goes a shade quieter and its three place
+boxes are drawn empty, muted and disabled, keeping a border a reader can still see; its own box
+and its name stay at full contrast, because they are what the reader uses to turn it back on. The
+page-wide rule that dims a label around a disabled switch is undone here, where it would take
+those three boxes down to a third of the contrast they were just given.
+
+**The boxes are boxes.** 18×18, 4px corners, empty with a thin border when unticked, filled
+purple with a white tick when ticked. The page's own switch draws its knob as a **radial gradient
+in `background-image`** and rounds itself with a 12px radius, and a rule that sets only a new
+`background-color` leaves both of them standing: an unticked box comes out as a grey circle inside
+a square. Both are reset, in the base rule and again in `:checked`, so no state can inherit the
+knob.
+
+**Prices.** Two groups, each caption directly above the boxes it names, 8px to them and 16px
+between the groups. The caption used to sit beside them in a grid column as wide as the longest
+caption on the page — a column of empty space on every row but one.
+
+**Two defects found by looking at the page, not by the tests:**
+
+- Every box here transitions its background over 150ms, and a capture taken on the next round
+  trip catches twelve of them **mid-fade** — a picture of neither state, in which an unticked box
+  reads as a filled square. That is what the first capture after this rework showed. It was
+  measured rather than guessed: the colours were sampled out of the PNG and matched `#7b5c8c` at
+  42% over the card before the cause was believed. `tools/make-store-shots.cjs` now waits half a
+  second before it captures.
+- The narrow-window rules for the table were written **above** the rules they override. A media
+  query adds no specificity, so they lost, and the headings stayed clipped while the rule that
+  was supposed to fix them sat in the file looking correct. They are at the end of the section's
+  rules now, with the reason written down.
+
+**Three things tried and rejected:**
+
+- Keeping the caption in a column beside its boxes, with the column as wide as the longest
+  caption. Rejected: that column is empty on every row but one, which is the wide grey gap
+  between a label and the control it labels. The caption is above its boxes now.
+- Clamping the table to its column with `max-width:100%`, so that it could never overflow.
+  Rejected: it does not shrink the table, it squeezes the columns below their min-content width
+  and clips the headings. Overflowing a scrolling wrapper is the lesser fault, and it is not
+  visible at any width this page is read at.
+- Taking the card's padding down on a narrow window to buy the table room. Rejected: the card's
+  24px inset is a decision about the card, and spending it to avoid a rule about the table is
+  the wrong end of the problem. The heading type drops a point at that width instead.
+
+**Checks:** `npm test` 2302 assertions across nine suites, `npm run render` 208 + 202,
+`npm run mutations` 22 of 22. Four of those are new and all four are about this layout: the
+narrow-window rules in the wrong place, a switched-off platform's places losing their border, the
+switch knob left in an unticked box, and the two columns collapsing to one.
+
+Four of the twenty-two are caught by the settings page's own source assertions rather than by a
+rendering, and that is weaker than the rest of the file and is said out loud here: nothing in this
+repository renders the settings page and checks it. They still prove what they claim — each one
+removes a rule the requirement names, and the assertion that fails is the one that names it — but
+a rendering check of that page would be the stronger thing, and it does not exist.
+
+### The visibility section is one table, and the Caster switch was dead
+
+**Layout.** "Скрытие лишнего" is **"Видимость"** / "Visibility", in three parts — **Платформы**,
+**Цены и ссылки**, **Интерфейс** — with headings and 24px between them instead of three framed
+blocks with legends in their borders. A fieldset with a legend in its border says "a group of
+related settings" by drawing a box, and three boxes inside a box says it three times; by the
+third the reader is looking at frames rather than at what is in them. The decorative vertical
+line beside each platform's places is gone with them.
+
+**One table instead of three stacks.** A row per platform, a column per place, every control a
+checkbox including the **Show** column: a column of sliders beside a row of boxes is two kinds
+of control wearing the same page's colours, and a reader has to stop and work out which is which.
+The platform's name is written once down the left, and each box is named by what it does —
+"Paper: show in search" — rather than by its column alone, which is what a table of twelve
+anonymous checkboxes otherwise gets you.
+
+**A platform off.** The row dims, its three place boxes are drawn empty and disabled, and its
+own box stays operable, because it is the only way back and a disabled control that is the only
+way out of a state is a trap. None of that reaches the stored value: what is drawn while a
+platform is off is what is in force, not what is stored. Turning it back on brings its three
+places out as they were, and a reader who unticks all three on a platform that is on has said so
+— nothing puts them back and nothing moves the platform's own box on their behalf.
+
+**Prices in two rows** — **USD, TIX** then **TCGplayer, Cardhoarder** — because a currency is a
+column of numbers and a shop is a link, and the grouping says so without a paragraph saying so.
+The paragraph it replaced is gone, as are the other long notes: what is left is in the "?"
+dialog, above the picture rather than under it, so the only explanation this section now has is
+not below a screen of screenshot.
+
+**The Caster switch was dead, and the reason is the sort that survives a green build.** The
+settings page wrote `setFilters.caster`; `theme.js` read a flat `hideCasterIndicator` that nothing
+had written since the settings were folded into `setFilters`. So the switch changed a value nobody
+read and the marker never went away. Both tests of it passed — one asked the theme script to read
+the flat key, which proved the read, and one ticked the box, which proved the write, and neither
+asked whether they were the same key. They are now checked as a pair.
+
+**Its polarity is inverted and its key is renamed.** The switch read "hide" and now reads "show",
+so `caster` becomes `showCaster` and the page class is its opposite. A stored boolean cannot carry
+two senses, so a value written by a build that stored "hide" and one written by a build that
+stores "show" are told apart by the name of the key rather than by a version number nobody writes.
+A value from 1.6.0–1.6.2 — the current layout, positive prices, the marker still meaning hide —
+gets a branch of its own whose only work is to rename one key and leave everything else alone.
+A reader who had the marker hidden keeps it hidden.
+
+**Checks:** `npm test` 2283 assertions across nine suites, `npm run render` 208 + 202,
+`npm run mutations` 18 of 18. Five mutations are new: the marker's two inversions, its polarity on
+the card page, a platform that is off writing its places into storage, and those places staying
+clickable while it is off.
+
+**Two defects the rework introduced and the layout check caught**, both found by looking at the
+page rather than at the tests:
+
+- The **Show** cell was prepended to each row instead of appended after the name, so every box
+  was drawn under the heading for the column to its left. Every id was right, every box behaved,
+  and the table drew wrong. No assertion could see it, because they all read boxes by id; the one
+  that reads the row left to right against the header can, and it is the only reading that
+  describes what the page looks like.
+- An unticked box came out as a **grey circle inside a square**: the page-wide switch draws its
+  knob in `background-image`, and overriding only `background-color` left the gradient in place.
+
+**Three things tried and rejected:**
+
+- Giving the table's third column a Russian word of its own, so "Prints table" would not have to
+  come from the same dictionary entry as the «Издания» heading further down the page. Rejected:
+  the brief names the Russian header, and inventing a different word to protect another section's
+  English is the tail wagging the dog. The collision went the other way — the section heading now
+  reads "Prints table" in English too, which is what that section is about.
+- Laying the price rows out as a two-column **grid**. Rejected: a grid gives every item its own
+  row, so USD and TIX came out stacked on a window wide enough to hold them side by side. The
+  boxes went into a container of their own, and the grid only holds the caption against them.
+- Laying them out as a **flex** row. Rejected: when it wraps, the second box drops under the
+  caption, so on a narrow window "Cardhoarder" appears at the left of the page with nothing beside
+  it and reads as a control of its own rather than as the second shop.
+
+### The price switches say "show", and the deck tokens moved next to the deck tools
+
+**Prices.** "Какие цены скрывать" is now "Какие цены показывать", and the four switches are
+positive: ticked means shown. They were the last four negative keys in the model, read by two
+files as `some(Boolean)` and `if (prices[option.value])`, and the group above them needed a
+legend saying which way round they ran to make four unticked boxes read as "everything is on"
+rather than as the opposite of every other switch on the page. The inversion is in the
+migration, and it is the one change in this project where reading it the wrong way round is
+expensive and silent: a reader who had every price on would find every price hidden on their
+first page load after an update, while the four switches on the settings page — which read the
+stored value — showed them all off. Both directions have a mutation against them, and one of
+those mutations had to be written against a branch by name because `String.replace` rewrites
+only the first match and the bare line appears in two.
+
+**Deck tokens.** "Show tokens created by cards in a deck" is a Deckbuilder feature and always
+was. The switch adds one button to one page — Scryfall's deck page, the `/@user/decks/…` URLs,
+where Scryfall lists the deck's cards — and nothing else on the site. It sat in "hide extras"
+because the price switches lived there and it did not. It is now with the deck tools, where
+the other three deck features already are, and the hint says which page it appears on.
+
+**Checks:** `npm test` 2204 assertions, `npm run render` 208 + 202, `npm run mutations` 13 of 13.
+
+### The visibility settings, reduced to one rule and nine switches
+
+The previous three entries describe a group that had been made smaller twice and was still too
+much. Paper carried five rules and three of them had lists underneath; the sub-categories crossed
+the rules above them, because a border family is a set, a Secret Lair is a set, and a set with no
+English printing is a set. A reader choosing between them was choosing between three descriptions
+of the same kind of thing and then had to work out which one won.
+
+There is one rule now — which platform — and each of the three platforms carries its own three
+switches: **Prints table**, **Search**, **Sets list**.
+
+**The places are per platform**, which is the one structural choice worth arguing for. They were
+one shared list for two releases, on the reasoning that "where should filtering apply" is one
+question with one answer. It is not: a reader who wants Arena out of the search dropdown and
+Arena printings left in the card page's table is answering two questions, and one list can only
+hold one answer. With it, switching Arena off for the dropdown also switched it off for the
+table — or off for neither.
+
+**Removed entirely**, with their logic rather than only their switches: non-tournament and
+ancillary printings, oversized cards, sets with no English printing, Foreign Black Border with
+its three families, the non-English categories Portal and Secret Lair, and the unique-art and
+unique-treatment rules. So are the five treatment fields the worker carried on every printing
+(`illustration_id`, `frame`, `frame_effects`, `border_color`, `full_art`) — they existed for one
+comparison rule, and they were sent on every card page and cached for it.
+
+**The worker stopped classifying sets.** It answered with six lists; it now answers with one, the
+`digital` flag Scryfall publishes on the set. The oversized walk alone was five pages of
+`is:oversized` every time the day turned over, to produce an answer no reader could ask for.
+
+**Migrated.** The platforms pass through, and the one shared list of places becomes all three
+platforms' lists — the reader made one answer, not three, and repeating it is the reading that
+changes nothing about what they see. A platform stored as a bare boolean, which is what two builds
+wrote, is read rather than dropped, because dropping it would silently hand every platform back.
+Everything that was a rule about sets has nowhere to go and is not read, so a reader who had
+those switches on gets those sets back: the only available reading, and it errs towards showing.
+
+**Checks:** `npm test` 2199 assertions across nine suites, `npm run render` 208 + 202,
+`npm run mutations` 11 of 11. Four mutations are new and three are about this shape's own new
+failure — nine switches where there used to be three, so the obvious mistake is reading one
+platform's answer for all three, and it is silent: the page is drawn and the wrong sets are gone.
+
+### The visibility settings, reduced to two
+
+The previous three releases put five rules under Paper and three of them carried lists
+underneath. The sub-categories crossed the rules above them — a border family is a set, a
+Secret Lair is a set, and a set with no English printing is a set — so a reader choosing
+between them was choosing between three descriptions of the same kind of thing and then
+had to work out which one won. They are two settings now, and nothing nests under either.
+
+**Merged.** "Нетурнирные и вспомогательные издания" is one switch covering non-tournament
+*and* oversized. A set can be both — Vintage Championship is memorabilia and oversized —
+which is why they were separate, and asking the same reader to tick two boxes about the
+same set was the cost of that accuracy. Its list comes from Scryfall in both halves:
+`set_type` for the four junk categories, a walk of the oversized printings for the other.
+
+**Removed entirely**, with their logic rather than only their switches: sets with no English
+printing, Foreign Black Border with its three families, and the non-English sub-categories
+Portal and Secret Lair. Every non-English printing is now one question under one dropdown —
+All, Only without an English analogue, None — and Никакие covers all of those groups at
+once. The worker stopped classifying them, `assets/data/set-foreign-only.js` is gone, and
+`npm run set-rules` with it: the sweep existed to check name patterns and to measure a list
+no setting reads any more. So are the unique-art and unique-treatment rules, which the
+analogue comparison answers per printing.
+
+**A set is never hidden for having only translated printings.** That was the removed switch,
+and it is now a property rather than a setting: the language rule is a statement about a
+printing, and a row on the sets index is a set. The 34 sets Scryfall prints with no English
+printing among them come back, and their printings are decided one at a time by the same
+rule as everything else.
+
+**Migrated.** Two old switches became one: either of them hiding hides the merged switch.
+The mixed case — one removed, one kept — has no answer in a one-switch shape, and this is
+the answer it gets, because the error it can make is showing something a reader removed
+rather than hiding something they kept. The two removed set rules have nowhere to go and
+are dropped, which returns those sets to readers who had them on: the only available
+reading, and it errs towards showing. Everything a reader can still be asking for is
+carried; nothing that was removed is left in storage pretending to work.
+
+**Not decided here.** Whether a set with no English printing should be hidden at all was a
+question the old interface answered by listing the 34 of them. It no longer answers it, and
+that is a deliberate loss rather than a deferral: the answer needed a dated list shipped
+inside the extension, and per-printing comparison is the question the middle dropdown
+already asks.
+
 ### Five defects in the settings the redesign shipped with
 
 The previous entry describes a feature that worked. It did not, in five places, and the

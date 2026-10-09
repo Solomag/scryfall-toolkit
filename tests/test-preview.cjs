@@ -52,6 +52,33 @@ const CARD_HTML = `<!DOCTYPE html><html><head>
 </div></div>
 </body></html>`;
 
+// The stored shape, in one place. Three platforms, each with a switch of its own and three
+// places of its own, and nothing else in the group — so every fixture below is a list of the
+// platforms to switch off plus, where a test needs it, a list of the places to switch off.
+//
+// Written once because the alternative is eight copies of a nested object in which the only
+// thing any of them varies is one boolean, and a copy is a second thing that can be wrong.
+// Every test that uses it passes `setFiltersMigrated: true`, because without that flag the
+// stored value goes through the migration and the cases that hide nothing would pass without
+// their settings ever having been set — which is what they did, the first time this ran.
+const PLATFORMS = ['paper', 'arena', 'mtgo'];
+const hideOnly = (off = [], places = {}) => ({
+  setFiltersMigrated: true,
+  setFilters: {
+    platforms: Object.fromEntries(PLATFORMS.map(name => [name, {
+      show: !(off || []).includes(name),
+      areas: { prints: true, search: true, sets: true, ...(places || {})[name] }
+    }])),
+    prices: { usd: false, tix: false, tcg: false, cardhoarder: false },
+    tokens: true,
+    caster: false
+  }
+});
+// The same, for a reader who has switched nothing off — the shape a page load should make
+// quietly, since it is the state every reader starts in and a default that hides something
+// takes rows away from somebody who never asked.
+const showEverything = (places = {}) => hideOnly([], places);
+
 const prints = [
   { id: 'p1', name: 'Test Card', uri: 'https://scryfall.com/card/tst/1/test-card', set: 'tst', setName: 'Test Set', number: '1', lang: 'en', digital: false, finishes: ['nonfoil'], prices: { eur: '1.00' } },
   { id: 'p2', name: 'Test Card', uri: 'https://scryfall.com/card/tst/3/test-card', set: 'tst', setName: 'Test Set', number: '3', lang: 'en', digital: false, finishes: ['foil', 'nonfoil'], prices: { eur: '2.00', usd: '3.50', tix: '0.05' } },
@@ -76,18 +103,13 @@ const routes = {
   allPrints: () => ({ prints, truncated: false }),
   cardtrader: () => ({ available: true, url: 'https://www.cardtrader.com/en/cards/test', nonfoil: { cents: 1234, currency: 'EUR' } }),
   preview: () => ({ name: 'Other Card', image: 'https://cards.scryfall.io/normal/o.jpg', uri: 'https://scryfall.com/card/oth/1/other-card' }),
-  // Per category, as the worker answers it now: the settings page has a list under each
-  // of the two rules and a flat list of codes cannot be narrowed by one.
+  // The three lists the worker answers with, and nothing else. It used to answer with six —
+  // two of them name-pattern categories with sub-lists under them and one was a measured list
+  // of thirty-four codes — and every one of the three extras belonged to a setting that no
+  // longer exists. The fixture is trimmed to match, so a test cannot pass by feeding the
+  // page a field the worker no longer sends.
   setCategories: () => ({
-    digital: ['ysos', 'me2'], nonTournament: [], oversized: [],
-    // The measured list, as the worker answers it. `por` is in it because the fixture's own
-    // route says Portal is a foreign-only set, which is a fiction — on Scryfall Portal has 215
-    // English printings and is not in the list. It is here so the test can watch the list
-    // being acted on, and the real file is checked against a real sweep by
-    // `npm run set-rules`, which is where the truth about `por` is settled.
-    foreignOnly: ['por', 'wmkm'],
-    foreignBlackBorder: { '4bb': ['4bb'], fbb: ['fbb'], bchr: ['bchr'] },
-    nonEnglish: { portal: ['por', 'p02', 'ptk'], 'secret-lair': ['sld'] }
+    digital: ['ysos', 'me2'], nonTournament: [], oversized: []
   }),
   setPlatforms: () => ({ ysos: ['arena'], me2: ['mtgo'] })
 };
@@ -107,7 +129,6 @@ async function loadDeckPage(state, pageRoutes = routes, html = DECK_HTML, before
   await page.script('src/core/i18n.js');
   await page.script('src/core/format-catalog.js');
   await page.script('src/core/tag-icons.js');
-  await page.script('assets/data/shambleshark-nicknames.js');
   await page.cardPage();
   await sleep(60);
   return page;
@@ -334,7 +355,6 @@ async function loadSetsPage(state, pageRoutes = routes, html = SETS_HTML) {
   await page.script('src/core/i18n.js');
   await page.script('src/core/format-catalog.js');
   await page.script('src/core/tag-icons.js');
-  await page.script('assets/data/shambleshark-nicknames.js');
   await page.cardPage();
   await sleep(80);
   return page;
@@ -354,7 +374,6 @@ async function loadCardPage(state, pageRoutes = routes) {
   await page.script('src/core/i18n.js');
   await page.script('src/core/format-catalog.js');
   await page.script('src/core/tag-icons.js');
-  await page.script('assets/data/shambleshark-nicknames.js');
   await page.cardPage();
   await sleep(60);
   return page;
@@ -718,7 +737,6 @@ async function searchPageTest() {
   await page.script('src/core/i18n.js');
   await page.script('src/core/format-catalog.js');
   await page.script('src/core/tag-icons.js');
-  await page.script('assets/data/shambleshark-nicknames.js');
   await page.cardPage();
   await sleep(60);
   const { document, mock } = page;
@@ -820,7 +838,6 @@ async function printsGroupsEdgeTest() {
   await page.script('src/core/i18n.js');
   await page.script('src/core/format-catalog.js');
   await page.script('src/core/tag-icons.js');
-  await page.script('assets/data/shambleshark-nicknames.js');
   await page.cardPage();
   await sleep(60);
   const { document } = page;
@@ -906,7 +923,6 @@ async function promoParentMergeTest() {
   await page.script('src/core/i18n.js');
   await page.script('src/core/format-catalog.js');
   await page.script('src/core/tag-icons.js');
-  await page.script('assets/data/shambleshark-nicknames.js');
   await page.cardPage();
   await sleep(60);
   const { document } = page;
@@ -951,8 +967,7 @@ async function printsOrderTest() {
     await page.script('src/core/i18n.js');
     await page.script('src/core/format-catalog.js');
     await page.script('src/core/tag-icons.js');
-    await page.script('assets/data/shambleshark-nicknames.js');
-    await page.cardPage();
+      await page.cardPage();
     await sleep(60);
     return page.document.querySelector('#main .prints .prints-table tbody');
   };
@@ -1010,7 +1025,6 @@ async function printsWindowTest() {
   await page.script('src/core/i18n.js');
   await page.script('src/core/format-catalog.js');
   await page.script('src/core/tag-icons.js');
-  await page.script('assets/data/shambleshark-nicknames.js');
   await page.cardPage();
   await sleep(60);
   const { document } = page;
@@ -1071,7 +1085,6 @@ async function starNumberTest() {
   await page.script('src/core/i18n.js');
   await page.script('src/core/format-catalog.js');
   await page.script('src/core/tag-icons.js');
-  await page.script('assets/data/shambleshark-nicknames.js');
   await page.cardPage();
   await sleep(60);
   const { document } = page;
@@ -1106,7 +1119,6 @@ async function singlePrintingTest() {
   await page.script('src/core/i18n.js');
   await page.script('src/core/format-catalog.js');
   await page.script('src/core/tag-icons.js');
-  await page.script('assets/data/shambleshark-nicknames.js');
   await page.cardPage();
   await sleep(60);
   const { document } = page;
@@ -1134,7 +1146,6 @@ async function legacyMigrationTest() {
   await page.script('src/core/i18n.js');
   await page.script('src/core/format-catalog.js');
   await page.script('src/core/tag-icons.js');
-  await page.script('assets/data/shambleshark-nicknames.js');
   await page.cardPage();
   await sleep(60);
   assertEqual(page.mock.state.cards, [
@@ -1159,8 +1170,7 @@ async function advancedPriceFilterTest() {
     await page.script('src/core/i18n.js');
     await page.script('src/core/format-catalog.js');
     await page.script('src/core/tag-icons.js');
-    await page.script('assets/data/shambleshark-nicknames.js');
-    await page.cardPage();
+      await page.cardPage();
     await sleep(60);
     return page;
   };
@@ -1175,27 +1185,178 @@ async function advancedPriceFilterTest() {
   assertEqual([...off.document.querySelectorAll('#price_1 option')].map(option => option.value), ['usd', 'eur', 'tix'],
     'with every column visible the currency choices stay as Scryfall made them');
 
-  // The four switches are independent, which is the whole point of having four of them.
-  // `onlyCardmarket` was one switch hiding both currencies and both shops together, so a
-  // reader who wanted no TCGplayer links but kept the dollar column had no way to say so.
-  const withPrices = async prices => {
-    const page = await load({ clipboard: false, setFilters: { prices }, setFiltersMigrated: true },
-      'https://scryfall.com/advanced');
+  // The switches are independent, which is the whole point of having one per kind.
+  // `onlyCardmarket` was one switch hiding both currencies and every shop together, so a reader
+  // who wanted no TCGplayer links but kept the dollar column had no way to say so.
+  //
+  // The fixture is the current shape — platforms and all — because a value with prices and no
+  // platforms is read as the 1.4.x shape and its prices are inverted, which is right for that
+  // shape and would make these cases test the migration instead of the filter.
+  const withPrices = async (prices, storage = {}) => {
+    const page = await load({
+      clipboard: false,
+      setFiltersMigrated: true,
+      ...storage,
+      setFilters: {
+        platforms: Object.fromEntries(PLATFORMS.map(name =>
+          [name, { show: true, areas: { prints: true, search: true, sets: true } }])),
+        prices
+      }
+    }, 'https://scryfall.com/advanced');
     return [...page.document.querySelectorAll('#price_1 option')].map(option => option.value);
   };
-  assertEqual(await withPrices({ tix: true }), ['usd', 'eur'],
+  assertEqual(await withPrices({ tix: false }), ['usd', 'eur'],
     'hiding only MTGO Tickets leaves the dollar search alone');
-  assertEqual(await withPrices({ usd: true }), ['eur', 'tix'],
+  assertEqual(await withPrices({ usd: false }), ['eur', 'tix'],
     'and hiding only the dollar column leaves the ticket search alone');
   assertEqual(await withPrices({}), ['usd', 'eur', 'tix'],
     'an empty prices object is no prices hidden, not all of them');
-  // Euros is never dropped: it is how a Cardmarket result is filtered on, and Cardmarket
-  // is the one price this extension has a reason to add.
-  for (const prices of [{ usd: true }, { tix: true }, { usd: true, tix: true }]) {
+  // The euro option follows the EUR source, not a shop's switch: `none` is the reader saying
+  // they want no euro column, and there is no price kind that means that. The euro option is
+  // Scryfall's `eur` and the source is one of four words, so the two are compared as words
+  // rather than assumed to be the same thing — the mismatch that left the TCGplayer links
+  // unhidden, in another file.
+  assertEqual(await withPrices({}, { euroPriceSources: 'none' }), ['usd', 'tix'],
+    'and the euro search goes with the EUR source being "show nothing"');
+  assertEqual(await withPrices({}, { euroPriceSources: 'ct' }), ['usd', 'eur', 'tix'],
+    'while choosing CardTrader as the source keeps the euro search, since the column is there');
+  for (const prices of [{ usd: false }, { tix: false }, { usd: false, tix: false }]) {
     assert((await withPrices(prices)).includes('eur'),
       `the euro option survives with prices ${JSON.stringify(prices)}`);
   }
 }
+
+// The price filter, which had no test at all until this one — and that is why it shipped broken.
+//
+// `initPriceFilter` read the *key* of its shop map as if it were the model's key for that shop.
+// The map is `hostname: modelKey`, and TCGplayer's model key is `tcg` while its hostname is
+// `tcgplayer.com`, so `prices.tcgplayer` was asked for, found nothing, and the TCGplayer links
+// were never hidden. Cardhoarder's worked only because its hostname and its key are the same
+// word, which is exactly the shape of bug that a test covering one case would have missed and a
+// test covering the group catches.
+async function priceFilterTest() {
+  console.log('content scripts: the price filter hides the columns and the shop links it names');
+  const html = `<!DOCTYPE html><html><head>
+    <meta name="scryfall:card:id" content="${PRINT_CURRENT}">
+    <title>Test Card</title></head><body>
+    <div id="main">
+      <!-- The card-image block is what makes this a card page, and the EUR source lives in a
+           step gated on that: without it the source cases below would test nothing. -->
+      <div class="card-image"><img src="https://cards.scryfall.io/normal/x.jpg" alt=""></div>
+      <div class="prints">
+      <table class="prints-table">
+        <thead><tr><th>Name</th><th>Set</th><th><span>USD</span></th><th><span>EUR</span></th><th><span>TIX</span></th></tr></thead>
+        <tbody><tr class="current">
+          <td><a data-card-id="${PRINT_CURRENT}" href="https://scryfall.com/card/tst/1/test-card">Test Set #1</a></td>
+          <td>TST</td><td>$7.82</td><td>€3.92</td><td>0.05</td>
+        </tr></tbody>
+      </table>
+    </div>
+    <div id="stores"><ul class="toolbox-links">
+      <li><a href="https://partner.tcgplayer.com/x">Buy on TCGplayer</a></li>
+      <li><a href="https://www.cardhoarder.com/cards/x">Buy on Cardhoarder</a></li>
+      <li><a href="https://www.cardmarket.com/en/Magic/Products/x">Buy on Cardmarket</a></li>
+    </ul></div>
+  </div></body></html>`;
+  const load = async (prices, filters = {}, storage = {}) => {
+    const page = createPage({
+      url: 'https://scryfall.com/card/tst/1/test-card', html, routes,
+      // Two places, because the settings are in two places: the hiding group is one storage key
+      // and the EUR source is another. Putting the source inside `setFilters` is how this
+      // fixture first tested nothing at all — the page read the default and the case passed for
+      // the wrong reason.
+      state: {
+        clipboard: false,
+        setFiltersMigrated: true,
+        ...storage,
+        setFilters: {
+          platforms: Object.fromEntries(PLATFORMS.map(name =>
+            [name, { show: true, areas: { prints: true, search: true, sets: true } }])),
+          prices,
+          ...filters
+        }
+      }
+    });
+    await page.script('src/core/i18n.js');
+    await page.script('src/core/format-catalog.js');
+    await page.script('src/core/tag-icons.js');
+    await page.cardPage();
+    await sleep(60);
+    return page;
+  };
+  // Named by what is hidden rather than by counting: a count would pass with the wrong three.
+  const hiddenHeads = document => [...document.querySelectorAll('#main .prints-table thead th')]
+    .filter(th => th.classList.contains('stk-price-hidden')).map(th => th.textContent.trim()).sort();
+  const hiddenCells = document => [...document.querySelectorAll('#main .prints-table tbody td')]
+    .filter(td => td.classList.contains('stk-price-hidden')).map(td => td.textContent.trim()).sort();
+  const hiddenLinks = document => [...document.querySelectorAll('#stores .toolbox-links a')]
+    .filter(a => a.classList.contains('stk-price-hidden')).map(a => new URL(a.href).hostname).sort();
+
+  // Every switch on: nothing is hidden. This is the default a reader who has never opened the
+  // settings gets, and it is the one case where the feature must do nothing at all.
+  const all = await load({ usd: true, tix: true, tcg: true, cardhoarder: true, cardmarket: true });
+  assertEqual([hiddenHeads(all.document), hiddenCells(all.document), hiddenLinks(all.document)],
+    [[], [], []], 'with every price shown nothing is hidden, and the filter does not run at all');
+
+  // One shop off. This is the assertion the old code failed: `tcg` and `tcgplayer` are different
+  // words, and the one the model stores is the one that has to be read.
+  const noTcg = await load({ usd: true, tix: true, tcg: false, cardhoarder: true, cardmarket: true });
+  assertEqual(hiddenLinks(noTcg.document), ['partner.tcgplayer.com'],
+    'turning TCGplayer off hides the TCGplayer link, which it did not do before');
+  assertEqual(hiddenHeads(noTcg.document), [],
+    'and hides no column: a shop is a link and a currency is a column, which is why they are two kinds');
+  assertEqual([...noTcg.document.querySelectorAll('#stores .toolbox-links li')]
+    .filter(li => li.classList.contains('stk-price-hidden')).length, 1,
+  'and the row around it goes too, so the list has no empty line in it');
+
+  // Cardhoarder, the case that used to work by accident.
+  const noCardhoarder = await load({ usd: true, tix: true, tcg: true, cardhoarder: false, cardmarket: true });
+  assertEqual(hiddenLinks(noCardhoarder.document), ['www.cardhoarder.com'],
+    'turning Cardhoarder off hides the Cardhoarder link and leaves the other two');
+
+  // Cardmarket is a shop here and nothing more: its box hides the cardmarket.com link, and the
+  // euro column it prices is not this filter's business. That column is the EUR source setting's,
+  // which has a "show nothing" of its own — answering it in two places would be two controls for
+  // one question.
+  const noCardmarket = await load({ usd: true, tix: true, tcg: true, cardhoarder: true, cardmarket: false });
+  assertEqual(hiddenLinks(noCardmarket.document), ['www.cardmarket.com'],
+    'turning Cardmarket off hides the Cardmarket link');
+  assertEqual(hiddenHeads(noCardmarket.document), [],
+    'and hides no column: the euro column is the EUR source setting\'s to remove, not a shop\'s');
+
+  // The euro column, removed by the source setting rather than by a shop.
+  const noEuro = await load({ usd: true, tix: true, tcg: true, cardhoarder: true, cardmarket: true },
+    {}, { euroPriceSources: 'none' });
+  assertEqual(hiddenHeads(noEuro.document), ['EUR'],
+    'and "show nothing" as the EUR source hides the euro column');
+  assertEqual(hiddenCells(noEuro.document), ['€3.92'],
+    'and the cells under it, so the column is gone rather than emptied');
+  assertEqual(hiddenLinks(noEuro.document), [],
+    'while no shop link is touched, because a source is not a shop');
+
+  // The currencies, which are columns and not links.
+  const noCurrencies = await load({ usd: false, tix: false, tcg: true, cardhoarder: true, cardmarket: true });
+  assertEqual(hiddenHeads(noCurrencies.document), ['TIX', 'USD'],
+    'turning the two currencies off hides their columns and leaves the euro one');
+  assertEqual(hiddenLinks(noCurrencies.document), [],
+    'and touches no shop link, because a currency is not a shop');
+
+  // The general switch over the block the three shops sit in. It is not a shop and not a price:
+  // hiding each shop leaves the heading and the block itself behind, and a reader who buys
+  // nowhere wants the block gone rather than emptied.
+  const allPrices = { usd: true, tix: true, tcg: true, cardhoarder: true, cardmarket: true };
+  const withBlock = await load(allPrices);
+  assert(!withBlock.document.querySelector('#stores').classList.contains('stk-price-hidden'),
+    'the store block is shown by default, like every other switch here');
+  const noBlock = await load(allPrices, { showStores: false });
+  assert(noBlock.document.querySelector('#stores').classList.contains('stk-price-hidden'),
+    'and hiding it hides the whole block, heading and all — not just its links');
+  assertEqual([hiddenHeads(noBlock.document), hiddenCells(noBlock.document), hiddenLinks(noBlock.document)],
+    [[], [], []],
+  'while no price and no individual link is touched: the block is the general switch and the ' +
+  'shops are the particular ones, and neither writes the other');
+}
+
 
 async function setPlatformTest() {
   console.log('content scripts: platform filter decides which sets are shown');
@@ -1204,8 +1365,7 @@ async function setPlatformTest() {
     await page.script('src/core/i18n.js');
     await page.script('src/core/format-catalog.js');
     await page.script('src/core/tag-icons.js');
-    await page.script('assets/data/shambleshark-nicknames.js');
-    await page.cardPage();
+      await page.cardPage();
     await sleep(80);
     return page;
   };
@@ -1242,17 +1402,7 @@ async function setPlatformTest() {
   // read" and turned back into three.
   const noneKept = await load({
     clipboard: false,
-    setFiltersMigrated: true,
-    setFilters: {
-      platforms: { paper: false, arena: false, mtgo: false },
-      areas: { prints: true, search: true, sets: true },
-      paper: {
-        nonTournament: true, oversized: true, noEnglishSets: true,
-        foreignBlackBorder: { '4bb': true, fbb: true, bchr: true }, nonEnglish: 'all'
-      },
-      prices: { usd: false, tix: false, tcg: false, cardhoarder: false },
-      tokens: true, caster: false
-    }
+    ...hideOnly(['paper', 'arena', 'mtgo'])
   }, 'https://scryfall.com/sets', setsHtml);
   assertEqual(hidden(noneKept.document).length, 3,
     'with every platform switched off every set on the index is hidden');
@@ -1262,17 +1412,7 @@ async function setPlatformTest() {
   // Magic Online has asked for nothing, and the page is allowed to show them nothing.
   const paperOnlyIndex = await load({
     clipboard: false,
-    setFiltersMigrated: true,
-    setFilters: {
-      platforms: { paper: true, arena: false, mtgo: false },
-      areas: { prints: true, search: true, sets: true },
-      paper: {
-        nonTournament: true, oversized: true, noEnglishSets: true,
-        foreignBlackBorder: { '4bb': true, fbb: true, bchr: true }, nonEnglish: 'all'
-      },
-      prices: { usd: false, tix: false, tcg: false, cardhoarder: false },
-      tokens: true, caster: false
-    }
+    ...hideOnly(['arena', 'mtgo'])
   }, 'https://scryfall.com/sets', setsHtml);
   assertEqual(hidden(paperOnlyIndex.document), ['Alchemy: Secrets of Strixhaven', 'Magic Online'],
     'and Paper alone still keeps the one set it is supposed to');
@@ -1305,69 +1445,89 @@ async function setPlatformTest() {
   assert(!arenaPrints.document.querySelector('.prints-table tbody tr.current').classList.contains('stk-digital-set-hidden'),
     'the printing being viewed stays visible even when its platform is not kept');
 
-  // The mode, on the grouped table prints.js builds itself. This is the second prints
-  // surface and it has its own `needsCategories` and its own excluded set, so a check
-  // over the native rows alone passes with every mutation of that path applied.
+// The grouped table prints.js builds itself. This is the second prints surface and it has its
+  // own fetch and its own gate, so a check over the native rows alone passes with every
+  // mutation of that path applied.
   //
-  // Two printings per extra set, and that is not decoration. A set with a single printing
-  // gets no group header at all — the row repeats the set name instead, which is what the
-  // table does on purpose — so a fixture with one printing each measures nothing at all.
-  // The first version of this test asked for groups that can never be there, and spent a
-  // long time failing on a table that was behaving exactly as written.
-  const borderPrinting = {
-    id: 'p4bb', name: 'Test Card', uri: 'https://scryfall.com/card/4bb/1/test-card', set: '4bb',
-    setName: 'Border Set', number: '1', lang: 'en',
-    digital: false, finishes: ['nonfoil'], prices: {}
+  // Two printings per set, and that is not decoration. A set with a single printing gets no
+  // group header at all — the row repeats the set name instead, which is what the table does
+  // on purpose — so a fixture with one printing each measures nothing at all. The first version
+  // of this test asked for groups that can never be there and spent a long time failing on a
+  // table that was behaving exactly as written. Ten units in all, which is the table's cap:
+  // past it the table stops placing groups and offers the rest behind a link, so a check
+  // reading group headers would be reading a rendering rule rather than the filter.
+  const arenaPrinting = {
+    id: 'pysos', name: 'Test Card', uri: 'https://scryfall.com/card/ysos/7/test-card', set: 'ysos',
+    setName: 'Alchemy: Secrets of Strixhaven', number: '7', lang: 'en', digital: true,
+    games: ['arena'], finishes: ['nonfoil'], prices: {}
   };
-  const secondBorderPrinting = {
-    ...borderPrinting, id: 'p4bb2', number: '2', uri: 'https://scryfall.com/card/4bb/2/test-card'
+  const mtgoPrinting = {
+    id: 'pme2', name: 'Test Card', uri: 'https://scryfall.com/card/me2/1/test-card', set: 'me2',
+    setName: 'Magic Online', number: '1', lang: 'en', digital: true,
+    games: ['mtgo'], finishes: ['nonfoil'], prices: {}
   };
-  const japanesePortal = {
-    id: 'ppor', name: 'Test Card', uri: 'https://scryfall.com/card/por/1/test-card', set: 'por',
-    setName: 'Portal', number: '1', lang: 'ja',
-    digital: false, finishes: ['nonfoil'], prices: {}
-  };
-  const englishPortal = {
-    ...japanesePortal, id: 'ppor2', number: '2', lang: 'en',
-    uri: 'https://scryfall.com/card/por/2/test-card'
-  };
-  // Nine units, under the table's cap of ten: past it the table stops placing groups and
-  // offers the rest behind a link, so a test reading group headers would be reading a
-  // rendering rule rather than the filter.
+  // The paper printings carry `games` too, and that is what makes this surface answerable:
+  // measured 2026-10-04 on Scryfall, every printing carries it and every paper printing has
+  // "paper" in it. The fixture says so rather than relying on the rule's fallback for a
+  // printing with no `games` at all, which is shown rather than hidden and would hide the
+  // difference between the two cases.
+  const withGames = list => list.map(card => ({ games: ['paper'], ...card }));
+  const digitalPair = card => [card, { ...card, id: card.id + 'b', number: '8',
+    uri: card.uri.replace(/\/7\//, '/8/').replace(/\/1\//, '/8/') }];
   const modeRoutes = {
     ...routes,
-    allPrints: () => ({ prints: [...prints, borderPrinting, secondBorderPrinting, japanesePortal, englishPortal], truncated: false })
+    allPrints: () => ({
+      prints: [...withGames(prints), ...digitalPair(arenaPrinting), ...digitalPair(mtgoPrinting)],
+      truncated: false
+    })
   };
-  const modePage = (paper = {}, areas, platforms) => loadCardPage({
+  const modePage = (off, places) => loadCardPage({
     cards: [],
-    // Without this flag the stored object goes through the migration, which would translate
-    // it from a shape this build does not use, and the cases that hide nothing would pass
-    // without their settings ever having been set. Which is what they did, the first time
-    // this ran.
-    setFiltersMigrated: true,
-    setFilters: {
-      platforms: platforms || { paper: true, arena: true, mtgo: true },
-      areas: areas || { prints: true, search: true, sets: true },
-      paper: {
-        nonTournament: true, oversized: true, noEnglishSets: true,
-        foreignBlackBorder: { '4bb': true, fbb: true, bchr: true },
-        nonEnglish: 'all',
-        ...paper
-      },
-      prices: { usd: false, tix: false, tcg: false, cardhoarder: false },
-      tokens: true, caster: false
-    },
+    ...hideOnly(off, places),
     printGrouping: true, printFoldGroups: true, printFullPageLink: true
   }, modeRoutes);
-  const modeGroups = async (paper, areas, count, platforms) => {
-    const page = await modePage(paper, areas, platforms);
+// The set codes the table built a row for.
+  // headers, because a header can also be built from Scryfall's own rows — including the row
+  // for the printing being viewed, which sets.js deliberately leaves visible — so a group
+  // header is not a thing the platform filter controls. The built rows are.
+  const builtBySet = page => {
+    const out = {};
+    for (const row of builtRows(page)) {
+      const href = row.querySelector('a[href]')?.getAttribute('href') || '';
+      const code = (href.match(/^\/card\/([^/]+)\//) || [])[1];
+      if (code) out[code] = (out[code] || 0) + 1;
+    }
+    return Object.keys(out).sort();
+  };
+  const modeGroups = async (off, places, count) => {
+    const page = await modePage(off, places);
     // The count is waited for rather than read once, because the table builds itself from an
     // API answer and the rows land after the page does. Reading once would test the timing of
     // the test rather than the filter, and this fixture has needed both directions of that
     // lesson.
+    //
+    // A timeout that reports only the number it was waiting for names a count rather than the
+    // rule, so the message carries what is actually there. That is what makes the difference
+    // between "the fixture never built the table" and "the filter removed a different set"
+    // visible from the failure alone, and it cost an afternoon to lack.
     await waitFor(() => page.document.querySelectorAll('.stk-print-group-row').length === count
-      ? true : null, `${count} print groups`);
+      ? true : null, `${count} print groups, but there are ` +
+      [...page.document.querySelectorAll('.stk-print-group-row')].map(row => row.textContent).join(' | ') +
+      ' || rows: ' + builtRows(page).map(row => row.textContent.trim().slice(0, 30)).join(' / '));
     return groups(page);
+  };
+  // The same page, read by what it built. Used wherever the question is "which printings are
+  // still there", which is the question the platform filter answers and the one the group
+  // headers cannot be asked.
+  const modePrintings = async (off, places) => {
+    const page = await modePage(off, places);
+    // Waited for by the fixture's own size rather than by a row count, because the case that
+    // removes everything has no row to wait for and a timeout there is indistinguishable from
+    // the filter having run and found nothing.
+    await waitFor(() => page.document.querySelector('.stk-print-entry') || null,
+      'the first built row');
+    await sleep(120);
+    return builtBySet(page);
   };
   // The rows the built table added, found by the class prints.js puts on them and not by the
   // text: the page also holds Scryfall's own prints table and a tags table, and a selector
@@ -1380,164 +1540,107 @@ async function setPlatformTest() {
   // src/card-page/sets.js hides separately, and which this file has no business counting
   // twice. So the two are told apart by their class rather than by their text.
   const builtRows = page => [...page.document.querySelectorAll('#main .prints-table tbody tr.stk-print-entry')];
-  const everySetHere = ['Test Set (TST) · 4', 'Modern Horizons 3 (MH3) · 2',
-    'Border Set (4BB) · 2', 'Portal (POR) · 2'];
-  const withoutBorder = ['Test Set (TST) · 4'];
+const everySetHere = ['Test Set (TST) · 4', 'Modern Horizons 3 (MH3) · 2',
+    'Alchemy: Secrets of Strixhaven (YSOS) · 2', 'Magic Online (ME2) · 2'];
 
-  assertEqual(await modeGroups({}, null, 4), everySetHere,
+  // The group headers, once, with nothing switched off. That is the one assertion about them
+  // this block makes: with a platform switched off, a header for a set with nothing left in it
+  // is still drawn, because the printing being viewed is deliberately never hidden and its own
+  // group goes with it. So the rule is asked of the rows the table builds, and the headers are
+  // asked only that they are there when nothing is filtered.
+  assertEqual(await modeGroups([], null, 4), everySetHere,
     'the grouped table keeps every set with nothing switched off');
-  // The border rule removes a whole set, so its group goes with both of its printings —
-  // including an English one, which is the difference from the rule below.
-  assertEqual(await modeGroups({ foreignBlackBorder: { '4bb': false, fbb: false, bchr: false } }, null, 3),
-    ['Test Set (TST) · 4', 'Modern Horizons 3 (MH3) · 2', 'Portal (POR) · 2'],
-    'switching the border category off takes its set out of the table, English printing included');
-  // The language rule removes printings, and what that does to a group depends on what is in
-  // it. This fixture is arranged so both answers appear: MH3 holds two Japanese printings and
-  // no English one, so the group goes; Portal holds a Japanese and an English printing, so
-  // the group stays with one row. That is the whole difference between a rule about a set and
-  // a rule about a printing, and it is why they are not one switch.
-  // A group of one gets no header, so Portal disappearing from the list of groups here is the
-  // English printing still being there — the row simply stops having a header to sit under.
-  // That is the table behaving as written, which is the second time this fixture has had to
-  // be arranged around it, and it is checked by counting the rows rather than the groups.
-  assertEqual(await modeGroups({ nonEnglish: 'none' }, null, 2),
-    ['Test Set (TST) · 4', 'Border Set (4BB) · 2'],
-    'the language rule at None takes out MH3 whole, since all it has is Japanese, and takes ' +
-    'one row out of Portal, which still has an English printing');
-  const languagePage = await modePage({ nonEnglish: 'none' });
-  // Nine printings in the fixture, three of them non-English, so six rows are left. The count
-  // is a floor rather than an exact figure because the table also marks its own group rows,
-  // and a group row is not a printing.
-  await waitFor(() => addedRows(languagePage).length >= 6, 'six added rows left');
-  const kept = addedRows(languagePage).map(row => row.href);
-  assert(kept.includes('/card/por/2/test-card'),
-    'and Portal is not merely a group of one: its English row is still in the table');
-  assert(!kept.some(href => /\/card\/mh3\//.test(href)),
-    'while MH3, whose printings were all Japanese, is gone from the rows as well');
-  assert(kept.includes('/card/tst/3/test-card') && kept.includes('/card/4bb/1/test-card'),
-    'and the language rule touched neither an English TST row nor an English border row');
-  // Both together. MH3 loses its only language, the border set loses both of its printings.
-  // Both rules at once. What is left is TST, whose four rows are all English, and Portal's
-  // one English row, which has lost its group header along with its Japanese printing. So
-  // one group and five rows: the two rules between them removed the border set, the Japanese
-  // printings and MH3, which had nothing else.
-  assertEqual(await modeGroups({
-    foreignBlackBorder: { '4bb': false, fbb: false, bchr: false }, nonEnglish: 'none'
-  }, null, 1), withoutBorder,
-  'both rules at once, and each still does its own kind of removing');
 
-  // The area answer, asked of the surface it governs. This is one list for every rule rather
-  // than a selector per rule, so it is asked once and the table obeys. The rule used is the
-  // border one, because this fixture has a set for it and no oversized set at all — a check
-  // against a rule this card has nothing for measures nothing, which is why the earlier
-  // version of this block had to be replaced rather than reworded.
-  assertEqual(await modeGroups({ foreignBlackBorder: { '4bb': false, fbb: false, bchr: false } },
-    { prints: false, search: false, sets: true }, 4),
-    everySetHere, 'a rule that is on with the prints area off removes nothing from the table');
-  assertEqual(await modeGroups({ foreignBlackBorder: { '4bb': false, fbb: false, bchr: false } },
-    { prints: true, search: false, sets: true }, 3),
-    ['Test Set (TST) · 4', 'Modern Horizons 3 (MH3) · 2', 'Portal (POR) · 2'],
-    'and with the area on it removes exactly the set it was aimed at');
+  // The whole rule, asked of what the table built. Paper off takes the paper printings and
+  // leaves the digital ones; one platform off takes only that platform's.
+assertEqual(await modePrintings([], null), ['me2', 'mh3', 'tst', 'ysos'],
+    'with nothing switched off the table builds rows for every set');
+  assertEqual(await modePrintings(['paper'], null), ['me2', 'ysos'],
+    'switching a platform off takes exactly that platform\'s printings out of the table');
+  assertEqual(await modePrintings(['arena'], null), ['me2', 'mh3', 'tst'],
+    'and one platform alone takes only its own, leaving the other two alone');
+  assertEqual(await modePrintings(['arena', 'mtgo'], null), ['mh3', 'tst'],
+    'two platforms off leaves the third\'s printings, and the paper ones are not collateral');
 
-  // The same answer, with the platform filter on — and this is the case the line above passed
-  // for the wrong reason. Turning a platform off fetches the set index for its own reasons, so
-  // `excluded` gets built whether the prints area is on or not, and the gate that was holding
-  // it back stopped holding. A reader who unticked "Prints table" and then turned Arena off
-  // found their prints table filtered by a rule they had excluded from it.
+  // The places, which are per platform now. This is the case one shared list of places could
+  // not express: Arena out of the table while it stays in the sets index and the search field.
+  const tableOff = { arena: { prints: false } };
+  assertEqual(await modePrintings([], tableOff), ['me2', 'mh3', 'tst'],
+    'one platform out of one place removes only from that place');
+  assertEqual(await modePrintings([], {
+    arena: { prints: false }, mtgo: { prints: false }
+  }), ['mh3', 'tst'],
+    'and a second platform out of that same place leaves the first one untouched');
+  // The switch and its places write different keys: a place switched off while the platform is
+  // on is a different state from the platform being switched off, and both are reachable. These
+  // two lines are that pair.
+  assertEqual(await modePrintings(['arena'], { arena: { sets: false, search: false } }),
+    ['me2', 'mh3', 'tst'],
+    'switching a platform off takes it out of the table even when its other places are still on');
+  assertEqual(await modePrintings([], { arena: { sets: false, search: false } }),
+    ['me2', 'mh3', 'tst', 'ysos'],
+    'and the places a reader answered about the other two surfaces change nothing here');
+
+  // Every platform off everywhere. The settings page keeps that choice — "a reader who unticks
+  // all three has said so" — so the page has to act on it, and it used not to: the kept list
+  // came back empty and an empty list was read as "nothing this build can read", which put all
+  // three back. The interface showed three unticked switches and the page showed everything,
+  // and only the settings page had ever been checked for it.
   //
-  // Read after a settle rather than waited for by count, on purpose: `modeGroups` waits for an
-  // exact number of groups and reports a timeout when the count differs, which is a failure
-  // that names a number rather than the rule. This assertion has to be the thing that fails,
-  // because the mutation that breaks it is otherwise indistinguishable from a timing problem.
-  const settledGroups = async (paper, areas, platforms) => {
-    const page = await modePage(paper, areas, platforms);
-    await waitFor(() => modeRoutes.allPrints && true, 'the print list route');
-    await sleep(150);
-    return groups(page);
-  };
-  assertEqual(await settledGroups({ foreignBlackBorder: { '4bb': false, fbb: false, bchr: false } },
-    { prints: false, search: false, sets: true }, { paper: true, arena: false, mtgo: false }),
-    everySetHere,
-    'and with the prints area off it still removes nothing once the platform filter has ' +
-    'fetched the set index for itself');
-  // The control for the line above, so it cannot pass by the table being empty: the same
-  // settings with the area on do remove the set.
-  assertEqual(await settledGroups({ foreignBlackBorder: { '4bb': false, fbb: false, bchr: false } },
-    { prints: true, search: false, sets: true }, { paper: true, arena: false, mtgo: false }),
-    ['Test Set (TST) · 4', 'Modern Horizons 3 (MH3) · 2', 'Portal (POR) · 2'],
-    'while with the area on the same platform choice removes it');
-
-  // The language rule on its own against a switched-off area. Every category switch above is
-  // on, so nothing but the language rule can remove a row — which is the point: a gate can be
-  // right for the wrong reason, and with any other rule also acting, a broken gate passes by
-  // hiding the same rows for a different reason. The grouped table's own gate is checked
-  // above with the border rule acting, and this is its counterpart with none.
-  assertEqual(await settledGroups({ nonEnglish: 'none' },
-    { prints: false, search: false, sets: true }, null), everySetHere,
-    'the language rule at None takes nothing out while the prints area is off');
-  // The control: the same rule with the area on removes exactly the Japanese printings, so the
-  // line above is about the area and not about the rule being unable to act here.
-  assertEqual(await settledGroups({ nonEnglish: 'none' }, null, null),
-    ['Test Set (TST) · 4', 'Border Set (4BB) · 2'],
-    'and takes out the Japanese printings when the area is on');
-
-  // Every platform off. The settings page keeps that choice — "a reader who unticks all three
-  // has said so" — so the page has to act on it, and it used not to: the kept-platform list
-  // comes back empty and an empty list was read as "nothing this build can read", which put
-  // all three back. The interface showed three unticked switches and the page showed
-  // everything, and only the settings page had ever been checked for it.
-  //
-  // Counted on the rows this table built rather than on the group headers, because a header
-  // can be made of Scryfall's own rows and those are hidden by sets.js rather than by here.
-  const allOffPage = await modePage({}, null, { paper: false, arena: false, mtgo: false });
+  // Counted on the rows this table built rather than on the group headers, because a header can
+  // be made of Scryfall's own rows and those are hidden by sets.js rather than by here.
+  const allOffPage = await modePage(['paper', 'arena', 'mtgo']);
   await waitFor(() => builtRows(allOffPage).length === 0, 'no printings left at all');
   assertEqual(builtRows(allOffPage).length, 0,
     'with every platform switched off the table builds no printing rows');
-  // And the reason, because "nothing is on the page" and "nothing was ever asked for" are
-  // the same picture and only one of them is the feature working.
+  // And the reason, because "nothing is on the page" and "nothing was ever asked for" are the
+  // same picture and only one of them is the feature working.
   assertEqual(await vm.runInContext(
     'JSON.stringify([...self.STK_CONTENT.chosenPlatforms])', allOffPage.context), '[]',
     'and the kept-platform list is empty rather than restored to three');
   assertEqual(await vm.runInContext(
     'String(self.STK_CONTENT.platformFilterOn)', allOffPage.context), 'true',
     'so the platform filter is running');
+
+  // Every platform switched off on one place only, which is the other legal empty state and the
+  // one the shared list could not hold. It reaches nothing on the other two surfaces.
+  const onePlaceOff = { paper: { prints: false }, arena: { prints: false }, mtgo: { prints: false } };
+  const placeOffPage = await modePage([], onePlaceOff);
+  await waitFor(() => builtRows(placeOffPage).length === 0, 'no rows on that place either');
+  assertEqual(builtRows(placeOffPage).length, 0,
+    'with every platform out of the prints table alone the table builds no rows');
+  assertEqual(await vm.runInContext(
+    'JSON.stringify([...self.STK_CONTENT.chosenPlatforms])', placeOffPage.context), '[]',
+    'and the kept list for that place is empty, while the switch above it is untouched');
+  assertEqual(await vm.runInContext(
+    'JSON.stringify([...self.STK_CONTENT.chosenForSets])', placeOffPage.context),
+    '["paper","arena","mtgo"]',
+    'and the sets index is untouched by the three places that were switched off');
 }
 
-// The mode, on both surfaces, in all three positions.
+// The platform rule on both surfaces of one page, asked separately.
 //
-// This is the test 1.1.0 needed and did not have. The mode shipped, the migration
-// mapped onto it, and no check ever asked what 'prints' did as opposed to 'sets-prints' —
-// so a version that looked like it worked did not work anywhere: `needsSetIndex` and
-// `needsCategories` both read a boolean alias that was false for 'prints', so the set
-// index was never fetched and the rule did nothing on either surface.
+// The sets index and the rows of a prints table sit on the same document, and each is answered
+// from the reader's own places for that surface. This is the test 1.1.0 needed and did not
+// have: a rule shipped, the migration mapped onto it, and no check ever asked what one surface
+// did as opposed to the other — so a version that looked like it worked did not work anywhere.
 //
-// So each position is asked of each surface separately, and the two surfaces are told
-// apart: a set row in the index, and a printing row in a prints table on the same page.
+// So each surface is asked with a different answer, and the fixture is arranged so that only
+// one platform can be on one surface and off the other. With a single shared list of places
+// that state could not be built at all, which is why it is the case this block is made of.
 async function setSurfaceModeTest() {
-  console.log('set filters: the mode decides per surface, and each surface decides for itself');
-  // One page holding both surfaces, which is what the fixture has always been: a sets index
-  // and a prints table on the same document, so one load can ask each of them a question.
-  // The oracle id is here because the language rule asks the print list what a row's language
-  // is, and the real card page carries this tag and a sets index does not.
-  const html = `<!DOCTYPE html><html><head>
-    <meta name="scryfall:oracle:id" content="${ORACLE_ID}"></head><body><div id="main">
+  console.log('set filters: one platform, two places, two answers');
+  const html = `<!DOCTYPE html><html><body><div id="main">
     <div class="search-controls"><label for="order">0 of 0 sets in</label><select id="order"><option>Name</option></select></div>
     <table id="js-checklist"><tbody>
       <tr><td><a href="https://scryfall.com/sets/mh3">Modern Horizons 3</a></td><td>MH3</td></tr>
-      <tr><td><a href="https://scryfall.com/sets/4bb">Fourth Edition Foreign Black Border</a></td><td>4BB</td></tr>
-      <tr><td><a href="https://scryfall.com/sets/por">Portal</a></td><td>POR</td></tr>
+      <tr><td><a href="https://scryfall.com/sets/ysos">Alchemy: Secrets of Strixhaven</a></td><td>YSOS</td></tr>
+      <tr><td><a href="https://scryfall.com/sets/me2">Magic Online</a></td><td>ME2</td></tr>
     </tbody></table>
     <table class="prints-table"><tbody>
       <tr><td><a href="/card/mh3/1/test-card">Test Card</a></td><td>MH3</td></tr>
-      <tr><td><a href="/card/4bb/1/test-card">Test Card</a></td><td>4BB</td></tr>
-      <tr><td><a href="/card/por/1/ja/test-card">Test Card</a></td><td>POR</td><td>JA</td></tr>
-      <!-- Two rows whose links carry no language at all, which is not a fiction: measured on
-           1762 printings on 2026-10-06, 995 of 1001 translated rows have the language in the
-           path and these six do not - sld/ph, acr/grc, ppls/grc and pinv/la all print a
-           link shaped exactly like an English one. Scryfall's games and lang fields know what
-           they are, so the row can still be identified; a link cannot. -->
-      <tr><td><a href="/card/sld/1206/batterskull">Test Card</a></td><td>SLD</td></tr>
-      <tr><td><a href="/card/sld/1207/blighted-agent">Test Card</a></td><td>SLD</td></tr>
+      <tr><td><a href="/card/ysos/7/test-card">Test Card</a></td><td>YSOS</td></tr>
+      <tr><td><a href="/card/me2/1/test-card">Test Card</a></td><td>ME2</td></tr>
     </tbody></table>
   </div></body></html>`;
   const hiddenSets = page => [...page.document.querySelectorAll('#js-checklist tbody tr')]
@@ -1546,156 +1649,76 @@ async function setSurfaceModeTest() {
   const hiddenPrints = page => [...page.document.querySelectorAll('.prints-table tbody tr')]
     .filter(row => row.classList.contains('stk-digital-set-hidden'))
     .map(row => row.querySelector('a').getAttribute('href'));
-  const load = (areas, paper = {}, pageRoutes = routes) => {
-    const state = {
-      clipboard: false, setFiltersMigrated: true,
-      setFilters: {
-        platforms: { paper: true, arena: true, mtgo: true },
-        areas: areas || { prints: true, search: true, sets: true },
-        paper: {
-          nonTournament: true, oversized: true, noEnglishSets: true,
-          foreignBlackBorder: { '4bb': false, fbb: false, bchr: false },
-          nonEnglish: 'none',
-          ...paper
-        },
-        prices: { usd: false, tix: false, tcg: false, cardhoarder: false },
-        tokens: true, caster: false
-      }
-    };
+  const load = (off, places = {}) => {
+    const state = { clipboard: false, ...hideOnly(off, places) };
     return (async () => {
-      const page = createPage({ url: 'https://scryfall.com/sets', html, state, routes: pageRoutes });
+      const page = createPage({ url: 'https://scryfall.com/sets', html, state, routes });
       await page.cardPage();
       await sleep(80);
       return page;
     })();
   };
 
-  // A printed row that cannot be read as English and cannot be read as anything else.
-  //
-  // The rows above are identified by their link: Scryfall writes a translated printing's
-  // language into the path, so `/por/1/ja/…` says JA and `/mh3/1/…` says nothing. Measured on
-  // 1762 printings, that holds for 995 of 1001 translated rows and fails for six — sld/ph,
-  // acr/grc, ppls/grc and pinv/la all print a link shaped exactly like an English one. Under
-  // "None" those six stayed on the page: the rule was on, the mode was chosen, and the rows
-  // were there.
-  //
-  // The print list says what they are — `lang` is `ph` — and the extension already fetches
-  // it on every card page, so the row is identified by what the API says about that set and
-  // number rather than by a shape the link does not always have. The link stays the fallback
-  // for rows the list does not cover, which is the direction that errs towards leaving a row
-  // up.
-  const filipinoRows = await load(null, {}, {
-    ...routes,
-    // In the worker's own shape, not Scryfall's: `number` is what `collector_number` is
-    // renamed to on the way out, and a fixture that answers with the API's field names is
-    // answering a question nobody asked.
-    allPrints: () => ({
-      prints: [
-        { id: 'p-en', set: 'sld', number: '1', lang: 'en', games: ['paper'],
-          art: ['art-1'], frame: '2015', frameEffects: [], borderColor: 'black' },
-        { id: 'p-ph', set: 'sld', number: '1206', lang: 'ph', games: ['paper'],
-          art: ['art-2'], frame: '2015', frameEffects: [], borderColor: 'black' },
-        { id: 'p-ph2', set: 'sld', number: '1207', lang: 'ph', games: ['paper'],
-          art: ['art-3'], frame: '2015', frameEffects: [], borderColor: 'black' }
-      ],
-      truncated: false
-    })
-  });
-  assertEqual(hiddenPrints(filipinoRows).includes('/card/sld/1206/batterskull'), true,
-    "a Filipino printing whose link names no language is hidden under None, because the " +
-    'print list says so');
-  assertEqual(hiddenPrints(filipinoRows).includes('/card/sld/1207/blighted-agent'), true,
-    'and so is the one beside it');
-  assertEqual(hiddenPrints(filipinoRows).includes('/card/mh3/1/test-card'), false,
-    'while the English row in the same set stays');
-  // The link is still what identifies a row the list does not cover, so a reader without the
-  // print list — a failed request, a truncated answer — still gets the rows it can be told
-  // about. The one case this fixture cannot supply is a truncated list, and it is checked on
-  // the model instead: a row nothing is known about is left alone.
-  const noList = await load(null, {}, { ...routes, allPrints: () => { throw new Error('no'); } });
-  assertEqual(hiddenPrints(noList).includes('/card/por/1/ja/test-card'), true,
-    'and with no print list at all the link still carries the Japanese row away');
+  // The state one shared list of places could not hold: Arena is out of the prints table and
+  // in everywhere else. A reader wanting the card page's table without Alchemy rows, while
+  // keeping Alchemy in the sets index and the search field, is answering three questions and
+  // the page has to be able to be in all three answers at once.
+  const split = { arena: { prints: false } };
+  const oneSurface = await load([], split);
+  assertEqual(hiddenSets(oneSurface), [],
+    'the sets index still lists the Arena set, because the reader left Arena in force there');
+  assertEqual(hiddenPrints(oneSurface), ['/card/ysos/7/test-card'],
+    'while the prints table has lost the Arena printing, because the reader took Arena out of it');
 
-  // Nothing switched off. Every rule is at its default, so nothing is hidden anywhere, and
-  // this is the state every reader starts in — which is the first thing to be sure of after
-  // a change of shape, because a default that hides something is a default that takes rows
-  // away from somebody who never asked.
-  const off = await load(null, {
-    nonEnglish: 'all',
-    foreignBlackBorder: { '4bb': true, fbb: true, bchr: true }
-  });
-  assertEqual(hiddenSets(off), [], 'with nothing switched off nothing is hidden from the sets index');
-  assertEqual(hiddenPrints(off), [], 'nor from the prints table on the same page');
+  // The other direction, on the same fixture, so it cannot be an accident of the one above.
+  const otherSurface = await load([], { arena: { sets: false } });
+  assertEqual(hiddenSets(otherSurface), ['Alchemy: Secrets of Strixhaven'],
+    'the other way round, the sets index loses the Arena set');
+  assertEqual(hiddenPrints(otherSurface), [],
+    'and the prints table keeps every row, because Arena is in force on it');
 
-  // The rule on, both areas in force: it removes a set from the index and a printing from
-  // the table, which are two different acts done by one switch.
-  const both = await load(null);
-  assertEqual(hiddenSets(both), ['Fourth Edition Foreign Black Border'],
-    'the border rule hides its set from the index');
-  assertEqual(hiddenPrints(both), ['/card/4bb/1/test-card', '/card/por/1/ja/test-card'],
-    'and both rules hide a printing from the table — the border one and the Japanese one');
+  // Both at once for one platform, which is the state no single switch can reach: Arena is on,
+  // and it is on nowhere.
+  const nowhere = await load([], { arena: { prints: false, sets: false } });
+  assertEqual(hiddenSets(nowhere), ['Alchemy: Secrets of Strixhaven'],
+    'a platform in force on no place is out of the sets index');
+  assertEqual(hiddenPrints(nowhere), ['/card/ysos/7/test-card'],
+    'and out of the prints table, which is the same state the platform switch itself would give');
 
-  // The distinction the redesign is built on: a set rule removes a set, a printing rule
-  // removes a printing. Portal has an English printing, so hiding the Japanese one does not
-  // hide Portal, and a set is not hidden because some of its printings are.
-  assertEqual(hiddenSets(both).includes('Portal'), false,
-    'the language rule does not remove the set that holds a translated printing');
-  assertEqual(hiddenPrints(both).includes('/card/por/2/test-card'), false,
-    'nor the English printing of the same set');
+  // The platform switch, which is a different state from either of the above and has to stay
+  // one: it takes the platform off everywhere, and the three places under it are kept.
+  const switchedOff = await load(['arena']);
+  assertEqual(hiddenSets(switchedOff), ['Alchemy: Secrets of Strixhaven'],
+    'and so does switching the platform off itself, on every place at once');
+  assertEqual(hiddenPrints(switchedOff), ['/card/ysos/7/test-card'],
+    'which is the same answer — and the reason the two must not be stored as one switch');
 
-  // One area off, and the other still on. This is what "where to apply" now means: a single
-  // shared answer rather than a per-rule selector, so the same rule reaches one surface and
-  // leaves the other alone.
-  const printsOnly = await load({ prints: true, search: true, sets: false });
-  assertEqual(hiddenSets(printsOnly), [], 'leaving the sets index off leaves it alone');
-  assertEqual(hiddenPrints(printsOnly), ['/card/4bb/1/test-card', '/card/por/1/ja/test-card'],
-    'while the prints table, which was asked for, still loses both rows');
+  // All three platforms off on all three places is a legal empty, and so is one platform off on
+  // one place. Neither is rescued, and the reader's other choices are not touched by either.
+  assertEqual(hiddenSets(await load(['paper', 'arena', 'mtgo'])).length, 3,
+    'with every platform off everywhere the sets index is empty');
+  assertEqual(hiddenPrints(await load(['paper', 'arena', 'mtgo'])).length, 3,
+    'and so is the prints table on the same page');
+  assertEqual(hiddenSets(await load([], {
+    paper: { sets: false }, arena: { sets: false }, mtgo: { sets: false }
+  })).length, 3,
+    'and a page where every platform is out of the sets index alone is empty there too');
+  assertEqual(hiddenPrints(await load([], {
+    paper: { sets: false }, arena: { sets: false }, mtgo: { sets: false }
+  })).length, 0,
+    'while the prints table on it keeps every row, because every platform is in force there');
 
-  const setsOnly = await load({ prints: false, search: true, sets: true });
-  assertEqual(hiddenSets(setsOnly), ['Fourth Edition Foreign Black Border'],
-    'the other way round, the sets index still loses the border set');
-  assertEqual(hiddenPrints(setsOnly), [],
-    'and the prints table keeps every row, English and translated alike');
+  // And nothing switched off: the state every reader starts in, which is the first thing to be
+  // sure of, because a default that hides something takes rows away from somebody who never
+  // asked.
+  assertEqual(hiddenSets(await load([])), [], 'with nothing switched off nothing is hidden');
+  assertEqual(hiddenPrints(await load([])), [],
+    'on either surface of the same page');
 
-  // A rule on with nowhere to act. The pair is the whole of the requirement: neither half
-  // removes anything on its own.
-  const nowhere = await load({ prints: false, search: false, sets: false });
-  assertEqual(hiddenSets(nowhere), [], 'a rule that is on with every area off removes nothing');
-  assertEqual(hiddenPrints(nowhere), [], 'on either surface');
-
-  // Narrowing a category rather than switching it. Foreign Black Border is per family, so
-  // leaving 4BB on keeps its sets and its printings while the other two families are off —
-  // which is the requirement about unticking one having to mean something.
-  const narrow = await load(null, {
-    foreignBlackBorder: { '4bb': true, fbb: false, bchr: false },
-    nonEnglish: 'none'
-  });
-  assertEqual(hiddenSets(narrow), [], 'showing 4BB keeps it in the sets index');
-  assertEqual(hiddenPrints(narrow), ['/card/por/1/ja/test-card'],
-    'and keeps its printing on the card page too, while the language rule takes only its own row');
-
-  // The language rule's three positions, each asked of the one surface that can act on it.
-  // The middle one is not a boolean and cannot be reached by flipping the third, so it gets
-  // its own case rather than being folded into the other two.
-  const all = await load(null, {
-    nonEnglish: 'all',
-    foreignBlackBorder: { '4bb': false, fbb: false, bchr: false }
-  });
-  assertEqual(hiddenPrints(all), ['/card/4bb/1/test-card'],
-    'All hides nothing by language, while the border rule still hides its own row');
-  assertEqual(hiddenSets(all), ['Fourth Edition Foreign Black Border'],
-    'and the sets index loses only the border set, since the language rule is about printings');
-
-  // The grouped table — the other prints surface, built by prints.js out of the API's
-// answer with its own needsCategories and its own excluded set — is checked in
-// setPlatformTest, next to the pages that demonstrably render one. Two things about it
-// are worth knowing before writing a check against it, because both cost an afternoon:
-//
-//   A set with a single printing gets no group header at all; the row repeats the set
-//   name instead. That is the table behaving as written, not a fault, and a fixture with
-//   one printing per extra set measures nothing.
-//   Past ten units the table stops placing groups and offers the rest behind a link, so
-//   a check reading group headers has to keep the table short.
+  // The counter above the index, which is the number a reader would quote.
+  const counted = await load(['arena']);
+  assertEqual(counted.document.querySelector('.search-controls label[for="order"]').textContent,
+    '2 of 3 sets in', 'and the counter above the list follows the sets-index answer only');
 }
 
 async function advancedSetFilterTest() {
@@ -1741,8 +1764,7 @@ async function advancedSetFilterTest() {
     await page.script('src/core/i18n.js');
     await page.script('src/core/format-catalog.js');
     await page.script('src/core/tag-icons.js');
-    await page.script('assets/data/shambleshark-nicknames.js');
-    await page.cardPage();
+      await page.cardPage();
     await sleep(80);
     return page;
   };
@@ -1798,6 +1820,50 @@ async function advancedSetFilterTest() {
   assertEqual(listValues(all), ['mh3', 'ysos', 'me2'], 'and so is the rendered dropdown');
   assertEqual(groups(all), ['Expansions', 'Online'], 'no group disappears without a platform filter');
 
+// The search dropdown and the `search` places. This is the third surface and the one with a
+  // control of Scryfall's own right above it, so the two are told apart: the Games checkboxes
+  // are not a setting and this file never stores them.
+  //
+  // The case one shared list of places could not hold is here in its sharpest form — Paper out
+  // of the dropdown while it stays in the table and the sets index — because this is the only
+  // surface where a set appears as an option rather than as a row.
+  //
+  // The Games box is ticked for Arena first, because with only Paper ticked the two answers
+  // do not meet and the field falls back to the Games choice rather than emptying itself.
+  // That fallback is deliberate and is checked on its own below; here we want the overlap.
+  const paperOutOfDropdown = await load({ clipboard: false, ...hideOnly([], { paper: { search: false } }) },
+    html);
+  tick(paperOutOfDropdown, 'arena', true);
+  assertEqual(selectValues(paperOutOfDropdown), ['ysos'],
+    'one platform out of the search place takes its set out of the dropdown, leaving the Arena set');
+  assertEqual(listValues(paperOutOfDropdown), ['ysos'],
+    'and the rendered dropdown follows the same answer');
+  assertEqual(groups(paperOutOfDropdown), ['Expansions'],
+    'while the group that lost its paper set keeps the one it still has');
+
+  // The control: the same fixture with nothing switched off, so the line above is about the
+  // place and not about the fixture having nothing to hide.
+  const nothingOff = await load({ clipboard: false, ...hideOnly([]) }, html);
+  tick(nothingOff, 'arena', true);
+  assertEqual(selectValues(nothingOff), ['mh3', 'ysos'],
+    'with nothing switched off and Arena ticked the dropdown has both of those sets');
+  // And the same page asked with the platform switched off rather than the place, which is a
+  // different stored state with the same answer here.
+  const platformOff = await load({ clipboard: false, ...hideOnly(['paper']) }, html);
+  tick(platformOff, 'arena', true);
+  assertEqual(selectValues(platformOff), ['ysos'],
+    'and switching the platform off reaches the dropdown too, which is what it says it does');
+
+  // The fallback, which is the reason the two answers above are not the only thing that decides
+  // this list. The Games boxes are not a setting and they can empty the overlap, and a field
+  // with no set at all is worse than a field showing something the reader did not ask for.
+  const noOverlap = await load({ clipboard: false, ...hideOnly([], { paper: { search: false } }) }, html);
+  assertEqual(selectValues(noOverlap), ['mh3', 'ysos'],
+    'with the Games choice and the setting naming nothing in common the Games choice wins, ' +
+    'so the field never ends up with no set at all');
+
+
+
   // Scryfall only builds the dropdown when the field is opened, so the list
   // arrives long after the script has run.
   const closedHtml = html.replace(/<span class="select2 select2-container[\s\S]*?\n    <\/span>\n/, '');
@@ -1807,32 +1873,6 @@ async function advancedSetFilterTest() {
   late.flushObservers();
   assertEqual(listValues(late), ['mh3'], 'a list that appears later is filtered as soon as it is rendered');
   assertEqual(groups(late), ['Expansions'], 'and its empty group is hidden with it');
-}
-
-async function cardNicknameTest() {
-  console.log('content scripts: historical card nicknames');
-  const load = async (url, state) => {
-    const page = createPage({ url, html: CARD_HTML, state, routes });
-    await page.script('src/core/i18n.js');
-    await page.script('src/core/format-catalog.js');
-    await page.script('src/core/tag-icons.js');
-    await page.script('assets/data/shambleshark-nicknames.js');
-    await page.cardPage();
-    await sleep(60);
-    return page;
-  };
-  const on = await load('https://scryfall.com/card/iko/19/lavabrink-venturer', { cards: [], cardNicknames: true });
-  const note = on.document.querySelector('.stk-card-nickname');
-  assert(note, 'a card Scryfall previewed under another name gets the nickname line');
-  assertEqual(note.textContent, 'Scryfall Preview Name: “Professional Stunt Performer”',
-    'the line names the source and the nickname under the prints table');
-  assert(note.closest('#main .prints'), 'the nickname sits inside the prints block');
-
-  const off = await load('https://scryfall.com/card/iko/19/lavabrink-venturer', { cards: [], cardNicknames: false });
-  assert(!off.document.querySelector('.stk-card-nickname'), 'the line stays away while the setting is off');
-
-  const plain = await load('https://scryfall.com/card/tst/1/test-card', { cards: [], cardNicknames: true });
-  assert(!plain.document.querySelector('.stk-card-nickname'), 'a card without a nickname gets no line');
 }
 
 async function printsSettingsTest() {
@@ -1955,62 +1995,56 @@ function clipboardFormatTest() {
   assertEqual(F.FORMATS.moxfield.withSets, true, 'the set format has one');
 }
 
-// The foreign-only rule on the sets index: a plain switch over a measured list, and the one
-// rule in the group whose list is dated rather than fetched.
+// The sets index on its own, asked the question it can be asked.
 //
-// What matters here is that the page asks the worker for the list and acts on the answer. The
-// list itself is not this test's business — whether `por` belongs in it is settled against
-// Scryfall by `npm run set-rules`, and settled wrongly on purpose in the route above so that a
-// page which stopped reading the list could be caught. A rule that reads `undefined` and hides
-// nothing looks exactly like a rule switched off, which is why the mutation list has one for
-// it.
-async function foreignOnlySetsTest() {
-  console.log('sets index: the foreign-only switch hides the measured list and nothing else');
-  const base = { setFiltersMigrated: true, setFilters: {
-    setsEnabled: true,
-    platforms: { paper: true, arena: true, mtgo: true },
-    sets: { nonTournament: false, oversized: false, foreignOnly: true,
-      foreignBlackBorder: { surfaces: 'off', which: [] },
-      nonEnglish: { surfaces: 'off', which: [] } },
-    prices: {}, tokens: false, caster: false
-  } };
+// One rule reaches this surface and it is the platform rule, so the index is checked over the
+// digital sets the platform index places rather than over a list of set names — which is what
+// the two rules that used to be here were checked over, and neither of those rules is on the
+// page any more. A reader who had either of them gets those sets back.
+//
+// What matters here is that the page asks the worker for the classification and acts on the
+// answer. A rule that reads `undefined` and hides nothing looks exactly like a rule switched
+// off, which is why the mutation list has one for the worker's answer.
+async function setsIndexPlatformTest() {
+  console.log('sets index: the platform rule, and a set the index cannot place');
+  const on = await loadSetsPage(hideOnly(['arena']), routes);
+  assertEqual(hiddenSets(on), ['ysos'],
+    'the one digital set the index places on Arena is marked');
 
-  const on = await loadSetsPage(base);
-  assertEqual(hiddenSets(on), ['por', 'wmkm'],
-    'both sets the worker names as foreign-only are marked, and in page order');
+  const off = await loadSetsPage(hideOnly([]), routes);
+  assertEqual(hiddenSets(off), [], 'with nothing switched off nothing is hidden, so the two differ');
 
-  const off = await loadSetsPage({ ...base, setFilters: { ...base.setFilters,
-    sets: { ...base.setFilters.sets, foreignOnly: false } } });
-  assertEqual(hiddenSets(off), [],
-    'with the switch off nothing is hidden, so the two are not the same page');
-
-  // The gate. A rule that answered the question itself instead of asking would keep hiding
-  // rows behind a closed master switch, which is the whole thing the gate is for.
-  const gated = await loadSetsPage({ ...base, setFilters: { ...base.setFilters,
-    setsEnabled: false } });
-  assertEqual(hiddenSets(gated), [],
-    'and with the master switch off the rule does nothing, without losing the choice');
-
-  // A worker that answers without the list — an older build's cache, or the failure path.
-  // The page must not treat a missing list as a reason to hide everything.
-  const empty = await loadSetsPage(base, { ...routes, setCategories: () => ({
-    digital: [], nonTournament: [], oversized: [], foreignOnly: [],
-    foreignBlackBorder: {}, nonEnglish: {}
-  }) });
+  // A platform index that answers with nothing. Scryfall's `/sets` marks a set digital and
+  // says nothing about which client carries it, so the extension ships a snapshot and looks up
+  // what the snapshot misses; a set it cannot place stays visible rather than being hidden on a
+  // guess, which is the direction this filter has always taken.
+  const empty = await loadSetsPage(hideOnly([]), { ...routes, setPlatforms: () => ({}) });
   assertEqual(hiddenSets(empty), [],
-    'a worker that answers with an empty list hides nothing rather than everything');
+    'a set the index cannot place is shown, not hidden on an inability to place');
 
-  // And the counter, which the reader quotes.
+  // And the counter, which is the number a reader would quote: one of five gone, four counted.
   const counter = on.document.querySelector('#main .search-controls label[for="order"]');
-  assert(counter && /3 of 5/.test(counter.textContent),
+  assert(counter && /4 of 5/.test(counter.textContent),
     'the counter above the list counts what is left, not what the page holds ("' +
     (counter ? counter.textContent.trim() : 'absent') + '")');
+
+  // The five rows the fixture holds are three paper sets and two digital ones, so the sets
+  // index has a paper set, an Arena set and a Magic Online set in it — and Paper is a platform
+  // like the other two, which is why switching it off hides the three paper sets and not a
+  // category of sets called "paper".
+  const paperOff = await loadSetsPage(hideOnly(['paper']), routes);
+  assertEqual(hiddenSets(paperOff), ['mh3', 'por', 'wmkm', 'sld'],
+    'switching Paper off takes the four paper sets of the five, which is what it says it does');
+  assertEqual(hiddenSets(paperOff).includes('ysos'), false,
+    'and leaves the digital set, which is not on Paper');
+  assertEqual(hiddenSets(paperOff).includes('me2'), false,
+    'and the Magic Online one with it');
 }
 
 (async () => {
   try {
     clipboardFormatTest();
-    await foreignOnlySetsTest();
+    await setsIndexPlatformTest();
     await cardPageTest();
     await printsGroupsEdgeTest();
     await promoParentMergeTest();
@@ -2023,12 +2057,12 @@ async function foreignOnlySetsTest() {
     await clipboardDisabledTest();
     await legacyMigrationTest();
     await advancedPriceFilterTest();
+await priceFilterTest();
     await deckLegalityTest();
 await deckButtonPlacementTest();
 await setSurfaceModeTest();
     await setPlatformTest();
 await advancedSetFilterTest();
-    await cardNicknameTest();
     await printsSettingsTest();
     summary('test-preview');
     process.exit(0);

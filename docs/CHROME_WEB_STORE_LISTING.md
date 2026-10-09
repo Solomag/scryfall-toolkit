@@ -1,4 +1,4 @@
-# Chrome Web Store listing — Scryfall Toolkit 1.4.1
+# Chrome Web Store listing — Scryfall Toolkit 1.7.6
 
 Everything here is written from the shipped code, so that the answers given in the store
 console match what the extension actually does. Where a field needs a decision from the
@@ -63,7 +63,7 @@ show, and the two had been disagreeing since before the extension had a release.
 > **Optional extras.** EDHREC and CardTrader are off until you turn them on; the rest have
 > their own defaults and each can be switched off. EDHREC deck usage and Salt Meter
 > inside the legality block. CardTrader prices for the exact printing, using your own
-> personal access token. Finish badges, card nicknames, type and mana search links, set and
+> personal access token. Finish badges, type and mana search links, set and
 > printing filters, a No Prices mode, a token list and a Commander legality check on deck
 > pages.
 >
@@ -257,36 +257,48 @@ Ready in `store-assets/`, each exactly **1280×800** (PNG), in English:
 
 | File | What it shows |
 | --- | --- |
-| `store-assets/01-settings-01-of-05.png` | the header, General (settings language, theme), Tags with its per-tag switches, and CardClip with its export format, then the Hide extras heading and the first platform switches |
-| `store-assets/02-settings-02-of-05.png` | Hide extras — Paper, Arena and Magic Online with Paper's detail panel open: its four categories, the Foreign Black Border families behind their own switch with the category off so the list is showing, non-English printings as one select over all / only without an English analogue / none, and the three places filtering applies to |
-| `store-assets/03-settings-03-of-05.png` | which prices to hide with its four switches, the Caster indicator and the deck token switch, then Additional info: the nickname switches, EDHREC deck usage and Salt Meter, and CardTrader with its EUR source and token field |
-| `store-assets/04-settings-04-of-05.png` | the end of the CardTrader token field, Legality with the format grid, and Scryfall Deckbuilder with the Commander legality check and the two opt-in deck tools |
-| `store-assets/05-settings-05-of-05.png` | the tail of the deck tools with the host-access button, the deck clean-up block, Prints, Experimental, and Credits and third-party projects |
+| `store-assets/01-settings-01-of-05.png` | the header, General (settings language, theme), Tags with its per-tag switches, and CardClip with its export format |
+| `store-assets/02-settings-02-of-05.png` | the whole of Visibility, side by side: the platforms table on the left with one row per platform and a column per place, one platform switched off and one place switched off, and Prices and links on the right with the prices, the three shop boxes, the whole-block switch, CardTrader unconnected, the EUR source — whose dropdown ends in "show nothing" — and the Caster marker, followed by Additional info as a list of features |
+| `store-assets/03-settings-03-of-05.png` | the end of Additional info and Legality with the format grid |
+| `store-assets/04-settings-04-of-05.png` | the end of the format grid and Scryfall Deckbuilder, including the Commander legality check and the three opt-in deck tools with the host-access button |
+| `store-assets/05-settings-05-of-05.png` | the deck clean-up block, the Prints table section with Experimental below it, and Credits and third-party projects |
 
 All five come from one real capture of the settings page
-(`store-assets/settings-page-full.png`, 1280×5626), so nothing is repeated or cropped
+(`store-assets/settings-page-full.png`, 1280×4014), so nothing is repeated or cropped
 away between them. Each tile is scaled uniformly to 800 rows and the margins continue
 the page's own colour, so no screenshot is stretched.
 
-The capture is taken with Paper's detail panel open and the Foreign Black Border category
-switched off, because that is where the rule is: a store shot of the panel closed shows
-three switches, a button and three more switches, and says nothing about what the button is
-for; and with every border family on, the list under that category is closed too — which is
-the state a reader is in by default and the one where the rule looks like a plain switch.
-`tools/make-store-shots.cjs` opens the panel by pressing the button, so the button's own
-script has run; a capture made by removing an attribute would be a picture of a page this
-build does not produce.
+The capture is taken with Arena switched off and with Magic Online's Prints table place
+switched off, because those are the two states the table has to be able to show and a
+capture of the defaults shows neither: with everything ticked, the three muted boxes of a
+platform that is off and the box that is merely unticked beside them are both invisible, and
+the table looks like twelve identical boxes. `tools/make-store-shots.cjs` reaches both by
+pressing the boxes and firing their own `change` events, so the stored value, the row and the
+boxes agree the way they do on the page; a capture made by setting `checked` and stopping
+there would be a picture of a state this build cannot be in.
 
-The switch that hides the Search area is off in the capture for the same reason: it is the
-one row of that group whose own meaning is not visible from the label.
+It also waits half a second before it captures. Every box transitions its background over
+150ms, and a capture taken on the next round trip catches all of them mid-fade — a picture of
+neither state, in which an unticked box reads as a filled square. That was not a guess: the
+first capture after the Visibility section was rebuilt showed exactly that, and the colours were
+sampled out of the PNG and matched against `#7b5c8c` at 42% before the cause was believed.
+
+**Additional info is a list of features, so the capture shows it as one.** Every panel is
+collapsed, which is how the page opens and the only way the list reads as a list; the capture
+deliberately does not open one, because a picture of an open panel is a picture of a state a
+reader has to ask for. CardTrader is shown unconnected, which is its state on a machine that has
+never had a token — the row is the name, the state and a button, with no switch to mistake for a
+working feature.
 
 **The heights move together, so a small change moves all five pictures.** The tile height
 is the page height divided by five and rounded up, so a section added since the pictures
 were last taken does not push one block down into the next tile - it changes the band for
 every tile, and moves the host-access button out of tile four and into tile five without a
 line of the settings page changing name. The row descriptions above were read off the
-pictures again after 1.4.0 for exactly that reason, and the height quoted in this document
-is checked against the PNG rather than trusted.
+pictures again after 1.7.6 for exactly that reason — Additional info lost two features and the
+secondary button that held the last of them, and the EUR source gained an option, which moved a
+boundary across every tile — and the height quoted in this document is checked against the PNG
+rather than trusted.
 
 **The row descriptions are read off the pictures, and they go stale the moment the page
 changes.** Two rounds of refactoring moved everything between them — the pictures went from

@@ -86,7 +86,6 @@ async function deckPageWith({ which, count = 5, tokens, state = {} }) {
   await page.script('src/core/i18n.js');
   await page.script('src/core/format-catalog.js');
   await page.script('src/core/tag-icons.js');
-  await page.script('assets/data/shambleshark-nicknames.js');
   await page.cardPage();
   await sleep(80);
   const button = page.document.querySelector(which === 'tokens' ? '.stk-token-button' : '.stk-legality-button');

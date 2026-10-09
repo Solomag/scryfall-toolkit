@@ -20,16 +20,154 @@ section.experimental h2{color:#e8cf9e}
 .experimental-sub{border-style:dashed;border-color:#7a6a55}
 .experimental-sub>legend{color:#e8cf9e}
 label{display:block;margin:9px 0;cursor:pointer}input{accent-color:#aa85b5}
-/* A platform and the button that opens its detail, on one line. The switch keeps the
-   switch shape, so a row of platforms reads as three switches and the button beside them
-   reads as a second thing rather than a fourth switch. */
-.platform-row{display:flex;align-items:center;gap:12px;margin:9px 0}
-.platform-row>label{display:flex;align-items:center;gap:11px;margin:0;flex:1 1 auto}
-.details-button{flex:0 0 auto;padding:4px 10px;font-size:13px}
-/* The detail panel is a nested fieldset with no border of its own: the switch above it says
-   which platform these settings belong to, and a second frame inside that would say it again
-   with more ink. */
-.sub-panel{border:0;border-left:2px solid #655968;border-radius:0;margin:6px 0 4px 7px;padding:2px 0 4px 14px}
+/* The visibility section: two columns, a table on the left and four short lines on the right,
+   told apart by headings and space rather than by frames. Its own padding is a little wider
+   than a section's, because a table against an 18px edge looks like it is falling out of the
+   card rather than sitting in it.
+
+   A fieldset with a legend in its border says "a group of related settings" by drawing a box.
+   Three boxes inside a box says it three times, and by the third the reader is looking at
+   frames rather than at what is in them. So the boxes go here and the structure is a heading,
+   a little space, and the next heading.
+
+   The colours and the type are the section's own: #e4c7ea is the colour this page already used
+   for a sub-heading, and everything else is inherited. */
+#visibilityGroup{padding:24px}
+#visibilityGroup h3{margin:0 0 12px;font-size:15px;font-weight:600;color:#e4c7ea}
+/* The left column is a little wider than the right, because it holds a table and the right
+   holds four short lines. `minmax(0, …)` and not a bare `1.15fr`: a grid track's automatic
+   minimum is its content, so without the zero the table's natural width would push the grid
+   wider than the card and the whole page would scroll sideways. */
+.visibility-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:32px;align-items:start}
+/* One column when the two stop fitting side by side. The second column goes under the first
+   rather than either being squeezed, and nothing overflows: the grid tracks can shrink to zero
+   and the table scrolls inside its own wrapper. */
+@media (max-width:720px){.visibility-grid{grid-template-columns:minmax(0,1fr)}}
+/* The platforms table. Five columns, sized by their content rather than by a share of the
+   width: a table stretched across its column puts the boxes so far apart that the row stops
+   reading as a row and the reader has to look back at the header for every one.
+   No `max-width`, deliberately. Clamping the table to its column squeezes the columns below
+   their min-content width and the headings are then clipped mid-word — "Список сетов" reading
+   as "Списо / сето". Left at its natural width it overflows the wrapper instead, and the
+   wrapper scrolls, so nothing is ever cut off. */
+.table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.platform-table{border-collapse:collapse}
+.platform-table th,.platform-table td{padding:0;text-align:center;font-weight:400}
+/* The platform's own name, once, down the left, and its heading above it on the same edge.
+   `scope="row"` is on the name in the markup so a screen reader announces it with each box in
+   that row rather than leaving the reader to count columns. */
+.platform-table th[scope=row]{
+  text-align:left;padding:0 14px 0 0;color:#e9e5ee;font-size:14px;white-space:nowrap;
+}
+/* 40px a row, with no padding of its own above or below it: the row is the row, and an 18px box
+   is comfortable to press because the label around it fills the whole cell. */
+.platform-table tbody tr{height:40px}
+.platform-table thead th{
+  padding:0 8px 6px;font-size:12px;font-weight:600;color:#bdb6c2;vertical-align:bottom;
+}
+/* The name column is left-aligned in its heading as well as in its rows, so the word sits over
+   the names it names rather than over the middle of them. */
+.platform-table thead th:first-child{text-align:left;padding-left:0}
+/* A switched-off platform. The row is *not* dimmed as a whole: the name and the platform's own
+   box are what the reader uses to read the row and turn it back on, and a control that has
+   faded is a control that has stopped being one. Only the name goes a shade quieter, and only
+   the three places the switch governs go quiet at all. */
+.platform-table tbody tr.is-off th[scope=row]{color:#b9b2c4}
+/* The cell is the hit area, not the box. A label that fills its cell turns an 18px target into
+   a 40px one without moving anything, which is why the box is a child of the label rather than
+   beside it.
+   `margin:0` because the page's own `label` rule gives every label 9px above and below: left
+   alone, that is 18px of nothing inside a 40px row, and the rows come out 58px apart. */
+.stk-cell-check{display:flex;align-items:center;justify-content:center;height:40px;margin:0;cursor:pointer}
+.stk-cell-check:has(input:disabled){cursor:default}
+/* The two price groups: a caption, and directly under it the boxes it names.
+   The caption is above them rather than beside them because beside them needs a column as wide
+   as the longest caption on the page, and that column is empty on every row but one — which is
+   the wide grey gap the group used to have between a label and its own boxes. */
+.pair-group{margin:0 0 16px}
+.pair-group:last-child{margin-bottom:0}
+.pair-caption{margin:0 0 8px;font-size:14px;color:#e9e5ee}
+.pair-items{display:flex;flex-wrap:wrap;gap:8px 18px}
+.pair-item{display:flex;align-items:center;gap:8px;margin:0;font-size:14px;cursor:pointer}
+/* Which shop's euro price the column carries. The same shape as the price groups above it —
+   a caption and the control it names — because it is the same kind of setting, and it sits
+   under them rather than in the other section, where it was a price setting in a list of
+   things that are not prices. */
+.price-source{margin:16px 0 0}
+.price-source-head{display:flex;align-items:center;gap:8px;margin:0 0 8px}
+.price-source .pair-caption{margin:0}
+.price-source select{width:auto;min-width:190px;max-width:260px;margin-top:0}
+/* The general switch over the block the three shops sit in, directly under the group it governs.
+   16px and not 24: it belongs to the group above it, and the 24px gap is for the two settings
+   that stand on their own. */
+.stores-row{margin:16px 0 0}
+/* One row and one box, on its own line under the prices rather than tucked under the store
+   links: it is a setting about the card page's marker and has nothing to do with where a euro
+   price comes from, and an indent under that group read as though it belonged to it. */
+.caster-row{margin:24px 0 0}
+/* Every control in the settings that is a square box rather than a slider. Two sections use
+   them — Visibility and Additional info — and they are one class rather than two sets of rules
+   because a reader has to be able to tell a checkbox from a switch without checking which part
+   of the page they are in. `appearance:none` plus a border and a tick is what makes it a box,
+   and the input stays a real checkbox underneath, so the keyboard and every screen reader keep
+   working.
+   `background-image:none` is not decoration. The page-wide switch draws its knob with a radial
+   gradient in `background-image` and rounds itself with a 12px radius, and a rule that set only
+   a new background-color left both of them standing — an unticked box came out as a grey circle
+   inside a square, which is a switch wearing a checkbox's border. Both are reset here, in the
+   base rule and again in `:checked`, so no state can inherit the knob.
+   The selector carries both the attribute and the class on purpose: the page-wide
+   `input[type=checkbox]` is the same specificity as `.stk-check` alone, so which of the two won
+   would come down to where this block happens to sit in the file. */
+input[type=checkbox].stk-check{
+  appearance:none;-webkit-appearance:none;position:relative;flex:0 0 auto;
+  width:18px;height:18px;margin:0;padding:0;border:1px solid #6a6070;border-radius:4px;
+  background-color:transparent;background-image:none;background-repeat:no-repeat;
+  cursor:pointer;transition:background-color .15s,border-color .15s;
+}
+/* Ticked: a filled square with a tick on it. The tick is a border on the box's own
+   pseudo-element — a pseudo-element on a form control is computed but never painted, which is
+   why the switch above draws its knob as a background instead. */
+input[type=checkbox].stk-check:checked{
+  background-color:#7b5c8c;background-image:none;border-color:#a98cbb;
+}
+input[type=checkbox].stk-check:checked::after{
+  content:"";position:absolute;left:5px;top:2px;width:5px;height:9px;
+  border:solid #fff;border-width:0 2px 2px 0;transform:rotate(43deg);
+}
+/* Focus is never removed. A twelve-box table is exactly where a keyboard user needs to see
+   which box they are on, and the outline is the only thing that says it. */
+input[type=checkbox].stk-check:focus-visible{outline:2px solid #c9a4d5;outline-offset:2px}
+/* The three places of a platform that is switched off, and the shop boxes under a hidden store
+   block. They keep a border and a recessed fill and they do not fade to nothing — a control that
+   has faded reads as a rendering fault rather than as a state — but the difference from a box
+   that is merely unticked has to be *visible*, because that difference is the whole message: a
+   grey that is two shades off the card is a grey nobody notices. So the border goes to #3b3642
+   and the fill to #232229, against an unticked box's #6a6070 on the card's own colour. */
+#visibilityGroup input[type=checkbox].stk-check:disabled,
+#visibilityGroup .pair-item input[type=checkbox].stk-check:disabled,
+#visibilityGroup .feature-row input[type=checkbox].stk-check:disabled{
+  background-color:#232229;border-color:#3b3642;opacity:1;cursor:default;
+}
+/* And the words beside them go quieter with them, which is the page's own rule for a label
+   around a disabled switch — except in the platforms table, where the name and the platform's
+   own box are what the reader uses to turn the row back on. */
+#visibilityGroup label.stk-cell-check:has(> input[type=checkbox].stk-check:disabled){opacity:1;cursor:default}
+/* In one column the table gets the whole card and still needs a little less room than it has:
+   five headings, four of them words that cannot be broken, add up to more than a 420px card
+   can give them. So the padding between the columns comes in, the heading type drops a point,
+   and the platform name is allowed to wrap — "Magic Online" on two lines is the widest thing
+   in the table and the least informative place to spend the width on.
+   This block sits at the end of the section's rules and not beside the grid's, because a media
+   query adds no specificity: written above `.platform-table thead th` it would lose to it, and
+   a rule that is overridden by the one it is meant to override reads as if it were never
+   there. */
+@media (max-width:720px){
+  .platform-table thead th{padding:0 4px 6px;font-size:11px}
+  .platform-table th[scope=row]{white-space:normal;padding-right:8px}
+}
+
+
 /* Every checkbox is drawn as a switch: the input stays a real checkbox, so
    keyboard and screen readers keep working while it looks like a toggle. The
    knob is a background of the input itself — a pseudo-element on a form control
@@ -46,7 +184,60 @@ select,input[type=password]{width:100%;padding:8px;margin-top:4px;color:#e9e5ee;
 .salt-thresholds{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px}.salt-thresholds label{display:flex;align-items:center;gap:8px}.salt-thresholds input{width:72px;padding:5px;color:#e9e5ee;background:#24242a;border:1px solid #6a6070;border-radius:4px}
 .salt-thresholds[hidden]{display:none}
 button{background:#473b50;color:#f1e8f3;border:1px solid #88758d;border-radius:4px;cursor:pointer;padding:7px 10px}button:hover{background:#5d4b68}
-.token-row{display:flex;gap:6px;align-items:center}.token-row input{min-width:0;flex:1}.token-row button{white-space:nowrap}
+.token-row{display:flex;gap:6px;align-items:center}.token-row input{min-width:0;flex:1}.token-row button{white-space:nowrap}.token-row[hidden]{display:none}
+/* Additional info: a list of features, one line each, and each feature's settings behind its
+   own button.
+   The section used to be two fieldsets standing open with every threshold and select in them,
+   which said "fill this in" about settings that are all optional and are already filled in.
+   A row says what the feature is and whether it is on; the button says there is more if you
+   want it. Nothing here has to be visited for a feature to work, and nothing here is a second
+   level: a panel holds fields and no other panel. */
+.feature-list{margin:0}
+/* 40px a line, and the line may wrap: a label is a sentence and a narrow window makes it two
+   lines, which is better than a sentence clipped or a row that grows unevenly. */
+.feature-row{display:flex;align-items:center;gap:8px;min-height:40px;padding:1px 0}
+/* The row's own layout — flex, centred, 11px between a box and its words — is the page's own
+   `label:has(> input[type=checkbox])` rule, which is what every switch on this page already
+   sits in and which beats this rule on specificity. Restating those three properties here would
+   be a rule that never applies, so only what this rule actually wins is written: the label takes
+   the free space, so the button lands on the common right edge. */
+.feature-main{flex:1 1 auto;min-width:0;margin:0;font-size:14px;color:#e9e5ee;cursor:pointer}
+/* The connection state, which is a fact about the feature rather than a control: it sits
+   between the name and the button and never takes the room the name needs. */
+.feature-state{flex:0 0 auto;font-size:13px;color:#bdb6c2;white-space:nowrap}
+/* Secondary by construction: outlined, on the card's own colour, and never the loudest thing
+   in the row. The switch beside it is the decision; this is a way to look inside. */
+.feature-toggle,.feature-help,.feature-reset{
+  flex:0 0 auto;background:transparent;border:1px solid #6b6474;color:#cfc8d8;
+  border-radius:4px;cursor:pointer;font-size:13px;line-height:1;
+}
+.feature-toggle{padding:7px 10px}
+.feature-toggle:hover,.feature-help:hover,.feature-reset:hover{background:#3a3342;border-color:#88758d}
+.feature-help{width:22px;height:22px;padding:0;border-radius:50%;font-weight:600}
+.feature-reset{padding:7px 10px}
+/* The panel belongs to the row above it, so it is indented from it by a little more than the
+   box it sits under. `[hidden]` is written out because the page-wide `display` rules on the
+   controls inside it would otherwise beat the browser's own hidden rule. */
+.feature-panel{margin:2px 0 12px 28px;display:block}
+.feature-panel[hidden]{display:none}
+/* A label in a panel is a row like the ones in the list: a field name, or a box and its words.
+   The gap is 11px to match the page's own label rule, which is what a label holding a checkbox
+   actually gets — a rule that asked for 10 would be a number the browser never uses. */
+.feature-panel>label{display:flex;align-items:center;gap:11px;margin:12px 0 0;font-size:13px;color:#d7c8d8}
+/* A select in a panel is as wide as the longest option and no wider: a control stretched to
+   the whole card reads as the most important thing in the section, and it is a detail. */
+.feature-panel select{width:auto;min-width:190px;max-width:260px;margin-top:4px}
+.feature-panel .salt-thresholds{margin-top:10px}
+.feature-actions{display:flex;align-items:center;gap:8px;margin-top:12px}
+.feature-actions[hidden]{display:none}
+.feature-actions .feature-reset{margin-left:auto}
+/* CardTrader with no token. The switch is not drawn at all — there is nothing for it to turn
+   on — and the row is the name, the state and the button. */
+.feature-main.is-unconnected input{display:none}
+/* The one button that belongs to the section rather than to a row. Under the list, on its own
+   line, so a reader who wants neither of its settings never has to read it. */
+.feature-more{margin-top:6px}
+.feature-panel-wide{margin-left:0}
 /* The "?" next to a section heading, and the picture it opens. The illustrations
    are a reference and not a banner: they open over the settings at a size the panel
    can actually be read at, and never scale up past the size they were drawn at. */
@@ -67,8 +258,17 @@ button{background:#473b50;color:#f1e8f3;border:1px solid #88758d;border-radius:4
 .shot-dialog::backdrop{background:rgba(8,8,12,.72)}
 .shot-dialog-close{float:right;margin:0}
 .shot-dialog-close button{border:1px solid #6b6474;background:#24252b;color:#cfc8d8;border-radius:4px;font-size:16px;line-height:1;padding:4px 9px;cursor:pointer}
-.shot-dialog img{display:block;max-width:100%;height:auto;margin:0 auto;border:1px solid #3a3644;border-radius:6px;background:#191820}
+.shot-dialog img{display:block;max-width:100%;height:auto;margin:10px auto 0;border:1px solid #3a3644;border-radius:6px;background:#191820}
+/* The feature help has no picture. `[hidden]` is written out because the rule above is a
+   `display` on the same element, and a rule that sets `display` beats the browser's own rule
+   for the hidden attribute. */
+.shot-dialog img[hidden]{display:none}
 .shot-dialog p{margin:9px 0 0;color:#a49fb0;font-size:12px;line-height:1.45}
+/* The notes moved off the settings page and into here. A little more room than the caption and
+   a rule above them, because they are read rather than glanced at: this is the only place the
+   explanation of a section's rules now exists. */
+.shot-notes{margin:0 0 2px;padding-bottom:10px;border-bottom:1px solid #3a3644}
+.shot-notes p{margin:7px 0 0;color:#bdb6c2;font-size:13px;line-height:1.5}
 .hint{font-size:12px;color:#bdb6c2;margin:12px 0 0}#status{color:#abdfb7;min-height:18px}
 .columns-header{display:grid;grid-template-columns:1fr 1fr;gap:8px;color:#bfb3c5;font-size:12px;margin:3px 0 7px}
 #formatList{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px 10px}

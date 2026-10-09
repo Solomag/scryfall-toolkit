@@ -351,9 +351,14 @@ function storeShotsTest() {
     assert(onDisk.includes(file), `the listing names ${file}, which exists`);
   }
 
-  // The capture has to cover the page, or a tile is cut away from something.
-  assert(capture.height > 4000,
-    'the capture is the whole page rather than part of it (' + capture.height + ' px)');
+  // The capture has to cover the page, or a tile is cut away from something. The floor is a
+  // guard against a window-sized capture — about 1080 rows — rather than the page's height: the
+  // height itself is asserted against the PNG where the listing states it, so this only has to
+  // catch the case where the tool captured a viewport and called it a page. It was 4000, which
+  // was the page's height when it was written and would now fail on a page that is genuinely
+  // shorter — a threshold that tracks the thing it measures is not a threshold.
+  assert(capture.height > 2000,
+    'the capture is the whole page rather than a window of it (' + capture.height + ' px)');
 
   // The README's own picture is a different file for a different reader: one screen of
   // settings at a width that can be read, not a strip six times taller than it is wide.
@@ -404,7 +409,7 @@ function packagedNoticesTest() {
     'src/styles/theme/01-card-page.css', 'src/styles/theme/02-shared-pages.css', 'src/styles/theme/03-account-and-marketing.css', 'src/styles/theme/04-surfaces.css', 'src/styles/theme/05-tagger.css', 'src/styles/theme/06-shared-surfaces.css', 'src/styles/theme/07-our-own-ui.css',
     'src/ui/options.html', 'src/ui/options.js', 'src/ui/options.css', 'src/core/i18n.js', 'src/core/tag-icons.js', 'src/card-page/tagger-clipboard.js',
     'src/core/format-catalog.js', 'src/core/format-overrides.js', 'assets/data/oracle-tags.js', 'assets/data/illustration-tags-1.js',
-    'assets/data/illustration-tags-2.js', 'assets/data/shambleshark-nicknames.js', 'assets/data/set-platforms.js',
+    'assets/data/illustration-tags-2.js', 'assets/data/set-platforms.js',
     'THIRD_PARTY_NOTICES.md', 'LICENSE', 'README.md', 'PRIVACY.md'
   ];
   for (const file of shipped) {
@@ -690,12 +695,6 @@ function packagedNoticesTest() {
     // Both halves name the same tags: they are one list split, not two lists.
     assertEqual(JSON.stringify(indexes.art1.t), JSON.stringify(indexes.art2.t),
       'both halves of the art index carry the same tag names');
-  }
-  const nicknames = read('assets/data/shambleshark-nicknames.js').slice(0, 700);
-  for (const statement of [
-    'crookedneighbor/shambleshark', 'Samuel Sim\u00f5es', 'Blade Barringer', 'MIT', 'assets/licences/Shambleshark-LICENSE'
-  ]) {
-    assert(nicknames.includes(statement), `assets/data/shambleshark-nicknames.js header states ${statement}`);
   }
   // The derived Scryfall snapshot says what it is and when it was taken.
   const platforms = read('assets/data/set-platforms.js');

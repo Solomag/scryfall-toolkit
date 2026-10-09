@@ -204,95 +204,36 @@
       // The rules themselves. One reference for the whole table, so the comparison below and
       // the platform check above cannot end up calling two different definitions.
       const RULES = self.STK_CONTENT.SET_FILTER_RULES;
-      // Whether this table is one the reader asked filtering to happen on, and whether any
-      // rule at all is removing something here. Both are needed: a rule that is on with the
-      // area off removes nothing, and an area with every rule on removes nothing.
+      // One rule, and whether it is in force on this surface. The reader answers the areas
+      // per platform, so "in force here" is not a single boolean but a set of platforms — and
+      // the whole table below is built from that one set.
       const printsWantedForTable = printsFilterOn();
-      const wantsRemovingHere = !settings.showNonTournament || !settings.showOversized ||
-        !settings.showNoEnglishSets ||
-        Object.values(settings.showForeignBlackBorder || {}).some(show => show !== true) ||
-        settings.nonEnglishMode !== 'all';
-      const needsCategories = platformFilterOn ||
-        (printsWantedForTable && wantsRemovingHere);
+      const keptHere = chosenPlatforms;
+      const needsCategories = printsWantedForTable;
       // The platform index only says which client carries a digital set, so the
       // set index is what tells the two apart.
       const [categories, platforms] = needsCategories
         ? await Promise.all([
           request({type:'setCategories'}).catch(() => ({})),
-          platformFilterOn ? request({type:'setPlatforms'}).catch(() => ({})) : Promise.resolve({})
+          request({type:'setPlatforms'}).catch(() => ({}))
         ])
         : [{}, {}];
-      const platformVisible = platformFilterOn ? platformSetVisible(categories, platforms) : () => true;
+      const platformVisible = needsCategories
+        ? platformSetVisible(categories, platforms, keptHere) : () => true;
       // The platform of this printing rather than of its set. A set can be on paper and Arena
       // while one of its cards is Arena-only, and a set-level answer would take the paper
-      // printing with it — which is the requirement that turning Arena off must not lose a
+      // printing with it — which is the requirement that switching Arena off must not lose a
       // printing that is still somewhere the reader keeps.
       //
       // The set answer still runs alongside it: a set Scryfall lists as digital and whose
       // platform could not be placed has to stay visible, and this is where that stays true.
       const platformPrintingVisible = card =>
-        RULES.printingOnPlatform(card, Array.from(chosenPlatforms));
-      // Per category, narrowed by the families the reader has switched off.
-      const codesFor = (group, keys) => keys.flatMap(key => (group?.[key] || []).map(code => String(code).toLowerCase()));
-      const borderOff = Object.entries(settings.showForeignBlackBorder || {})
-        .filter(([, show]) => show !== true)
-        .map(([key]) => key);
-      // Gated on the area, like the language rule further down. It was not, and the gate that
-      // appeared to hold it was the fetch above: while nothing else wanted the set index it
-      // never arrived, so `excluded` stayed empty and the table was untouched. Turning a
-      // platform off fetches the index for its own reasons, and from that moment the category
-      // rules reached a surface the reader had switched off — the same four rules, the same
-      // switches, a different answer depending on an unrelated setting.
-      //
-      // `categories` itself is still fetched when the platform filter is on, because that is
-      // what tells a digital set from a paper one. Only the removal list is gated.
-      const excluded = printsWantedForTable ? new Set([
-        ...(settings.showNonTournament ? [] : categories.nonTournament || []),
-        ...(settings.showOversized ? [] : categories.oversized || []),
-        // Measured once, by `npm run set-rules`, and shipped as a dated list rather than
-        // asked for per page: the sets it is about are a subset of all of them, so there is
-        // no short list of candidates to look up. Stale in the safe direction — a new
-        // foreign-only set stays visible until the next sweep.
-        ...(settings.showNoEnglishSets ? [] : categories.foreignOnly || []),
-        ...codesFor(categories.foreignBlackBorder, borderOff)
-      ]) : new Set();
+        RULES.printingOnPlatform(card, Array.from(keptHere));
 
-      // ---- the non-English rule -------------------------------------------------
-      //
-      // Three positions, and only the third is "hide them all". The middle one is a
-      // judgement about a pair of printings and is the reason this is not a switch: it asks
-      // whether the reader has already seen this exact picture, in English, on paper.
-      //
-      // What "the same picture" means lives in src/core/set-filters.js, beside the model and
-      // its tests, rather than here. This file used to hold its own copy of the comparison
-      // and the two were free to disagree about which fields take part, and a rule about
-      // what looks the same cannot be allowed two answers.
-      const languageMode = printsWantedForTable ? settings.nonEnglishMode : 'all';
-      // The English half, built once from the whole print list rather than as rows are
-      // walked, because the analogue of a printing is regularly *earlier* in the list than
-      // the printing being tested and a rule that could only look forwards would call every
-      // reprint unique.
-      //
-      // Only printings the reader kept can be an analogue. An English printing that has
-      // itself been filtered out, by a switched-off platform or by the oversized rule, is
-      // not a picture the reader has, so it must not count as one.
-      const pictures = languageMode === 'analogue'
-        ? RULES.englishPictures(prints, card => !excluded.has(String(card.set || '').toLowerCase()) &&
-            !(platformFilterOn && !platformPrintingVisible(card)))
-        : null;
-      const hidesForeignPrinting = card => {
-        if (languageMode === 'all') return false;
-        if (!card.lang || card.lang === 'en') return false;
-        // 'none' hides every non-English printing and asks nothing about the artwork.
-        if (languageMode === 'none') return true;
-        return RULES.redundantAgainst(card, pictures);
-      };
       const groups = new Map();
       for (const card of prints) {
-        if (excluded.has(String(card.set || '').toLowerCase()) ||
-            !platformVisible(card.set) ||
-            platformFilterOn && !platformPrintingVisible(card) ||
-            hidesForeignPrinting(card)) continue;
+        if (!platformVisible(card.set) ||
+            printsWantedForTable && !platformPrintingVisible(card)) continue;
         const group = groups.get(card.set) || [];
         group.push(card);
         groups.set(card.set, group);

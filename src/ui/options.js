@@ -12,7 +12,7 @@ const defaults = {
   settingsLanguage: 'auto', siteLanguage: 'en',
   clipboard: true, printAddButtons: true, darkTheme: 'auto', tags: true, cardTags: true, artTags: false, relationships: true,
   finishBadges: true, cardtraderPrices: false, cardtraderToken: '', euroPriceSources: 'cm',
-  edhrecUsage: false, edhrecSalt: false, showSaltScale: false, edhrecLink: false, edhrecUsageDisplay: 'both',
+  edhrecUsage: false, edhrecSalt: false, showSaltScale: false, edhrecUsageDisplay: 'both',
   usageColorMetric: 'decks', usageMediumDecks: 50000, usageHighDecks: 100000,
   usageMediumPercent: 1, usageHighPercent: 2.6, saltMediumThreshold: 1, saltHighThreshold: 2,
   printPageSameTab: false,
@@ -21,7 +21,7 @@ const defaults = {
   // here would make every old key look as though it had a value, and the migration
   // reads those keys to decide what the reader had chosen.
   setFilters: null, setFiltersMigrated: false,
-  taggerSearchLinks: false, cardSearchLinks: true, cardNicknames: true, deckNoPrices: true, stackedDeckCards: true, deckLegality: true,
+  taggerSearchLinks: false, cardSearchLinks: true, deckNoPrices: true, stackedDeckCards: true, deckLegality: true,
   deckCleanUpImprover: false, cleanUpLandsInSingleton: true, sortEntriesPrimary: 'none', insertSortingHeadings: true,
   edhrecSuggestions: false, deckSearch: false,
   legalities: true, exportFormat: "moxfield", formatOrder: null, formatVisibility: null,
@@ -40,7 +40,7 @@ const defaults = {
 // one flag, the two category rules carry a list under them, and the four price kinds are
 // told apart by the model rather than by an id. A key-by-key save would have to be kept
 // in step with all three, and there is no test that could tell that it was not.
-const basicFields = ["clipboard", "printAddButtons", "printPageSameTab", "tags", "cardTags", "artTags", "relationships", "finishBadges", "cardtraderPrices", "euroPriceSources", "edhrecUsage", "edhrecSalt", "showSaltScale", "edhrecLink", "edhrecUsageDisplay", "usageColorMetric", "legalities", "exportFormat", "taggerSearchLinks", "cardSearchLinks", "cardNicknames", "deckNoPrices", "stackedDeckCards", "deckLegality", "deckCleanUpImprover", "cleanUpLandsInSingleton", "sortEntriesPrimary", "insertSortingHeadings", "edhrecSuggestions", "deckSearch", "printGrouping", "printFoldGroups", "printFullPageLink"];
+const basicFields = ["clipboard", "printAddButtons", "printPageSameTab", "tags", "cardTags", "artTags", "relationships", "finishBadges", "cardtraderPrices", "euroPriceSources", "edhrecUsage", "edhrecSalt", "showSaltScale", "edhrecUsageDisplay", "usageColorMetric", "legalities", "exportFormat", "taggerSearchLinks", "cardSearchLinks", "deckNoPrices", "stackedDeckCards", "deckLegality", "deckCleanUpImprover", "cleanUpLandsInSingleton", "sortEntriesPrimary", "insertSortingHeadings", "edhrecSuggestions", "deckSearch", "printGrouping", "printFoldGroups", "printFullPageLink"];
 // EDHREC and CardTrader are optional features, and so is the access they need.
 // Chrome has a place for exactly this: optional_host_permissions, granted only
 // when the user turns one of them on. Turning a switch off and on again is also
@@ -48,7 +48,6 @@ const basicFields = ["clipboard", "printAddButtons", "printPageSameTab", "tags",
 const OPTIONAL_HOSTS = {
   edhrecUsage: ['https://json.edhrec.com/*'],
   edhrecSalt: ['https://json.edhrec.com/*'],
-  edhrecLink: ['https://json.edhrec.com/*'],
   // Suggestions need both: the commander page comes from their public JSON, and
   // the recommendations for a deck come from the endpoint their own site posts
   // to. The deck list is what that request carries.
@@ -58,7 +57,7 @@ const OPTIONAL_HOSTS = {
 // What each of those is called in the interface. Every key is listed, so adding a
 // feature with a host cannot leave the message showing a storage key to a reader.
 const OPTIONAL_HOST_NAMES = {
-  edhrecUsage: 'EDHREC', edhrecSalt: 'EDHREC', edhrecLink: 'EDHREC',
+  edhrecUsage: 'EDHREC', edhrecSalt: 'EDHREC',
   edhrecSuggestions: 'EDHREC', cardtraderPrices: 'CardTrader',
   euroPriceSources: 'CardTrader'
 };
@@ -134,6 +133,13 @@ function requestHostAccess(origins) {
 }
 
 const status = document.getElementById("status");
+// The CardTrader box is drawn from two things at once — whether the reader has the token the
+// feature needs, and whether the block it adds its links to is on screen — and those two are
+// wired in two different storage callbacks, because the token lives with the settings page and
+// the block lives with the hiding group. One of them publishes a repaint and the other calls it,
+// so there is one place that decides what the box looks like rather than two that disagree.
+let repaintCardtrader = null;
+let cardtraderWanted = false;
 chrome.storage.local.get(defaults, values => {
   // What the user chose and what the interface speaks are different things. The
   // choice is stored; the language is derived from it and never stored back.
@@ -146,26 +152,60 @@ chrome.storage.local.get(defaults, values => {
   settingsLanguage.value = selected;
   siteLanguage.value = values.siteLanguage === 'ru' ? 'ru' : 'en';
   window.STK_I18N.localizeOptions(language);
+  // ---- CardTrader ------------------------------------------------------------------
+  //
+  // The one feature in this section that cannot work without being set up, so it is the one
+  // row whose shape depends on whether it has what it needs. Without a token there is nothing
+  // to fetch, and a switch that turns on a request that cannot be made is a switch that lies;
+  // so the row shows the feature's name, says it is not connected, and offers to connect. With
+  // a token the switch appears and the token becomes something to replace or remove.
+  //
+  // The status says "saved", not "working", and that is deliberate: nothing on this page asks
+  // CardTrader anything, so the only honest thing it can report is what is stored. Whether the
+  // token works is answered on a card page, by the request that uses it.
   const token = document.getElementById('cardtraderToken');
   const tokenStatus = document.getElementById('tokenStatus');
   const label = document.getElementById('cardtraderTokenLabel');
   const save = document.getElementById('saveToken');
+  const replace = document.getElementById('replaceToken');
   const remove = document.getElementById('removeToken');
-  function showTokenState(stored) {
+  const tokenRow = document.getElementById('cardtraderTokenRow');
+  const tokenActions = document.getElementById('cardtraderTokenActions');
+  const cardtraderMain = document.getElementById('cardtraderMain');
+  const cardtraderToggle = document.getElementById('cardtraderToggle');
+  const cardtraderPanel = document.getElementById('cardtraderPanel');
+  function showTokenState(stored, replacing = false) {
     tokenStatus.dataset.stored = stored ? 'yes' : 'no';
-    label.textContent = t(stored ? 'Личный API-токен CardTrader · сохранён ✓' : 'Личный API-токен CardTrader · не задан');
+    tokenStatus.textContent = t(stored ? 'Токен сохранён ✓' : 'Не подключено');
+    // A checkbox the reader cannot see is not a control, it is a decoration: without a token
+    // the switch is hidden rather than disabled, because a disabled switch says "this exists
+    // and you may not have it" and this one does not exist yet.
+    cardtraderMain.classList.toggle('is-unconnected', !stored);
+    cardtraderToggle.textContent = t(stored ? 'Настроить' : 'Подключить');
+    label.textContent = t('Личный API-токен CardTrader');
     token.placeholder = t(stored ? 'Введите новый токен для замены сохранённого' : 'Вставь личный токен');
-    save.textContent = t(stored ? 'Заменить' : 'Сохранить');
-    remove.disabled = !stored;
-    tokenStatus.textContent = t(stored ? 'Токен сохранён. Пустое поле означает, что текущий токен продолжает работать. Он передаётся только в API CardTrader.' : 'Для цен CardTrader нужен личный токен. Он хранится локально и передаётся только в API CardTrader.');
+    save.textContent = t('Сохранить');
+    tokenRow.hidden = stored && !replacing;
+    tokenActions.hidden = !stored;
+    if (!stored || replacing) token.value = '';
+    // Whatever the token state is, the box is redrawn: with a token it appears, and it appears
+    // disabled if the block its links go in is hidden.
+    repaintCardtrader?.();
   }
   showTokenState(Boolean(values.cardtraderToken));
+  // The reader's own answer for CardTrader, kept here rather than read back from the box: the
+  // box is drawn empty while the store block is hidden, and an empty box is not an answer.
+  cardtraderWanted = values.cardtraderPrices === true;
+  document.getElementById('cardtraderPrices').addEventListener('change', event => {
+    cardtraderWanted = event.target.checked;
+    repaintCardtrader?.();
+  });
   settingsLanguage.addEventListener('change', () => {
     // The raw selection is saved, whatever it resolves to right now.
     selected = ['auto', 'ru', 'en'].includes(settingsLanguage.value) ? settingsLanguage.value : 'auto';
     language = window.STK_I18N.resolveSettingsLanguage(selected);
     window.STK_I18N.localizeOptions(language);
-    showTokenState(tokenStatus.dataset.stored === 'yes');
+    showTokenState(tokenStatus.dataset.stored === 'yes', !tokenRow.hidden);
     document.querySelectorAll('#formatList .format-item').forEach(row => { row.title = language === 'ru' ? `Перетащи ${formats.get(row.dataset.key)} в нужную колонку` : `Drag ${formats.get(row.dataset.key)} to either column`; });
     status.textContent = t('Сохранено');
     chrome.storage.local.set({ settingsLanguage: selected });
@@ -173,24 +213,28 @@ chrome.storage.local.get(defaults, values => {
   siteLanguage.addEventListener('change', () => {
     chrome.storage.local.set({ siteLanguage: siteLanguage.value === 'ru' ? 'ru' : 'en' }, () => { status.textContent = t('Сохранено'); });
   });
-  document.getElementById('saveToken').addEventListener('click', () => {
+  save.addEventListener('click', () => {
     const value = token.value.trim();
     if (!value || /\s/.test(value)) { status.textContent = t('Вставь токен без пробелов'); return; }
     chrome.storage.local.set({ cardtraderToken: value }, () => {
       token.value = '';
-      showTokenState(true);
-      tokenStatus.dataset.stored = 'yes';
+      // The field is emptied as soon as the token is stored, so a stored token is never on
+      // screen — not even in a password field, which is one Tab and one screen-share away
+      // from being read out.
+      showTokenState(true, false);
       status.textContent = t('Токен сохранён; цены проверятся на странице карты');
     });
   });
-  document.getElementById('removeToken').addEventListener('click', () => {
+  // Replacing is a second step on purpose: the field appears when it is asked for and not
+  // before, so a reader who opened the panel to look at something else cannot overwrite a
+  // working token by typing into a box that was already there.
+  replace.addEventListener('click', () => showTokenState(true, true));
+  remove.addEventListener('click', () => {
     chrome.storage.local.remove('cardtraderToken', () => {
       document.getElementById('cardtraderPrices').checked = false;
       document.getElementById('euroPriceSources').value = 'cm';
       chrome.storage.local.set({ cardtraderPrices: false, euroPriceSources: 'cm' });
-      token.value = '';
       showTokenState(false);
-      tokenStatus.dataset.stored = 'no';
       status.textContent = t('Токен удалён');
     });
   });
@@ -226,9 +270,24 @@ chrome.storage.local.get(defaults, values => {
       src: '../../assets/shots/cardclip.png',
       caption: 'Буфер в углу страницы: собранные карты, каждую можно скопировать отдельно.'
     },
-    'hide-extra': {
+    // The visibility section's picture, and the notes that used to be eleven lines of grey text
+    // under the switches.
+    //
+    // The paragraphs went because they described the rules rather than answering anything: an
+    // empty list does not put the platforms back, a legitimate choice, a set whose platform
+    // could not be determined. A reader who has not hit one of those cannot act on it, and a
+    // reader who has can get the same answer from the switch they are looking at. What is here
+    // instead is the one thing that is not visible from the controls: that a platform keeps its
+    // places while it is off, and why a card stays when one of two platforms is switched off.
+    visibility: {
       src: '../../assets/shots/hide-extra.png',
-      caption: 'Та же колонка без цифровых наборов и без цен в долларах и билетах: остались бумажные наборы и цена в евро.'
+      caption: 'Та же колонка без цифровых наборов и без цен в долларах и билетах: остались бумажные наборы и цена в евро.',
+      notes: [
+        'Каждая платформа включается отдельно в каждом из трёх мест: «Издания», «Поиск» и «Список сетов». Снимите галочку «Показывать», чтобы выключить платформу целиком, — её места запомнятся и вернутся вместе с ней.',
+        'Издание может быть на нескольких платформах. Если выключена Arena, карты, доступные ещё и на Paper, остаются.',
+        'Набор, у которого платформу определить не удалось, остаётся видимым.',
+        'Цена в евро — это цена Cardmarket; её можно скрыть так же, как доллары и билеты.'
+      ]
     },
     additional: {
       src: '../../assets/shots/additional.png',
@@ -243,25 +302,98 @@ chrome.storage.local.get(defaults, values => {
       caption: 'Вся колонка: все издания собраны в одной таблице и сгруппированы по сетам.'
     }
   };
+  // The help that belongs to one feature rather than to a section: no picture, because what
+  // moved here is a paragraph and not a panel. It is the same dialog, so a reader who has used
+  // one "?" on this page has used all of them — and it is a button, so it is reachable by Tab
+  // and opened by Enter or Space, which a `title` tooltip is not.
+  //
+  // These paragraphs used to stand in the body under the switches they explain. A settings page
+  // that argues with itself about thresholds before the reader has decided to change one is a
+  // page that looks like a form to fill in, and every one of these settings works untouched.
+  const FEATURE_HELP = {
+    finishes: {
+      caption: 'Столбец отделки изданий',
+      notes: [
+        'У издания бывает не вся отделка: только фойл, только нефойл, только etched или особый фойл. Когда это так, в таблице изданий между названием и ценами появляется узкий столбец с тем, что у издания есть.',
+        'Обычные звёздочки фойла в названиях изданий при этом не дублируются. Данные приходят из Scryfall и могут появиться после загрузки страницы.'
+      ]
+    },
+    usage: {
+      caption: 'Популярность в Commander',
+      notes: [
+        'Показатели встраиваются под форматы. Дробь показывает количество колод с картой среди подходящих по цветовой идентичности.',
+        'По умолчанию популярность окрашивается по абсолютному количеству колод: зелёный ниже 50 000, жёлтый от 50 000, красный от 100 000. При выборе доли — зелёный до 1% включительно, жёлтый выше 1%, красный от 2,6%.'
+      ]
+    },
+    salt: {
+      caption: 'Salt Meter',
+      notes: [
+        'Salt Score — оценка сообщества от 0 до 4, не сила карты. По умолчанию зелёный до 1, жёлтый от 1, красный от 2.',
+        'Шкала «/4» показывает рядом с показателем, какому значению соответствует цвет.'
+      ]
+    },
+    cardtrader: {
+      caption: 'Предложения CardTrader',
+      notes: [
+        'Для цен CardTrader нужен токен. Он хранится локально в расширении и передаётся только в API CardTrader.',
+        'Цены в таблице появляются постепенно; учитываются предложения в EUR. Состояние и язык могут отличаться.',
+        'Сохранённый токен не проверяется этой страницей: она не делает запросов к CardTrader. Работает он или нет, видно на странице карты.'
+      ]
+    },
+    eursource: {
+      caption: 'Источники EUR-цен в таблице изданий',
+      notes: [
+        'Столбец EUR на Scryfall — это цена Cardmarket. Здесь выбирается, чем его заполнять: Cardmarket, CardTrader или обоими — тогда рядом появляется второй столбец. «Не показывать» убирает столбец целиком.',
+        'Для цен CardTrader нужен личный токен, и задаётся он в строке «Предложения CardTrader» выше, в том же блоке магазинов.',
+        'Включать саму галочку «Предложения CardTrader» для этого не обязательно: она добавляет ссылки CardTrader в блок покупки, а столбец работает и без них.'
+      ]
+    }
+  };
   const shotDialog = document.getElementById('shotDialog');
   const shotImage = document.getElementById('shotImage');
   const shotCaption = document.getElementById('shotCaption');
-  document.querySelectorAll('.shot-button').forEach(button => {
-    // A "?" with no picture behind it is worse than no "?" at all, so a name the
-    // page does not know fails loudly here rather than opening an empty frame.
-    const shot = SHOTS[button.dataset.shot];
-    if (!shot) {
-      console.error('no illustration named ' + button.dataset.shot + '; the button will do nothing');
+  const shotNotes = document.getElementById('shotNotes');
+  // One dialog, two kinds of entry: a section's illustration with its caption, and a feature's
+  // help with no picture at all. `replaceChildren` on the notes and `hidden` on the image, both
+  // every time, because the dialog is reused and a picture must not keep the last entry's notes
+  // or the other way round.
+  const openDialog = entry => {
+    shotCaption.textContent = t(entry.caption);
+    shotNotes.replaceChildren(...(entry.notes || []).map(note => {
+      const line = document.createElement('p');
+      line.textContent = t(note);
+      return line;
+    }));
+    shotNotes.hidden = !(entry.notes || []).length;
+    if (entry.src) {
+      shotImage.src = entry.src;
+      shotImage.alt = t(entry.caption);
+      shotImage.hidden = false;
+    } else {
+      shotImage.removeAttribute('src');
+      shotImage.alt = '';
+      shotImage.hidden = true;
+    }
+    shotDialog.showModal();
+  };
+  // A "?" with nothing behind it is worse than no "?" at all, so a name the page does not know
+  // fails loudly here rather than opening an empty frame.
+  const wireDialogButton = (button, table, key) => {
+    const entry = table[key];
+    if (!entry) {
+      console.error('no help named ' + key + '; the button will do nothing');
       button.disabled = true;
       return;
     }
+    button.addEventListener('click', () => openDialog(entry));
+  };
+  document.querySelectorAll('.shot-button').forEach(button => {
     button.setAttribute('aria-label', t('Показать, как это выглядит'));
-    button.addEventListener('click', () => {
-      shotImage.src = shot.src;
-      shotImage.alt = t(shot.caption);
-      shotCaption.textContent = t(shot.caption);
-      shotDialog.showModal();
-    });
+    wireDialogButton(button, SHOTS, button.dataset.shot);
+  });
+  document.querySelectorAll('.feature-help').forEach(button => {
+    button.setAttribute('aria-label', t('Что это'));
+    wireDialogButton(button, FEATURE_HELP, button.dataset.help);
   });
   // Clicking the dimmed page behind the dialog closes it, the way a dialog is
   // expected to behave; Escape already does, through the form's dialog method.
@@ -415,176 +547,217 @@ chrome.storage.local.get(defaults, values => {
   const saveFilters = () => chrome.storage.local.set(
     { setFilters: filters, setFiltersMigrated: true }, () => { status.textContent = t('Сохранено'); });
 
-  // The three platforms, one switch each, and nothing above them.
+// The platforms table: one row per platform, a column per place, and every control a checkbox.
+//
+// Written rather than typed, so a fourth platform is one entry in the model's PLATFORM_NAMES and
+// a fourth place one entry in its AREAS. A column of sliders and a row of boxes do not read as
+// one thing, so the "Show" column is a checkbox like the other three.
+//
+// A platform's own box writes `show` and its three place boxes write their own keys, and neither
+// writes the other's. That is the whole of "turning a platform off keeps its settings", and it
+// is achieved by neither control being able to rewrite the other rather than by saving and
+// restoring.
+const head = document.getElementById('platformHead');
+const body = document.getElementById('platformBody');
+
+// The header, from the model: the platform's name column, the Show column, then one per place.
+// `scope` on each so a screen reader says the column when a box is reached, and the boxes carry
+// their own name — "Paper: показывать в поиске" rather than the column header alone, which is
+// what a table of twelve checkboxes otherwise gets you.
+const headCell = (text, scope) => {
+  const cell = document.createElement('th');
+  // `setAttribute`, not the `scope` property: a browser reflects one into the other and a
+  // stand-in DOM does not, so the property form is the kind that looks right here and is
+  // absent under test. The attribute is what the browser reads anyway.
+  cell.setAttribute('scope', scope);
+  cell.textContent = text;
+  return cell;
+};
+head.append(headCell(t(FILTERS.PLATFORM_COLUMN.label), 'col'));
+head.append(headCell(t(FILTERS.SHOW_COLUMN.label), 'col'));
+for (const area of FILTERS.AREA_NAMES) head.append(headCell(t(FILTERS.AREAS[area].label), 'col'));
+
+for (const name of FILTERS.PLATFORM_NAMES) {
+  const row = document.createElement('tr');
+  const label = FILTERS.PLATFORM_LABELS[name];
+
+  const nameCell = document.createElement('th');
+  nameCell.setAttribute('scope', 'row');
+  nameCell.textContent = label;
+  row.append(nameCell);
+
+  // A checkbox in a cell, with the label wrapping it so the whole cell is the hit area. That is
+  // what makes a 18px box comfortable to press: the target is the cell, not the glyph.
+  const cellWith = (box, aria) => {
+    const cell = document.createElement('td');
+    const wrap = document.createElement('label');
+    wrap.className = 'stk-cell-check';
+    box.setAttribute('aria-label', `${label}: ${t(aria)}`);
+    wrap.append(box);
+    cell.append(wrap);
+    return cell;
+  };
+
+  const show = document.createElement('input');
+  show.type = 'checkbox';
+  show.className = 'stk-check';
+  show.id = 'show' + name[0].toUpperCase() + name.slice(1);
+  show.dataset.platform = name;
+  show.dataset.kind = 'show';
+  // In the header's order: the name, then the platform's own box, then its three places. The
+  // row was once assembled by appending the places and then prepending the box, which put the
+  // Show box in the *name* column and shifted every heading one column to the left of the box
+  // it named — a table that looks right in its markup and draws every control under the wrong
+  // heading. Nothing could see it: the ids were right and the assertions read the boxes by id.
+  row.append(cellWith(show, FILTERS.SHOW_COLUMN.aria));
+  const places = {};
+  for (const area of FILTERS.AREA_NAMES) {
+    const box = document.createElement('input');
+    box.type = 'checkbox';
+    box.className = 'stk-check';
+    box.id = show.id + '-' + area;
+    box.dataset.which = area;
+    box.dataset.platform = name;
+    places[area] = box;
+    row.append(cellWith(box, FILTERS.AREAS[area].aria));
+  }
+
+  // One place where the row's state is written to the page, because a platform off means two
+  // things at once — three boxes emptied and disabled — and doing that in two listeners is how
+  // one of them ends up disagreeing with the other.
   //
-  // A switch writes one field. It does not touch the detail panel, and the detail panel does
-  // not touch it — so turning Paper off and back on brings the reader's own settings with it,
-  // which is the requirement, achieved by neither of them being able to rewrite the other.
-  //
-  // The "all platforms" fallback is gone with the master switch. There is no list to empty:
-  // a reader who unticks all three has said so, and the page then shows no sets at all, which
-  // is a legitimate thing to have chosen and which the earlier build quietly undid on reload.
-  const platformBoxes = FILTERS.PLATFORM_NAMES.map(name => ({
-    name,
-    element: document.getElementById('show' + name[0].toUpperCase() + name.slice(1))
-  }));
-  for (const box of platformBoxes) {
-    box.element.checked = filters.platforms[box.name] !== false;
-    box.element.addEventListener('change', () => {
-      filters.platforms[box.name] = box.element.checked;
+  // Nothing here touches the stored value. A platform switched off keeps its three places
+  // exactly as they were, and switching it back on brings them out again; the dimming is the
+  // page saying what is in force, not the page throwing the answer away. Nothing corrects an
+  // empty row either: a reader who unticks all three places on a platform that is on has said
+  // so, and neither the places nor the platform's own box is moved on their behalf.
+  const paint = () => {
+    const on = filters.platforms[name].show !== false;
+    row.classList.toggle('is-off', !on);
+    for (const area of FILTERS.AREA_NAMES) {
+      const box = places[area];
+      box.checked = on && filters.platforms[name].areas[area] !== false;
+      box.disabled = !on;
+    }
+    // The platform's own box stays operable whatever else is true of the row: it is the only
+    // way back, and a disabled control that is the only way out of a state is a trap.
+    show.checked = on;
+  };
+  show.addEventListener('change', () => {
+    filters.platforms[name].show = show.checked;
+    paint();
+    saveFilters();
+  });
+  for (const area of FILTERS.AREA_NAMES) {
+    places[area].addEventListener('change', () => {
+      filters.platforms[name].areas[area] = places[area].checked;
+      paint();
       saveFilters();
     });
   }
+  paint();
+  body.append(row);
+}
 
-  // Paper's detail panel, closed to begin with.
-  //
-  // A disclosure rather than a section that is always there, because the main screen is meant
-  // to answer "what is shown" in one glance and this is the answer to "and within Paper".
-  // Its state is kept for the session and not stored: a panel that reopens where the reader
-  // left it is a nicety, and a stored flag for it is one more thing to migrate.
-  const paperButton = document.getElementById('paperDetails');
-  const paperPanel = document.getElementById('paperPanel');
-  paperButton.addEventListener('click', () => {
-    const open = paperPanel.hidden;
-    paperPanel.hidden = !open;
-    paperButton.setAttribute('aria-expanded', String(open));
-  });
-
-  // The categories inside Paper. Positive switches, one per row, each about a whole category.
-  for (const [id, key] of [['showNonTournament', 'nonTournament'], ['showOversized', 'oversized'],
-    ['showNoEnglishSets', 'noEnglishSets']]) {
-    const box = document.getElementById(id);
-    box.checked = filters.paper[key] !== false;
+// The four prices in two groups: a currency is a column of numbers, a shop is a link, and the
+// grouping says so without a paragraph saying so.
+//
+// Each caption sits directly above the boxes it names. Beside them it needed a column as wide
+// as the longest caption, and that column is empty on every other row — which is the wide grey
+// gap the pair used to have between a label and its own box.
+//
+// Positive — ticked means shown — like everything else in this section. These were the last
+// four switches on the page that meant the opposite, and the group above them needed a legend
+// reading "which prices to hide" to make four unticked boxes mean "everything is on".
+const priceList = document.getElementById('priceList');
+const priceBoxes = {};
+for (const group of FILTERS.PRICE_GROUP_NAMES) {
+  const line = document.createElement('div');
+  line.className = 'pair-group';
+  const caption = document.createElement('div');
+  caption.className = 'pair-caption';
+  caption.textContent = t(FILTERS.PRICE_GROUPS[group]);
+  // The boxes go in a container of their own so they sit on one line when there is room and
+  // wrap under each other when there is not, rather than each becoming a row of its own.
+  const items = document.createElement('div');
+  items.className = 'pair-items';
+  line.append(caption, items);
+  for (const [kind, entry] of Object.entries(FILTERS.PRICE_KINDS)) {
+    if (entry.group !== group) continue;
+    const label = document.createElement('label');
+    label.className = 'pair-item';
+    const box = document.createElement('input');
+    box.type = 'checkbox';
+    box.className = 'stk-check';
+    box.id = 'price-' + kind;
+    box.dataset.which = kind;
+    box.checked = filters.prices[kind] !== false;
+    box.setAttribute('aria-label', `${entry.label}: ${t('показывать')}`);
     box.addEventListener('change', () => {
-      filters.paper[key] = box.checked;
+      filters.prices[kind] = box.checked;
       saveFilters();
     });
+    priceBoxes[kind] = box;
+    label.append(box, document.createTextNode(' ' + entry.label));
+    items.append(label);
   }
-  function buildWhichList(containerId, table, chosen, onChange) {
-    const container = document.getElementById(containerId);
-    const boxes = [];
-    for (const [key, entry] of Object.entries(table)) {
-      const label = document.createElement('label');
-      const box = document.createElement('input');
-      box.type = 'checkbox';
-      box.id = containerId + '-' + key;
-      box.dataset.which = key;
-      box.checked = chosen.includes(key);
-      box.addEventListener('change', onChange);
-      label.append(box, document.createTextNode(' ' + entry.label));
-      container.append(label);
-      boxes.push(box);
-    }
-    return boxes;
-  }
+  priceList.append(line);
+}
 
-  function whichOf(boxes) {
-    return boxes.filter(box => box.checked).map(box => box.dataset.which);
-  }
-
-  // Foreign Black Border: one switch for the category and a list of families behind it.
-  //
-  // The list is hidden while the category is on, because with every family shown there is
-  // nothing in it to decide — and it stays usable while it is off, which is how a reader sets
-  // up "show everything except BCHR" without the list disappearing the moment they touch the
-  // switch above it.
-  const borderSwitch = document.getElementById('showBorderFamilies');
-  const borderList = document.getElementById('setBorderFamiliesList');
-  const borderFamilies = Object.keys(FILTERS.FOREIGN_BLACK_BORDER);
-  const borderBoxes = buildWhichList('setBorderFamiliesList', FILTERS.FOREIGN_BLACK_BORDER,
-    borderFamilies.filter(key => filters.paper.foreignBlackBorder[key] !== false), () => {
-      const chosen = whichOf(borderBoxes);
-      for (const key of borderFamilies) filters.paper.foreignBlackBorder[key] = chosen.includes(key);
-      saveFilters();
-    });
-  function applyBorder() {
-    // The switch is a summary of the three families rather than a fourth setting: it is on
-    // while any family is shown, so it cannot be wrong about the category's own state.
-    borderSwitch.checked = borderFamilies.some(key => filters.paper.foreignBlackBorder[key] !== false);
-    // The list opens whenever the families are not all shown, and closes only when they are.
-    //
-    // It used to open when the *switch* was off, which is a different question: the switch is
-    // on whenever any family is shown, so a reader who had chosen "everything except FBB" got
-    // a category reading as simply on and no way to see that one of its three families was
-    // hidden. The setting was applied correctly and was invisible, which is the one state a
-    // reader cannot act on — and the only thing the list is for is being acted on.
-    borderList.hidden = borderFamilies.every(key => filters.paper.foreignBlackBorder[key] !== false);
-    for (const box of borderBoxes) {
-      box.checked = filters.paper.foreignBlackBorder[box.dataset.which] !== false;
-    }
-  }
-  // The switch is the category's own control and it does what a category switch does: it
-  // moves all three families to its own position. That is a deliberate act on a control
-  // drawn above the list, and it is not what loses a reader's narrowing — being unable to
-  // see the narrowing in the first place is, and that is what the line above fixed.
-  borderSwitch.addEventListener('change', () => {
-    for (const key of borderFamilies) filters.paper.foreignBlackBorder[key] = borderSwitch.checked;
-    applyBorder();
-    saveFilters();
-  });
-  for (const box of borderBoxes) box.addEventListener('change', applyBorder);
-  applyBorder();
-
-  // The non-English rule: one select, three positions, and the hint under it says what the
-  // middle one means because the middle one is not the opposite of either end.
-  const nonEnglishSelect = document.getElementById('nonEnglishMode');
-  const nonEnglishHint = document.getElementById('nonEnglishHint');
-  for (const [value, entry] of Object.entries(FILTERS.NON_ENGLISH_MODES)) {
-    const option = document.createElement('option');
-    option.value = value;
-    option.textContent = t(entry.label);
-    nonEnglishSelect.append(option);
-  }
-  nonEnglishSelect.value = FILTERS.NON_ENGLISH_MODES[filters.paper.nonEnglish]
-    ? filters.paper.nonEnglish : 'all';
-  function applyNonEnglish() {
-    nonEnglishSelect.value = FILTERS.NON_ENGLISH_MODES[filters.paper.nonEnglish]
-      ? filters.paper.nonEnglish : 'all';
-    const entry = FILTERS.NON_ENGLISH_MODES[nonEnglishSelect.value];
-    nonEnglishHint.textContent = t(entry.hint);
-  }
-  nonEnglishSelect.addEventListener('change', () => {
-    filters.paper.nonEnglish = nonEnglishSelect.value;
-    applyNonEnglish();
-    saveFilters();
-  });
-  applyNonEnglish();
-
-  // Where filtering applies, one list for every rule. Drawn from the model's own table for
-  // the same reason the border families and the price kinds are: a fourth area has to be one
-  // line in set-filters.js and nothing here, or this page shows a rule it cannot store.
-  //
-  // The rows go before the hint rather than after it. The hint says what the choice means —
-  // that a set rule removes a whole set and the language rule removes one printing — and a
-  // reader meets a paragraph about a rule before the switches that rule is behind.
-  const areaBoxes = buildWhichList('filterAreasGroup', FILTERS.AREAS,
-    FILTERS.AREA_NAMES.filter(area => filters.areas[area] !== false), () => {
-      const chosen = whichOf(areaBoxes);
-      for (const area of FILTERS.AREA_NAMES) filters.areas[area] = chosen.includes(area);
-      saveFilters();
-    });
-
-  // The four price kinds, one row each, from the model's own table. Which row is which
-  // is the model's business: prices.js asks `setFilters.prices[kind]` for each of them,
-  // so a fifth kind added there has to appear here or the settings page is a rule it
-  // cannot store.
-  const priceBoxes = buildWhichList('setPrices', FILTERS.PRICE_KINDS,
-    Object.keys(FILTERS.PRICE_KINDS).filter(kind => filters.prices[kind]), () => {
-      const chosen = whichOf(priceBoxes);
-      for (const kind of Object.keys(FILTERS.PRICE_KINDS)) filters.prices[kind] = chosen.includes(kind);
-      saveFilters();
-    });
-
-  // The two that were outside the gate, and are now simply two more switches in their own
-  // sections — they were never about sets or platforms to begin with.
-  for (const [id, key] of [['setCaster', 'caster'], ['setTokens', 'tokens']]) {
+  // The switches that live outside this section's rules and are not drawn from a table: the
+  // Caster marker, the deck tokens and the whole "Buy This Card" block. The tokens sit with the
+  // deck tools and the other two here, and this loop does not care which is where — the model
+  // does not group them and neither does it.
+  for (const [id, key] of [['setCaster', 'showCaster'], ['setTokens', 'tokens']]) {
     const box = document.getElementById(id);
-    box.checked = filters[key];
+    box.checked = filters[key] !== false;
     box.addEventListener('change', () => {
       filters[key] = box.checked;
       saveFilters();
     });
   }
+
+  // The whole "Buy This Card" block, which is the general switch over the shops.
+  //
+  // A shop is a link inside that block, so with the block hidden there is nowhere for it to be
+  // shown and its box has nothing to say. It is drawn off and out of reach while the block is
+  // hidden — the platform pattern, and for the same reason: the reader's per-shop choices are
+  // what the boxes are drawn from, not what they write, so turning the block off and on again
+  // brings the shops back as they were rather than resetting them.
+  //
+  // CardTrader is one of those links, and this is where that is visible: its box is governed by
+  // the same switch, and the two are drawn together. What the reader wants for it is kept in
+  // `cardtraderWanted` rather than read back from the box, because the box is emptied while the
+  // block is hidden and an emptied box is not an answer.
+  //
+  // The block itself is stored on its own key. It is not a price kind, so nothing that walks
+  // `prices` can find it, and the card page's boot gate names it separately.
+  const setStores = document.getElementById('setStores');
+  const cardtraderBox = document.getElementById('cardtraderPrices');
+  repaintCardtrader = () => {
+    const connected = tokenStatus.dataset.stored === 'yes';
+    const block = filters.showStores !== false;
+    cardtraderBox.disabled = !connected || !block;
+    cardtraderBox.checked = connected && block && cardtraderWanted;
+  };
+  const paintStores = () => {
+    const on = filters.showStores !== false;
+    for (const [kind, entry] of Object.entries(FILTERS.PRICE_KINDS)) {
+      if (entry.group !== 'links') continue;
+      const box = priceBoxes[kind];
+      if (!box) continue;
+      box.disabled = !on;
+      box.checked = on && filters.prices[kind] !== false;
+    }
+    repaintCardtrader();
+  };
+  setStores.checked = filters.showStores !== false;
+  setStores.addEventListener('change', () => {
+    filters.showStores = setStores.checked;
+    paintStores();
+    saveFilters();
+  });
+  paintStores();
   // The rows above were written after the page was localized, so the page is localized
   // again over them. Their labels are the model's own Russian strings, so this is the
   // same translation every other label on the page gets — and the language selector
@@ -636,6 +809,54 @@ chrome.storage.local.get(defaults, values => {
   }
   saltMedium.addEventListener('change', saveSaltThresholds);
   saltHigh.addEventListener('change', saveSaltThresholds);
+
+  // ---- the feature rows and their panels -------------------------------------------
+  //
+  // One rule for every disclosure on the page: the button carries `aria-controls` and
+  // `aria-expanded`, and the panel is the element it names. Nothing here writes to storage,
+  // which is the whole of "opening a panel changes nothing": the settings inside it were saved
+  // when they were last edited and they keep working while the panel is shut.
+  //
+  // `aria-expanded` is on the button rather than on the panel because that is what a screen
+  // reader reads out when the button is reached — "Настроить, collapsed" — and a state a
+  // reader cannot hear is a state that does not exist for them.
+  document.querySelectorAll('button[aria-controls]').forEach(button => {
+    const panel = document.getElementById(button.getAttribute('aria-controls'));
+    if (!panel) {
+      console.error('no panel named ' + button.getAttribute('aria-controls') + '; the button will do nothing');
+      button.disabled = true;
+      return;
+    }
+    button.setAttribute('aria-expanded', 'false');
+    button.addEventListener('click', () => {
+      const open = panel.hidden;
+      panel.hidden = !open;
+      button.setAttribute('aria-expanded', String(open));
+    });
+  });
+  // A reset is one feature's parameters and nothing else. It writes the same defaults the page
+  // starts a new reader with — the numbers live in `defaults` above, which is also what
+  // `chrome.storage.local.get` fills a fresh install from, so the two cannot drift — and it
+  // does not touch the switch, because "these numbers are wrong" is not "turn this off".
+  const resetFeature = (buttonId, keys) => {
+    document.getElementById(buttonId).addEventListener('click', () => {
+      const restored = {};
+      for (const key of keys) restored[key] = defaults[key];
+      chrome.storage.local.set(restored, () => {
+        for (const key of keys) {
+          const element = document.getElementById(key);
+          if (!element) continue;
+          if (element.type === 'checkbox') element.checked = Boolean(defaults[key]);
+          else element.value = defaults[key];
+        }
+        showUsageThresholds();
+        status.textContent = t('Стандартные настройки восстановлены');
+      });
+    });
+  };
+  resetFeature('resetUsage', ['edhrecUsageDisplay', 'usageColorMetric',
+    'usageMediumDecks', 'usageHighDecks', 'usageMediumPercent', 'usageHighPercent']);
+  resetFeature('resetSalt', ['showSaltScale', 'saltMediumThreshold', 'saltHighThreshold']);
 
   const catalog = [...window.STK_FORMAT_CATALOG, ...values.discoveredFormats.map(({ key, label }) => [key, label])];
   const formats = new Map(catalog);

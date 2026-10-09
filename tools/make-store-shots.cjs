@@ -36,37 +36,30 @@ async function main() {
   try {
     await session.open();
     await session.open_(page, { width: WIDTH, height: 900 });
-    // Paper's detail panel is closed to begin with, and a store screenshot taken with it
-    // closed shows three switches, a button and three more switches — which is honest about
-    // what a reader first sees and says nothing at all about what the button is for. So it is
-    // opened here, by pressing the button rather than by removing `hidden` from the
-    // markup: the capture then shows the page as it looks when someone has asked for it,
-    // and the button's own script has run, which a hand-edited attribute would not prove.
+    // One platform switched off, and one place switched off. That is what the section looks
+    // like to somebody who has actually used it, and a capture that shows every box ticked
+    // says nothing at all about the two states the layout has to cope with: a dimmed row whose
+    // own box is still the way back, and a place that is genuinely out.
     //
-    // The Foreign Black Border category is switched off in this capture, so the picture shows
-    // the rule's list — the part a reader cannot guess at — rather than a switch that looks
-    // the same as the three above it. And with a category off its list stays open, which is
-    // what a reader who has narrowed that category actually sees: the list is the only place
-    // the narrowing is visible at all.
+    // Both are pressed rather than set by hand. `checked = false` on its own would draw the
+    // box empty and leave the stored value and the row's dimming exactly as they were, and the
+    // capture would then show a state the page cannot actually be in.
+    //
+    // And then the page is given a moment. Every box here transitions its background over
+    // 150ms, so a capture taken on the next round trip catches twelve of them mid-fade — a
+    // picture of neither state, with an unticked box looking like a filled square. That is not
+    // hypothetical: it is what the first capture after this rework showed, and it was measured
+    // pixel by pixel before it was believed.
     await session.evaluate(`(() => {
-      document.getElementById('paperDetails').click();
-      for (const [id, value] of [['showBorderFamilies', false],
-        ['nonEnglishMode', 'analogue']]) {
+      for (const [id, value] of [['showArena', false], ['showMtgo-prints', false]]) {
         const box = document.getElementById(id);
-        if (!box) continue;
-        if (box.tagName === 'SELECT') box.value = value;
-        else box.checked = value;
+        if (!box) throw new Error('no such box on the page: ' + id);
+        box.checked = value;
         box.dispatchEvent(new Event('change', { bubbles: true }));
       }
-      // The areas are written by options.js rather than put in the markup, so they are
-      // addressed the way the page addresses them: the container id plus the name. Asking for
-      // "areaSearch" finds nothing, and a capture tool that disagrees with the settings page
-      // about an id is a drift this repository has already paid for twice.
-      document.getElementById('filterAreasGroup-search').checked = false;
-      document.getElementById('filterAreasGroup-search')
-        .dispatchEvent(new Event('change', { bubbles: true }));
       return true;
     })()`);
+    await new Promise(resolve => setTimeout(resolve, 500));
     const tall = await session.fullHeight();
     const out = path.join(STORE, 'settings-page-full.png');
     await session.shootWholePage(out, { width: WIDTH });

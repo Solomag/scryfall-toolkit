@@ -74,7 +74,6 @@
 #main .select2-results__option[role="group"][hidden]{display:none!important}
 .card-grid-item>.stk-tagger-link{position:absolute;bottom:5px;left:5px;z-index:8;display:grid;place-items:center;width:25px;height:25px;border-radius:4px;background:#2b2935ba;color:#e3cfed;text-decoration:none;opacity:.68}
 .card-grid-item>.stk-tagger-link:hover,.card-grid-item>.stk-tagger-link:focus-visible{opacity:1}
-.stk-card-nickname{font-style:italic}
 .card-grid.stk-stacked-deck .card-grid-item[data-card-id]:not(.stk-stacked-last){height:50px}
 #stores .stk-cardtrader-link{display:flex;align-items:center;justify-content:space-between;gap:6px;color:#715590}
 #stores .stk-cardtrader-link span:last-child{white-space:nowrap}
@@ -123,8 +122,6 @@
 #stk-edhrec .stk-usage-low{--stk-usage-color:#75986e}
 #stk-edhrec .stk-usage-medium{--stk-usage-color:#b49a45}
 #stk-edhrec .stk-usage-high{--stk-usage-color:#a85656}
-#stk-edhrec .stk-edhrec-source{display:inline-flex;align-items:center;justify-content:center;flex:none;width:17px;height:17px;border-radius:2px;background:#292b2c}
-#stk-edhrec .stk-edhrec-source img{display:block;width:16px;height:16px;object-fit:contain}
 html.stk-dark #stk-edhrec{color:#e6e3df;border-color:#414345}
 html.stk-dark #stk-edhrec .stk-edhrec-usage>.stk-edhrec-fraction{color:#d5d2d6}
 /* The usage and Salt badges use the same light status fills as Scryfall's own

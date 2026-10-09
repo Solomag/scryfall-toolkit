@@ -5,96 +5,81 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  *
- * Third-party data, images and code in this project keep their own licence
- * and are described in THIRD_PARTY_NOTICES.md. The MPL does not cover them.
+ * Third-party data, images and code in this project keep their own licence and
+ * are described in THIRD_PARTY_NOTICES.md. The MPL does not cover them.
  */
 
-// What is shown, where, and what each of those answers means.
+// What is shown, where, and which of those three answers goes with which of the other two.
 //
 // One file because four places have to agree on the shape and none of them can check the
 // others: the settings page draws it, the card page reads it on both surfaces, and the worker
-// fetches the sets it needs. The shape has been rewritten here twice after two copies of one
-// rule drifted apart, so it lives in one place with its migration beside it.
+// fetches the sets it needs. The shape has been rewritten here four times, and each rewrite
+// was a reader saying the last one was too much, so this is the fourth and the shortest.
 //
-// The whole shape is one sentence: **on means show.** Every switch below is positive, in the
-// stored value, in the interface and in what `effective()` hands the pages. The earlier shape
-// was negative — "hide non-tournament", "hide oversized", and a `surfaces` mode reading
-// 'off'/'prints'/'sets-prints' where 'off' meant "not hiding" — and a positive word meaning
-// "not hiding" reads as the opposite of itself at every call site. Three of the places that
-// read it had to know which sense a field was in.
+// The whole shape is one sentence: **on means show.** Every switch is positive, in the stored
+// value, in the interface and in what `effective()` hands the pages. The first shape was
+// negative — "hide non-tournament", "hide oversized" — and a positive word meaning "not
+// hiding" reads as the opposite of itself at every call site.
 //
-//   platforms  { paper, arena, mtgo }     which platforms' things are shown
-//   areas      { prints, search, sets }   which surfaces any rule applies to
-//   paper      nonTournament             show non-tournament printings
-//              oversized                 show oversized printings
-//              noEnglishSets             show sets with no English printing
-//              foreignBlackBorder        { '4bb', fbb, bchr }  show each family
-//              nonEnglish                'all' | 'analogue' | 'none'
+//   platforms  paper   { show, areas: { prints, search, sets } }
+//             arena   { show, areas: { prints, search, sets } }
+//             mtgo    { show, areas: { prints, search, sets } }
 //
-// `areas` is one list for every rule, deliberately. Per-surface checkboxes for every rule is
-// the tree this shape exists to avoid: three rules times three surfaces is nine switches, and
-// a reader who ticks one of them has answered a question about a rule rather than about a
-// place. "Where should filtering apply" is one question with one answer.
+// Nine area switches and three platform switches, and that is all there is.
 //
-// `nonEnglish` is a mode rather than a switch because the middle option is not the opposite
-// of either end. 'all' and 'none' are opposites; 'analogue' is neither — it shows a
-// non-English printing only where the same card has no English Paper printing of the same
-// artwork in the same treatment. That is a judgement about a pair of printings, and a switch
-// cannot say it.
+// The areas are **per platform** rather than one shared list, and that is the second thing
+// this file says. One shared list was the shape for two releases, on the reasoning that
+// "where should filtering apply" is one question with one answer — and it is not, because the
+// platforms are not interchangeable. A reader who wants Arena sets out of the search dropdown
+// and Arena printings left in the card page's table is not choosing a rule, they are choosing
+// two answers to two questions, and one list cannot hold them: with it, switching Arena off
+// for the dropdown also switched it off for the table, or switching it off for neither.
+//
+// Everything else is gone, and it is worth saying what it was. There were rules about
+// ancillary printings and about non-English printings, and before those rules about oversized
+// cards, about sets with no English printing, about Foreign Black Border families and about
+// the non-English categories Portal and Secret Lair. Every one of them crossed the others: a
+// border family is a set, a Secret Lair is a set, and a set with no English printing is a
+// set, so a reader choosing between them was choosing between three descriptions of the same
+// kind of thing and then had to work out which one won. The rules that survived longest were
+// the ones decided by reading a set's name, and the ones that were checked against the API
+// rather than against a copy of themselves turned out to be answerable from a field.
+//
 (function () {
   'use strict';
 
-  // The three places a filter can apply. `search` is the set field on the advanced search
+  // The three places a platform can be shown. `search` is the set field on the advanced search
   // page, which is the only one of the three that is a form control rather than a list.
   //
-  // The label lives here and not in the markup, because these three names appear in two
-  // places — the checkbox and the hint under it — and the checkboxes are written by
-  // options.js from this table while a copy typed into options.html would be a second thing to
-  // keep in step. That is the same reason the border families and the price kinds carry their
-  // labels here.
+  // Each entry carries two words, not one: `label` is the column header over the table, which
+  // has to be short enough for a 60px column, and `aria` is the phrase a screen reader hears,
+  // which is what the checkbox is. They are not the same sentence — "Издания" as a column and
+  // "показывать в таблице изданий" as a checkbox — and a header reused as an accessible name
+  // is the usual way a table of switches ends up with twelve boxes all named "Поиск".
+  //
+  // The words live here and not in the markup, because options.js writes every row of the
+  // table from this table and a copy typed into options.html would be a second thing to keep
+  // in step.
   const AREAS = {
-    prints: { label: 'Таблица изданий' },
-    search: { label: 'Поиск' },
-    sets: { label: 'Список сетов' }
+    prints: { label: 'Издания', aria: 'показывать в таблице изданий' },
+    search: { label: 'Поиск', aria: 'показывать в поиске' },
+    sets: { label: 'Список сетов', aria: 'показывать в списке сетов' }
   };
   const AREA_NAMES = Object.keys(AREAS);
+
+  // The two columns that are not places: the platform's own name, and the switch that turns
+  // the platform on everywhere.
+  const PLATFORM_COLUMN = { label: 'Платформа', aria: 'платформа' };
+  const SHOW_COLUMN = { label: 'Показывать', aria: 'показывать' };
 
   // The three places a printing can exist, as Scryfall's own `games` field names them.
   // `paper` is in there and printings carry it, so "is this printing on an allowed platform"
   // is a question about the printing rather than about the set it sits in.
-  //
-  // No labels, and none needed: these are Scryfall's own product names, spelled the same way
-  // in every language this extension has. They used to carry a `label` that nothing read,
-  // which meant a fourth copy of three names and nothing to notice when they drifted.
   const PLATFORM_NAMES = ['paper', 'arena', 'mtgo'];
-
-  // The three positions of the non-English rule, in the order they appear in the interface.
-  const NON_ENGLISH_MODES = {
-    all: {
-      label: 'Все',
-      hint: 'Язык не влияет: иностранные издания показываются всегда.'
-    },
-    analogue: {
-      label: 'Только без английского аналога',
-      hint: 'Иноязычное издание показывается, только если у той же карты нет бумажного ' +
-        'английского издания с тем же артом и тем же оформлением.'
-    },
-    none: {
-      label: 'Никакие',
-      hint: 'Все неанглийские издания скрываются.'
-    }
-  };
-
-  // Foreign Black Border, as the three sets Scryfall names that way. Split per family because
-  // unticking one has to mean something, and a flat list behind one switch cannot untick one.
-  //
-  // The worker finds these sets by name off its own index of /sets, so the table holds no
-  // codes: a code kept here is a code that can disagree with the API.
-  const FOREIGN_BLACK_BORDER = {
-    '4bb': { label: 'Fourth Edition Foreign Black Border (4BB)' },
-    fbb: { label: 'Foreign Black Border (FBB)' },
-    bchr: { label: 'Chronicles Foreign Black Border (BCHR)' }
-  };
+  // Scryfall's own product names, in Scryfall's own spelling. They are brands rather than
+  // words, and "Арена" would be a translation of a name nobody calls it that — which is the
+  // same reason the column header above is a word this extension chose and this one is not.
+  const PLATFORM_LABELS = { paper: 'Paper', arena: 'Arena', mtgo: 'Magic Online' };
 
   // Every storage key the migration has to be able to see, in one list, because two files need
   // it: the card page migrates what the reader chose and the settings page has to show the
@@ -106,35 +91,68 @@
     'hideForeignOnlySets'
   ];
 
+  // The five prices, in two groups rather than five switches. `group` is what puts the two
+  // currencies on one line and the three shops on another, and it lives here rather than in the
+  // markup for the reason the area labels do: options.js draws both groups from these two
+  // tables, and a line typed into options.html would be a second place to forget a price.
+  //
+  // The split is not cosmetic. A currency is a column of numbers and a shop is a link, and on
+  // the page they are different things that happen to both be prices — which is why one switch
+  // for all of them was wrong, and why the grouping says so without a paragraph saying so.
+  //
+  // Cardmarket is a shop, and it is the one shop that also owns a column: the native EUR column
+  // is Cardmarket's price, and Scryfall draws it whether or not the reader ever wants a euro
+  // price. So its switch hides two things — the EUR column and the cardmarket.com links — which
+  // is what "hide Cardmarket" has to mean to be one button rather than two. The key was `eur`
+  // for one unreleased build, where the switch sat among the currencies and read as one; it is
+  // `cardmarket` now, because it sits with the other shops and hides the other shops' things.
+  const PRICE_GROUPS = { prices: 'Цены', links: 'Ссылки на магазины' };
   const PRICE_KINDS = {
-    usd: { label: 'USD', selects: ['usd'], links: [] },
-    tix: { label: 'TIX', selects: ['tix'], links: [] },
-    tcg: { label: 'TCGplayer', selects: [], links: ['tcgplayer'] },
-    cardhoarder: { label: 'Cardhoarder', selects: [], links: ['cardhoarder'] }
+    usd: { label: 'USD', group: 'prices' },
+    tix: { label: 'TIX', group: 'prices' },
+    tcg: { label: 'TCGplayer', group: 'links' },
+    cardhoarder: { label: 'Cardhoarder', group: 'links' },
+    cardmarket: { label: 'Cardmarket', group: 'links' }
   };
+  const PRICE_GROUP_NAMES = Object.keys(PRICE_GROUPS);
+
+  // All nine areas on, all three platforms shown and all four prices shown. That is what a
+  // reader who has never touched this section gets, and it has to mean "nothing is hidden",
+  // because the default is what every reader starts in and a default that hides something
+  // takes rows away from somebody who never asked.
+  const platformDefault = () => ({
+    show: true,
+    areas: { prints: true, search: true, sets: true }
+  });
 
   const defaults = () => ({
-    // Positive throughout, and all on: a reader who has never opened this section sees
-    // everything Scryfall shows, which is what "no filtering" has to mean to a default.
-    platforms: { paper: true, arena: true, mtgo: true },
-    areas: { prints: true, search: true, sets: true },
-    paper: {
-      nonTournament: true,
-      oversized: true,
-      noEnglishSets: true,
-      foreignBlackBorder: { '4bb': true, fbb: true, bchr: true },
-      nonEnglish: 'all'
+    platforms: {
+      paper: platformDefault(),
+      arena: platformDefault(),
+      mtgo: platformDefault()
     },
-    prices: { usd: false, tix: false, tcg: false, cardhoarder: false },
+    // Positive like everything else here, which this one was not: the four keys it started with
+    // used to mean "hide this kind", so they were the only negative booleans left in the shape,
+    // read by two files with `some(Boolean)` and `if (prices[option.value])` — a reader's four
+    // unticked switches meaning "show everything" is the opposite of what every other switch in
+    // the group means, and the page had to say "which prices to hide" above them to make it
+    // legible. Cardmarket was added later and has only ever meant "show".
+    //
+    // Inverted, so the switches say what every other switch in the settings says and the
+    // group above them does not need a sentence explaining which way round they run. The
+    // inversion is in the migration, not here.
+    prices: { usd: true, tix: true, tcg: true, cardhoarder: true, cardmarket: true },
     tokens: true,
-    caster: false
+    showCaster: true,
+    // The whole "Buy This Card" block on a card page, heading and disclaimer included — the
+    // container the three shop links live in. It is not a price kind and not a shop: hiding each
+    // shop leaves the heading and the block behind, and a reader who buys nowhere wants the block
+    // gone rather than emptied. Positive like everything else here, so the box reads "show".
+    showStores: true
   });
 
   const isPlainObject = value =>
     Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-
-  const knownList = (list, table) =>
-    Array.isArray(list) ? list.filter(name => Object.prototype.hasOwnProperty.call(table, name)) : null;
 
   // Fill in anything missing without touching what is there, so a partial object written by
   // an older build is completed rather than replaced.
@@ -142,55 +160,63 @@
   // A key that arrives with the wrong shape is completed too rather than dropped: a reader who
   // had stored something this build cannot read gets the default, which is "show", so the
   // worst case of not understanding their setting is that nothing is hidden.
+  //
+  // A platform stored as a bare boolean is accepted, because that is the shape two builds
+  // wrote and reading it costs one line rather than a migration that has to run first. What
+  // is *not* accepted is any of the removed rules: `ancillary`, `nonEnglish`, `noEnglishSets`,
+  // `foreignBlackBorder` and the rest are still sitting in the storage of anybody who used
+  // 1.3–1.5, and nothing here looks at them. That is the requirement — a removed setting must
+  // stop affecting the result rather than keep working through a field nobody removed.
   function normalise(input) {
     const out = defaults();
     if (!isPlainObject(input)) return out;
 
     for (const platform of PLATFORM_NAMES) {
-      if (typeof input.platforms?.[platform] === 'boolean') out.platforms[platform] = input.platforms[platform];
-    }
-    for (const area of AREA_NAMES) {
-      if (typeof input.areas?.[area] === 'boolean') out.areas[area] = input.areas[area];
-    }
-
-    const paper = input.paper;
-    if (isPlainObject(paper)) {
-      for (const key of ['nonTournament', 'oversized', 'noEnglishSets']) {
-        if (typeof paper[key] === 'boolean') out.paper[key] = paper[key];
+      const stored = input.platforms?.[platform];
+      if (typeof stored === 'boolean') {
+        out.platforms[platform].show = stored;
+        continue;
       }
-      if (typeof paper.nonEnglish === 'string' &&
-          Object.prototype.hasOwnProperty.call(NON_ENGLISH_MODES, paper.nonEnglish)) {
-        out.paper.nonEnglish = paper.nonEnglish;
-      }
-      for (const key of Object.keys(FOREIGN_BLACK_BORDER)) {
-        if (typeof paper.foreignBlackBorder?.[key] === 'boolean') {
-          out.paper.foreignBlackBorder[key] = paper.foreignBlackBorder[key];
-        }
+      if (!isPlainObject(stored)) continue;
+      if (typeof stored.show === 'boolean') out.platforms[platform].show = stored.show;
+      for (const area of AREA_NAMES) {
+        if (typeof stored.areas?.[area] === 'boolean') out.platforms[platform].areas[area] = stored.areas[area];
       }
     }
 
     for (const price of Object.keys(out.prices)) {
       if (typeof input.prices?.[price] === 'boolean') out.prices[price] = input.prices[price];
     }
+    // The euro switch under the name it had for one unreleased build, before it moved from the
+    // currencies to the shops. Read rather than dropped: a reader who hid the euro column in
+    // that build hid Cardmarket, and this is the same setting with a better name — and a build
+    // that is never released still has readers between one local load and the next.
+    if (typeof input.prices?.cardmarket !== 'boolean' && typeof input.prices?.eur === 'boolean') {
+      out.prices.cardmarket = input.prices.eur;
+    }
     if (typeof input.tokens === 'boolean') out.tokens = input.tokens;
-    if (typeof input.caster === 'boolean') out.caster = input.caster;
+    // The "Buy This Card" block, added after the shape settled, so it has no older name to read.
+    if (typeof input.showStores === 'boolean') out.showStores = input.showStores;
+    // `showCaster`, not `caster`. The old key meant the opposite of what its name in the
+    // settings said, and renaming it is what makes the two directions tellable apart: a value
+    // carrying `showCaster` was written by a build that stored "show", and one carrying
+    // `caster` by a build that stored "hide". Without the rename the two are the same
+    // boolean and `normalise` cannot know which sense it is holding — and reading it the
+    // wrong way round flips the Caster marker for every reader on the first page load after
+    // an update, which is exactly what the relabel must not do.
+    if (typeof input.showCaster === 'boolean') out.showCaster = input.showCaster;
     return out;
   }
 
-  // The flat booleans of 1.1.x and earlier, translated once.
+  // ---- migration ------------------------------------------------------------------
   //
-  // Two of the mappings need saying out loud, because they are judgement and not arithmetic.
+  // Four old shapes end here, and each mapping is a judgement rather than arithmetic. They
+  // are written out because three of them are lossy and a reader who lost a setting is a
+  // reader who did not choose to lose it.
   //
-  // `setsEnabled` was a master gate over the whole group: off meant "no rule applies", which
-  // in the positive shape is every switch at its default. So a reader arriving with it off
-  // gets the defaults, which shows everything — the same thing they had, arrived at by
-  // inverting five switches instead of by keeping a gate that no longer has a meaning to keep.
-  //
-  // The two `surfaces` rules become positions rather than switches. Foreign Black Border was
-  // per-category "hide these", so a family that was hidden becomes shown and the rest keep
-  // what they had. Non-English was one switch hiding every non-English printing, and the
-  // closest position in the new three is 'none' — the new middle option did not exist to be
-  // migrated into, and pretending otherwise would show a reader rows they had asked to lose.
+  // The one rule everywhere: when a choice cannot be carried across, show.
+
+  // The flat booleans of 1.0 and earlier, translated once.
   function migrate(stored) {
     const out = defaults();
     if (!isPlainObject(stored)) return out;
@@ -199,50 +225,41 @@
       // Only a list naming at least one platform we know. A list of nothing recognisable is
       // not a choice to show nothing — that would blank three surfaces outright — it is a
       // value this build cannot read, and the safe reading of that is the default.
-      const known = stored.setPlatforms
-        .filter(name => PLATFORM_NAMES.includes(name));
+      const known = stored.setPlatforms.filter(name => PLATFORM_NAMES.includes(name));
       if (known.length) {
-        for (const platform of PLATFORM_NAMES) out.platforms[platform] = known.includes(platform);
+        for (const platform of PLATFORM_NAMES) out.platforms[platform].show = known.includes(platform);
       }
     }
     if (stored.hideDigitalSets === true) {
-      out.platforms.arena = false;
-      out.platforms.mtgo = false;
+      out.platforms.arena.show = false;
+      out.platforms.mtgo.show = false;
     }
 
-    // Inverted, because the old words were "hide" and these are "show".
-    if (stored.hideNonTournamentSets === true) out.paper.nonTournament = false;
-    if (stored.hideOversizedSets === true) out.paper.oversized = false;
-    if (stored.hideForeignOnlySets === true) out.paper.noEnglishSets = false;
-
-    if (stored.hideForeignBlackBorder === true) {
-      // The old switch hid every family; the old `which` narrowed that to a list. Both mean
-      // "not shown" for the families they named, so the new switches are inverted per family.
-      const old = stored.setFilters?.sets?.foreignBlackBorder;
-      const which = Array.isArray(old?.which) ? old.which : Object.keys(FOREIGN_BLACK_BORDER);
-      for (const key of Object.keys(FOREIGN_BLACK_BORDER)) {
-        out.paper.foreignBlackBorder[key] = !which.includes(key);
-      }
-    }
-
-    if (stored.hideNonEnglishPrints === true) out.paper.nonEnglish = 'none';
-
+    // The one switch that meant "every price but Cardmarket". It was the only price setting
+    // before 1.1.2, and it says what it says: the four kinds that existed then were hidden,
+    // which in the positive shape is those four off.
+    //
+    // The four are named rather than taken from the model's keys. Cardmarket *is* the euro
+    // column, so it is the one price this switch must leave alone — and iterating the keys
+    // would hide the very price the switch is named after, which is the kind of thing a
+    // migration can only get wrong once and never be told about.
     if (stored.onlyCardmarket === true) {
-      for (const price of Object.keys(out.prices)) out.prices[price] = true;
+      for (const price of ['usd', 'tix', 'tcg', 'cardhoarder']) out.prices[price] = false;
     }
 
-    if (stored.hideCasterIndicator === true) out.caster = true;
+    // The Caster marker, whose switch used to read "hide" and now reads "show". Inverted, and the
+    // only place the inversion happens: a reader who had the marker hidden keeps it hidden.
+    if (stored.hideCasterIndicator === true) out.showCaster = false;
     // The old switch was "show the tokens a deck makes" and defaulted on, so it is already a
     // positive: only an explicit false carries over.
     if (stored.deckTokens === false) out.tokens = false;
 
-    // The master gate, if it was off, means everything below it was not applying. Arriving at
-    // that by putting every switch at its default rather than by keeping a gate.
-    if (stored.setFilters?.setsEnabled === false) {
-      for (const key of ['nonTournament', 'oversized', 'noEnglishSets']) out.paper[key] = true;
-      for (const key of Object.keys(FOREIGN_BLACK_BORDER)) out.paper.foreignBlackBorder[key] = true;
-      out.paper.nonEnglish = 'all';
-    }
+    // Five old switches have no target at all and are simply not read: non-tournament,
+    // oversized, the sets with no English printing, Foreign Black Border and the non-English
+    // categories. All five were whole-set rules and none of them is a platform. Readers who
+    // had any of them on get those sets back, which is the only reading available — the new
+    // shape has nothing that could mean "hide this set" — and it errs towards showing, which
+    // is the direction this project has always taken when it cannot carry a setting across.
 
     return out;
   }
@@ -251,12 +268,10 @@
   // happens once rather than on every page load, and so that a build which later changes the
   // shape has something to compare against.
   //
-  // `upgrade` sits between them on purpose. A reader who has never seen the positive shape has
-  // flat booleans to translate; a reader who has seen the negative shape of 1.1.4–1.3.0 has
-  // that shape, which is neither of the other two and whose fields are spelled differently.
-  // Calling `normalise` on it would return the defaults, which is "show everything" — the
-  // migration's worst case, arrived at silently, for a reader who had chosen to hide a third
-  // of their sets.
+  // `upgrade` sits between the two older shapes and this one. It reads a value written by
+  // 1.1.4–1.3.0 (negative, under `sets`), by 1.4.x–1.5.x (positive, under `paper`) and by
+  // 1.5.1+ (a shared list of areas beside the platforms), and every one of them carries
+  // fields this shape has no place for.
   function read(stored) {
     return {
       filters: stored.setFiltersMigrated === true
@@ -266,210 +281,160 @@
     };
   }
 
-  // One rule: was this surface stored under the old shape? A reader who has never touched the
-  // new shape gets every area, which is "filter where it is on" — the one reading of a master
-  // that survives the removal of the master, and the one that hides nothing on first run.
-  //
-  // The old value could name one area or both; there are three now. "Sets and prints" becomes
-  // all three, because the old rule reached both places it could and this build has one more
-  // place, not one fewer, and dropping the reader's choice in the new place would be the
-  // migration narrowing somebody's settings on upgrade.
-  function areasFromLegacy(areas) {
-    const out = { ...defaults().areas };
-    if (typeof areas?.prints === 'boolean') out.prints = areas.prints;
-    if (typeof areas?.search === 'boolean') out.search = areas.search;
-    if (typeof areas?.sets === 'boolean') out.sets = areas.sets;
-    return out;
-  }
+  
 
-  // The shape as a stored value from an earlier build of *this* file, which is a different
-  // migration from the flat booleans and is kept separate so neither reads the other's keys.
+// The shape as a stored value from any of the earlier builds of *this* file. Kept separate
+  // from `migrate` so neither reads the other's keys: one knows flat booleans, the others
+  // know nested objects.
+  //
+  // Four shapes end here and each is told apart by a key that exists or does not, rather than
+  // by a version number nobody writes. That is deliberate: a stored version can be wrong or
+  // missing, and then a reader's settings are read as the wrong shape. A key either is there
+  // or is not.
   function upgrade(input) {
     if (!isPlainObject(input)) return defaults();
-    // Which of the two shapes this is, asked before anything is read out of it.
-    //
-    // The positive shape holds `paper`; the negative one of 1.1.4–1.3.0 holds `sets`. There
-    // is a third possibility, which is a value written part-way through a migration and
-    // holding neither, and it is not the old shape: feeding it to the translation below would
-    // invert five switches for a reader who had never touched any of them. So anything that
-    // does not carry `sets` is read as the positive shape and merely completed, and `sets`
-    // is the single thing that says "this is the old one".
-    //
-    // It used to ask the same question twice, once per shape, and both answers did the same
-    // thing — so the code said nothing about a case that a value with both keys would reach,
-    // and the comment claimed a check that was not there.
-    if (!isPlainObject(input.sets)) return normalise(input);
 
+    // The current shape: a value a later build wrote and this one has to read back unchanged,
+    // and it is the only shape that stores `showCaster`. Checked first, because the branches
+    // below rewrite every platform's places from one shared list, and doing that to a value
+    // that already has nine of its own would throw the reader's choices away on the first page
+    // load after an update — which is the failure this file has been rewritten to avoid three
+    // times.
+    if (typeof input.showCaster === 'boolean') return normalise(input);
+
+    // 1.6.0 to 1.6.2: the current layout — per-platform places, positive prices — with the Caster
+    // key still named `caster` and still meaning *hide*. This branch exists only to rename that
+    // one key, and it is the reason the rename above is a rename rather than a comment: a value
+    // from that range has the new layout and the old sense, and the two are otherwise the same
+    // object. Prices pass through untouched, because that range already stored them positively.
+    if (PLATFORM_NAMES.some(name => isPlainObject(input.platforms?.[name]))) {
+      return normalise({
+        ...input,
+        showCaster: typeof input.caster === 'boolean' ? !input.caster : undefined
+      });
+    }
+
+    // 1.1.4 to 1.3.0: negative switches under `sets`, and a master beside them. It is the only
+    // shape with `sets`, and that one key is what says "this is older" — a value written
+    // part-way through a migration holds neither `sets` nor `paper` and must not be read as
+    // the old shape, or five switches would act for a reader who had never touched any of them.
+    if (isPlainObject(input.sets)) {
+      // A master that was off meant none of this was applying, which is now every switch at
+      // its default — arriving there by putting them back rather than by keeping a gate.
+      if (input.setsEnabled === false) return defaults();
+      const out = normalise({
+        platforms: input.platforms,
+        prices: invertPrices(input.prices),
+        tokens: input.tokens,
+        showCaster: invertCaster(input.caster)
+      });
+      const areas = areasFromLegacyAreas(isPlainObject(input.areas) ? input.areas : {});
+      return withAreas(out, areas);
+    }
+
+    // 1.4.x and 1.5.0: positive switches under `paper`, beside a shared list of areas.
+    // Neither the paper rules nor the removed set rules have anywhere to go, and the shared
+    // list is spread over the three platforms — which is the last shape that had one, so this
+    // is the migration that turns it into three.
     const out = normalise({
       platforms: input.platforms,
-      areas: areasFromLegacy(input.areas),
-      prices: input.prices,
+      prices: invertPrices(input.prices),
       tokens: input.tokens,
-      caster: input.caster
+      showCaster: invertCaster(input.caster)
     });
-    const sets = isPlainObject(input.sets) ? input.sets : {};
-    // Everything the old shape hid by default is now shown by default, so each switch is
-    // inverted only where the old shape actually carried a value.
-    if (typeof sets.nonTournament === 'boolean') out.paper.nonTournament = !sets.nonTournament;
-    if (typeof sets.oversized === 'boolean') out.paper.oversized = !sets.oversized;
-    if (typeof sets.foreignOnly === 'boolean') out.paper.noEnglishSets = !sets.foreignOnly;
+    return withAreas(out, areasFromLegacyAreas(isPlainObject(input.areas) ? input.areas : {}));
+  }
 
-    // The border rule had two spellings and one meaning: "hide", narrowed by which families.
-    // Read as one thing, because reading the two halves separately is how an inactive rule
-    // with a populated list under it hid that list anyway — which is what this did until the
-    // test that stores exactly that value caught it.
-    const border = isPlainObject(sets.foreignBlackBorder) ? sets.foreignBlackBorder : {};
-    const borderHides = typeof border.on === 'boolean'
-      ? border.on
-      : SURFACE_NAMES_OLD.includes(border.surfaces) && border.surfaces !== 'off';
-    if (borderHides) {
-      const which = knownList(border.which, FOREIGN_BLACK_BORDER);
-      // No list under an active rule meant every family.
-      const hidden = which || Object.keys(FOREIGN_BLACK_BORDER);
-      for (const key of Object.keys(FOREIGN_BLACK_BORDER)) {
-        out.paper.foreignBlackBorder[key] = !hidden.includes(key);
-      }
-    }
+  // The Caster key as the shape that stored *hide* it, read into the one that stores *show*.
+  //
+  // `undefined` rather than a guess: a shape that never stored the key at all has to arrive at
+  // the default, and arriving there through `normalise`'s own filling is the only way that
+  // default can change without this file changing too.
+  function invertCaster(caster) {
+    return typeof caster === 'boolean' ? !caster : undefined;
+  }
 
-    // The old non-English rule was one switch, so it maps onto one position. 'none' is the
-    // faithful reading of anything that was hiding: the new middle option did not exist when
-    // the reader made that choice, and choosing it for them would show rows they had asked to
-    // lose.
-    const language = isPlainObject(sets.nonEnglish) ? sets.nonEnglish : {};
-    if (typeof language.on === 'boolean') out.paper.nonEnglish = language.on ? 'none' : 'all';
-    if (SURFACE_NAMES_OLD.includes(language.surfaces)) {
-      out.paper.nonEnglish = language.surfaces === 'off' ? 'all' : 'none';
-      if (language.surfaces === 'sets-prints') {
-        // Two surfaces named in the old value; the third is added rather than dropped.
-        out.areas = areasFromLegacy({ prints: true, sets: true });
-      }
-    }
+  // The four price keys as the shape that used to hold them, read into the positive one.
+//
+// Every one of the three earlier nested shapes stored `prices` the other way round, so all
+// three go through here and the current shape does not. Getting this wrong in either direction
+// is expensive and silent: read positive as negative and a reader who had every price on gets
+// every price hidden on the first page load after an update, and the four switches on the
+// settings page — which read the stored value — would all be unticked while every price was
+// still on the page.
+function invertPrices(prices) {
+  if (!isPlainObject(prices)) return undefined;
+  const out = {};
+  for (const price of Object.keys(defaults().prices)) {
+    if (typeof prices[price] === 'boolean') out[price] = !prices[price];
+  }
+  return out;
+}
 
-    // A master that was off meant none of this was applying.
-    if (input.setsEnabled === false) {
-      for (const key of ['nonTournament', 'oversized', 'noEnglishSets']) out.paper[key] = true;
-      for (const key of Object.keys(FOREIGN_BLACK_BORDER)) out.paper.foreignBlackBorder[key] = true;
-      out.paper.nonEnglish = 'all';
+  // The same object with a given list of areas written into all three platforms.
+  //
+  // Written as a function rather than folded into `normalise` because `normalise` reads the
+  // per-platform shape and this is the only place that manufactures one out of a shared list.
+  // It copies rather than aliases: two platforms holding the same object would be one reader's
+  // mistake on one surface showing up on the other two, and the settings page writes one
+  // platform at a time.
+  function withAreas(filters, areas) {
+    const out = Object.assign({}, filters);
+    out.platforms = {};
+    for (const platform of PLATFORM_NAMES) {
+      out.platforms[platform] = {
+        show: Boolean(filters.platforms[platform]?.show),
+        areas: { ...areas }
+      };
     }
     return out;
   }
 
-  // The old surface names, named here rather than imported from a shape that no longer exists,
-  // because one migration has to recognise a value written by a build that is not this one.
-  const SURFACE_NAMES_OLD = ['off', 'prints', 'sets-prints'];
+  // One rule: was this area stored under the old shape? The old value could name one area or
+  // both; there are three now. A rule that named both reaches all three, because this build
+  // has one more place and not one fewer, and dropping the reader's choice in the new place
+  // would be the migration narrowing somebody's settings on upgrade.
+  function areasFromLegacyAreas(areas) {
+    const out = { prints: true, search: true, sets: true };
+    for (const area of AREA_NAMES) {
+      if (typeof areas?.[area] === 'boolean') out[area] = areas[area];
+    }
+    return out;
+  }
 
   // What the pages are handed. One object, already resolved, so no page re-derives whether a
   // switch means hide or show.
   //
   // There is no gate in it and no `effective` collapse: a platform that is off is off, and its
-  // own settings are still stored and still come back when it is switched on. That is the
-  // whole of what "turning a platform off preserves its settings" requires — there is nothing
-  // to preserve if turning it off also rewrites the values under it, and there is a test for
-  // it below.
+  // own areas are still stored and still come back when it is switched on. That is the whole
+  // of what "turning a platform off preserves its settings" requires — there is nothing to
+  // preserve if turning it off also rewrites the values under it.
   function effective(filters) {
     return normalise(filters);
   }
 
-  // Whether a printing is on a platform the reader kept.
+  // The platforms a printing is allowed to be on, for one surface.
+  //
+  // This is the whole of the platform rule and the whole of the area list: a platform counts
+  // on a surface when it is shown *and* it is in force there. Everything else the pages need
+  // to know about filtering is this one answer per surface.
   //
   // Answered per printing, from the printing's own `games`, and never from its set. A set can
   // be paper and Arena while one of its cards is Arena-only, and a set-level answer would hide
-  // the paper printing along with it — which is the requirement that turning off Arena must not
-  // lose a printing that is also on an allowed platform.
+  // the paper printing along with it.
   //
   // A printing whose `games` is missing is shown. It cannot be placed, and hiding on an
-  // inability to place is the failure this has been written to avoid since the platform filter
-  // first shipped.
+  // inability to place is the failure this filter has never been allowed to make.
   function printingOnPlatform(printing, chosen) {
     const games = printing?.games;
     if (!Array.isArray(games) || !games.length) return true;
     return games.some(game => chosen.includes(game));
   }
 
-  // ---- the English analogue ------------------------------------------------------
-  //
-  // What makes two printings of one card the same picture, as one comparable string.
-  //
-  // The parts are the artwork, the base frame, the frame's effects, the border colour and
-  // the full-art treatment — which is what Scryfall publishes, measured 2026-10-04. It is
-  // deliberately not a claim to describe every visual difference: two printings can differ in
-  // ways none of these fields record. The rule below is built so that being wrong about that
-  // costs an extra row rather than a missing one.
-  //
-  // The artwork arrives as a sorted list of per-face illustration ids, because a multi-faced
-  // card carries its illustrations on its faces and not on itself. The rest arrive as
-  // strings already, so a field that is missing becomes '' — which means a printing with
-  // nothing known can only match another with nothing known, and never a printing that does
-  // know.
-  function pictureKey(printing) {
-    // Sorted here rather than trusted to arrive sorted. The worker does sort both lists, and
-    // this sorts again: a key that depends on its input's order is a key whose two callers can
-    // disagree about the same printing, and a rule about what looks the same has to have one
-    // answer.
-    const list = value => (Array.isArray(value) ? [...value].sort().join('+') : '');
-    return [
-      list(printing?.art),
-      printing?.frame || '',
-      list(printing?.frameEffects),
-      printing?.borderColor || '',
-      printing?.fullArt === true ? 'full' : ''
-    ].join('|');
-  }
-
-  // Whether a printing could serve as the English half of the comparison: an English paper
-  // printing the reader can actually see.
-  //
-  // Three refusals, each for a reason about correctness rather than tidiness.
-  //
-  //   not English   — the comparison is with an English analogue by definition.
-  //   not on paper  — the answer is required to be a paper one, so an Arena-only English
-  //                   printing of the same art does not count. `games` missing is a refusal
-  //                   too: nothing is known about where it was released, and refusing leaves
-  //                   a row visible, which is the right way to be wrong here.
-  //   filtered away — an English printing the reader has already hidden is not a picture they
-  //                   have, so it must not be allowed to hide anything else.
-  //
-  // A printing with no artwork recorded is refused as an analogue as well: it cannot be
-  // compared, so it cannot be evidence.
-  function isAnalogueCandidate(printing, keep) {
-    if (!printing || printing.lang !== 'en') return false;
-    if (!Array.isArray(printing.games) || !printing.games.includes('paper')) return false;
-    if (!Array.isArray(printing.art) || !printing.art.length) return false;
-    return keep ? keep(printing) !== false : true;
-  }
-
-  // The pictures the reader already has in English on paper, built once from the whole print
-  // list rather than as rows are walked.
-  //
-  // Once, and over everything, because the analogue of a printing is regularly *earlier* in
-  // the list than the printing being tested — Scryfall returns printings in its own order, not
-  // release order. A rule that could only look forwards would call every reprint unique and
-  // hide nothing at all, which is the failure this function exists to make impossible.
-  function englishPictures(printings, keep) {
-    const pictures = new Set();
-    for (const printing of Array.isArray(printings) ? printings : []) {
-      if (isAnalogueCandidate(printing, keep)) pictures.add(pictureKey(printing));
-    }
-    return pictures;
-  }
-
-  // Whether one non-English printing is redundant against a set of pictures.
-  //
-  // Every early return leaves the printing visible, and that is the design rather than a
-  // caution: this rule can lose a row, so it has to be certain, and Scryfall's fields are
-  // enough to be certain about a match and not enough to be certain about a mismatch. An
-  // unknown language, unknown artwork and an empty picture set all mean "keep".
-  function redundantAgainst(printing, pictures) {
-    if (!printing || !printing.lang || printing.lang === 'en') return false;
-    if (!Array.isArray(printing.art) || !printing.art.length) return false;
-    if (!pictures || !pictures.size) return false;
-    return pictures.has(pictureKey(printing));
-  }
-
   window.STK_SET_FILTERS = {
-    AREAS, AREA_NAMES, PLATFORM_NAMES, NON_ENGLISH_MODES,
-    FOREIGN_BLACK_BORDER, PRICE_KINDS, LEGACY_KEYS,
+    AREAS, AREA_NAMES, PLATFORM_NAMES, PLATFORM_LABELS, PLATFORM_COLUMN, SHOW_COLUMN,
+    PRICE_KINDS, PRICE_GROUPS, PRICE_GROUP_NAMES, LEGACY_KEYS,
     defaults, normalise, upgrade, migrate, read, effective, isPlainObject,
-    printingOnPlatform, pictureKey, isAnalogueCandidate, englishPictures, redundantAgainst
+    printingOnPlatform
   };
 })();

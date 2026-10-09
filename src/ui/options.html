@@ -40,95 +40,145 @@
 <label><input type="checkbox" id="printAddButtons"> Плюс для отдельного издания при наведении в полном списке</label>
 </section>
 
-<section><div class="section-head"><h2>Скрытие лишнего</h2>
-<button type="button" class="shot-button" data-shot="hide-extra" aria-haspopup="dialog" title="Показать, как это выглядит">?</button></div>
-<!-- Three platforms, each with its own switch, and the switch means one thing everywhere in
-     this group: on is show. The switches are positive because the rule they follow is "on
-     means show", and a row of switches reading "hide X" next to three reading "show Y" is
-     how a reader ends up with a platform hidden and a category hidden and no way to tell
-     which switch did which.
-     There is deliberately no "all platforms" master. The earlier one was a gate over
-     everything, which is a fourth thing with a fourth meaning; and a reader who wants all
-     three has them all on by default, so the switch would have had no use except as a
-     shortcut that loses per-platform settings when it is pressed.
-     Turning a platform off keeps everything under it. That is not a promise in a comment —
-     the switch writes one field and the detail panel writes another, and there is a test
-     that switches a platform off, changes its detail, switches it back, and asks. -->
-<fieldset id="visibilityGroup"><legend>Что показывать</legend>
-<div class="platform-row"><label><input type="checkbox" id="showPaper"> Paper</label>
-<button type="button" id="paperDetails" class="details-button" aria-expanded="false" aria-controls="paperPanel">Настроить</button></div>
-<div class="platform-row"><label><input type="checkbox" id="showArena"> Arena</label></div>
-<div class="platform-row"><label><input type="checkbox" id="showMtgo"> Magic Online</label></div>
-<p class="hint">Платформа выключается целиком, её собственные настройки при этом сохраняются и возвращаются вместе с ней. Издание может быть на нескольких платформах: выключение Arena не убирает то, что осталось и на Paper.</p>
-<fieldset id="paperPanel" class="sub-panel" hidden><legend>Paper: дополнительные категории</legend>
-<!-- Positive switches again, and each one is a statement about a whole category rather than
-     about a row. The two platform-only groups have no detail panel because there is nothing
-     to put in it: a digital set is not memorabilia, is not oversized, and has no English
-     printing to speak of. Inventing a row for them would be a switch that cannot do anything. -->
-<label><input type="checkbox" id="showNonTournament"> Нетурнирные и вспомогательные издания</label>
-<label><input type="checkbox" id="showOversized"> Увеличенные карты (oversized)</label>
-<label><input type="checkbox" id="showNoEnglishSets"> Наборы без английских изданий</label>
-<label><input type="checkbox" id="showBorderFamilies"> Foreign Black Border</label>
-<!-- The three families, behind their own toggle rather than always visible. Written by
-     options.js because the list is the model's: a fourth border set has to be one line in
-     set-filters.js and nothing else, or this page would be showing a rule it cannot store. -->
-<fieldset id="setBorderFamiliesList" class="which-list" hidden><legend>Какие именно</legend>
-</fieldset>
-<label for="nonEnglishMode">Неанглийские издания</label>
-<select id="nonEnglishMode"></select>
-<p class="hint" id="nonEnglishHint"></p>
-<p class="hint">Режим «Только без английского аналога» сравнивает иноязычное издание со всеми бумажными английскими изданиями той же карты — не только с теми, что попали в текущую таблицу. Сравниваются арт, рамка, её особенности, цвет бордера и полноформатное оформление; у многолицевых карт — каждое лицо. Если сравнить нельзя, издание остаётся видимым: лишняя строка лучше пропавшей.</p>
-<p class="hint">Этот режим не возвращает то, что убрали другие правила. Например, Secret Lair останется скрытым при выключенной категории Foreign Black Border, даже если аналог у него есть.</p>
-</fieldset>
-<!-- One list for every rule, deliberately. Three rules times three surfaces is nine
-     switches, and a reader who ticks one has answered a question about a rule rather than
-     about a place. "Where should filtering apply" is one question. -->
-<fieldset id="filterAreasGroup"><legend>Где применять</legend>
-<!-- Three switches, one per entry in STK_SET_FILTERS.AREAS, written by options.js. They
-     are the shortest list in this group and the one most likely to grow a row, and the
-     labels were in this file as literals before: one place to read them and another to
-     change them, with nothing to notice when the two disagreed. -->
-<p class="hint">Правила наборов убирают набор целиком, правило языка — отдельное издание. Наличие в наборе скрытых карт само по себе набор не скрывает.</p>
-</fieldset>
-</fieldset>
-<fieldset id="setPrices" class="which-list"><legend>Какие цены скрывать</legend>
-<!-- Four switches, one per entry in STK_SET_FILTERS.PRICE_KINDS, written by
-     options.js. They were one switch before 1.1.2, and a reader who wanted no
-     TCGplayer links but kept the dollar column had no way to say so. -->
-</fieldset>
-<p class="hint">Цены в долларах и билетах — это столбцы чисел, а TCGplayer и Cardhoarder — ссылки на магазины, поэтому они и скрываются по отдельности. Цена в евро и всё, что добавляет само расширение, не скрывается никогда.</p>
-<label><input type="checkbox" id="setCaster"> Скрыть индикатор Caster ON</label>
-<label><input type="checkbox" id="setTokens"> Список токенов, создаваемых картами колоды</label>
-<p class="hint">Токены показываются на странице колоды: кнопка Show Tokens находит токены карт колоды через Scryfall.</p>
-</section>
-<section><div class="section-head"><h2>Дополнительная информация</h2>
-<button type="button" class="shot-button" data-shot="additional" aria-haspopup="dialog" title="Показать, как это выглядит">?</button></div>
-<label><input type="checkbox" id="finishBadges"> Отдельный столбец отделки выпусков: Nonfoil, Foil, Etched, особый фойл</label>
-<label><input type="checkbox" id="cardSearchLinks"> Поиск по типу и манакосту со страницы карты</label>
-<label><input type="checkbox" id="cardNicknames"> Исторические прозвища карт в предпросмотре Scryfall</label>
-<p class="hint">Прозвище появляется под таблицей изданий, когда карта выходила под другим именем. Например, Lavabrink Venturer (IKO #19) — «Professional Stunt Performer», Barbed Spike (MH2 #5) — «Barbed Flier».</p>
-<fieldset><legend>EDHREC</legend>
-<label><input type="checkbox" id="edhrecUsage"> Показывать использование в колодах Commander</label>
-<label><input type="checkbox" id="edhrecLink"> Показывать значок-ссылку EDHREC</label>
-<label for="edhrecUsageDisplay">Как показывать использование</label>
-<select id="edhrecUsageDisplay"><option value="both">Дробь и процент</option><option value="fraction">Только дробь</option><option value="percent">Только процент</option></select>
-<label for="usageColorMetric">Окрашивать популярность по</label>
-<select id="usageColorMetric"><option value="decks">Количеству колод</option><option value="percent">Доле подходящих колод</option></select>
-<div class="salt-thresholds" id="usageCountThresholds"><label for="usageMediumDecks">Жёлтый: от <input type="number" id="usageMediumDecks" min="0" step="1000"></label><label for="usageHighDecks">Красный: от <input type="number" id="usageHighDecks" min="1" step="1000"></label></div>
-<div class="salt-thresholds" id="usagePercentThresholds" hidden><label for="usageMediumPercent">Жёлтый: более <input type="number" id="usageMediumPercent" min="0" max="100" step="0.1"></label><label for="usageHighPercent">Красный: от <input type="number" id="usageHighPercent" min="0.1" max="100" step="0.1"></label></div>
-<label><input type="checkbox" id="edhrecSalt"> Показывать Salt Score карты</label>
-<label><input type="checkbox" id="showSaltScale"> Показывать шкалу «/4» рядом с Salt Meter</label>
-<div class="salt-thresholds"><label for="saltMediumThreshold">Жёлтый с <input type="number" id="saltMediumThreshold" min="0" max="4" step="0.1"></label><label for="saltHighThreshold">Красный с <input type="number" id="saltHighThreshold" min="0" max="4" step="0.1"></label></div>
-<p class="hint">Показатели встраиваются под форматы. Дробь показывает количество колод с картой среди подходящих по цветовой идентичности. По умолчанию популярность окрашивается по абсолютному количеству: зелёный ниже 50 000, жёлтый от 50 000, красный от 100 000; при выборе доли — до 1% включительно, выше 1% и от 2,6% соответственно. Salt Score — оценка сообщества от 0 до 4, не сила карты: зелёный до 1, жёлтый от 1, красный от 2.</p>
-</fieldset>
-<fieldset><legend>CardTrader</legend>
-<label><input type="checkbox" id="cardtraderPrices"> Показывать предложения CardTrader на странице карты</label>
-<label for="euroPriceSources">Цены в евро в таблице выпусков</label>
-<select id="euroPriceSources"><option value="cm">Cardmarket</option><option value="ct">CardTrader</option><option value="both">Cardmarket и CardTrader</option></select>
+<section id="visibilityGroup"><div class="section-head"><h2>Видимость</h2>
+<button type="button" class="shot-button" data-shot="visibility" aria-haspopup="dialog" title="Показать, как это выглядит">?</button></div>
+
+<!-- Two columns on a window that has the room: the table on the left, and everything that is
+     four short lines on the right. The card is wide and the settings are not, so a single
+     column left two thirds of the card empty and made the reader scroll past nothing.
+     The columns collapse to one below the width where the table and the prices both still fit
+     side by side; nothing is hidden either way, and neither column overflows. -->
+<div class="visibility-grid">
+<div class="visibility-column">
+<h3>Платформы</h3>
+<!-- One table, written by options.js: a row per platform, a column per place.
+     Every control in it is a checkbox, including the platform's own — a column of sliders and
+     a row of boxes do not read as one thing, and a reader has to stop and work out which kind
+     of control each is.
+
+     The places are per platform rather than one shared list, and that is the one structural
+     choice here worth arguing for. A reader who wants Arena sets out of the search dropdown and
+     Arena printings left in the card page's table is answering two questions — one about a
+     place and one about a platform — and one shared list cannot hold two answers.
+
+     There is deliberately no "all platforms" master. A reader who wants all three has them
+     all on by default, so the switch would have had no use except as a shortcut that loses
+     per-platform settings when it is pressed.
+
+     Turned off, a platform's three place boxes are emptied and muted while its own box stays
+     operable and its name stays readable. That is the whole behaviour: a reader who turns a
+     platform off and back on gets the places they chose, and the muting is the page saying what
+     is in force rather than a thing that reaches into the stored value. -->
+<div class="table-scroll"><table class="platform-table">
+<thead><tr id="platformHead"></tr></thead>
+<tbody id="platformBody"></tbody>
+</table></div>
+</div>
+
+<div class="visibility-column">
+<h3>Цены и ссылки</h3>
+<!-- Two groups rather than five switches. A currency is a column of numbers and a shop is a
+     link, and the grouping says so without a paragraph saying so. Each caption sits directly
+     above the boxes it names, so there is no column of empty space between a label and the
+     control it labels. -->
+<div id="priceList"></div>
+<!-- The general switch over the block the three shops sit in. It is not a shop and not a price:
+     hiding each shop leaves the heading and the block itself behind, and a reader who buys
+     nowhere wants the block gone rather than emptied. Turning it off also takes the three shop
+     boxes out of reach, because a link inside a hidden block has nowhere to be shown. -->
+<label class="stores-row"><input type="checkbox" class="stk-check" id="setStores"> Показывать блок «Купить карту»</label>
+<!-- CardTrader's offers, with the stores they belong to: it adds a link to that block and a euro
+     column to the prints table, and it sits here rather than under the EUR source so that the
+     store links are one place. -->
+<div class="feature-row" id="cardtraderRow">
+<label class="feature-main" id="cardtraderMain"><input type="checkbox" class="stk-check" id="cardtraderPrices"> Предложения CardTrader</label>
+<span class="feature-state" id="tokenStatus">Не подключено</span>
+<button type="button" class="feature-toggle" id="cardtraderToggle" aria-expanded="false" aria-controls="cardtraderPanel">Подключить</button>
+</div>
+<div class="feature-panel" id="cardtraderPanel" hidden>
 <label id="cardtraderTokenLabel" for="cardtraderToken">Личный API-токен CardTrader</label>
-<div class="token-row"><input id="cardtraderToken" type="password" autocomplete="off" spellcheck="false" placeholder="Вставь личный токен"><button id="saveToken" type="button">Сохранить</button><button id="removeToken" type="button">Удалить</button></div>
-<p class="hint" id="tokenStatus">Для цен CardTrader нужен токен. Он хранится локально в расширении и передаётся только в API CardTrader. Цены в таблице появляются постепенно; учитываются предложения в EUR. Состояние и язык могут отличаться.</p>
-</fieldset>
+<div class="token-row" id="cardtraderTokenRow"><input id="cardtraderToken" type="password" autocomplete="off" spellcheck="false" placeholder="Вставь личный токен"><button id="saveToken" type="button">Сохранить</button></div>
+<div class="feature-actions" id="cardtraderTokenActions" hidden>
+<button type="button" id="replaceToken">Заменить токен</button>
+<button type="button" id="removeToken">Удалить токен</button>
+</div>
+<div class="feature-actions">
+<button type="button" class="feature-help" data-help="cardtrader" aria-haspopup="dialog" title="Что это">?</button>
+</div>
+</div>
+<!-- Which shop's euro price the prints table's column carries. It needs CardTrader's token to
+     offer CardTrader at all, which is not obvious from a dropdown of three names, so it carries
+     its own help. -->
+<div class="price-source">
+<div class="price-source-head">
+<label class="pair-caption" for="euroPriceSources">Источники EUR-цен в таблице изданий</label>
+<button type="button" class="feature-help" data-help="eursource" aria-haspopup="dialog" title="Что это">?</button>
+</div>
+<select id="euroPriceSources"><option value="cm">Cardmarket</option><option value="ct">CardTrader</option><option value="both">Cardmarket и CardTrader</option><option value="none">Не показывать</option></select>
+</div>
+<!-- Its own line rather than indented under the store links: it is a setting about the card
+     page's marker and has nothing to do with where a euro price comes from. -->
+<label class="caster-row"><input type="checkbox" class="stk-check" id="setCaster"> Показывать индикатор Caster ON</label>
+</div>
+</div>
+</section>
+<section id="additionalSection"><div class="section-head"><h2>Дополнительная информация</h2>
+<button type="button" class="shot-button" data-shot="additional" aria-haspopup="dialog" title="Показать, как это выглядит">?</button></div>
+<!-- One line per feature, and the feature works from that line alone. Everything a feature
+     needs beyond a switch is behind its own "Настроить", which is closed when the page opens
+     whatever the feature is set to — a form standing open is a form the reader has to work out
+     whether they are meant to fill in, and these are all optional.
+     Only one level: no panel holds another, no panel holds a menu, and nothing has to be
+     visited for a feature to work. The exception is CardTrader, which cannot fetch anything
+     without a token and so asks for one before it offers its switch at all. -->
+<div class="feature-list">
+
+<div class="feature-row">
+<label class="feature-main"><input type="checkbox" class="stk-check" id="finishBadges"> Столбец отделки изданий</label>
+<button type="button" class="feature-help" data-help="finishes" aria-haspopup="dialog" title="Что это">?</button>
+</div>
+
+<div class="feature-row">
+<label class="feature-main"><input type="checkbox" class="stk-check" id="cardSearchLinks"> Поиск по типу и мана-стоимости</label>
+</div>
+
+<div class="feature-row">
+<label class="feature-main"><input type="checkbox" class="stk-check" id="edhrecUsage"> Популярность в Commander</label>
+<button type="button" class="feature-toggle" id="edhrecUsageToggle" aria-expanded="false" aria-controls="edhrecUsagePanel">Настроить</button>
+</div>
+<div class="feature-panel" id="edhrecUsagePanel" hidden>
+<label for="edhrecUsageDisplay">Формат отображения</label>
+<select id="edhrecUsageDisplay"><option value="both">Дробь и процент</option><option value="fraction">Только дробь</option><option value="percent">Только процент</option></select>
+<label for="usageColorMetric">Окрашивать по</label>
+<select id="usageColorMetric"><option value="decks">Количеству колод</option><option value="percent">Доле подходящих колод</option></select>
+<div class="salt-thresholds" id="usageCountThresholds"><label for="usageMediumDecks">Жёлтый: от <input type="number" id="usageMediumDecks" min="0" step="1000"> колод</label><label for="usageHighDecks">Красный: от <input type="number" id="usageHighDecks" min="1" step="1000"> колод</label></div>
+<div class="salt-thresholds" id="usagePercentThresholds" hidden><label for="usageMediumPercent">Жёлтый: более <input type="number" id="usageMediumPercent" min="0" max="100" step="0.1"> %</label><label for="usageHighPercent">Красный: от <input type="number" id="usageHighPercent" min="0.1" max="100" step="0.1"> %</label></div>
+<div class="feature-actions">
+<button type="button" class="feature-help" data-help="usage" aria-haspopup="dialog" title="Что это">?</button>
+<button type="button" class="feature-reset" id="resetUsage">Вернуть стандартные настройки</button>
+</div>
+</div>
+
+<div class="feature-row">
+<label class="feature-main"><input type="checkbox" class="stk-check" id="edhrecSalt"> Salt Meter</label>
+<button type="button" class="feature-toggle" id="edhrecSaltToggle" aria-expanded="false" aria-controls="edhrecSaltPanel">Настроить</button>
+</div>
+<div class="feature-panel" id="edhrecSaltPanel" hidden>
+<label class="feature-main"><input type="checkbox" class="stk-check" id="showSaltScale"> Показывать шкалу «/4»</label>
+<div class="salt-thresholds"><label for="saltMediumThreshold">Жёлтый с <input type="number" id="saltMediumThreshold" min="0" max="4" step="0.1"></label><label for="saltHighThreshold">Красный с <input type="number" id="saltHighThreshold" min="0" max="4" step="0.1"></label></div>
+<div class="feature-actions">
+<button type="button" class="feature-help" data-help="salt" aria-haspopup="dialog" title="Что это">?</button>
+<button type="button" class="feature-reset" id="resetSalt">Вернуть стандартные настройки</button>
+</div>
+</div>
+
+<!-- CardTrader moved to Visibility, with the prices it fills: it adds a euro column to the
+     prints table and a link to the store block, and it was here only because this section used
+     to hold every switch that was not about sets. The EDHREC icon and link went with it, and
+     with it gone there is nothing left for a "Дополнительные настройки" button to hold — a
+     button over an empty panel is a promise this build cannot keep. -->
+
+</div>
 </section><section><div class="section-head"><h2>Легальность</h2>
 <button type="button" class="shot-button" data-shot="legality" aria-haspopup="dialog" title="Показать, как это выглядит">?</button></div>
 <label><input type="checkbox" id="legalities"> Дополнительные форматы</label>
@@ -139,6 +189,8 @@
 </fieldset>
 </section><section><h2>Scryfall Deckbuilder</h2>
 <label><input type="checkbox" id="deckNoPrices"> Режим «No Prices» в выпадающем списке колоды</label>
+<label><input type="checkbox" id="setTokens"> Список токенов, создаваемых картами колоды</label>
+<p class="hint">Кнопка Show Tokens на странице колоды находит токены, которые создают карты твоей колоды. Она появляется только там, где у Scryfall есть список карт колоды, — на странице колоды в Deckbuilder, и больше нигде.</p>
 <label><input type="checkbox" id="stackedDeckCards"> Карты колоды стопкой вместо развёрнутой сетки</label>
 <label><input type="checkbox" id="deckLegality"> Проверка легальности колоды в Commander</label>
 <p class="hint">Кнопка на странице колоды спрашивает у Scryfall легальность каждой карты отдельно и показывает те, которые Scryfall считает нелегальными в Commander. Это ответ на формат для каждой карты, а не проверка колоды целиком: цветовая идентичность командира, ограничение в 100 карт и правило одной копии для карт с надписью «только Commander» не проверяются, и панель говорит об этом рядом со списком. Формат не выбирается — редактор Scryfall собирает командные колоды, и это факт о странице, а не настройка.</p>
@@ -182,7 +234,7 @@
 <p class="hint">После изменения настроек обнови открытые страницы Scryfall и Tagger. MoxTags продолжает работать отдельно на Moxfield.</p>
 <button id="openOptions" type="button">Открыть настройки во вкладке</button>
 <section class="credits"><h2>Авторы и сторонние проекты</h2>
-<p class="hint">Расширение независимо: оно не создано, не одобрено и не спонсировано Scryfall, Wizards of the Coast, EDHREC, CardTrader, Cardmarket или Moxfield. В сборке лежат файлы других проектов под лицензией MIT с сохранёнными уведомлениями: иконки — CardClip (Jacob Hearst), данные тегов — MoxTags v1.8.3 (Nate Finch), названия карт — Shambleshark (Samuel Simões, Blade Barringer), дополнительные форматы — MTG Enhancements (notsonic). Полный список файлов и лицензий — в THIRD_PARTY_NOTICES.md и assets/licences/ внутри архива расширения.</p>
+<p class="hint">Расширение независимо: оно не создано, не одобрено и не спонсировано Scryfall, Wizards of the Coast, EDHREC, CardTrader, Cardmarket или Moxfield. В сборке лежат файлы других проектов под лицензией MIT с сохранёнными уведомлениями: иконки — CardClip (Jacob Hearst), данные тегов — MoxTags v1.8.3 (Nate Finch), модуль очистки колоды — Shambleshark (Samuel Simões, Blade Barringer), дополнительные форматы — MTG Enhancements (notsonic). Полный список файлов и лицензий — в THIRD_PARTY_NOTICES.md и assets/licences/ внутри архива расширения.</p>
 </section>
 <p id="status" role="status" aria-live="polite"></p></main>
 <!-- The illustrations live here rather than in the sections themselves: six large
@@ -190,7 +242,14 @@
      reader who only wants to change a switch had to scroll past all of them. -->
 <dialog id="shotDialog" class="shot-dialog" aria-labelledby="shotCaption">
 <form method="dialog" class="shot-dialog-close"><button type="submit" aria-label="Закрыть">×</button></form>
-<img id="shotImage" alt="">
+<!-- The caption and the notes first, then the picture. The pictures are a screen tall and the
+     text is three lines, so a dialog that opens on the image puts the only thing a reader came
+     for below the fold — and this dialog is the whole of the explanation this page now has. -->
 <p id="shotCaption"></p>
+<!-- The notes a section used to carry as grey paragraphs under its own switches. Here they are
+     one click and one key away, and a section with none leaves this empty rather than keeping
+     the last one's. -->
+<div id="shotNotes" class="shot-notes" hidden></div>
+<img id="shotImage" alt="">
 </dialog>
 <script src="../core/set-filters.js"></script><script src="../core/i18n.js"></script><script src="../core/format-catalog.js"></script><script src="options.js"></script></body></html>

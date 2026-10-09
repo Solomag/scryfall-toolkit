@@ -28,16 +28,16 @@ document, and it grants no rights in anyone's trademarks, logos, card data or se
 
 In particular, and stated plainly because it is easy to get wrong:
 
-- The MPL-2.0 notice does **not** cover `assets/icons/edhrec.png`, `assets/icons/cardtrader.svg` or
+- The MPL-2.0 notice does **not** cover `assets/icons/cardtrader.svg` or
   `assets/icons/cardtrader.png`. Those are third-party brand marks, and their rights stay with
   their owners.
 - **Data access and logos are two different questions, and both are answered.** EDHREC
   answered with their published data policy, which permits this use, so the data side is
-  covered and recorded in section 7. Nothing was said about their logo. CardTrader's mark
-  was taken from their own site and no permission for it has been given. Both marks ship
-  on the basis set out in sections 7 and 8 — nominative use: the mark says whose data is
-  on screen, is never altered, and sits on a control that already carries the name in
-  words. No permission was sought and none was granted, and nothing here claims one was.
+  covered and recorded in section 7; their logo used to ship for a control that has since been
+  removed, and went with it. CardTrader's mark was taken from their own site and no permission
+  for it has been given. It ships on the basis set out in section 8 — nominative use: the mark
+  says whose data is on screen, is never altered, and sits on a control that already carries the
+  name in words. No permission was sought and none was granted, and nothing here claims one was.
 - **Cardmarket's logo is theirs and is used on their terms.** Two of their published
   files head the EUR price column. Their rights stay theirs, the goodwill from use is
   theirs, and nothing here implies they endorse this project. Section 9 has the terms
@@ -89,25 +89,20 @@ clipboard once. That is an interface with an existing installation, not copied c
   and collector number (`1 Card Name (SET) 123`), exposed as the `moxfield` export option.
 - No file from this repository was copied into this project.
 
-## 3. Shambleshark — data copied
+## 3. Shambleshark — behaviour ported
 
 - Upstream: <https://github.com/crookedneighbor/shambleshark> ("An Unofficial browser
   extension to add functionality to the Scryfall site. Not affiliated with Scryfall.",
   last pushed 2023-10-07)
 - Authors: Samuel Simões (2016), Blade Barringer (2019)
 - Licence: MIT — full text in [`assets/licences/Shambleshark-LICENSE`](assets/licences/Shambleshark-LICENSE)
-- Used: **data copied** (1 file) and **behaviour ported** (the clean up improver).
+- Used: **behaviour ported** (the clean up improver). No file of theirs ships in this build.
 
-| File in this repo | What it is |
-| --- | --- |
-| `assets/data/shambleshark-nicknames.js` | The 396 card-nickname records from upstream's per-set TypeScript modules under `src/js/lib/card-nicknames/`, re-serialised into a single JSON array |
-
-Upstream's record shape (`realName`, `setCode`, `collectorNumber`, `nickname`, `source`)
-and every nickname string are upstream's. Two differences from upstream's `main` branch
-were introduced here: the records were flattened into one array instead of 22 modules, and
-Streets of New Capenna is keyed `snc` (Scryfall's current set code) where upstream still
-writes `stc`. Both are recorded in the file's own header comment. Shambleshark's MIT
-notice is retained in `assets/licences/Shambleshark-LICENSE`.
+This section used to list one copied file: `assets/data/shambleshark-nicknames.js`, the card
+nickname records behind the historical-names line on the card page. That feature was cut — it
+was a setting nobody could say what it was for — and the data went with it. Shambleshark's MIT
+notice is still retained in `assets/licences/Shambleshark-LICENSE`, because their behaviour is
+still here.
 
 The inline card/art tag presentation was **not** copied: none of Shambleshark's
 identifiers (`CardNicknameDisplay`, `createViewMoreTagsRow`, `TaggerIcon`,
@@ -198,26 +193,23 @@ with their verdicts) written for this project.
   already looking at, and calls Scryfall's documented public API
   (`api.scryfall.com`, `data.scryfall.io`) and Tagger's own endpoints.
 
-Two derived data files are bundled:
+One derived data file is bundled:
 
 | File in this repo | What it is |
 | --- | --- |
 | `assets/data/set-platforms.js` | A snapshot, taken 2026-09-25, mapping 61 digital set codes to the client each was released for |
-| `assets/data/set-foreign-only.js` | A snapshot, measured 2026-10-04, of the 34 set codes Scryfall has printings for and no English printing among |
 
-The first was produced by reading Scryfall's `/sets` list and the `games` field of one card per
+It was produced by reading Scryfall's `/sets` list and the `games` field of one card per
 set. It contains set codes and platform names only — no card names, no card text, no
 artwork, and nothing from Wizards of the Coast beyond factual set identifiers. Sets missing
 from the snapshot are looked up at runtime and cached.
 
-The second was produced by asking Scryfall's search, once per set it serves, whether that set
-has any English printing, and keeping the ones it does not. It is set codes only — no card
-names, no card text, no artwork. It cannot be refreshed at runtime the way the first one can:
-the sets it is about are a subset of all 1,053, so there is no short list of candidates to
-look up, and a thousand requests a day for every reader is not a cost this extension should
-generate. It goes stale in the safe direction — a foreign-only set released after the
-measurement stays visible until the next one — and `npm run set-rules --write` regenerates it,
-with a check that fails when the file and a fresh sweep disagree.
+A second snapshot used to be bundled: the set codes Scryfall has printings for and no
+English printing among, measured 2026-10-04 by asking Scryfall's search once per set. It
+served a settings switch that removed those sets from the sets index. That switch is gone —
+the same question is now answered about each printing, against the printings themselves —
+so the file is gone with it, and nothing derived from Scryfall's data is bundled here beyond
+the platform snapshot.
 
 One Scryfall asset was copied and then removed. The icon beside the EUR price column
 began as the inline SVG from Scryfall's own "Buy at Cardmarket" link, recoloured to
@@ -287,23 +279,10 @@ last only as long as a worker does; losing them costs a repeat request, nothing 
 Their warning that they may change the data without notice is why the feature shows
 nothing at all when a field is missing, rather than an error or a wrong number.
 
-### The mark
-
-`assets/icons/edhrec.png` is EDHREC's own logo, taken from their site and shipped
-unmodified. **We have not asked for permission and have been given none.** Their data
-policy covers the use of their data and says nothing about their logo, so it is not a
-licence for it.
-
-It is shipped on one basis, which is the one the law actually offers a project in this
-position: **using a mark to say whose data is on screen.** The mark appears only on
-the EDHREC controls and beside EDHREC numbers, it is never altered, never redrawn, and
-never used as decoration or as our own identity. This extension is independent, says so
-in five places including its own settings page, and makes no claim of any relationship
-to EDHREC or Space Cow Media.
-
-**If they object, nothing has to be rebuilt.** The control already reads "EDHREC" in
-words next to the icon; removing the image is deleting one line of markup. That is why
-the fallback exists, and it is why no part of the feature depends on the mark.
+EDHREC's logo used to ship with this extension, for the icon-and-link control on the card
+page. That control is gone — it was a setting nobody could say what it was for — and the
+image went with it, so the only thing of EDHREC's in the build is the data the feature asks
+for at run time.
 
 ## 8. CardTrader — service reached with the user's own token, mark used to name it
 
@@ -470,8 +449,9 @@ sections 7, 8 and 9, and in `docs/ROADMAP.md` under "Decided, with the reasoning
 
 **Closed, and removed from this list:**
 
-- the two brand marks, EDHREC's and CardTrader's — shipped on nominative use, basis in
-  sections 7 and 8;
+- the two brand marks, CardTrader's and Cardmarket's — shipped on nominative use and on their
+  published terms, basis in sections 8 and 9. EDHREC's was here too and is not any more: its
+  logo went with the icon-and-link control it was shown on;
 - the CardTrader API — nothing is fetched without the user's own token, so there is no
   redistribution to ask about;
 - Cardmarket's logo — used on their published terms, section 9.

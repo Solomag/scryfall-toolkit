@@ -122,18 +122,29 @@ between printing names and prices: foil-only, nonfoil-only, etched-only, or a kn
 special foil treatment. Hover for the meaning. Native foil stars in printing names are
 not duplicated. Uses Scryfall's collection API and may arrive after the page loads.
 
-**Price filter.** Hides the USD and TIX columns and the TCGplayer and Cardhoarder
-purchase links, including Buy buttons in deck sidebars. Keeps Cardmarket links. Existing
-Scryfall prices are never altered. Choose Cardmarket, CardTrader or both as the EUR
-source in the Prints table; with both, their columns carry provider icons.
+**Price filter.** Hides the USD and TIX columns and the TCGplayer, Cardhoarder and Cardmarket
+purchase links, including Buy buttons in deck sidebars. Each is a switch of its own, so a reader
+who wants no shop links but keeps the dollar column can say so, and one more switch hides the whole
+**Buy This Card** block — the column the links sit in, heading and all — because hiding each shop
+leaves the block behind. Existing Scryfall prices are never altered.
+
+**EUR source.** Scryfall's native euro column is Cardmarket's price. The dropdown beside the shops
+chooses what fills it: Cardmarket, CardTrader, both — in which case a second column appears beside
+it — or **show nothing**, which removes the column. That dropdown is the only control for the column,
+so hiding Cardmarket hides its links and not the column. CardTrader needs a personal token for that,
+set in the CardTrader row above it, and the row's own switch is not required for it: that switch is
+about the buy-block links.
 
 **CardTrader prices.** With your own personal API token, the extension matches Scryfall
 print IDs against CardTrader blueprints, links the exact printing and shows the cheapest
 listed foil and nonfoil offers. Its EUR column fills gradually to respect the marketplace
 rate limit, and only EUR offers appear. If CardTrader fails, a CardTrader-only table
-restores the native Cardmarket column. Listed prices exclude shipping and do not
-guarantee language, condition or stock. The token is stored locally and sent only to
-`api.cardtrader.com`.
+restores the native Cardmarket column unless the reader has hidden Cardmarket. Listed prices
+exclude shipping and do not guarantee language, condition or stock. The token is stored locally
+and sent only to `api.cardtrader.com`. On the settings page the feature cannot be switched on
+before there is a token, because a switch that turns on a request that cannot be made is a switch
+that lies; the page says **Токен сохранён ✓** and not "connected", because nothing on it asks
+CardTrader anything.
 
 **EDHREC indicators.** Usage and Salt Meter sit inside the legality block, each with a
 same-size badge before its label. Choose a stacked fraction (decks containing the card /
@@ -141,16 +152,26 @@ decks eligible by colour identity), the percentage of eligible decks, or both. U
 colouring can use absolute deck counts or percentages, with adjustable thresholds. Salt
 Meter is EDHREC's community vote average on a 0–4 scale, not a power rating. Usage, salt
 and the EDHREC link switch independently; missing data produces no panel. The lookup
-sends the card's name to EDHREC only when the feature is on.
+sends the card's name to EDHREC only when the feature is on. Both have their settings behind
+their own **Настроить** on the settings page, collapsed by default and working while collapsed,
+each with a **Вернуть стандартные настройки** that restores only its own numbers.
 
-**Search and nickname extras.** A Tagger shortcut on search results; search links for a
-card's type and mana cost; archived card nicknames under the prints table of a card
-Scryfall previewed under another name (for example Lavabrink Venturer (IKO #19) as
-"Professional Stunt Performer"). The bundled list holds 396 of them across 21 sets.
+**Search extras.** A Tagger shortcut on search results, and search links for a card's type and
+mana cost.
+
+The historical card names line — an archived nickname under the prints table of a card Scryfall
+previewed under another name — was cut in 1.7.6. It was a switch whose purpose nobody could say,
+and it carried a 396-record data file of somebody else's for it.
 
 **Deck pages.** A No Prices mode, stacked deck cards, and a Show Tokens dialog that looks
 up deck cards and their tokens through Scryfall (at most 150 unique deck cards). These do
 not install Shambleshark itself.
+
+All three are Deckbuilder features and only that: they add their controls to Scryfall's deck
+page, and the Show Tokens button appears only where Scryfall itself lists a deck's cards — the
+`/@user/decks/…` pages — and nowhere else on the site. The switch was in the "hide extras"
+group until this release, which is where the price switches lived and not where this one
+belongs.
 
 **Deck legality check.** A button on a deck page asks Scryfall about each of the deck's
 cards and lists the ones it counts as not legal in Commander. Commander is not chosen: the
@@ -220,112 +241,190 @@ These affect the **Sets** index and the **Prints** table on a card page. Card se
 individual set pages and decks are not changed, and the currently selected printing
 stays visible.
 
-These are one group in the interface, and every switch in it means the same thing:
-**on is show.** Nothing here says "hide", and that is deliberate — a negative word read
-next to positive ones is the opposite of itself at every call site, and three of the four
-places that read this setting had to know which sense a given field was in.
+These are one section in the interface, called **Visibility** / **Видимость**, and every
+control in it means the same thing: **on is show.** Nothing here says "hide", and that is
+deliberate — a negative word read next to positive ones is the opposite of itself at every call
+site, and three of the four places that read this setting had to know which sense a given field
+was in. The one that used to be negative is now positive too, and its stored key was **renamed**
+rather than flipped in place; see the Caster marker below.
+
+The section is two columns on a window with the room for them — the table on the left, and the
+four short lines on the right — and one column below the width where they stop fitting. The card
+is wide and the settings are not, so a single column left two thirds of it empty. There are no
+frames and two headings rather than three: a fieldset with a legend in its border says "a group
+of related settings" by drawing a box, and boxes inside boxes says it three times; by the third
+the reader is looking at frames rather than at what is in them. The long paragraphs about
+internal rules are gone from the page too, and the few notes worth having are one click away in
+the "?" dialog, above the picture rather than under it.
 
 **There is no master switch.** A reader who wants Paper, Arena and Magic Online has all
 three on by default, so a switch over them had no use except as a shortcut that loses
 per-platform settings when pressed. The earlier one was exactly that, and it could be
 drawn in a state the model could not explain — a master off with a rule on.
 
-- **Paper / Arena / Magic Online** — three switches, and each one says whether that
-  platform is shown. Turning one off keeps its own settings and brings them back when it
-  returns: the switch writes one field and the detail panel writes another, and neither can
-  rewrite the other.
+- **Platforms** — one table: a row per platform and a column per place, 40px a row with no
+  padding above or below it. Every control in it is an 18×18 checkbox rather than a slider,
+  including the **Show** column, because a column of pills beside a row of boxes is two kinds of
+  control wearing the same page's colours. An unticked box is empty with a thin border and a
+  ticked one is filled purple with a white tick; nothing in the section keeps the switch's
+  rounded knob, which is drawn as a gradient in `background-image` and has to be cleared in
+  every state rather than only recoloured. The platform's name is written once, down the left,
+  on the same edge as the heading over it, and each box is named by what it does — "Paper: show
+  in search" — rather than by its column alone, which is what a table of twelve anonymous
+  checkboxes otherwise gets.
 
-  **All three off is a choice, and the page acts on it.** There is no master above them to
-  put them back, so unchecking the last one leaves the index empty rather than restoring
-  them — which is what the settings page stores and what the Scryfall pages then show.
+  **The three places are per platform, and that is the one choice worth arguing for.** For two
+  releases they were one shared list, on the reasoning that "where should filtering apply" is
+  one question with one answer. It is not, because the platforms are not interchangeable: a
+  reader who wants Arena out of the search dropdown and Arena printings left in the card page's
+  table is answering two questions, and one list cannot hold two answers. With it, switching
+  Arena off for the dropdown also switched it off for the table, or switching it off for
+  neither.
 
-  A printing can be on several platforms, so this is asked **per printing** rather than
-  per set. Scryfall records `games` on every printing and never omits it, and a paper
-  printing carries "paper" in it — Vintage Masters has 171 printings marked Magic Online
-  and four marked for Arena as well. Answering at the set level meant turning Arena off
-  took the paper printing of a set that was on both.
+  Turning a platform off keeps its three places: the switch writes `show` and the places write
+  their own keys, and neither can rewrite the other. Its three place boxes are drawn empty,
+  muted and disabled while its own box stays operable — it is the only way back, and a disabled
+  control that is the only way out of a state is a trap. The row as a whole is **not** faded:
+  the name and the platform's own box are what the reader uses to read the row and turn it back
+  on, so only the name goes a shade quieter and only the three places go quiet at all, keeping a
+  border a reader can still see. Nothing reaches the stored value: what is drawn while a
+  platform is off is what is in force, not what is stored, and the three places come back with
+  it.
 
-- **Paper → Настроить** — Paper's own settings, behind a button, closed to begin with:
-  **Нетурнирные и вспомогательные издания** (memorabilia, minigame, Vanguard and token
-  categories, plus official proxy set codes — Collector's Edition, 30th Anniversary
-  Edition, World Championship Decks; mixed "funny" sets stay, because some contain
-  tournament-legal cards), **Увеличенные карты**, **Наборы без английских изданий**, and
-  **Foreign Black Border** with its list of 4BB / FBB / BCHR behind another switch.
-  Arena and Magic Online have no details button: a digital set is not memorabilia, is not
-  oversized and has no English printing to speak of.
+  **All three off is a choice, and the page acts on it.** There is no master above them to put
+  them back, so unchecking the last one leaves the index empty rather than restoring them —
+  which is what the settings page stores and what the Scryfall pages then show. A platform with
+  all three places off is the same, and is a state one shared list could not hold. The page does
+  not tidy it up: nothing puts a place back and nothing moves the platform's own box on the
+  reader's behalf.
 
-- **Неанглийские издания** — one dropdown, three positions: **Все**, **Только без
-  английского аналога**, **Никакие**. The middle one shows a foreign printing only where
-  the same card has no English **Paper** printing with the same artwork in the same
-  treatment — compared on `illustration_id`, `frame`, `frame_effects`, `border_color` and
-  `full_art`, and on every face of a multi-faced card, because Scryfall leaves the card's
-  own `illustration_id` off a double-faced card and puts it on the faces. A set name, a
-  collector number or the language is not part of that comparison. It is not a claim to
-  catch every visual difference Scryfall does not record, so anything it cannot compare
-  stays visible: an extra row is better than a missing one.
+  A printing can be on several platforms, so this is asked **per printing** rather than per
+  set. Scryfall records `games` on every printing and never omits it, and a paper printing
+  carries "paper" in it — Vintage Masters has 171 printings marked Magic Online and four
+  marked for Arena as well. Answering at the set level meant turning Arena off took the paper
+  printing of a set that was on both.
 
-  Scryfall's own rows in a Prints table carry no artwork, so the middle position does not
-  touch them; "Никакие" hides them. The middle position does apply to the printings the
-  extension adds itself, which come from the API with those fields.
+  Scryfall names four clients and this extension offers three: `astral` and `sega` are the two
+  Astral and Sega Dreamcast releases, and a reader keeping Paper and Magic Online has kept
+  nothing those are on, so they go with the rest.
 
-  **How a Scryfall row's language is known.** Mostly from its link: a translated printing's
-  path carries an extra segment, `/por/1/ja/name`, and an English row's does not. Measured
-  over 1762 printings on 2026-10-06, that identifies 995 of 1001 translated rows — and the
-  six it misses are `sld/1206`, `sld/1207` (Filipino), `acr/272`, `acr/273`, `ppls/119`
-  (Ancient Greek) and `pinv/262` (Latin), each of which prints a link shaped exactly like an
-  English one. Those are identified from the print list instead, which the extension already
-  fetches on every card page and the worker already caches, so it costs a lookup rather than
-  a request. The link remains what identifies a row nothing else covers, and a failed request
-  leaves the rows it can still tell about — both answers err towards leaving a row up.
 
-- **Где применять** — one list of three places for every rule: **Таблица изданий**,
-  **Поиск**, **Список сетов**. One list rather than a selector per rule, because three
-  rules times three surfaces is nine switches and a reader who ticks one has answered a
-  question about a rule rather than about a place.
+- **Prices and links** — **USD, TIX**, then **TCGplayer, Cardhoarder, Cardmarket**, as two groups
+  rather than five switches. A currency is a column of numbers and a shop is a link, and the grouping
+  says so without a paragraph saying so. Each caption sits directly above the boxes it names, because
+  beside them it needs a column as wide as the longest caption and that column is empty on every
+  other row. They say what every other control in the section says: on is on. Four of them were
+  the last negative keys in the model, and the group above them needed a legend reading "which
+  prices to hide" to make four unticked boxes mean "everything is shown" rather than the opposite;
+  Cardmarket was added later and has only ever meant "show". The inversion is in the migration, and
+  both directions have a mutation against them because reading it the wrong way round hides every
+  price a reader had switched on, on their first page load after an update, while the boxes on the
+  settings page show them all off. See the price filter above. They are in this section because
+  they are settings about what is shown, not because they have anything to do with sets.
 
-  Every rule consults it, and a rule that is on with its place switched off removes nothing
-  there. That holds whichever other settings are in force: the rule only needed the set index
-  when something else wanted it, and turning a platform off wants it for its own reasons.
+  **And one switch over the block they sit in.** Scryfall draws one column headed "Buy This Card",
+  holding the three links; emptying it shop by shop leaves the heading and the column behind, which
+  is not what a reader who buys nowhere is asking for. That switch is not a fourth shop: it sits
+  under the group, it turns no shop off on its own, and the per-shop choices are still there when it
+  comes back on. With it off the shop boxes are drawn empty and disabled, because a link inside a
+  hidden block has nowhere to be shown — and CardTrader is drawn with them, since its switch is what
+  puts CardTrader links in that block. It is also not a price kind, so `priceFilter`'s gate — which
+  is "something is hidden", computed by walking the price keys — has to name it, or the switch saves
+  and does nothing.
 
-  Set rules remove a set whole; the language rule removes an individual printing. A set
-  having some hidden cards in it does not by itself hide the set.
+  **Cardmarket is a shop here and nothing more.** Scryfall's native euro column *is* Cardmarket's
+  price, and it is tempting to make one button hide both — but the column and the links are two
+  questions, and answering one question in two places is the shape this file has been rewritten to
+  get out of three times. So the shop box hides the cardmarket.com link and the EUR source hides the
+  column, including with a "show nothing" of its own. The old "only Cardmarket" switch walked the
+  model's price keys to turn them all off, which would have hidden the very shop it is named after;
+  it names the four kinds it governed instead.
 
-**Oversized** is its own switch, independent of the one above it: a set can be both, a
-  Vintage Championship being memorabilia *and* oversized, and turning one off does not turn
-  the other off. Its list comes from Scryfall and not from a guess — oversized is a flag on
-  the printing, not a field on the set, so the sets holding an oversized printing are
-  collected by asking for the printings.
+  **The EUR source sits with the prices it chooses between**, under the shops, and so does
+  CardTrader: it fills that column and adds a link to that block. It says whose number the euro
+  column carries, and it was in the other section with the card-page features — a price setting in a
+  list of things that are not prices. It carries its own "?", because choosing CardTrader there
+  needs a token that is set up in the CardTrader row and ticking **Предложения CardTrader** is not
+  required for it — the switch is about the buy-block links and the column works without them.
 
-  **Foreign Black Border** has its list of 4BB, FBB and BCHR behind another switch, because
-  unticking one family has to mean something. The list stays open whenever the three families
-  are not all shown, so a reader who has narrowed the category can see that they have — a
-  switch reading "on" above a closed list is a setting that has been applied and cannot be
-  inspected. The switch above the list is a summary of the three rather than a fourth
-  setting: it is on while any family is shown.
+- **The Caster marker** — its own line under the prices, with no heading of its own: a heading
+  over a single box is a level of structure that holds nothing. It was indented under the store
+  links for one release, where it read as though it belonged to that group.
 
-  A set is found by name, because Scryfall has nothing else to say: a set object carries
-  `code`, `name`, `set_type`, `digital`, `card_count`, `released_at` and fifteen more, and
-  nothing about borders.
+  **The Caster marker was dead, and it was dead because its key was renamed rather than
+  inverted.** The settings page wrote `setFilters.caster` while `theme.js` read a flat
+  `hideCasterIndicator` that nothing had written since the settings were folded into
+  `setFilters` — so the switch changed a value nobody read and the marker never went away. Both
+  tests of it passed: one asked the theme script to read the flat key, which proved the read, and
+  one ticked the box, which proved the write, and neither asked whether they were the same key.
+  They are now checked as a pair — one writer, one reader, and the flat key named by neither.
 
-- **Sets with no English printing** — the third switch inside Paper, and a plain one. There
-  are 34 of them: the French `ren` and Italian `rin` releases of Renaissance, Salvat 2005 and
-  2011, Sega Dreamcast Cards, the Magic Premiere Shop runs, Japanese promo sets and five sets
-  of Japanese promo tokens.
+  Its switch read **hide** and now reads **show**, so the stored key is `showCaster` and the
+  class on the page is its opposite. **A stored boolean cannot carry two senses**, so a value
+  written by a build that stored "hide" and one written by a build that stores "show" are told
+  apart by the name of the key rather than by a version number nobody writes. Prices had the same
+  problem and were inverted in 1.6.1, before this shape existed; the marker is inverted by the
+  rename, and a value from 1.6.0–1.6.2 gets its own branch whose only work is to rename one key
+  and leave its prices alone. Getting that wrong flips the marker for every reader on the first
+  page load after an update, and both directions have a mutation against them.
 
-  **Its list is dated and ships inside the extension, and it says so on the settings page.**
-  There is no short list of sets to check: these are a subset of all 1,053, so "the ones we do
-  not know about" is most of Scryfall and looking each one up would be a thousand requests a
-  day for every reader. Unlike the platform index beside it, which can refresh itself because
-  its candidates are the 61 digital sets, this one cannot. It goes stale in the safe
-  direction: a foreign-only set released since the measurement stays visible until the next
-  one. `npm run set-rules --write` regenerates it, and the check in that tool fails when the
-  file and a fresh sweep disagree.
+The **set index is cached for one day**.
 
-- **Hide USD, TIX, TCGplayer and Cardhoarder prices** — four separate checkboxes, see
-  the price filter above. They are in the same group because they are set rules about what
-  is shown, not because they have anything to do with sets.
-The **set index is cached for one day**, and the Caster marker and the deck token list
-sit in the same section.
+## Additional info: a list of features, not a form
+
+The section is a list of one-line features. Each row is a switch and the feature's name, and the
+settings a feature has beyond its switch are behind its own **Настроить** — collapsed when the page
+opens, whatever the feature is set to. Opening one writes nothing: the numbers inside were saved
+when they were last edited, and they work while the panel is shut. That is the whole of "the button
+is optional", and it is why there is exactly one level of disclosure here: no panel holds another,
+none holds a menu, and nothing has to be visited.
+
+The section used to be two fieldsets standing open with every threshold, select and token field in
+them. That reads as a form to fill in, and every one of these settings works untouched — a reader
+who has never opened the section gets the finish column and the type search.
+
+- **Столбец отделки изданий**, **Поиск по типу и мана-стоимости** — a switch and nothing else. The
+  finish column carries a "?" because its name alone does not say what it is.
+- **Популярность в Commander** — the display format, the colouring metric, both pairs of thresholds
+  with their units, and **Вернуть стандартные настройки**.
+- **Salt Meter** — the «/4» scale, its two thresholds, its own reset.
+
+**CardTrader is not in this list.** It adds a euro column to the prints table and a link to the
+store block, so it lives in Visibility with the prices it fills, next to the EUR source that chooses
+whose number goes in that column. It was here because this section used to hold every switch that
+was not about sets.
+
+**Two features were cut in 1.7.6, and their rows and settings went with them.** *Historical card
+names* was a line under the prints table showing what Scryfall previewed a card as before it was
+renamed — a switch nobody could say the purpose of, carrying a third-party data file. *Show the
+EDHREC icon and link* was the last setting in the **Дополнительные настройки** panel, and with it
+gone the panel held nothing, so the button went too: a button over an empty panel is a promise this
+build cannot keep.
+
+**A reset is its own feature's numbers.** Each restores from the same `defaults` object a fresh
+install is filled from, so the two cannot drift, and neither touches the switch: "these numbers are
+wrong" is not "turn this off". The popularity reset does not reach into the Salt settings and the
+Salt reset does not reach into the popularity ones.
+
+**CardTrader asks for what it needs first.** Without a token there is nothing for it to fetch, so
+the row is the name, **Не подключено** and **Подключить** — and the switch is *hidden* rather than
+disabled, because a disabled switch says "this exists and you may not have it" and this one does not
+exist yet. With a token the switch appears, the state reads **Токен сохранён ✓**, and the button
+becomes **Настроить**, opening **Заменить токен** and **Удалить токен**. The new-token field
+appears only when replacing; closing the panel with it open does not delete anything, and an empty
+field saved does not either. The stored token is never on screen — the field is emptied the moment
+it is stored. The switch is also drawn empty and disabled while the **Buy This Card** block is
+hidden, because what it adds is a link in that block; the token stays reachable, because the EUR
+source needs it too.
+
+The status says **saved**, not **working**. Nothing on the settings page asks CardTrader anything,
+so what is stored is all it can honestly report; whether the token works is answered on a card page,
+by the request that uses it. The project has no connection check to borrow, and none was invented.
+
+**The paragraphs moved behind a "?" rather than being deleted.** The examples of historical names,
+the explanation of the thresholds and the colours, and what the token is for are one click away in
+the same dialog the section "?" opens — which is a button, so it is reachable by Tab and opened by
+Enter, unlike a `title` tooltip.
 
 **The set index and the platform index.** Paper is every set Scryfall does not mark digital;
 Arena and Magic Online are their digital-only sets. Scryfall's index does not name the
@@ -343,61 +442,54 @@ The set field of Advanced search follows the **Games** checkboxes Scryfall alrea
 above it. Hidden sets are marked, never removed, so the field can widen again at any
 time.
 
-**What these rules are checked against.** The name-matched border rule is verified on the Sets
-index, in a real browser: with the category off, every row is on the page; with it off, exactly
-the border sets go and nothing else does, and Scryfall's own counter is rewritten to match.
-Narrowing it to a single family is checked separately, because "unticking one has to mean
-something" is a different claim from "the category works". With paper alone chosen, all 61
-digital sets go. The rule's names are read out of `worker.js` rather than copied into the check,
-so a change to a pattern changes what is expected instead of quietly disagreeing with it.
+**What this rule is checked against.** The platform rule is verified on the Sets index, in a
+real browser: with all three platforms kept, every row is on the page; keeping Paper alone, every
+digital set goes and nothing else does, and Scryfall's own counter is rewritten to match. The
+places are checked there too, which is the check one shared list of places could not have: Arena
+out of the sets index while it stays in the table and the search field, and the index hiding
+exactly the digital sets no kept client carries.
 
-They are not verified on the Prints table, and the reason is worth knowing before reading
-that as a gap in the feature. That table shows a window of ten sets around the printing being
-viewed, and the sets these rules name sit outside it for most cards — for Counterspell, `sld`
-is the eleventh of twenty-four. The window widens when "View all prints" is pressed, which no
-automated check can do to a page whose features have already run. So the Prints table's own
-behaviour is checked in the extension's unit tests, where the fixture supplies the API's
-answer directly, and the browser check is on the surface where the switch and the row are
-next to each other.
+They are not verified on the Prints table, and the reason is worth knowing before reading that as
+a gap in the feature. That table shows a window of ten sets around the printing being viewed, so
+the sets a platform rule would remove sit outside it for most cards, and the window widens only
+when "View all prints" is pressed — which no automated check can do to a page whose features have
+already run. So the Prints table's own behaviour is checked in the extension's unit tests, where
+the fixture supplies the API's answer directly. Those tests count the rows the table *builds*,
+rather than the group headers: a header can also be built from Scryfall's own rows, including the
+row for the printing being viewed, which is deliberately never hidden. So a group header is not
+a thing this rule controls and the built rows are.
 
-**Why the border rule reads names at all.** Nothing on Scryfall says a set has a black border:
-a set object carries `code`, `name`, `set_type`, `digital`, `card_count`, `released_at` and
-fifteen more, and nothing about borders. `npm run set-rules` sweeps all 1,053 sets and asks
-Scryfall about each, which settles both halves of a name-based rule — that each matched set
-really is in the state claimed, and that nothing Scryfall *names* Foreign Black Border was left
-out. Three sets say it and all three are matched.
+**Why there are no set names in this group any more.** Nothing on Scryfall says a set has a black
+border: a set object carries `code`, `name`, `set_type`, `digital`, `card_count`, `released_at` and
+fifteen more, and nothing about borders. Every rule that used to be decided by reading a name was
+a list of exceptions that grew — and where one was checked against the API instead of against a
+copy of itself, what it found was that the name was not the interesting part. All eleven of the
+official proxy codes a non-tournament rule used to spell out are `memorabilia` sets, which
+`set_type` already answers. What is left is one rule, and it is not a name.
 
-That half is falsifiable: a foreign black border set has no English printing anywhere in it, so
-`e:<code> lang:en` is refused for one and answered for every other set. All three hold — 378,
-307 and 125 printings, none of them English.
+**The measurements that decided the removed rules.** They are kept here because they are the
+reason the rules are not coming back, and because a reader who had them on will notice their
+absence.
 
-**The language rule asks a different question, and that is why it is not a set list.** The
-question is whether a *printing* has an English counterpart that looks the same, so the answer
-comes from the printings rather than from a set's name. Three ways of asking about the
-*absence* of English were tried and all three fail: `lang:!en` is not a negation and returns
-all 397 printings of `m21`; `-lang:en` is not one either and returns 3,411 against 397; and
-`NOT lang:en` is honoured and wrong, refused for `m21` correctly and for `cmd` and `tsp`
-incorrectly.
-
-**34 sets have no English printing at all**, and three of them are the border releases. The rest
-are foreign-only products — 21 promo sets, five sets of Japanese promo tokens, three box sets
-(Salvat 2005 and 2011, Sega Dreamcast Cards) and two master sets, the French `ren` and the
-Italian `rin` of Renaissance. The switch inside Paper hides all 34; the three border releases
-are in it too, since they have no English printing either, and hiding them twice is harmless.
-
-**What the middle position can and cannot decide.** It compares a foreign printing with the
-English Paper printings of the same card across the whole print list, not only the rows the
-current window happens to show — the analogue of a printing is regularly *earlier* in the list
-than the printing being tested, and a rule that could only look forwards would call every
-reprint unique and hide nothing at all. It also refuses to use an English printing the reader
-has themselves hidden, since that is not a picture they have.
-
-What it cannot decide is a visual difference Scryfall does not record. `frame`,
-`frame_effects`, `border_color` and `full_art` cover the ones the API knows about; a treatment
-that differs in some other way is not visible to the comparison, and the consequence is a
-duplicate row rather than a missing one. That is the intended direction, and it is why every
-unresolved case — no artwork recorded, no English printing on paper, an empty comparison — keeps
-the printing on screen.
+- **34 sets have no English printing at all**, three of them the black-border releases. The
+  rest are foreign-only products — 21 promo sets, five sets of Japanese promo tokens, three box
+  sets (Salvat 2005 and 2011, Sega Dreamcast Cards) and two master sets, the French `ren` and
+  the Italian `rin` of Renaissance. This used to ship as a dated list and a switch of its own.
+- **Scryfall names four clients and this extension offers three.** `astral` and `sega` are the
+  two Astral and Sega Dreamcast releases; a reader keeping Paper and Magic Online has kept
+  nothing those are on.
+- **Oversized is not a property of a set.** It is a flag on the printing, and those printings
+  sit inside ordinary sets: a Planechase plane, a Magic Online promo, a Commander release, a
+  promo from 2009. A name rule measured against Scryfall on 2026-10-02 found 14 of the 38 sets
+  that hold one, and nothing that was not one — too narrow rather than wrong, which is the worst
+  shape of bug to have: the setting looked like it worked and the other twenty-four stayed
+  visible with nothing to say why. Getting the right answer cost five pages of `is:oversized`
+  every time the index was rebuilt, which is what the extension was doing daily for a list
+  nobody asked for.
+- **Three ways of asking Scryfall about the absence of English all fail.** `lang:!en` is not a
+  negation and returns all 397 printings of `m21`; `-lang:en` is not one either and returns
+  3,411 against 397; and `NOT lang:en` is honoured and wrong, refused for `m21` correctly and
+  for `cmd` and `tsp` incorrectly.
 
 ---
 
@@ -418,6 +510,7 @@ the printing on screen.
 - Tag data ships from MoxTags v1.8.3 (June 2026). The extension tries to refresh it from
   Scryfall's published tag bulk files on installation and every seven days; the bundled
   snapshot stays usable if that fails.
-- The CardTrader and Cardmarket icons are third-party marks, and the EDHREC icon appears
-  to be one. Their provenance is not settled. `THIRD_PARTY_NOTICES.md` records exactly
-  what is unconfirmed and what has to be established before wider distribution.
+- The CardTrader and Cardmarket icons are third-party marks. Their provenance is not settled.
+  `THIRD_PARTY_NOTICES.md` records exactly what is unconfirmed and what has to be established
+  before wider distribution. EDHREC's logo was here too, and is not any more: it went with the
+  icon-and-link control it was shown on.

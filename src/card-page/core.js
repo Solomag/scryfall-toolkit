@@ -66,10 +66,10 @@
     printAddButtons: true, printPageSameTab: false,
     legalities: true, finishBadges: true, cardtraderPrices: false, euroPriceSources: 'cm',
     printGrouping: false, printFoldGroups: false, printFullPageLink: false,
-    edhrecUsage: false, edhrecSalt: false, showSaltScale: false, edhrecLink: false, edhrecUsageDisplay: 'both',
+    edhrecUsage: false, edhrecSalt: false, showSaltScale: false, edhrecUsageDisplay: 'both',
     usageColorMetric: 'decks', usageMediumDecks: 50000, usageHighDecks: 100000,
     usageMediumPercent: 1, usageHighPercent: 2.6, saltMediumThreshold: 1, saltHighThreshold: 2,
-    taggerSearchLinks: false, cardSearchLinks: true, cardNicknames: true, deckNoPrices: true, stackedDeckCards: true, deckLegality: true,
+    taggerSearchLinks: false, cardSearchLinks: true, deckNoPrices: true, stackedDeckCards: true, deckLegality: true,
     premodern: true, heritage: false, classic: false, peak: false,
     formatOrder: null, formatVisibility: null,
     deckCleanUpImprover: false, cleanUpLandsInSingleton: true,
@@ -104,33 +104,38 @@
   if (filtersRead.migrated) {
     chrome.storage.local.set({ setFilters, setFiltersMigrated: true });
   }
-  // What the feature files read, and it is the stored shape: positive switches, a list of
-  // platforms kept and three areas. No alias, no derived boolean, and nothing named "hide".
+  // What the feature files read: the stored shape, with nothing named "hide" and no alias.
   //
   // The aliases this replaces were the third place a rule could be spelled, and one of them
   // was wrong in a way nothing tested: `hideNonTournamentSets` was handed `hiding.nonTournament`
-  // where the old shape meant *hide*, and the old shape's `effective()` returned the opposite,
-  // so the two senses met there. The shape now says "show" everywhere and the feature files
-  // read it under its own name.
-  settings.showNonTournament = hiding.paper.nonTournament;
-  settings.showOversized = hiding.paper.oversized;
-  settings.showNoEnglishSets = hiding.paper.noEnglishSets;
-  settings.showForeignBlackBorder = hiding.paper.foreignBlackBorder;
-  settings.nonEnglishMode = hiding.paper.nonEnglish;
-  settings.filterAreas = hiding.areas;
-  settings.setPlatforms = window.STK_SET_FILTERS.PLATFORM_NAMES
-    .filter(name => hiding.platforms[name]);
-  // There is no `hideDigitalSets` here, and there was never a decision behind the old one.
-  // It used to be derived from the platform switches, which hid every Arena and Magic Online
-  // set twice over and took Arena sets with it even when Arena was the platform being kept;
-  // so it was pinned to false and three branches went on reading it. A flag that is written
-  // once as a constant and read in three places is not a setting, it is a question nobody
-  // asked any more — and a list of twelve online-cube codes was unreachable behind it.
-  // Which sets are digital is still asked, in `setPlatformsOf`, because that is how a set is
-  // known to be paper.
-  settings.onlyCardmarket = Object.values(setFilters.prices).some(Boolean);
+  // where the old shape meant *hide*, and the old `effective()` returned the opposite, so the
+  // two senses met there.
+  //
+  // There is no `settings.filterAreas` and no `settings.setPlatforms` any more. Both were a
+  // second spelling of the same thing — one list of places and one list of platforms — and the
+  // places now belong to the platforms, so a surface is asked as "which platforms are in force
+  // here" rather than as two independent lists that had to agree.
+  //
+  // There is no `hideDigitalSets` here, and there was never a decision behind the old one. It
+  // used to be derived from the platform switches, which hid every Arena and Magic Online set
+  // twice over and took Arena sets with it even when Arena was the platform being kept; so it
+  // was pinned to false and three branches went on reading it. A flag that is written once as
+  // a constant and read in three places is not a setting, it is a question nobody asked any
+  // more. Which sets are digital is still asked, in `setPlatformsOf`, because that is how a
+  // set is known to be paper.
+  // Whether anything is hidden at all, which is what decides whether the price features run.
+  // The price keys are positive — a price is shown — so "something is hidden" is one of them
+  // being off, and this used to be the only line in the settings that had to remember that.
+  //
+  // The "Buy This Card" block is in here too: it is not a price kind, so it cannot be found by
+  // walking `prices`, and a reader who hid the whole block and nothing else would otherwise get a
+  // feature that never boots — a switch that saves and does nothing.
+  settings.onlyCardmarket = Object.values(setFilters.prices).some(price => price === false);
+  settings.showStores = setFilters.showStores !== false;
   settings.deckTokens = setFilters.tokens;
-  settings.hideCasterIndicator = setFilters.caster;
+  // The Caster marker, kept under the name that means *hide* so nothing downstream has to be
+  // told about the rename: the model stores "show" and the class is its opposite.
+  settings.hideCasterIndicator = setFilters.showCaster === false;
   // --- the page-world bridge -------------------------------------------------
   // The deck features have to run in Scryfall's own page world, because they
   // work through window.Scryfall and window.ScryfallAPI and this script lives
@@ -214,38 +219,41 @@
   // Paper is every set Scryfall does not mark digital; Arena and Magic Online
   // sets answer for themselves in the platform index.
   const PLATFORM_NAMES = ['paper', 'arena', 'mtgo'];
-  const chosenPlatforms = new Set(
-    (Array.isArray(settings.setPlatforms) ? settings.setPlatforms : PLATFORM_NAMES).filter(name => PLATFORM_NAMES.includes(name))
-  );
-  // An empty list means every platform was switched off, and that is a choice this build
-  // offers on purpose: the settings page has three switches with no master above them, and a
-  // reader who unticks all three has said so.
+  // The platforms in force on one surface: a platform counts when it is shown *and* the
+  // reader left it in force there. That is the whole of the settings as this page sees them,
+  // and every place that hides anything asks it per surface.
   //
-  // There used to be a fallback here that put all three back when the list came back empty,
-  // on the grounds that an empty list is more likely a value this build cannot read than an
-  // answer. It cannot tell those apart, and the settings page's own behaviour — which keeps
-  // the empty choice, because the master that used to rescue it is gone — is the answer that
-  // reached the reader. So the two disagreed: the page showed three unticked switches and the
-  // Scryfall page showed everything. Only the settings page had been checked.
+  // Three surfaces and three answers, which is the point of the areas being per platform: a
+  // reader who wants Arena out of the search dropdown and Arena left in the prints table gets
+  // two different answers here, and with one shared list they could not.
   //
-  // Unreadable values are handled where they can be told apart from a choice: `normalise`
-  // falls back for a non-boolean, and `migrate` refuses a platform list naming nothing it
-  // knows, which is why neither can hand this line an empty list it did not mean.
-  const platformFilterOn = chosenPlatforms.size < PLATFORM_NAMES.length;
-  // Whether a filter is wanted at all, for a given surface. One question asked once, because
-  // three surfaces asking it separately is how a rule reached one of them and not another.
-  //
-  // The areas are the reader's answer to "where should filtering apply", and every rule
-  // consults them together with its own switch: a rule that is off is off everywhere, and a
-  // rule that is on applies only where the reader asked. So "all" is not a way of bringing
-  // back printings that a category switch has removed.
-  const filteringOn = area => settings.filterAreas?.[area] === true;
-  // The set index and the search field are set-level surfaces; the prints table is where
-  // individual printings can be removed. Keeping the distinction here rather than at each
-  // call site is what stops a printing-level rule from being asked to remove whole sets.
+  // An empty answer means every platform was switched off on that surface, and that is a
+  // choice this build offers on purpose: the settings page has three switches per surface with
+  // no master above them, and a reader who unticks all of them has said so. There used to be
+  // a fallback that put all three back on an empty answer, on the grounds that an empty list is
+  // more likely a value this build cannot read — it cannot tell those apart, and the settings
+  // page kept the empty choice, so the two disagreed and only the settings page had been
+  // checked. Unreadable values are refused where they can be told from a choice, in
+  // `normalise` and `migrate`, which is why neither can hand this line an empty answer it did
+  // not mean.
+  const platformsOn = area => PLATFORM_NAMES.filter(name =>
+    hiding.platforms[name]?.show === true && hiding.platforms[name]?.areas?.[area] === true);
+  const chosenPlatforms = new Set(platformsOn('prints'));
+  const chosenForSets = new Set(platformsOn('sets'));
+  const chosenForSearch = new Set(platformsOn('search'));
+  // Whether anything is being hidden at all. Every surface asks this, so a reader who has
+  // touched nothing does not fetch a set index they do not need — and a reader who turned one
+  // platform off on one surface does, on that surface only.
+  const filteringOn = area => platformsOn(area).length < PLATFORM_NAMES.length;
+  // The three surfaces, named. Kept as three functions rather than one call with an argument
+  // because each call site reads better as a sentence about where it is, and because three
+  // surfaces asking the same question separately is how a rule once reached one of them and
+  // not another.
   const setsFilterOn = () => filteringOn('sets');
   const searchFilterOn = () => filteringOn('search');
   const printsFilterOn = () => filteringOn('prints');
+  const platformFilterOn = filteringOn('prints') || filteringOn('sets') ||
+    filteringOn('search');
   // Tells whether a set belongs to a platform the user kept. A digital set the
   // index could not place stays visible: hiding a set on a guess is worse.
   const setPlatformsOf = (categories, platforms, code) => {
@@ -255,9 +263,12 @@
     const games = (platforms || {})[key];
     return Array.isArray(games) ? games : [];
   };
-  const platformSetVisible = (categories, platforms) => code => {
+  // Whether a set is shown, for a surface. The answer is per set and per surface, so the
+  // surface is an argument rather than a captured value: one caller filters the sets index and
+  // another filters the search dropdown, and they are not always the same reader's choice.
+  const platformSetVisible = (categories, platforms, kept = chosenForSets) => code => {
     const games = setPlatformsOf(categories, platforms, code);
-    return !games.length || games.some(game => chosenPlatforms.has(game));
+    return !games.length || games.some(game => kept.has(game));
   };
   const platformSetRequests = async (withPlatforms = platformFilterOn) => {
     const [categories, platforms] = await Promise.all([
@@ -434,7 +445,10 @@
     advancedPage,
     identity,
     PLATFORM_NAMES,
+    platformsOn,
     chosenPlatforms,
+    chosenForSets,
+    chosenForSearch,
     platformFilterOn,
     setsFilterOn,
     searchFilterOn,
@@ -483,30 +497,14 @@
   // there was the collapsed alias, so with 'prints' chosen it was false and the whole
   // feature did not run — on either surface, including the one it had been asked for.
   const setFilterNeeded = (() => {
-    // A rule that wants to remove something, and a surface it wants to remove it from. Both
-    // halves are needed and either alone is wrong: a rule on with no surface chosen removes
-    // nothing, and a surface chosen with every rule off removes nothing.
+    // Anything hidden anywhere. There is one rule now and it is the platform rule, so the
+    // question is whether it is hiding something on any of the three surfaces — which is what
+    // decides whether the set index is fetched at all.
     //
-    // The two rule families are asked apart because they act on different things and the
-    // surfaces can differ: the category rules are properties of a set, and the non-English
-    // rule is a property of a printing.
-    // A category is on while at least one of its families is, and it removes a set while any
-    // family is off. The two are not the same question and only the second is written here.
-    //
-    // "Some family is off", spelled as "not every family is on". The other spelling —
-    // `some(show => show)` being false — is what this said first, and it is true only when
-    // every family is off. So narrowing the category to a single family read as "nothing to
-    // do" and the whole feature stood down: untick 4BB, leave FBB and BCHR on, and not one
-    // row moved. A check that only ever switched whole categories passed.
-    const someFamilyOff = Object.values(settings.showForeignBlackBorder || {})
-      .some(show => show !== true);
-    const ruleWantsSomething =
-      !settings.showNonTournament || !settings.showOversized || !settings.showNoEnglishSets ||
-      someFamilyOff;
-    const languageWantsSomething = settings.nonEnglishMode !== 'all';
-    return (platformFilterOn ||
-      (ruleWantsSomething && (setsFilterOn() || printsFilterOn())) ||
-      (languageWantsSomething && printsFilterOn()));
+    // It used to be a longer answer with two rules in it, and each half named a different
+    // surface, which is how the boot decision came to disagree with the two feature files
+    // about where a rule was wanted. One rule, asked once, cannot do that.
+    return filteringOn('prints') || filteringOn('sets') || filteringOn('search');
   })();
   const setFilterPage = /^\/sets\/?$/.test(location.pathname) || cardPage;
   const BOOT = [
@@ -518,12 +516,11 @@
     ["nativePrintButtons", () => cardPage && settings.clipboard && settings.printAddButtons, false],
     ["expandedPrints", () => cardPage && settings.printGrouping, false],
     ["edhrecStats", () => cardPage && (settings.edhrecUsage || settings.edhrecSalt), false],
-    ["priceFilter", () => settings.onlyCardmarket, false],
+    ["priceFilter", () => settings.onlyCardmarket || settings.showStores === false, false],
     ["advancedPriceFilter", () => advancedPage, false],
     ["advancedSetFilter", () => advancedPage, false],
     ["cardTrader", () => cardPage && (settings.cardtraderPrices || settings.euroPriceSources !== 'cm'), false],
     ["cardSearchLinks", () => cardPage && settings.cardSearchLinks, false],
-    ["cardNicknames", () => cardPage && settings.cardNicknames, false],
     ["searchTaggerLinks", () => settings.taggerSearchLinks, false],
     ["deckPriceOption", () => settings.deckNoPrices, false],
     ["stackedDeckCards", () => settings.stackedDeckCards, false],

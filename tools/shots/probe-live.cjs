@@ -34,8 +34,7 @@ const { heroCard, clipboardCards, setCategories } = require('./live.cjs');
   const categories = await setCategories();
   const digital = hero.prints.filter(p => categories.digital.includes(p.set)).map(p => p.set);
   console.log('\ndigital sets among these printings: ' + (digital.join(', ') || '(none)'));
-  console.log('non-tournament: ' + (hero.prints.filter(p => categories.nonTournament.includes(p.set))
-    .map(p => p.set).join(', ') || '(none)'));
+  console.log('sets classified as digital: ' + categories.digital.length);
   // The formats the extension adds, which the card has to be legal somewhere in or
   // the legality picture would show Scryfall's own rows and nothing of ours.
   console.log('extra formats:  ' + (hero.extraFormats || []).join(', '));

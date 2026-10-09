@@ -37,8 +37,17 @@ if (systemDark && systemDark.addEventListener) {
 // answers synchronously, so the class is set before the first paint and storage
 // simply corrects it a moment later.
 if (themeMode('auto') === 'dark') document.documentElement.classList.add('stk-dark');
-chrome.storage.local.get({ darkTheme: 'auto', hideCasterIndicator: false, siteLanguage: 'en' }).then(({ darkTheme, hideCasterIndicator, siteLanguage }) => {
-  document.documentElement.classList.toggle('stk-hide-caster', Boolean(hideCasterIndicator));
+chrome.storage.local.get({ darkTheme: 'auto', siteLanguage: 'en', setFilters: null })
+  .then(({ darkTheme, siteLanguage, setFilters }) => {
+  // The Caster marker reads `setFilters.showCaster`, and the class is the opposite of it.
+  //
+  // It used to read a flat `hideCasterIndicator`, which nothing has written since the settings
+  // were folded into `setFilters` — the options page wrote `setFilters.caster` and this read a
+  // key that had no writer, so the switch on the settings page changed a value nobody read and
+  // the marker never went away. The test that covered this asked the theme script to read the
+  // flat key directly, which is the same fiction one level up: it proved the read and never the
+  // write.
+  document.documentElement.classList.toggle('stk-hide-caster', !(setFilters?.showCaster !== false));
   document.documentElement.classList.toggle('stk-site-ru', siteLanguage === 'ru');
   if (siteLanguage === 'ru') translateSiteControls();
   applyTheme(darkTheme);
@@ -56,7 +65,13 @@ if (/^\/bots(?:\/|$)/.test(location.pathname)) document.documentElement.classLis
 if (/(^|\.)tagger\.scryfall\.com$/.test(location.hostname)) document.documentElement.classList.add('stk-tagger');
 if (/^\/(?:@[^/]+\/decks|decks)(?:\/|$)/.test(location.pathname)) initDeckActionsLayout();
 chrome.storage.onChanged.addListener(changes => {
-  if (changes.hideCasterIndicator) document.documentElement.classList.toggle('stk-hide-caster', Boolean(changes.hideCasterIndicator.newValue));
+  if (changes.setFilters) {
+  // Read out of the whole object rather than out of a named key, because the key inside it was
+  // renamed when the switch stopped reading "hide". A reader on the old shape has no
+  // `showCaster`, and there `undefined` means "shown", which is what the old `false` meant too.
+  document.documentElement.classList.toggle('stk-hide-caster',
+    !(changes.setFilters.newValue?.showCaster !== false));
+}
   if (changes.siteLanguage) document.documentElement.classList.toggle('stk-site-ru', changes.siteLanguage.newValue === 'ru');
   if (changes.darkTheme) applyTheme(changes.darkTheme.newValue);
 });
