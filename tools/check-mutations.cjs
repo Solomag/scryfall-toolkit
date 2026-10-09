@@ -599,9 +599,21 @@ const MUTATIONS = [
     run: 'test-options',
     find: '      } else if (!onEditorPage) {\n' +
       '        add(t(\'Подходящая страница редактора не открыта. Это не ошибка: на других страницах Scryfall модули и не должны работать.\'), \'diagnostic-state\');\n' +
-      '      } else if (s.wired === false || problems.length) {',
-    replace: '      } else if (s.wired === false || problems.length) {',
+      '      } else if (problems.length) {',
+    replace: '      } else if (problems.length) {',
     expect: 'a report from a card page is named as "no editor page open"'
+  },
+  {
+    // And the other half: a page where the adapter never loaded, read as "no editor page
+    // open" because the page is a card page. The deck scripts failing is a fault on any
+    // page, not the expected absence of a deckbuilder, so its branch has to stay.
+    name: 'an adapter that never loaded is read as "no editor page open"',
+    file: 'options',
+    run: 'test-options',
+    find: '      } else if (!wired) {\n' +
+      '        add(t(\'Обнаружена ошибка: модули редактора не загрузились.\'), \'diagnostic-state diagnostic-state-error\');\n',
+    replace: '',
+    expect: 'a report where the adapter never loaded is an error even on a card page'
   },
   {
     // The permission chip asking for every host the extension might ever need rather than the
@@ -610,7 +622,7 @@ const MUTATIONS = [
     name: 'the permission chip asks for every host',
     file: 'options',
     run: 'test-options',
-    find: '      requestHostAccess(OPTIONAL_HOSTS.edhrecSuggestions).then(answer => {',
+    find: '      requestHostAccess(OPTIONAL_HOSTS[row.key]).then(answer => {',
     replace: '      requestHostAccess([...new Set(Object.values(OPTIONAL_HOSTS).flat())]).then(answer => {',
     expect: 'pressing it asks for both hosts the feature needs, and no others'
   },
@@ -620,9 +632,19 @@ const MUTATIONS = [
     name: 'the permission chip is never hidden',
     file: 'options',
     run: 'test-options',
-    find: '      if (!missing.length) { edhrecPermission.hidden = true; return; }',
-    replace: '      if (false) { edhrecPermission.hidden = true; return; }',
+    find: '      if (!missing.length) { row.chipEl.hidden = true; return; }',
+    replace: '      if (false) { row.chipEl.hidden = true; return; }',
     expect: 'and the chip goes away once the access is granted'
+  },
+  {
+    // And only EDHREC suggestions carrying a chip, so a missing host for the other features
+    // is a status line at the bottom of the page again — the gap this closes.
+    name: 'only EDHREC suggestions has a permission chip',
+    file: 'options',
+    run: 'test-options',
+    find: '    { key: \'edhrecUsage\', chip: \'edhrecUsagePermission\', text: \'edhrecUsagePermissionText\', grant: \'grantEdhrecUsage\' },\n',
+    replace: '',
+    expect: 'the Commander popularity row shows its own chip while its host is missing'
   },
   {
     // Diagnostics standing open when the page loads. The report is a place to read, not a step,
@@ -653,7 +675,7 @@ const MUTATIONS = [
     name: 'the expected non-attachment is listed as a fault on a card page',
     file: 'options',
     run: 'test-options',
-    find: '      if (onEditorPage && problems.length) {',
+    find: '      if (problems.length && (onEditorPage || !wired)) {',
     replace: '      if (problems.length) {',
     expect: 'and the expected non-attachment is not listed under "what is wrong"'
   },

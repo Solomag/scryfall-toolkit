@@ -8,6 +8,34 @@ All releases: <https://github.com/Solomag/scryfall-toolkit/releases>
 
 ---
 
+### The permission chip reaches every feature, and the documents caught up
+
+**Every feature that takes an optional host now asks for it on its own row.** The inline
+**Предоставить** chip was on EDHREC suggestions alone; Commander popularity, Salt Meter and
+CardTrader prices still fell back to a status line at the bottom of the page and a "turn the
+feature off and on again" when a host went missing. Each of those rows carries a chip now, and its
+button asks for that feature's hosts and no others. The status line still names what is missing,
+but it is no longer the only way to act on it.
+
+**Diagnostics got more precise.** A report where the page-world adapter never loaded is a fault on
+any page — the deck scripts failing is not the same thing as a page without a deckbuilder — so it
+is an error and its reason is shown even on a card page, while the expected non-attachment stays
+hidden. And the module list is headed **Modules** rather than **Wired**: the flags say a module is
+set up, and on a page that is not an editor that means armed and waiting, not attached.
+
+**The documents caught up with the last two releases.** The release checklist still said "all four
+modules" and "all printings, grouped by set … the full-page link", and quoted an assertion count
+several releases old. The FAQ still answered about a "Hide non-tournament sets" switch that went
+with the set rules. The features list still counted card input editing among the integrated
+modules, and called the CardTrader and Cardmarket marks' provenance "not settled" after both were
+settled. And 52 translation keys for removed features — the grouped table, the site-language
+selector, the old deck and legality labels — were deleted from the dictionary. One language
+setting covers the whole extension now, and the documents say so.
+
+**Checks:** `npm test` 2350 assertions across nine suites, `npm run render` 176 + 202,
+`npm run mutations` 51 of 51. Three are new: the chip list losing a feature, an adapter that never
+loaded read as "no editor page open", and the expected non-attachment shown as a fault.
+
 ### Diagnostics stops arguing with itself, and CardTrader answered
 
 **Diagnostics no longer lists the expected non-attachment as a fault.** A report from a page that

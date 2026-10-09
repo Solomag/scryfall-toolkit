@@ -52,7 +52,12 @@ const REQUIRED_IDS = [
   'cardtraderRow', 'cardtraderMain', 'cardtraderToggle', 'cardtraderPanel',
   'cardtraderTokenRow', 'cardtraderTokenActions', 'replaceToken',
   'edhrecUsageToggle', 'edhrecUsagePanel', 'edhrecSaltToggle', 'edhrecSaltPanel',
-  'resetUsage', 'resetSalt'
+  'resetUsage', 'resetSalt',
+  // The permission chips: one per feature that takes an optional host, so a missing host is
+  // a click on the feature's own row rather than a status line at the bottom of the page.
+  'edhrecUsagePermission', 'edhrecUsagePermissionText', 'grantEdhrecUsage',
+  'edhrecSaltPermission', 'edhrecSaltPermissionText', 'grantEdhrecSalt',
+  'cardtraderPermission', 'cardtraderPermissionText', 'grantCardtrader'
 ];
 
 // The old flat keys are gone from the page, and this is what says so.
@@ -1177,6 +1182,9 @@ async function deckModuleStatusTest() {
   assert(!/ScryfallAPI\.decks is not available/.test(cardText),
     'and the expected non-attachment is not listed under "what is wrong", which would make ' +
     'the page argue with itself');
+  assert(/modules:/i.test(cardText) && !/wired:/i.test(cardText),
+    'and the module list is headed "Modules" rather than "Wired", which would overstate what a ' +
+    'module that is only armed on a non-editor page has done');
 
   // A report from a real editor page with a problem in it. This one is an error, and the
   // adapter's own words are kept — inside diagnostics, where the technical detail belongs.
@@ -1217,6 +1225,23 @@ async function deckModuleStatusTest() {
   assert(/the module is working/i.test(works.document.getElementById('deckModuleStatus').textContent),
     'a clean report from an editor page with a module applied says it works');
 
+  // A report where the page-world adapter never loaded. That is a fault on any page — the
+  // deck scripts failing is not the same thing as a page that has no deckbuilder — so it is
+  // an error even on a card page, and its reason is shown.
+  const unloaded = loadOptions({
+    settingsLanguage: 'en',
+    deckModuleStatus: {
+      at: Date.now(), page: '/card/tst/1/test-card',
+      wired: false, problems: ['the deck modules did not load']
+    }
+  });
+  await settle();
+  const unloadedText = unloaded.document.getElementById('deckModuleStatus').textContent;
+  assert(/an error was found: the deck modules did not load/i.test(unloadedText),
+    'a report where the adapter never loaded is an error even on a card page');
+  assert(/— the deck modules did not load/.test(unloadedText),
+    'and its reason is shown, because that one is not the expected non-attachment');
+
   // A report from an editor page where nothing was enabled says so rather than reading as a
   // failure: the module was never asked to do anything.
   const off = loadOptions({
@@ -1250,6 +1275,25 @@ async function grantHostsTest() {
     ['https://edhrec.com/*', 'https://json.edhrec.com/*'],
     'pressing it asks for both hosts the feature needs, and no others');
   assert(chip.hidden === true, 'and the chip goes away once the access is granted');
+  assert(document.getElementById('edhrecUsagePermission').hidden === true,
+    'while a feature that is off shows no chip at all');
+
+  // And the other features have chips of their own, not only EDHREC suggestions. Commander
+  // popularity needs one host, so its chip asks for that one and no others.
+  const usage = loadOptions({ edhrecUsage: true, settingsLanguage: 'en' });
+  await settle();
+  await settle();
+  const usageChip = usage.document.getElementById('edhrecUsagePermission');
+  assert(usageChip && usageChip.hidden === false,
+    'the Commander popularity row shows its own chip while its host is missing');
+  assertEqual(usage.document.getElementById('edhrecUsagePermissionText').textContent, 'Permission needed',
+    'and says what it is');
+  usage.document.getElementById('grantEdhrecUsage').dispatchEvent(new usage.window.Event('click'));
+  await settle();
+  await settle();
+  assertEqual(usage.mock.permissions.grantedOrigins, ['https://json.edhrec.com/*'],
+    'and its button asks for that feature\'s host alone');
+  assert(usageChip.hidden === true, 'and the chip goes away once the host is there');
 
   // The limited mode: only part of the access. The commander page still loads, the advice
   // about the deck does not, and "permission needed" would read as a feature that does not

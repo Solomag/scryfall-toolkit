@@ -69,7 +69,7 @@ The toolbar button opens a small popup with the five switches you reach for most
 
 | Section | What is in it |
 | --- | --- |
-| **General** | Settings language, theme |
+| **General** | Settings language — which also sets the language of the controls the extension adds to Scryfall and Tagger — and theme |
 | **Tags** | Card/art tags, related cards, the Tagger link on search results |
 | **CardClip** | The clipboard, the copy format, the per-printing `+` |
 | **Visibility** | two columns: on the left a table with one row per platform — Paper, Arena, Magic Online — and a column per place: the platform's own **Show** box and its own boxes for the **Prints table**, **Search** and **Sets list**, with the Caster marker on its own under the table; and on the right, prices (USD, TIX, EUR), store links (TCGplayer, Cardhoarder, Cardmarket) under a switch for the whole **Buy This Card** block, CardTrader offers, and the EUR price source. Everything ticked means shown, and turning a platform — or the store block — off keeps the choices under it and brings them back; the **EUR** box and the EUR-source dropdown are two views of the same column, kept in step |

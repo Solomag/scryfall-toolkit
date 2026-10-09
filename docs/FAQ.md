@@ -61,9 +61,10 @@ No. Their API needs one. Everything else works without it.
 ## How things behave
 
 **Why do some sets stay in the list even though I hid them?**
-Each filter covers its own category. **Hide non-tournament sets** keeps mixed "funny"
-sets because some contain tournament-legal cards, and the currently selected printing is
-always left visible so you do not lose your place.
+Two reasons, and neither is a bug. A set the platform index cannot place stays visible
+rather than being hidden on a guess. And the printing you are viewing is always left
+visible, on the card page and in the set list, so switching a platform off does not lose
+your place.
 
 **A digital set is showing that I expected to be filtered.**
 The platform filter works from a snapshot of which client carries each digital set.

@@ -456,34 +456,46 @@ chrome.storage.local.get(defaults, values => {
     chrome.storage.local.set({ darkTheme: darkTheme.value }, () => { status.textContent = t('Сохранено'); });
   });
   // An enabled feature may be missing a host it needs, if the host was added after the
-  // user granted access. Chrome answers a permission request only from a click, so the
-  // page never asks on its own — a request made while loading is refused and printed as
-  // an unchecked error, which is the bug this page already fixed once.
+  // user granted access, or revoked in Chrome's own settings. Chrome answers a permission
+  // request only from a click, so the page never asks on its own — a request made while
+  // loading is refused and printed as an unchecked error, which is the bug this page
+  // already fixed once.
   //
-  // The one feature with a click of its own is EDHREC suggestions, whose row carries a
-  // chip that appears only while it is on without the access it needs. The chip says
-  // which of two cases it is: no access at all, or the partial access where EDHREC falls
-  // back to the commander page instead of advice about the deck. Every other feature is
-  // turned on from its own switch, and turning it off and on again is what re-asks.
-  const edhrecPermission = document.getElementById('edhrecSuggestPermission');
-  const edhrecPermissionText = document.getElementById('edhrecPermissionText');
-  const grantEdhrec = document.getElementById('grantEdhrecSuggest');
-  const edhrecBox = document.getElementById('edhrecSuggestions');
-  const refreshEdhrecPermission = () => {
-    if (!edhrecPermission) return;
-    if (!edhrecBox.checked) { edhrecPermission.hidden = true; return; }
-    missingHostsFor('edhrecSuggestions').then(missing => {
-      if (!missing.length) { edhrecPermission.hidden = true; return; }
-      const limited = missing.length < OPTIONAL_HOSTS.edhrecSuggestions.length;
-      edhrecPermissionText.textContent = t(limited ? 'Ограниченный режим' : 'Требуется разрешение');
-      edhrecPermission.hidden = false;
+  // Every feature that takes an optional host carries a chip on its own row, and the chip
+  // is the click: it appears only while that feature is on without the access it needs, and
+  // the button in it asks for that feature's hosts and no others. The chip says which of two
+  // cases it is: no access at all, or the partial access where the feature falls back to
+  // something blander (EDHREC suggestions show the commander's page; the price sources show
+  // the native column). One row per feature, because the alternative — a single button for
+  // everything — either asks for hosts the reader never turned on or makes them hunt for it.
+  const PERMISSION_ROWS = [
+    { key: 'edhrecUsage', chip: 'edhrecUsagePermission', text: 'edhrecUsagePermissionText', grant: 'grantEdhrecUsage' },
+    { key: 'edhrecSalt', chip: 'edhrecSaltPermission', text: 'edhrecSaltPermissionText', grant: 'grantEdhrecSalt' },
+    { key: 'edhrecSuggestions', chip: 'edhrecSuggestPermission', text: 'edhrecPermissionText', grant: 'grantEdhrecSuggest' },
+    { key: 'cardtraderPrices', chip: 'cardtraderPermission', text: 'cardtraderPermissionText', grant: 'grantCardtrader' }
+  ].map(row => ({
+    ...row,
+    box: document.getElementById(row.key),
+    chipEl: document.getElementById(row.chip),
+    textEl: document.getElementById(row.text),
+    grantEl: document.getElementById(row.grant)
+  })).filter(row => row.box && row.chipEl && row.textEl);
+  const refreshPermission = row => {
+    if (!row.box.checked) { row.chipEl.hidden = true; return; }
+    missingHostsFor(row.key).then(missing => {
+      if (!missing.length) { row.chipEl.hidden = true; return; }
+      const hosts = OPTIONAL_HOSTS[row.key] || [];
+      const limited = hosts.length > 1 && missing.length < hosts.length;
+      row.textEl.textContent = t(limited ? 'Ограниченный режим' : 'Требуется разрешение');
+      row.chipEl.hidden = false;
     });
   };
-  if (grantEdhrec) {
-    grantEdhrec.addEventListener('click', () => {
+  const refreshPermissions = () => PERMISSION_ROWS.forEach(refreshPermission);
+  for (const row of PERMISSION_ROWS) {
+    row.grantEl?.addEventListener('click', () => {
       // Only this feature's hosts: asking for everything the extension might ever need
       // is how a permission dialog comes to look like a demand.
-      requestHostAccess(OPTIONAL_HOSTS.edhrecSuggestions).then(answer => {
+      requestHostAccess(OPTIONAL_HOSTS[row.key]).then(answer => {
         if (!answer.granted) {
           // The browser refusing to ask at all is not the reader saying no, and
           // saying "не выдан" for it would be a message about the wrong thing.
@@ -493,7 +505,7 @@ chrome.storage.local.get(defaults, values => {
           return;
         }
         status.textContent = t('Доступ к хосту выдан — перезагрузи открытые страницы.');
-        refreshEdhrecPermission();
+        refreshPermission(row);
       });
     });
   }
@@ -507,7 +519,7 @@ chrome.storage.local.get(defaults, values => {
       status.textContent = t('Не выдан доступ к хостам для: ') + named.join(', ') +
         '. Выключи и включи нужную функцию, чтобы запросить доступ.';
     }
-    refreshEdhrecPermission();
+    refreshPermissions();
   });
   for (const key of basicFields) {
     const element = document.getElementById(key);
@@ -535,14 +547,14 @@ chrome.storage.local.get(defaults, values => {
           }
           chrome.storage.local.set({ [key]: wanted }, () => {
             status.textContent = t('Сохранено');
-            if (key === 'edhrecSuggestions') refreshEdhrecPermission();
+            if (OPTIONAL_HOSTS[key]) refreshPermissions();
           });
         });
         return;
       }
       chrome.storage.local.set({ [key]: wanted }, () => {
         status.textContent = t('Сохранено');
-        if (key === 'edhrecSuggestions') refreshEdhrecPermission();
+        if (OPTIONAL_HOSTS[key]) refreshPermissions();
       });
     });
   }
@@ -591,12 +603,18 @@ chrome.storage.local.get(defaults, values => {
       }
       const problems = [...(s.problems || []), ...((s.scryfall && s.scryfall.problems) || [])];
       const onEditorPage = DECK_EDITOR_PATH.test(s.page || '');
+      // `wired` is false only when the page-world adapter did not load at all — the deck
+      // scripts failed, which is a real fault on any page. That is a different thing from
+      // "there is no editor here", which is what any page without a deckbuilder is.
+      const wired = s.wired !== false;
       const applied = [s.cleanUp, s.edhrecSuggestions, s.deckSearch].filter(Boolean).length;
       if (s.off) {
         add(t('Проверка ещё не выполнена: ни один модуль редактора не включён.'), 'diagnostic-state');
+      } else if (!wired) {
+        add(t('Обнаружена ошибка: модули редактора не загрузились.'), 'diagnostic-state diagnostic-state-error');
       } else if (!onEditorPage) {
         add(t('Подходящая страница редактора не открыта. Это не ошибка: на других страницах Scryfall модули и не должны работать.'), 'diagnostic-state');
-      } else if (s.wired === false || problems.length) {
+      } else if (problems.length) {
         add(t('Обнаружена ошибка на странице редактора.'), 'diagnostic-state diagnostic-state-error');
       } else if (applied) {
         add(t('Модуль работает.'), 'diagnostic-state diagnostic-state-ok');
@@ -609,7 +627,10 @@ chrome.storage.local.get(defaults, values => {
         ['edhrecSuggestions', t('Подсказки EDHREC')],
         ['deckSearch', t('Поиск Scryfall')]
       ];
-      add(t('Подключено') + ': ' + (flags.filter(([key]) => s[key]).map(([, label]) => label).join(', ') || '—'));
+      // "Modules", not "Wired": the flags say a module is set up, and on a page that is not
+      // an editor that means armed and waiting, not attached. The state line above already
+      // says which page this is, so the list does not have to overstate what it means.
+      add(t('Модули') + ': ' + (flags.filter(([key]) => s[key]).map(([, label]) => label).join(', ') || '—'));
       const inner = s.scryfall || {};
       add(t('Внутренности Scryfall') + ': ' + [
         inner.hasScryfall ? 'window.Scryfall ✓' : 'window.Scryfall ✗',
@@ -620,8 +641,9 @@ chrome.storage.local.get(defaults, values => {
       // is not an editor the module cannot attach and says so — "Scryfall.deckbuilder is
       // not available" is the module reporting the page, not a fault, and a list headed
       // "What is wrong" under a line that has just said this is not an error is the page
-      // arguing with itself. On an editor page the same lines are real and are shown.
-      if (onEditorPage && problems.length) {
+      // arguing with itself. On an editor page the same lines are real, and so is a page
+      // where the adapter never loaded: that is the deck scripts failing, not the page.
+      if (problems.length && (onEditorPage || !wired)) {
         add(t('Что не так') + ':');
         for (const problem of problems) add('— ' + problem, 'diagnostic-problem');
       }

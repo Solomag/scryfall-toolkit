@@ -9,6 +9,11 @@ integrations are off until you turn them on, because both of them send something
 what you are looking at to someone else. The other extras have their own defaults and
 each can be switched off.
 
+One language setting covers the whole extension: **Settings language** in the settings page
+chooses the language of the page, and of the controls the extension adds to Scryfall and
+Tagger. **As in the browser** resolves from the browser, so a Russian browser gets Russian
+everywhere and a pinned English gets English everywhere.
+
 ---
 
 ## Shared clipboard
@@ -239,14 +244,16 @@ EDHREC's published JSON instead — the commander page's `cardlists` already car
 feature shows — through the same queue and the same rate their data policy asks for. No
 frame, no page markup, no endpoint that was not already being used.
 
-**Its access is asked for from its own row, and only when it is missing.** The feature needs two
-hosts; if either is missing the row shows a chip — **Требуется разрешение** when none of the
-access is there, **Ограниченный режим** when only part of it is, because the commander page still
-loads while the deck-specific advice does not. The button in the chip is the only thing on the
-page that asks, and it asks only for this feature's hosts, from a click. The page never asks on
-its own — a request made while loading is refused by the browser and printed as an unchecked
-error, which is the bug the page already fixed once — and opening a help dialog asks for nothing.
-Once the access is there the chip and the warning are gone rather than left standing.
+**Every feature that takes an optional host asks for it from its own row.** If a host is missing
+— a later version added one to a feature that was already on, or the reader revoked it in
+Chrome's own settings — the row shows a chip: **Требуется разрешение**, or **Ограниченный режим**
+when only part of the access is there, because the feature falls back to something blander rather
+than stopping (EDHREC suggestions show the commander's page; the price sources show the native
+column). The button in the chip is the click that asks, and it asks only for that feature's
+hosts. The page never asks on its own — a request made while loading is refused by the browser
+and printed as an unchecked error, which is the bug the page already fixed once — and opening a
+help dialog asks for nothing. Once the access is there the chip and the warning are gone rather
+than left standing.
 
 **Scryfall search** *(off by default)*. A Search button in the deck editor's toolbar opens
 a query box in Scryfall's own syntax, lists what comes back, and puts a card in the deck.
@@ -533,11 +540,12 @@ absence.
 - Tag panels appear on single card pages. Panels in search results are **not planned**:
   a search grid would need a rule for which of a card's thousands of tags to show, and a
   request per card to fetch them. Tags belong on the card that has them.
-- Shambleshark's deckbuilder search, EDHREC suggestions, cleanup and card input editing
-  **are** integrated; see the deck page section above. Its Card Notes and Legality Check
-  modules are empty placeholders upstream, so there is nothing there to port. A legality
-  check over the deck is now ours, and is described under Deck pages: it judges Commander
-  per card and prints the rules it did not apply rather than guessing them.
+- Shambleshark's deckbuilder search, EDHREC suggestions and cleanup **are** integrated; see
+  the deck page section above. A fourth module, card input editing, was ported and taken
+  back out — the road map records why. Its Card Notes and Legality Check modules are empty
+  placeholders upstream, so there is nothing there to port. A legality check over the deck is
+  now ours, and is described under Deck pages: it judges Commander per card and prints the
+  rules it did not apply rather than guessing them.
 - The dark theme is applied over Scryfall's own styles, so it depends on Scryfall's
   markup. A page that changes its markup can come out partly unthemed until this
   extension is updated. Behaviour on private, signed-in pages depends on what that page
@@ -545,7 +553,9 @@ absence.
 - Tag data ships from MoxTags v1.8.3 (June 2026). The extension tries to refresh it from
   Scryfall's published tag bulk files on installation and every seven days; the bundled
   snapshot stays usable if that fails.
-- The CardTrader and Cardmarket icons are third-party marks. Their provenance is not settled.
-  `THIRD_PARTY_NOTICES.md` records exactly what is unconfirmed and what has to be established
-  before wider distribution. EDHREC's logo was here too, and is not any more: it went with the
-  icon-and-link control it was shown on.
+- The CardTrader and Cardmarket icons are third-party marks, used to name the source of the
+  numbers on the screen. Cardmarket publishes its assets for download and this project uses one
+  of them on those terms; the CardTrader mark ships on nominative use, with no permission
+  sought or given for it. `THIRD_PARTY_NOTICES.md` records each one's real status. EDHREC's
+  logo was here too, and is not any more: it went with the icon-and-link control it was shown
+  on.

@@ -9,8 +9,8 @@ Scryfall.
 
 That is the whole risk in one sentence. A feature here reads another site's markup and, for
 the deck editor, another site's application internals. Scryfall can change either with no
-deprecation cycle and no changelog entry, and a suite of 1658 assertions running against a
-stand-in will pass on code that stopped working last Tuesday.
+deprecation cycle and no changelog entry, and the whole suite — running against a stand-in —
+will pass on code that stopped working last Tuesday.
 
 ## Why this is a checklist and not a test
 
@@ -34,13 +34,14 @@ that cannot be automated.
 - [ ] **Card page.** Tags and art tags appear next to the printings, with the "View all
       tags" link. Click a tag: it goes into the search box.
 - [ ] **Related cards.** Previews on hover.
-- [ ] **Printings.** All printings, grouped by set, finish badges on the rows, the
-      full-page link works.
+- [ ] **Printings.** A finish badge on the rows where a printing has a single finish, and
+      Scryfall's own prints table left otherwise as it is. A platform taken out of the
+      **Prints table** place hides that platform's rows and keeps the printing being viewed.
 - [ ] **Legalities.** At least one extra format appears, with the right badge, in the
       position the format list asks for.
 - [ ] **Clipboard.** `+` on a printing, the list follows to another tab, copy works in both
       formats.
-- [ ] **Deck editor.** All four modules. They are **off by default**, so this is the step
+- [ ] **Deck editor.** All three modules. They are **off by default**, so this is the step
       that needs them turned on first, and the step most likely to find something.
 - [ ] **Tagger page.** Clipboard and the Tagger link on search results.
 - [ ] **A Scryfall page in the light theme**, if the dark theme has just changed: the theme
