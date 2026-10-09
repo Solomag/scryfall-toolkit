@@ -34,10 +34,12 @@ In particular, and stated plainly because it is easy to get wrong:
 - **Data access and logos are two different questions, and both are answered.** EDHREC
   answered with their published data policy, which permits this use, so the data side is
   covered and recorded in section 7; their logo used to ship for a control that has since been
-  removed, and went with it. CardTrader's mark was taken from their own site and no permission
-  for it has been given. It ships on the basis set out in section 8 — nominative use: the mark
-  says whose data is on screen, is never altered, and sits on a control that already carries the
-  name in words. No permission was sought and none was granted, and nothing here claims one was.
+  removed, and went with it. CardTrader answered that their API is public and may be used for
+  commercial projects, so the data side there is answered too (section 8). Their **mark** is a
+  separate question: it was taken from their own site and no permission for it has been given.
+  It ships on the basis set out in section 8 — nominative use: the mark says whose data is on
+  screen, is never altered, and sits on a control that already carries the name in words. No
+  permission was sought for the mark and none was granted, and nothing here claims one was.
 - **Cardmarket's logo is theirs and is used on their terms.** Two of their published
   files head the EUR price column. Their rights stay theirs, the goodwill from use is
   theirs, and nothing here implies they endorse this project. Section 9 has the terms
@@ -300,13 +302,24 @@ GET https://api.cardtrader.com/api/v2/products     → 401
 {"error_code":"unauthorized","extra":{"message":"You are not authorized to access this page"}}
 ```
 
-So this is not a matter of reading a public endpoint. It is an account-bound API, and the
-account is the user's own. The extension asks for no token, stores none, and sends none; the
-CardTrader price source stays off until the user supplies a token they got themselves, and
-without one the background refuses the request rather than calling out and being turned
-away. Nothing here is a claim that this use is permitted. It has not been established, and
-the token in the user's hand is not the same as permission to redistribute a third party's
-marks or to publish their data.
+So the data is public in the sense that any account may read it — CardTrader's support said as
+much, below — but it is an account-bound API, and the account is the user's own. The extension
+asks for no token, stores none, and sends none; the CardTrader price source stays off until the
+user supplies a token they got themselves, and without one the background refuses the request
+rather than calling out and being turned away. The token is what makes the request; it is not a
+redistribution of anything.
+
+### Their answer on the API
+
+Asked about this use, CardTrader's support replied that their APIs are public and can also be
+used for commercial projects such as this one, with some limits on the number of calls and a
+24-hour cache on some responses. Their documentation is at
+<https://www.cardtrader.com/en/docs/api>, and their affiliate programme is at
+<https://www.cardtrader.com/en/earnings>.
+
+That answers the data-access side. It says nothing about their brand mark, which is a separate
+question answered below, and it does not change the token requirement, so nothing is fetched
+without the user's own credential.
 
 ### The mark
 
@@ -452,7 +465,8 @@ sections 7, 8 and 9, and in `docs/ROADMAP.md` under "Decided, with the reasoning
 - the two brand marks, CardTrader's and Cardmarket's — shipped on nominative use and on their
   published terms, basis in sections 8 and 9. EDHREC's was here too and is not any more: its
   logo went with the icon-and-link control it was shown on;
-- the CardTrader API — nothing is fetched without the user's own token, so there is no
+- the CardTrader API — their support answered that it is public and may be used for commercial
+  projects, and nothing is fetched without the user's own token either way, so there is no
   redistribution to ask about;
 - Cardmarket's logo — used on their published terms, section 9.
 

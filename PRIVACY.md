@@ -124,11 +124,12 @@ JSON; the recommendations for a specific deck live on `edhrec.com` itself, at
 `api/recs/`, which is the endpoint their own site posts to. Both hosts are optional,
 and each is asked for when a feature that needs it is turned on — not at install.
 
-The settings page also has a button that asks for whatever a turned-on feature is still
-missing. That is there because a host added in a later version is not covered by a grant
-the user gave earlier, and a feature running without its host fails quietly: the panel
-falls back to something blander and says nothing. Where a fallback is in use, the panel
-names which of the two it is showing.
+The settings page asks for a host when a feature that needs one is turned on, and the EDHREC
+suggestions row shows a **Grant** button while that feature is on without the access it needs.
+That is there because a host added in a later version is not covered by a grant the user gave
+earlier, and a feature running without its host fails quietly: the panel falls back to
+something blander and says nothing. Where a fallback is in use, the panel names which of the
+two it is showing.
 
 ## Permissions this extension asks for
 

@@ -265,7 +265,7 @@ const resolveSettingsLanguage = value => {
     'Проверить карты в Commander': 'Check cards for Commander',
     'Допустимость карт в Commander': 'Card legality in Commander',
     'Проверяю карты…': 'Checking cards…',
-    'После изменения настроек обнови открытые страницы Scryfall и Tagger. MoxTags продолжает работать отдельно на Moxfield.': 'Reload open Scryfall and Tagger tabs after changing settings. MoxTags continues to run separately on Moxfield.',
+    'После изменения настроек обнови открытые страницы Scryfall и Tagger.': 'Reload open Scryfall and Tagger tabs after changing settings.',
     'Открыть настройки во вкладке': 'Open settings in a tab',
     'Сохранить': 'Save', 'Удалить': 'Delete',
     'Вставь личный токен': 'Paste your personal token',

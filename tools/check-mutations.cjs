@@ -645,6 +645,18 @@ const MUTATIONS = [
     replace: '        button.textContent = t(closed);',
     expect: 'and the button says which way it goes'
   },
+  {
+    // And the adapter's complaints shown on a page that is not an editor, under a heading
+    // that says "what is wrong" — right under a line that has just said this is not an
+    // error. The module cannot attach where there is no deckbuilder and says so; that is the
+    // page, not a fault.
+    name: 'the expected non-attachment is listed as a fault on a card page',
+    file: 'options',
+    run: 'test-options',
+    find: '      if (onEditorPage && problems.length) {',
+    replace: '      if (problems.length) {',
+    expect: 'and the expected non-attachment is not listed under "what is wrong"'
+  },
 ];
 
 const RUNS = {

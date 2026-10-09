@@ -616,7 +616,12 @@ chrome.storage.local.get(defaults, values => {
         inner.hasScryfallApi ? 'ScryfallAPI ✓' : 'ScryfallAPI ✗',
         inner.hooksInstalled ? 'hooks ✓' : 'hooks ✗'
       ].join(' · '));
-      if (problems.length) {
+      // The adapter's own complaints, but only where they mean something. On a page that
+      // is not an editor the module cannot attach and says so — "Scryfall.deckbuilder is
+      // not available" is the module reporting the page, not a fault, and a list headed
+      // "What is wrong" under a line that has just said this is not an error is the page
+      // arguing with itself. On an editor page the same lines are real and are shown.
+      if (onEditorPage && problems.length) {
         add(t('Что не так') + ':');
         for (const problem of problems) add('— ' + problem, 'diagnostic-problem');
       }

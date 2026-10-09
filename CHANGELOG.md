@@ -8,6 +8,34 @@ All releases: <https://github.com/Solomag/scryfall-toolkit/releases>
 
 ---
 
+### Diagnostics stops arguing with itself, and CardTrader answered
+
+**Diagnostics no longer lists the expected non-attachment as a fault.** A report from a page that
+is not a deck editor said, correctly, "No suitable editor page is open. That is not an error" — and
+then, under **What is wrong**, printed the adapter's own words: *Scryfall.deckbuilder is not
+available*, *Scryfall.deckbuilder.cleanUp is not available*. Those lines are the module reporting
+the page, not a fault: the module cannot attach where there is no deckbuilder, which is every
+Scryfall page but the editor. They are shown only on an editor page now, where the same lines mean
+something. The report still names the page it came from, so a card-page report is still
+distinguishable from a deck-page one.
+
+**And the MoxTags line is gone from the settings page.** The hint under the sections read "Reload
+open Scryfall and Tagger tabs after changing settings. MoxTags continues to run separately on
+Moxfield." The second sentence is removed. MoxTags is still credited where its data is used, in
+the credits block and the third-party notices; it is not a note the settings page has to carry.
+
+**CardTrader answered about their API, and the notices say so.** Asked whether their API may be
+used by a project like this one, their support replied that it is public and can also be used for
+commercial projects, with limits on the number of calls and a 24-hour cache on some responses.
+`THIRD_PARTY_NOTICES.md` records the reply and their documentation link; the CardTrader **mark** is
+a separate question, and the notice still says plainly that no permission for it was sought or
+granted. The API is still account-bound — every call carries the user's own token — so nothing is
+fetched without the user's credential either way.
+
+**Checks:** `npm test` 2333 assertions across nine suites, `npm run render` 176 + 202,
+`npm run mutations` 49 of 49. One is new: the expected non-attachment shown as a fault on a card
+page.
+
 ### The experimental card is gone, and the interface language is one setting now
 
 **The whole "Prints table / Experimental" card was removed.** It held a grouped table that

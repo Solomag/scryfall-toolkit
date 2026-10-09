@@ -1174,6 +1174,9 @@ async function deckModuleStatusTest() {
   assert(!/error was found/i.test(cardText), 'and not as an error, because it is not one');
   assert(cardText.includes('/card/tst/1/test-card'),
     'while the page it came from is still named, so the reader knows which check this is');
+  assert(!/ScryfallAPI\.decks is not available/.test(cardText),
+    'and the expected non-attachment is not listed under "what is wrong", which would make ' +
+    'the page argue with itself');
 
   // A report from a real editor page with a problem in it. This one is an error, and the
   // adapter's own words are kept — inside diagnostics, where the technical detail belongs.
