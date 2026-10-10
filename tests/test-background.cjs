@@ -442,6 +442,13 @@ async function scryfallHoldTest() {
   const realSetTimeout = ctx.setTimeout;
   const delays = [];
   let attempts = 0;
+  // A clock the timers move. Each wait advances it by the delay the worker asked for and runs at
+  // once, so the retry's wait is measured without sitting for the thirty seconds it is, and the
+  // queue the earlier tests left — which may still be a few milliseconds in the future on a busy
+  // runner — is reached rather than skipped. A timer that ran without moving the clock would send
+  // the retry round the loop for ever; a timer that never ran would leave the first fetch unmade.
+  let fakeNow = Date.now();
+  ctx.Date = class { static now() { return fakeNow; } };
   ctx.fetch = async url => {
     const target = String(url);
     if (/\/cards\/[0-9a-f-]+$/.test(target)) {
@@ -451,21 +458,19 @@ async function scryfallHoldTest() {
     }
     return realFetch(url);
   };
-  // Record the length the worker asks its timers to wait, and never let the wait finish: the
-  // point is what it asked for, and a timer that ran at once without moving the clock would send
-  // the retry round the loop again for ever.
-  ctx.setTimeout = (fn, ms) => { delays.push(ms); return realSetTimeout(() => {}, 0); };
+  ctx.setTimeout = (fn, ms) => { delays.push(ms); fakeNow += ms; return realSetTimeout(fn, 0); };
   try {
-    send({ type: 'card', id: CARD_ID }).catch(() => {});
-    await new Promise(resolve => realSetTimeout(resolve, 20));
+    await send({ type: 'card', id: CARD_ID }, undefined, 3000);
   } finally {
     ctx.setTimeout = realSetTimeout;
     ctx.fetch = realFetch;
+    // This runs last, so the clock can be left; taking the override away is tidy and harmless.
+    delete ctx.Date;
   }
-  assert(attempts >= 1, 'the request reached the card endpoint');
+  assertEqual(attempts, 2, 'a 429 is retried once');
   assert(delays.some(ms => ms >= 30000),
-    'and the 429 makes the retry ask to wait the thirty-second hold instead of fetching again ' +
-    'at once (' + JSON.stringify(delays) + ')');
+    'and the retry waits out the thirty-second hold instead of fetching again at once (' +
+    JSON.stringify(delays) + ')');
 }
 
 (async () => {
@@ -737,8 +742,8 @@ async function scryfallHoldTest() {
       };
       try {
         await Promise.all([
-          send({ type: 'edhrecRecs', commanders: ['Tameshi, Reality Architect'], cards: ['1 Counterspell'] }, undefined, 6000),
-          send({ type: 'edhrecRecs', commanders: ['Tameshi, Reality Architect'], cards: ['1 Sol Ring'] }, undefined, 6000)
+          send({ type: 'edhrecRecs', commanders: ['Tameshi, Reality Architect'], cards: ['1 Counterspell'] }, undefined, 10000),
+          send({ type: 'edhrecRecs', commanders: ['Tameshi, Reality Architect'], cards: ['1 Sol Ring'] }, undefined, 10000)
         ]);
       } finally {
         ctx.fetch = realFetch;
