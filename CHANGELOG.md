@@ -8,6 +8,15 @@ All releases: <https://github.com/Solomag/scryfall-toolkit/releases>
 
 ---
 
+### 2.0.0 — the settings rework, released
+
+This is the release that ships the settings rework: Visibility as one platforms table with a place
+per platform, the euro column as a price with its own source, the Scryfall Deckbuilder as a list of
+features with Diagnostics behind a disclosure, one language setting for the whole extension, and
+the release-blocking defects a pre-release review found. The rounds below are the work, newest
+first. The release notes carry the detail and the archive's SHA-256, and the tag is built by CI from
+the commit it names.
+
 ### The release-blocking defects from the pre-release review
 
 A pre-release review of the tree found ten defects. All ten are fixed here. What follows is each,
