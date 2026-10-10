@@ -2271,14 +2271,17 @@ function featureShotsTest() {
   assertEqual(fromTool, named,
     'the tool makes exactly the illustrations the page can open');
 
-  // Five of the six are the card page's right-hand column, and the sixth is the
-  // clipboard, which is not in any column. A check over the pictures alone cannot tell
-  // which is which, so the tool's own declaration is what is checked — and the two
-  // things that make it a column are named, because both were got wrong first:
+  // Four of the five are a whole column of the card page — three the right-hand one and one
+  // the left-hand one — and the fifth is the clipboard, which is not in any column. A check
+  // over the pictures alone cannot tell which is which, so the tool's own declaration is what
+  // is checked — and the things that make each a column are named, because all of them were
+  // got wrong first:
   //
   //   `.prints-current` hangs 20px above its own parent on Scryfall's page (a negative
   //   margin), so a union that leaves it out slices the printing's name across the top.
-  //   `.card-text` is the card's rules and its legality, which is the *other* column.
+  //   `.card-text` is the card's rules and its legality, which is the *other* column — and
+  //   it is the column the legality picture is cut from, because that is where the added
+  //   formats land.
   const shotTool2 = read('tools/make-feature-shots.cjs');
   const columnBlock = /const RIGHT_COLUMN = (\[[\s\S]*?\]);/.exec(shotTool2);
   assert(columnBlock, 'the tool names the right-hand column it crops');
@@ -2288,25 +2291,43 @@ function featureShotsTest() {
     'together with the printing banner, which hangs above its own box and would be sliced otherwise');
   assert(!/card-text/.test(columnBlock[1]),
     'and not the card text, which is the other column and was the first guess');
-  // Per shot, not per line: three of the six carry a comment between the file name and
-  // the flag, and a check written to the shape of the file rather than to what it says
-  // is a check that fails on a comment and passes on a missing flag.
+  const leftBlock = /const LEFT_COLUMN = (\[[\s\S]*?\]);/.exec(shotTool2);
+  assert(leftBlock, 'the tool names the left-hand column it crops');
+  assert(/\.card-profile \.card-text'/.test(leftBlock[1]),
+    'and that column is the card text, which is where the legality block and the added formats are');
+  // Per shot, not per line: some carry a comment between the file name and the flag, and a
+  // check written to the shape of the file rather than to what it says is a check that fails
+  // on a comment and passes on a missing flag.
   const declaredColumn = shotTool2
     .split(/file: '/).slice(1)
     .filter(block => /\n\s*column: true,/.test(block.split(/\n\s*};/)[0]))
     .map(block => block.slice(0, block.indexOf("'")).trim())
     .sort();
-  assertEqual(declaredColumn, ['additional.png', 'hide-extra.png', 'legality.png', 'tags.png'],
-    'every picture that lives in the column is cropped as the whole column');
-  assert(!declaredColumn.includes('cardclip.png'),
+  assertEqual(declaredColumn, ['additional.png', 'hide-extra.png', 'tags.png'],
+    'every picture that lives in the right-hand column is cropped as the whole column');
+  const declaredLeft = shotTool2
+    .split(/file: '/).slice(1)
+    .filter(block => /\n\s*column: 'left',/.test(block.split(/\n\s*};/)[0]))
+    .map(block => block.slice(0, block.indexOf("'")).trim())
+    .sort();
+  assertEqual(declaredLeft, ['legality.png'],
+    'and the legality picture is the left-hand column, which is where the added formats are');
+  assert(!declaredColumn.includes('cardclip.png') && !declaredLeft.includes('cardclip.png'),
     'and the clipboard is not one of them, because it is a panel floating over the page rather than a part of the column');
   // A column picture is a picture of an arrangement, so it has to show more than one
   // panel. A tool that silently went back to cropping would still make a valid PNG of a
-  // plausible size, and this is the only thing here that would notice.
+  // plausible size, and this is the only thing here that would notice. The right-hand
+  // column is the tall one, because it is a prints table; the left-hand column is the
+  // card's rules and its legality, which is shorter.
   for (const name of declaredColumn) {
     const height = fs.readFileSync(path.join(dir, name)).readUInt32BE(20);
     assert(height > 1100,
       name + ' is the whole column and not a panel inside it (' + height + ' px)');
+  }
+  for (const name of declaredLeft) {
+    const height = fs.readFileSync(path.join(dir, name)).readUInt32BE(20);
+    assert(height > 500,
+      name + ' is the whole left-hand column and not a panel inside it (' + height + ' px)');
   }
 
   // Each one is a real PNG and none of them is a blank rectangle.
@@ -2318,11 +2339,11 @@ function featureShotsTest() {
     assert(width > 200 && height > 80,
       name + ' is a panel and not a sliver (' + width + 'x' + height + ')');
     // The ceiling is the tool's own bound for the whole column, not an arbitrary one:
-    // five of the six pictures are a card page's right-hand column rather than a panel
-    // inside it, and that column is between one and two thousand pixels tall depending on
-    // how many printings the card has. The bound still means something — a picture that
-    // passes it is a column or a panel, and not a page — but it is the bound the tool
-    // refuses to exceed, so the two cannot drift apart silently.
+    // four of the five pictures are a whole column of the card page rather than a panel
+    // inside it, and the right-hand column is between one and two thousand pixels tall
+    // depending on how many printings the card has. The bound still means something — a
+    // picture that passes it is a column or a panel, and not a page — but it is the bound
+    // the tool refuses to exceed, so the two cannot drift apart silently.
     const ceiling = Number(read('tools/make-feature-shots.cjs')
       .match(/const bound = wholeColumn \? (\d+) : \d+;/)[1]);
     assert(height <= ceiling,

@@ -39,6 +39,13 @@ const {
 const OUT = path.join(ROOT, 'assets', 'shots');
 const WORK = path.join(ROOT, 'dist', 'feature-shots');
 
+// The card page picks its language from storage or from the browser, and the harness these
+// shots are built in is deliberately a Russian browser (tests/testlib.cjs) — so without this
+// the panels come out in Russian for an English README and an English settings page, which is
+// exactly the trap store-assets/make-store-shots.cjs documents for the settings capture. The
+// language is stored rather than guessed, because there is no other way to ask for it.
+const LANGUAGE = 'en';
+
 // Wide enough for the card page's two columns and the toolbox, at the width the reader
 // most likely has. Narrower and the right-hand column is pushed down the page, which
 // makes the column of panels come out as a very tall thin strip.
@@ -85,7 +92,15 @@ const RIGHT_COLUMN = [
   '.card-profile .prints .prints-table'
 ];
 
-// --- the six shots ------------------------------------------------------------
+// The other column, for the one picture whose subject is not in the right-hand one. The extra
+// formats are added to Scryfall's legality block, and the legality block is in `.card-text` —
+// the left-hand column, `.prints`'s sibling. The 1.1.7 change that made every "?" picture a
+// whole column took the right one for all of them, so the legality picture came out as the
+// prints table with none of the formats it exists to show. It is the same arrangement as the
+// others — the whole column, not a crop of the block — on the side the block is actually on.
+const LEFT_COLUMN = ['.card-profile .card-text'];
+
+// --- the five shots -----------------------------------------------------------
 //
 // Each one: the storage that has the feature on, the element the shot is about, and
 // the wait that has to pass before the picture is taken. The wait is what makes a shot
@@ -137,11 +152,15 @@ const SHOTS = [
   },
   {
     file: 'legality.png',
-    // The whole legality block, not the first row of it. The block gets an id on
-    // whichever row sorts first, and an added format lands in whichever row still has
-    // room — so cropping the id gives a picture of Scryfall's own Standard and Modern
-    // and none of our work, which is what the previous version of this shot showed.
-    column: true,
+    // The left-hand column, which holds the legality block the added formats land in. It was
+    // the right-hand column, which holds neither, so the picture showed the prints table and
+    // none of the formats it exists to show.
+    //
+    // The whole block and not the first row of it. The block gets an id on whichever row sorts
+    // first, and an added format lands in whichever row still has room — so cropping the id
+    // gives a picture of Scryfall's own Standard and Modern and none of our work, which is
+    // what the version before that showed.
+    column: 'left',
     // Premodern on, because that is the one of the four extra formats read off the
     // card's own Scryfall answer. The other three are asked of Scryfall by oracle id
     // through a query this build has no answer for, so turning them on would put
@@ -236,9 +255,8 @@ async function main() {
   try {
     await session.open();
     for (const shot of SHOTS) {
-      const storage = shot.file === 'cardclip.png'
-        ? { ...shot.storage, cards: data.clipboard }
-        : shot.storage;
+      const storage = { settingsLanguage: LANGUAGE, ...shot.storage };
+      if (shot.file === 'cardclip.png') storage.cards = data.clipboard;
       const card = await buildCardPage({ data, storage });
       if (shot.prepare) await shot.prepare(card);
       await waitForSelector(card, shot.waitFor);
@@ -253,10 +271,12 @@ async function main() {
       // One selector, or several: a shot about a toolbar and the panel it opens has to
       // be the two of them, and cropping the element that owns both gives a strip of
       // empty page between them.
-      // `column` names the whole right-hand column and `about` names a panel inside it. A shot
-      // that wants the column says so rather than repeating the selector, so the two are
-      // different properties and not one string that happens to be long.
-      const target = shot.column ? RIGHT_COLUMN : shot.about;
+      // `column` names a whole column — the right-hand one by default, the left-hand one for
+      // the legality picture — and `about` names a panel inside it. A shot that wants a column
+      // says so rather than repeating the selector, so the two are different properties and
+      // not one string that happens to be long.
+      const target = shot.column === 'left' ? LEFT_COLUMN
+        : shot.column ? RIGHT_COLUMN : shot.about;
       const wanted_by = Array.isArray(target) ? target : [target];
       const boxes = [];
       for (const selector of wanted_by) {
@@ -293,7 +313,7 @@ async function main() {
       const bound = wholeColumn ? 9000 : 4000;
       if (box.height > bound) {
         throw new Error(shot.file + ': the crop is ' + Math.round(box.height) +
-          ' pixels tall' + (wholeColumn ? ', and it is the whole right-hand column' : ', which is not a panel') +
+          ' pixels tall' + (wholeColumn ? ', and it is a whole column' : ', which is not a panel') +
           '. Something in the stage has no size.');
       }
       // The column is taken whole. Cropping it at a thousand pixels would be the crop the

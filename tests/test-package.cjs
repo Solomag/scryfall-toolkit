@@ -287,11 +287,18 @@ function documentationTest() {
     assert(height < width * 8, `the settings capture is a picture and not a strip (${width}x${height})`);
   }
   // The language is stored, not guessed: the page would otherwise take it from the
-  // browser, which is how an English listing ended up with Russian screenshots.
-  const tool = read('tools/make-store-shots.cjs');
-  assert(/settingsLanguage:\s*LANGUAGE/.test(tool),
-    'the store capture asks for a language instead of taking the browser\'s');
-  assert(/const LANGUAGE = 'en'/.test(tool), 'and that language is English');
+  // browser, which is how an English listing ended up with Russian screenshots. The same
+  // trap caught the README's card-page illustrations, because the harness they are built
+  // in is deliberately a Russian browser — so both tools are held to the same rule.
+  for (const [tool, what] of [
+    ['tools/make-store-shots.cjs', 'the store capture'],
+    ['tools/make-feature-shots.cjs', 'the card-page illustrations']
+  ]) {
+    const source = read(tool);
+    assert(/settingsLanguage:\s*LANGUAGE/.test(source),
+      `${what} ask for a language instead of taking the browser's`);
+    assert(/const LANGUAGE = 'en'/.test(source), `and that language is English (${tool})`);
+  }
   // The "?" replaced the pictures in the page, so the README must not still describe
   // pictures sitting beside the switches.
   assert(!/beside a switch is the panel/.test(readme),

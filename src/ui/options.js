@@ -262,11 +262,13 @@ chrome.storage.local.get(defaults, values => {
   // pushed the settings they explain off the bottom of the page, and the point of
   // the settings page is the settings.
   //
-  // Five of the six are the card page's whole right-hand column rather than a panel cut
-  // out of it. A crop says what a panel looks like and nothing about where it goes; the
-  // column says where the tags sit relative to the prints, what the page looks like once
-  // a rule has taken rows out of it, and that the panel is a panel and not part of
-  // Scryfall's own page. They are taller than a window, which is why the dialog scrolls.
+  // Four of the five are a whole column of the card page rather than a panel cut out of it:
+  // the right-hand column for the tags, the finishes and the hiding rules, and the left-hand
+  // column for the legality block, which is where the added formats land. A crop says what a
+  // panel looks like and nothing about where it goes; the column says where the tags sit
+  // relative to the prints, what the page looks like once a rule has taken rows out of it,
+  // and that the panel is a panel and not part of Scryfall's own page. They are taller than a
+  // window, which is why the dialog scrolls.
   //
   // The captions are written in Russian and run through the same translator as the
   // rest of the page, because this text is created after the page is localized.

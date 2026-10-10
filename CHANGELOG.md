@@ -8,7 +8,18 @@ All releases: <https://github.com/Solomag/scryfall-toolkit/releases>
 
 ---
 
-### 2.0.0 — the settings rework, released
+### 2.0.1 - the pictures the README shows, in English and the right way round
+
+The card-page illustrations behind the settings page's "?" were made by a tool that let the page
+take its language from the browser, and the harness they are built in is deliberately a Russian
+browser - so an English README and an English settings page were showing Russian panels. The tool
+now asks for English, the way the store capture already did. The legality picture was also cut
+from the right-hand column, which holds no legality block: it is the left-hand column now, so the
+picture shows the formats the section adds instead of the prints table. Four of the five
+illustrations changed and one did not - the one that did not is byte-for-byte the same, which is
+the point of building them from the page rather than photographing them.
+
+### 2.0.0 - the settings rework, released
 
 This is the release that ships the settings rework: Visibility as one platforms table with a place
 per platform, the euro column as a price with its own source, the Scryfall Deckbuilder as a list of
