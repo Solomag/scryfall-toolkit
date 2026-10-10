@@ -14,8 +14,9 @@ This is the release that ships the settings rework: Visibility as one platforms 
 per platform, the euro column as a price with its own source, the Scryfall Deckbuilder as a list of
 features with Diagnostics behind a disclosure, one language setting for the whole extension, and
 the release-blocking defects a pre-release review found. The rounds below are the work, newest
-first. The release notes carry the detail and the archive's SHA-256, and the tag is built by CI from
-the commit it names.
+first, and they are the detail. The archive is built by CI from the tag, its SHA-256 is printed in
+the workflow run that produced it, and the release links the full changelog against the previous
+tag.
 
 ### The release-blocking defects from the pre-release review
 
