@@ -41,8 +41,9 @@ that cannot be automated.
       position the format list asks for.
 - [ ] **Clipboard.** `+` on a printing, the list follows to another tab, copy works in both
       formats.
-- [ ] **Deck editor.** All three modules. They are **off by default**, so this is the step
-      that needs them turned on first, and the step most likely to find something.
+- [ ] **Deck editor.** All three modules. They are **on by default**, so the buttons are there
+      on a fresh profile; this is the step most likely to find something, because they run
+      through Scryfall's application internals.
 - [ ] **Tagger page.** Clipboard and the Tagger link on search results.
 - [ ] **A Scryfall page in the light theme**, if the dark theme has just changed: the theme
       paints over their stylesheet and depends on their class names. Read the text, not the
@@ -74,8 +75,8 @@ deciding rather than stumbling into it.
   extension is updated. `docs/scryfall-dom.md` names every class and the theme part that
   reaches for it; the contract is generated and tested.
 - **The deck editor modules depend on undocumented internals.** `window.Scryfall` and
-  `window.ScryfallAPI` are theirs and covered by no licence. They stay off by default for
-  that reason.
+  `window.ScryfallAPI` are theirs and covered by no licence. They are on by default, with a
+  switch each for that reason.
 - **The illustrations in the settings are not a photograph of the extension running.** They
   are cut from a real card page with the real feature files over it, because Chrome 154
   refuses `--load-extension`. The panels are placed by the tool rather than by a content

@@ -68,12 +68,12 @@ requests, and so does each service named below.
   viewing, to fetch tag and relationship data.
 - Sent: the printing you are looking at. `credentials: 'omit'` here too.
 
-**EDHREC (`json.edhrec.com`) — optional, off by default**
+**EDHREC (`json.edhrec.com`) — optional**
 
-- When you turn on the EDHREC feature, the extension requests
+- When you turn on EDHREC usage or Salt Meter, the extension requests
   `json.edhrec.com/pages/cards/<card-name>.json` for the card on the page you are viewing.
-- When you turn on EDHREC suggestions and click the button in the deck editor, it makes
-  one request of two kinds:
+- When you click the EDHREC button in the deck editor — the suggestions are on by default —
+  it makes one request of two kinds:
   - `json.edhrec.com/pages/commanders/<commander-name>.json`, the commander's page;
   - `edhrec.com/api/recs/`, which is the endpoint EDHREC's own site posts to when it
     suggests cards for a deck. **This one sends the whole deck list** — every card in it
@@ -81,7 +81,7 @@ requests, and so does each service named below.
     decks, not your collection: this deck, by name and count, and nothing more.
 - That second request is what makes the suggestions answer to your deck rather than to
   your commander alone. It is also the largest thing this extension ever sends anywhere.
-  It is off unless you turn the feature on, and turning it off stops it.
+  It is sent only when you click the button, and turning the feature off stops it.
 - **EDHREC does not publish that endpoint.** It is the one their own site uses, it has no
   documented contract, and it may change or disappear without notice. If it does, the
   panel falls back to their published commander page rather than failing.
@@ -145,10 +145,11 @@ Content scripts run only on `scryfall.com`, `www.scryfall.com` and `tagger.scryf
 
 ## Your choices
 
-Everything optional is off by default except the core clipboard and theme features. You
-can turn the EDHREC and CardTrader features off at any time; turning them off stops the
-requests. Removing the stored CardTrader token stops the token being used immediately. To
-delete everything at once, remove the extension: Chrome deletes its local storage with it.
+The deck editor's tools are on by default, like the core clipboard and theme features;
+EDHREC usage and Salt Meter, and CardTrader, are off until you turn them on. You can turn
+any feature off at any time; turning EDHREC or CardTrader off stops the requests. Removing
+the stored CardTrader token stops the token being used immediately. To delete everything at
+once, remove the extension: Chrome deletes its local storage with it.
 
 ## Changes
 

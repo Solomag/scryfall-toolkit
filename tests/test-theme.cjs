@@ -702,7 +702,7 @@ function auditGapCheck() {
 }
 
 async function darkThemeRuntime() {
-  console.log('theme.js: dark theme, Caster marker and RU site language');
+  console.log('theme.js: dark theme, the Caster marker and the site left in English');
   // The marker is stored inside `setFilters`, next to every other visibility switch, and this
   // state is written the way the settings page writes it: `showCaster: false` is the box
   // unticked.
@@ -734,12 +734,13 @@ page.script('src/core/theme.js');
 
   assert(root.classList.contains('stk-dark'), 'dark theme class applied');
   assert(root.classList.contains('stk-hide-caster'), 'caster indicator hidden');
-  assert(root.classList.contains('stk-site-ru'), 'RU site language class applied');
+  assert(!root.classList.contains('stk-site-ru'),
+    'the site is not given a language class, whatever the settings language says');
   assertEqual(root.dataset.stkPurpleRepair, 'true', 'purple repair armed once');
   assert(document.querySelector('#main a').classList.contains('stk-brighter-purple'),
     'purple links repaired for dark theme');
-  assertEqual(document.querySelector('.prints-table thead th').textContent, 'Легально',
-    'RU site language translates Scryfall table headers');
+  assertEqual(document.querySelector('.prints-table thead th').textContent, 'Legal',
+    'and Scryfall keeps its own English, even with the settings page in Russian');
 
   // A reader on the older shape, whose value has no Caster key at all: `undefined` means
   // "shown", which is what the old flat `false` meant too. Reading it as anything else would
@@ -779,7 +780,7 @@ older.script('src/core/theme.js');
   });
   assert(!root.classList.contains('stk-dark'), 'storage change removes dark class');
   assert(!root.classList.contains('stk-hide-caster'), 'storage change restores caster indicator');
-  assert(!root.classList.contains('stk-site-ru'), 'storage change restores EN site language');
+  assert(!root.classList.contains('stk-site-ru'), 'and the site stays English');
 }
 
 // The page that writes the marker's key and the page that reads it, and nothing in between.

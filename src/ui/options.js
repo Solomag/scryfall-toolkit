@@ -20,8 +20,8 @@ const defaults = {
   // reads those keys to decide what the reader had chosen.
   setFilters: null, setFiltersMigrated: false,
   taggerSearchLinks: false, cardSearchLinks: true, deckNoPrices: true, stackedDeckCards: true, deckLegality: true,
-  deckCleanUpImprover: false, cleanUpLandsInSingleton: true, sortEntriesPrimary: 'none', insertSortingHeadings: true,
-  edhrecSuggestions: false, deckSearch: false,
+  deckCleanUpImprover: true, cleanUpLandsInSingleton: true, sortEntriesPrimary: 'none', insertSortingHeadings: true,
+  edhrecSuggestions: true, deckSearch: true,
   legalities: true, exportFormat: "moxfield", formatOrder: null, formatVisibility: null,
   discoveredFormats: [], premodern: true, heritage: false, classic: false, peak: false
 };
@@ -149,6 +149,9 @@ const status = document.getElementById("status");
 // the block lives with the hiding group. One of them publishes a repaint and the other calls it,
 // so there is one place that decides what the box looks like rather than two that disagree.
 let repaintCardtrader = null;
+// The EUR source dropdown is drawn from two things too — the EUR box and whether CardTrader has
+// the token its prices need — so the token callbacks publish a repaint the same way.
+let repaintEuro = null;
 let cardtraderWanted = false;
 chrome.storage.local.get(defaults, values => {
   // What the user chose and what the interface speaks are different things. The
@@ -197,8 +200,9 @@ chrome.storage.local.get(defaults, values => {
     tokenActions.hidden = !stored;
     if (!stored || replacing) token.value = '';
     // Whatever the token state is, the box is redrawn: with a token it appears, and it appears
-    // disabled if the block its links go in is hidden.
+    // disabled if the block its links go in is hidden. The EUR source follows the token too.
     repaintCardtrader?.();
+    repaintEuro?.();
   }
   showTokenState(Boolean(values.cardtraderToken));
   // The reader's own answer for CardTrader, kept here rather than read back from the box: the
@@ -353,6 +357,7 @@ chrome.storage.local.get(defaults, values => {
         'Столбец EUR на Scryfall — это цена Cardmarket. Здесь выбирается, чем его заполнять: Cardmarket, CardTrader или обоими — тогда рядом появляется второй столбец. «Не показывать» убирает столбец целиком и снимает галочку EUR в группе «Цены»: это одна настройка с двумя ручками.',
         'Пока галочка EUR снята, список заблокирован: выбирать источник для столбца, которого нет, нечего.',
         'Для цен CardTrader нужен личный токен, и задаётся он в строке «Предложения CardTrader» выше, в том же блоке магазинов.',
+        'Пока токена нет, варианты CardTrader и «Cardmarket и CardTrader» заблокированы. Чтобы их открыть, нажмите «Подключить» в строке «Предложения CardTrader» выше и сохраните личный токен.',
         'Включать саму галочку «Предложения CardTrader» для этого не обязательно: она добавляет ссылки CardTrader в блок покупки, а столбец работает и без них.'
       ]
     },
@@ -548,6 +553,17 @@ chrome.storage.local.get(defaults, values => {
     else element.value = values[key];
     element.addEventListener("change", () => {
       const wanted = element.type === "checkbox" ? element.checked : element.value;
+      // CardTrader's two euro sources are blocked without its token, so a change that reaches
+      // one anyway — a keyboard, a script, a value written back by an older build — is refused
+      // rather than stored as a source that cannot fill the column. The field says what is
+      // missing; see the dropdown's own paint for the blocked state itself.
+      if (key === 'euroPriceSources' && tokenStatus.dataset.stored !== 'yes' &&
+          (wanted === 'ct' || wanted === 'both')) {
+        element.value = 'cm';
+        chrome.storage.local.set({ euroPriceSources: 'cm' });
+        status.textContent = t('Введите личный API-ключ для отображения этой цены.');
+        return;
+      }
       // Turning an optional feature on is the moment the browser is asked for
       // its host. Refusing leaves the switch off rather than saving a feature
       // that cannot reach anything.
@@ -918,12 +934,30 @@ for (const group of FILTERS.PRICE_GROUP_NAMES) {
   const euroBox = priceBoxes.eur;
   const euroSource = document.getElementById('euroPriceSources');
   const euroShield = document.getElementById('euroSourceShield');
+  const euroHint = document.getElementById('euroSourceHint');
+  const euroOptions = [...euroSource.options];
   const paintEuro = () => {
     const on = filters.prices.eur !== false;
+    const connected = tokenStatus.dataset.stored === 'yes';
     euroSource.disabled = !on;
     euroShield.hidden = on;
     euroShield.setAttribute('aria-label', t('Нельзя выбрать источник цены, пока цена не показывается.'));
+    // CardTrader's euro prices need the personal token, so its two choices are out of reach
+    // until one is saved. A source that cannot fill the column is not a choice, and offering it
+    // left a reader picking CardTrader and watching nothing appear — the column stayed empty
+    // because the request it needs cannot be made. The row says what is missing instead.
+    for (const option of euroOptions) {
+      if (option.value === 'ct' || option.value === 'both') option.disabled = !connected;
+    }
+    euroHint.hidden = connected || !on;
+    // A stored value from before the token was removed cannot stand: fall back to Cardmarket,
+    // the only source this page can pick without inventing a preference.
+    if (!connected && (euroSource.value === 'ct' || euroSource.value === 'both')) {
+      euroSource.value = 'cm';
+      chrome.storage.local.set({ euroPriceSources: 'cm' });
+    }
   };
+  repaintEuro = paintEuro;
   const flashEuro = () => {
     euroBox.classList.remove('stk-blink');
     // Read back a layout property so the class is re-added to an element the browser has already

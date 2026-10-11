@@ -20,8 +20,6 @@
   // that was not there.
   const {
     settings,
-    language,
-    t,
     cardPath,
     cardPage,
     advancedPage,
@@ -56,7 +54,7 @@
     const panel = document.createElement("div");
     panel.id = "stk-tags";
     panel.classList.add('stk-loading');
-    panel.textContent = t('Загружаю теги…');
+    panel.textContent = 'Loading tags…';
     anchor.after(panel);
     let noticeTimeout;
     function showTagNotice(token) {
@@ -68,7 +66,7 @@
         notice.setAttribute("aria-live", "polite");
         document.body.append(notice);
       }
-      notice.textContent = language === 'ru' ? `Добавлено в поиск: ${token}` : `Added to search: ${token}`;
+      notice.textContent = `Added to search: ${token}`;
       clearTimeout(noticeTimeout);
       noticeTimeout = setTimeout(() => notice.remove(), 2200);
     }
@@ -106,7 +104,7 @@
         const th = document.createElement("th");
         const title = document.createElement("a");
         title.href = `https://tagger.scryfall.com/card/${encodeURIComponent(identity.set)}/${encodeURIComponent(identity.number)}`;
-        title.textContent = language === 'ru' ? ({'Card Tags':'Теги карты','Art Tags':'Теги рисунка','Related Cards':'Связанные карты'}[heading] || heading) : heading;
+        title.textContent = heading;
         th.append(title);
         headRow.append(th);
         head.append(headRow);
@@ -138,10 +136,10 @@
               });
             } else if (tagType === "PRINTING_TAG") {
               a.href = `https://tagger.scryfall.com/tags/print/${encodeURIComponent(tag.slug)}`;
-              a.title = language === 'ru' ? `Открыть печатный тег ${tag.name} в Tagger` : `Open printing tag ${tag.name} in Tagger`;
+              a.title = `Open printing tag ${tag.name} in Tagger`;
             } else {
               a.href = `/search?q=${encodeURIComponent(token)}`;
-              a.title = language === 'ru' ? `Добавить ${token} в поиск` : `Add ${token} to search`;
+              a.title = `Add ${token} to search`;
               a.addEventListener("click", event => {
                 if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0) return;
                 const input = document.querySelector("#header-search-field") || document.querySelector("input[name='q']");
@@ -166,7 +164,7 @@
             const cell = document.createElement("td");
             const toggle = document.createElement('a');
             toggle.href = '#';
-            toggle.textContent = expanded ? (language === 'ru' ? 'Скрыть теги ↑' : 'Show fewer tags ↑') : (language === 'ru' ? 'Показать все теги →' : 'View all tags →');
+            toggle.textContent = expanded ? 'Show fewer tags ↑' : 'View all tags →';
             toggle.addEventListener('click', event => {
               event.preventDefault();
               expanded = !expanded;
@@ -183,11 +181,11 @@
         table.append(head, body);
         panel.append(table);
       }
-      if (!panel.children.length) panel.textContent = t('Для этой карты тегов нет');
+      if (!panel.children.length) panel.textContent = 'No tags for this card';
       if (tags.fallback) {
         const fallback = document.createElement("p");
         fallback.className = "stk-tag-fallback";
-        fallback.textContent = t('Связи Tagger сейчас недоступны; теги показаны из локального списка.');
+        fallback.textContent = 'Tagger relationships are unavailable; showing tags from the local index.';
         panel.append(fallback);
       }
     }).catch(error => {
@@ -195,7 +193,7 @@
       panel.replaceChildren();
       const link = document.createElement("a");
       link.href = `https://tagger.scryfall.com/card/${encodeURIComponent(identity.set)}/${encodeURIComponent(identity.number)}`;
-      link.textContent = t('Теги недоступны — открыть Tagger');
+      link.textContent = 'Tags unavailable — open Tagger';
       link.title = error.message;
       panel.append(link);
     });
@@ -210,7 +208,7 @@
       const tagger = document.createElement('a');
       tagger.className = 'stk-tagger-link';
       tagger.href = `https://tagger.scryfall.com/card/${encodeURIComponent(match[1])}/${encodeURIComponent(match[2])}`;
-      tagger.title = t('Открыть теги карты в Tagger');
+      tagger.title = 'Open card tags in Tagger';
       tagger.textContent = '◆';
       tagger.setAttribute('aria-label', tagger.title);
       item.append(tagger);

@@ -36,7 +36,7 @@
 <label><input type="checkbox" id="clipboard"> CardClip</label>
 <p class="hint">Общий буфер карт на Scryfall и Tagger. Пока выключено, формат копирования и плюс у отдельных изданий заблокированы.</p>
 <label for="exportFormat">Формат копирования</label>
-<select id="exportFormat"><option value="names">1 Название карты</option><option value="moxfield">1 Название карты (SET) номер</option></select>
+<select id="exportFormat"><option value="names">Только название карты</option><option value="moxfield">Название карты (SET) номер</option></select>
 <label><input type="checkbox" id="printAddButtons"> Плюс для отдельного издания при наведении в полном списке</label>
 </section>
 
@@ -134,6 +134,7 @@
 <select id="euroPriceSources"><option value="cm">Cardmarket</option><option value="ct">CardTrader</option><option value="both">Cardmarket и CardTrader</option><option value="none">Не показывать</option></select>
 <button type="button" class="price-source-shield" id="euroSourceShield" hidden></button>
 </div>
+<p class="hint" id="euroSourceHint" hidden>Введите личный API-ключ для отображения этой цены.</p>
 </div>
 </div>
 </div>

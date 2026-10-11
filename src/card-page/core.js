@@ -61,7 +61,6 @@
   self.STK_CONTENT = { on, reportFeature, context: arrived };
 
   const defaults = {
-    settingsLanguage: 'auto',
     clipboard: true, tags: true, cardTags: true, artTags: false, relationships: true,
     printAddButtons: true,
     legalities: true, finishBadges: true, cardtraderPrices: false, euroPriceSources: 'cm',
@@ -71,9 +70,9 @@
     taggerSearchLinks: false, cardSearchLinks: true, deckNoPrices: true, stackedDeckCards: true, deckLegality: true,
     premodern: true, heritage: false, classic: false, peak: false,
     formatOrder: null, formatVisibility: null,
-    deckCleanUpImprover: false, cleanUpLandsInSingleton: true,
+    deckCleanUpImprover: true, cleanUpLandsInSingleton: true,
     sortEntriesPrimary: 'none', insertSortingHeadings: true,
-    edhrecSuggestions: false, deckSearch: false, deckResultsView: 'images',
+    edhrecSuggestions: true, deckSearch: true, deckResultsView: 'images',
     exportFormat: "moxfield", cards: null,
     // Read with no default, on purpose: passing one here would make every old key look
     // as though it had a value, and the migration reads those keys to decide what the
@@ -222,12 +221,10 @@
     keys.forEach(key => { if (changes[key]) settings[key] = changes[key].newValue; });
     sendDeckSettings();
   });
-  // One language setting for the whole extension now: the General choice, resolved. There
-  // used to be a second one for the site's injected controls, and a reader had to keep two
-  // answers about the same thing in step. `resolveSettingsLanguage` is the same resolution
-  // the settings page uses, so "as in the browser" means the same thing on both sides.
-  const language = window.STK_I18N.resolveSettingsLanguage(settings.settingsLanguage);
-  const t = text => window.STK_I18N.t(text, language);
+  // The controls this adds to Scryfall and Tagger are English, and only English. There used to
+  // be a language for them, and it was merged with the settings page's own choice, so a reader
+  // whose settings page was Russian got a Russian card page too — on a site that is English, in
+  // a language nobody chose for it. The settings page keeps its language; the site does not.
   const cardPath = location.pathname.match(/^\/card\/([^/]+)\/([^/]+)/);
   const cardPage = Boolean(cardPath && document.querySelector('.card-image') && document.querySelector('#main .prints-table'));
   const advancedPage = location.pathname === '/advanced';
@@ -359,7 +356,7 @@
             document.body.append(previewBox);
             window.addEventListener('scroll', () => hidePreview(true), { passive: true });
           }
-          previewBox.textContent = t('Загружаю карту…');
+          previewBox.textContent = 'Loading card…';
           previewBox.classList.add('stk-card-preview-loading');
           positionPreview(link);
           previewBox.hidden = false;
@@ -400,7 +397,7 @@
     add.title = addTitle;
     add.setAttribute('aria-label', addTitle);
     cell.append(add);
-    const removeTitle = language === 'ru' ? 'Убрать это издание из буфера' : 'Remove this printing from the clipboard';
+    const removeTitle = 'Remove this printing from the clipboard';
     const sync = () => {
       const selected = shared.clipboardCards.some(card => printKey(card.set, card.number) === key);
       // A selected printing keeps its check mark on screen at all times; an
@@ -422,7 +419,7 @@
     control.classList.remove('stk-copied');
     void control.offsetWidth;
     control.classList.add('stk-copied');
-    control.title = t('Скопировано');
+    control.title = 'Copied';
     copiedTimers.set(control, setTimeout(() => {
       control.classList.remove('stk-copied');
       control.title = restTitle;
@@ -452,8 +449,6 @@
   // cannot see a half-built core.
   context = {
     settings,
-    language,
-    t,
     cardPath,
     cardPage,
     advancedPage,

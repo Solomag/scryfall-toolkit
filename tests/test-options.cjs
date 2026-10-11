@@ -406,7 +406,7 @@ function popupTest() {
     'and it points at the toolbar icon, two folders up');
   assert(fs.existsSync(path.join(ROOT, resolves('../../assets/icons/icon32.png'))),
     'which is assets/icons/icon32.png, and it exists');
-  for (const id of ['darkTheme', 'tags', 'clipboard', 'edhrecUsage', 'cardtraderPrices', 'openAll']) {
+  for (const id of ['darkTheme', 'tags', 'clipboard', 'edhrecUsage', 'openAll']) {
     assert(html.includes(`id="${id}"`), `the popup has a control for ${id}`);
   }
   assert(/Открыть все настройки/.test(html),
@@ -415,7 +415,7 @@ function popupTest() {
   const popup = read('src/ui/popup.js');
   const options = read('src/ui/options.js');
   // Whatever the popup writes, the full page must write too.
-  for (const key of ['darkTheme', 'tags', 'clipboard', 'edhrecUsage', 'cardtraderPrices']) {
+  for (const key of ['darkTheme', 'tags', 'clipboard', 'edhrecUsage']) {
     assert(popup.includes(`'${key}'`) || popup.includes(`"${key}"`),
       `the popup handles ${key}`);
     assert(options.includes(key),
@@ -451,8 +451,8 @@ async function popupDefaultsTest() {
   const q = id => fresh.document.getElementById(id);
   assertEqual([q('tags').checked, q('clipboard').checked], [true, true],
     'on a fresh profile the popup shows the features that are on by default as on');
-  assertEqual([q('edhrecUsage').checked, q('cardtraderPrices').checked], [false, false],
-    'and the optional ones as off');
+  assertEqual(q('edhrecUsage').checked, false,
+    'and the optional one as off');
   assertEqual(q('darkTheme').value, 'auto', 'and the theme as Auto');
 
   // An old boolean theme is read the way the full page reads it, not as Auto; and a feature the
@@ -561,7 +561,7 @@ const tick = () => new Promise(resolve => setTimeout(resolve, 0));
 async function optionalHostsTest() {
   console.log('settings: optional features ask for their host before saving');
   const page = await loadOptions({
-    cardtraderPrices: false, euroPriceSources: 'cm',
+    cardtraderPrices: false, euroPriceSources: 'cm', cardtraderToken: 'ct-token-1',
     edhrecUsage: false, edhrecSalt: false
   });
   const { document, mock } = page;
@@ -601,7 +601,7 @@ async function optionalHostsTest() {
 
   // Refusing the permission must not leave a setting saved that cannot work.
   const second = await loadOptions({
-    cardtraderPrices: false, euroPriceSources: 'cm', edhrecUsage: false
+    cardtraderPrices: false, euroPriceSources: 'cm', cardtraderToken: 'ct-token-1', edhrecUsage: false
   });
   second.mock.permissions.deny = true;
   const refused = second.document.getElementById('euroPriceSources');
@@ -1931,8 +1931,12 @@ async function hidingGroupTest() {
     'and the pair is written back in step');
 
   // A refused permission rolls the dropdown back to what storage holds, not to what the page
-  // opened with: cm → both (stored), then both → ct refused, has to leave both.
-  const denied = await groupReady(loadOptions({ settingsLanguage: 'en', euroPriceSources: 'cm' }));
+  // opened with: cm → both (stored), then both → ct refused, has to leave both. A token is
+  // stored, because CardTrader's choices are blocked without one — the block itself is checked
+  // just below.
+  const denied = await groupReady(loadOptions({
+    settingsLanguage: 'en', euroPriceSources: 'cm', cardtraderToken: 'ct-token-1'
+  }));
   const deniedSource = denied.document.getElementById('euroPriceSources');
   deniedSource.value = 'both';
   fireEvent(deniedSource, 'change');
@@ -1947,6 +1951,33 @@ async function hidingGroupTest() {
   assertEqual(deniedSource.value, 'both',
     'a refused source rolls back to the last one stored, not to the one the page opened with');
   assertEqual(denied.mock.state.euroPriceSources, 'both', 'and storage is unchanged');
+
+  // CardTrader's euro prices need the token, so its two choices are blocked until one is saved,
+  // and the field says what is missing rather than letting a reader pick a source that cannot
+  // fill the column.
+  const noToken = await groupReady(loadOptions({ settingsLanguage: 'en', euroPriceSources: 'cm' }));
+  const noTokenSource = noToken.document.getElementById('euroPriceSources');
+  const euroOption = value => [...noTokenSource.options].find(item => item.value === value);
+  assertEqual([Boolean(euroOption('ct').disabled), Boolean(euroOption('both').disabled)], [true, true],
+    'without a token the CardTrader choices are blocked');
+  assertEqual([Boolean(euroOption('cm').disabled), Boolean(euroOption('none').disabled)], [false, false],
+    'while Cardmarket and "show nothing" are still reachable');
+  assertEqual(noToken.document.getElementById('euroSourceHint').hidden, false,
+    'and the field says the personal API key is missing');
+  noTokenSource.value = 'both';
+  fireEvent(noTokenSource, 'change');
+  await tick();
+  assertEqual(noTokenSource.value, 'cm', 'choosing a blocked source falls back to Cardmarket');
+  assertEqual(noToken.mock.state.euroPriceSources, 'cm',
+    'and nothing that cannot work is stored');
+
+  // Saving a token unlocks them, and the field stops asking for one.
+  const reconnectEuro = await groupReady(loadOptions({ settingsLanguage: 'en', euroPriceSources: 'cm', cardtraderToken: 'ct-token-1' }));
+  const reconnectSource = reconnectEuro.document.getElementById('euroPriceSources');
+  assertEqual(Boolean([...reconnectSource.options].find(item => item.value === 'ct').disabled), false,
+    'with a token the CardTrader choice is reachable');
+  assertEqual(reconnectEuro.document.getElementById('euroSourceHint').hidden, true,
+    'and the field stops asking for a key');
 
   // The Caster marker. Its old switch read "hide" and this one reads "show", so the stored key
   // was renamed rather than inverted in place — the rename is what lets the migration tell the
@@ -2670,6 +2701,23 @@ async function cardtraderRowTest() {
 }
 
 
+// The deck editor's tools are on out of the box, and the two defaults objects — the content
+// scripts' and the settings page's — have to agree about that: a page showing a switch on while
+// the script that switch configures boots nothing is the quietest kind of wrong.
+async function deckDefaultsTest() {
+  console.log('settings: the deck editor tools are on by default');
+  const ids = ['deckNoPrices', 'stackedDeckCards', 'deckLegality', 'deckCleanUpImprover', 'edhrecSuggestions', 'deckSearch'];
+  const page = await loadOptions({ settingsLanguage: 'en' });
+  for (const id of ids) {
+    assertEqual(page.document.getElementById(id).checked, true, `${id} is on out of the box`);
+  }
+  const content = read('src/card-page/core.js');
+  for (const key of ids) {
+    assert(new RegExp(key + ':\\s*true').test(content),
+      `and the content defaults turn ${key} on too, so the switch and the script agree`);
+  }
+}
+
 (async () => {
   try {
     htmlIdCheck();
@@ -2698,6 +2746,7 @@ async function cardtraderRowTest() {
     await deckModuleStatusTest();
     await grantHostsTest();
     await deckbuilderSectionTest();
+    await deckDefaultsTest();
     featureShotsTest();
     await featureRowsTest();
     await cardtraderRowTest();

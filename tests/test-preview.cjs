@@ -213,16 +213,19 @@ async function deckLegalityTest() {
   assert(/said nothing about/i.test(text), 'and says that one card had no answer, apart from not-legal');
   assert(/Commander/.test(text), 'and says which format it judged');
 
+  // The site's panels are English whatever the settings page's language is: the settings
+  // language is for the settings page, and the controls this adds to Scryfall and Tagger do not
+  // take it. This case used to assert the panel was Russian here.
   const ru = await loadDeckPage({ deckLegality: true, clipboard: false, settingsLanguage: 'ru' },
     { ...routes, deckLegality: () => answer }, html);
   ru.document.querySelector('.stk-legality-button').dispatchEvent(new ru.window.Event('click'));
   await sleep(60);
   const ruText = ru.document.getElementById('stk-deck-legality').textContent;
-  assertEqual(ru.document.querySelector('.stk-legality-button').textContent, 'Проверить карты в Commander',
-    'the button is Russian when the page is, and says it checks cards rather than the deck');
-  assert(/цветовая идентичность командира/i.test(ruText),
-    'and the limits are named in Russian too, not left in English');
-  assert(/одной копии/i.test(ruText), 'all three of them');
+  assertEqual(ru.document.querySelector('.stk-legality-button').textContent, 'Check cards for Commander',
+    'the button is English even when the settings page is Russian');
+  assert(/colour identity/i.test(ruText) && !/цветовая идентичность/i.test(ruText),
+    'and the limits are English too, not translated into the settings language');
+  assert(/one-copy rule/i.test(ruText), 'all three of them');
 
   // The note is last on purpose and the stylesheet pins it there: a hundred-card deck
   // puts it 2,276 pixels down a 1,018-pixel window otherwise. The two halves are one
@@ -518,7 +521,7 @@ async function cardPageTest() {
   // to say "Names only, no sets" always, which meant that whoever had chosen names in
   // the settings had two buttons doing the same thing and could not reach the set
   // format from here at all.
-  assertEqual(plain.textContent, '1 Card name', 'menu offers the format the setting is not using');
+  assertEqual(plain.textContent, 'Card name only', 'menu offers the format the setting is not using');
   click(plain);
   await waitFor(() => mock.clipboardWrites.length === 2, 'alternative-format copy wrote to clipboard');
   // Three printings of one card, and no set on any line to tell them apart, so they
@@ -543,9 +546,9 @@ async function cardPageTest() {
   // And the other way round: with names chosen, the menu offers the set format and
   // gives the sets, because asked for moxfield is asked for moxfield.
   fireEvent(copyWrap, 'mouseenter');
-  await waitFor(() => plain.textContent === '1 Card name (SET) number',
+  await waitFor(() => plain.textContent === 'Card name (SET) number',
     'the menu follows the setting instead of being fixed');
-  assertEqual(plain.textContent, '1 Card name (SET) number',
+  assertEqual(plain.textContent, 'Card name (SET) number',
     'the menu follows the setting instead of being fixed');
   click(plain);
   await waitFor(() => mock.clipboardWrites.length === 4, 'the set format is reachable from the menu');

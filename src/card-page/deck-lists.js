@@ -20,8 +20,6 @@
   // that was not there.
   const {
     settings,
-    language,
-    t,
     cardPath,
     cardPage,
     advancedPage,
@@ -125,16 +123,16 @@
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'button-n stk-token-button';
-    button.textContent = language === 'ru' ? 'Показать токены' : 'Show Tokens';
+    button.textContent = 'Show Tokens';
     const dialog = document.createElement('dialog');
     dialog.id = 'stk-deck-tokens';
     const close = document.createElement('button');
     close.type = 'button';
     close.className = 'button-n';
-    close.textContent = t('Закрыть');
+    close.textContent = 'Close';
     close.addEventListener('click', () => dialog.close());
     const title = document.createElement('h2');
-    title.textContent = t('Токены колоды');
+    title.textContent = 'Deck tokens';
     const content = document.createElement('div');
     content.className = 'stk-token-grid';
     dialog.append(title, close, content);
@@ -143,13 +141,13 @@
     button.addEventListener('click', async () => {
       dialog.showModal();
       if (!pending) {
-        content.textContent = t('Загружаю токены…');
+        content.textContent = 'Loading tokens…';
         pending = request({type:'deckTokens',entries}).catch(error => { pending = null; throw error; });
       }
       try {
         const tokens = await pending;
         content.replaceChildren();
-        if (!tokens.length) { content.textContent = t('Токены не найдены.'); return; }
+        if (!tokens.length) { content.textContent = 'No tokens found.'; return; }
         for (const token of tokens) {
           const link = document.createElement('a');
           link.href = token.uri;
@@ -162,7 +160,7 @@
           link.append(img);
           content.append(link);
         }
-      } catch { content.textContent = t('Не удалось загрузить токены.'); }
+      } catch { content.textContent = 'Could not load tokens.'; }
     });
     placeDeckButton(button);
   }
@@ -182,7 +180,7 @@
     if (!select.querySelector('[value="no-prices"]')) {
       const option = document.createElement('option');
       option.value = 'no-prices';
-      option.textContent = language === 'ru' ? 'Без цен' : 'No Prices';
+      option.textContent = 'No Prices';
       select.append(option);
     }
     const apply = () => {
@@ -210,8 +208,8 @@
   // `legalities`, and a panel that called all three of them "not legal" would be
   // paraphrasing a distinction Scryfall took the trouble to make.
   const VERDICT_TEXT = {
-    banned: t => t('запрещена в Commander'),
-    restricted: t => t('ограничена в Commander')
+    banned: 'banned in Commander',
+    restricted: 'restricted in Commander'
   };
 
   function initDeckLegality() {
@@ -221,16 +219,16 @@
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'button-n stk-legality-button';
-    button.textContent = t('Проверить карты в Commander');
+    button.textContent = 'Check cards for Commander';
     const dialog = document.createElement('dialog');
     dialog.id = 'stk-deck-legality';
     const close = document.createElement('button');
     close.type = 'button';
     close.className = 'button-n';
-    close.textContent = t('Закрыть');
+    close.textContent = 'Close';
     close.addEventListener('click', () => dialog.close());
     const title = document.createElement('h2');
-    title.textContent = t('Допустимость карт в Commander');
+    title.textContent = 'Card legality in Commander';
     const content = document.createElement('div');
     content.className = 'stk-legality-result';
     dialog.append(title, close, content);
@@ -246,7 +244,7 @@
     button.addEventListener('click', async () => {
       dialog.showModal();
       if (!pending) {
-        content.textContent = t('Проверяю карты…');
+        content.textContent = 'Checking cards…';
         pending = request({ type: 'deckLegality', entries })
           .catch(error => { pending = null; throw error; });
       }
@@ -254,11 +252,11 @@
         const answer = await pending;
         content.replaceChildren();
         if (!answer.checked) {
-          content.append(line(t('Scryfall не ответил ни по одной карте.')));
+          content.append(line('Scryfall did not answer about a single card.'));
           return;
         }
         if (!answer.notLegal.length && !answer.unknown) {
-          content.append(line(t('Все карты колоды Scryfall считает легальными в Commander.')));
+          content.append(line('Scryfall counts every card in the deck as legal in Commander.'));
         } else if (answer.notLegal.length) {
           const list = document.createElement('ul');
           list.className = 'stk-legality-list';
@@ -278,23 +276,23 @@
             if (why) {
               const mark = document.createElement('span');
               mark.className = 'stk-legality-verdict';
-              mark.textContent = ' · ' + why(t);
+              mark.textContent = ' · ' + why;
               item.append(mark);
             }
             list.append(item);
           }
-          content.append(line(t('Scryfall считает эти карты нелегальными в Commander:')));
+          content.append(line('Scryfall counts these cards as not legal in Commander:'));
           content.append(list);
         }
         if (answer.unknown) {
-          content.append(line(t('Про %s карт Scryfall не сказал ничего; это не то же самое, что «легально».').replace('%s', String(answer.unknown))));
+          content.append(line('Scryfall said nothing about %s cards; that is not the same as “legal”.'.replace('%s', String(answer.unknown))));
         }
         // Always last, and never omitted: it is the half of the answer a list of card
         // names cannot give.
-        content.append(line(t(
-          'Проверена только легальность каждой карты отдельно. Цветовая идентичность командира, ограничение в 100 карт и правило одной копии для карт с надписью «только Commander» не проверялись.')));
+        content.append(line(
+          'Only each card’s legality on its own was checked. The commander’s colour identity, the hundred-card limit and the one-copy rule for cards marked “Commander only” were not.'));
       } catch {
-        content.replaceChildren(line(t('Не удалось проверить легальность.')));
+        content.replaceChildren(line('Could not check legality.'));
       }
     });
     placeDeckButton(button);
