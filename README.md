@@ -59,20 +59,20 @@ To build the archive yourself: `npm run package`. It writes `dist/scryfall-toolk
 | **Extra format legalities** | Heritage, Classic Legacy, Peak Legacy and Premodern in Scryfall's own legality block, in its own badges. Reorder or hide any row. |
 | **Dark theme** | For Scryfall and Tagger. Follows your system until you pick otherwise. |
 | **Optional extras** | EDHREC deck usage and Salt Meter, CardTrader prices for the exact printing, finish badges, type and mana search links, set and printing filters, a No Prices mode, a token list and a Commander legality check on deck pages. EDHREC and CardTrader are off until you turn them on; the rest have their own defaults and each can be switched off. |
-| **In the deck editor** | Three more tools, **all off by default**: a Clean Up button that sorts the deck and puts lands back in their column, EDHREC's suggestions for this deck and commander, and a Scryfall search that adds cards without leaving the editor. These run through Scryfall's own application state rather than the page markup, which is why they are opt-in. |
+| **In the deck editor** | Three more tools, **on by default**: a Clean Up button that sorts the deck and puts lands back in their column, EDHREC's suggestions for this deck and commander, and a Scryfall search that adds cards without leaving the editor. These run through Scryfall's own application state rather than the page markup, so each has its own switch and can be turned off. |
 
 Everything each one does, in detail: **[docs/FEATURES.md](docs/FEATURES.md)**.
 
 ## Settings
 
-The toolbar button opens a small popup with the five switches you reach for most — theme, tags, clipboard, EDHREC, CardTrader — and a button to the full page.
+The toolbar button opens a small popup with the four switches you reach for most — theme, tags, clipboard, EDHREC — and a button to the full page.
 
 | Section | What is in it |
 | --- | --- |
-| **General** | Settings language — which also sets the language of the controls the extension adds to Scryfall and Tagger — and theme |
+| **General** | Settings language — for the settings page and the popup; the controls the extension adds to Scryfall and Tagger are always in English — and theme |
 | **Tags** | Card/art tags, related cards, the Tagger link on search results |
 | **CardClip** | The clipboard, the copy format, the per-printing `+` |
-| **Visibility** | two columns: on the left a table with one row per platform — Paper, Arena, Magic Online — and a column per place: the platform's own **Show** box and its own boxes for the **Prints table**, **Search** and **Sets list**, with the Caster marker on its own under the table; and on the right, prices (USD, TIX, EUR), store links (TCGplayer, Cardhoarder, Cardmarket) under a switch for the whole **Buy This Card** block, CardTrader offers, and the EUR price source. Everything ticked means shown, and turning a platform — or the store block — off keeps the choices under it and brings them back; the **EUR** box and the EUR-source dropdown are two views of the same column, kept in step |
+| **Visibility** | two columns: on the left a table with one row per platform — Paper, Arena, Magic Online — and a column per place: the platform's own **Show** box and its own boxes for the **Prints table**, **Search** and **Sets list**, with the Caster marker on its own under the table; and on the right, prices (USD, TIX, EUR), store links (TCGplayer, Cardhoarder, Cardmarket) under a switch for the whole **Buy This Card** block, CardTrader offers, and the EUR price source. Everything ticked means shown, and turning a platform — or the store block — off keeps the choices under it and brings them back; the **EUR** box and the EUR-source dropdown are two views of the same column, kept in step. CardTrader's prices need a personal API key: until one is saved, its choices in the EUR-source dropdown are blocked and the field says so |
 | **Additional info** | A list of one-line features, each with its own switch and its settings behind a **Set up** button: the finish column, type and mana search, Commander popularity and Salt Meter |
 | **Legality** | The extra formats and their order |
 | **Scryfall Deckbuilder** | A list of one-line features, each with its own switch and a **?** for what it does and what it does not: No Prices, the token list, stacked cards, a per-card Commander check, EDHREC suggestions, deck search, and the improved cleanup — whose settings are behind its own **Set up**, collapsed until asked for |

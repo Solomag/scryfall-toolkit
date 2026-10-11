@@ -8,6 +8,30 @@ All releases: <https://github.com/Solomag/scryfall-toolkit/releases>
 
 ---
 
+### 2.1.0 - the site in English, the deck tools on, and a key before CardTrader
+
+The settings language is the settings page's own again. It had been merged with the language of
+the controls the extension adds to Scryfall and Tagger, so a reader whose settings page was
+Russian got a Russian card page too - on a site whose own language is English, in a language
+nobody chose for it. Those controls are English now, and Scryfall's own page is left in English
+as well; the setting reaches the settings page and the popup, and nothing else.
+
+The Scryfall Deckbuilder's tools - the improved clean-up, EDHREC's suggestions and the Scryfall
+search - are on out of the box. Each keeps its own switch, and each still fails soft if Scryfall
+reshapes what it touches.
+
+CardTrader's euro prices need a personal API key, so the two CardTrader choices in the EUR-source
+dropdown are blocked until one is saved, and the field says so ("Enter your personal API key to
+display this price") instead of letting a reader pick a source that cannot fill the column. The
+help behind the "?" explains how to connect.
+
+The clipboard's export formats say what they produce: "Card name only" and "Card name (SET)
+number", instead of the "1 Card name" that read like a card named "1".
+
+CardTrader is out of the toolbar popup. Its switch there could be turned on without a token, and
+without a token it fetched nothing; the full settings page is where it is set up, so that is
+where it stays.
+
 ### 2.0.1 - the pictures the README shows, in English and the right way round
 
 The card-page illustrations behind the settings page's "?" were made by a tool that let the page

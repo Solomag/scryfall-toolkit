@@ -21,8 +21,6 @@
   const {
     settings,
     setFilters,
-    language,
-    t,
     cardPath,
     cardPage,
     advancedPage,
@@ -75,12 +73,12 @@
       if (sources === 'both') {
         heading.classList.add('stk-cm-price-header');
         heading.replaceChildren(priceHeading('cardmarket'));
-        heading.title = t('Цены Cardmarket в евро');
+        heading.title = 'Cardmarket prices in EUR';
       }
       if (showTable) {
         const th = document.createElement('th');
         th.className = 'stk-ct-price-header';
-        th.title = t('CardTrader: минимальное предложение для этого издания в евро');
+        th.title = 'CardTrader: lowest EUR offer for this printing';
         th.append(priceHeading('cardtrader'));
         heading.after(th);
         const rows = [...table.querySelectorAll('tbody tr')];
@@ -120,12 +118,12 @@
               a.href = result.url;
               a.target = '_blank';
               a.rel = 'noopener noreferrer';
-              a.title = t('Минимальное предложение CardTrader; состояние и язык могут отличаться');
+              a.title = 'Lowest CardTrader offer; condition and language may vary';
               a.textContent = new Intl.NumberFormat('en-IE', { style:'currency', currency:'EUR' }).format(price.cents / 100);
               print.cell.append(a);
             }
           } catch {
-            print.cell.title = t('Цена CardTrader недоступна');
+            print.cell.title = 'CardTrader price unavailable';
             if (print.id === id) {
               if (sources === 'ct') showEurFallback();
               return true;
@@ -170,7 +168,7 @@
         text.append(icon, document.createTextNode(` CardTrader${kind === 'foil' ? ' foil' : ''}`));
         const value = document.createElement('span');
         value.textContent = new Intl.NumberFormat(undefined, { style: 'currency', currency: price.currency }).format(price.cents / 100);
-        link.title = t('Минимальное предложение; состояние и язык могут отличаться');
+        link.title = 'Lowest offer; condition and language may vary';
         link.append(text, value);
         row.append(link);
         links.append(row);
@@ -178,7 +176,7 @@
     }).catch(() => {
       const note = document.createElement('p');
       note.className = 'stk-cardtrader-error';
-      note.textContent = t('CardTrader недоступен — проверь токен в настройках.');
+      note.textContent = 'CardTrader unavailable — check the token in settings.';
       links.after(note);
     });
   }

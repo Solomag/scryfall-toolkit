@@ -131,13 +131,13 @@ in place of the message bus and a Scryfall adapter that fails soft where upstrea
 the shape of `window.Scryfall` and `window.ScryfallAPI` is fixed. Those two globals are
 Scryfall's application internals and are not covered by anyone's licence — see section 6.
 The preview reuses Scryfall's own `#card-tooltip` element rather than upstream's separate
-tooltip markup. Both features are **off by default**, and that is a statement about the
-dependency rather than about the port: they run through `window.Scryfall` and
-`window.ScryfallAPI`, Scryfall's own application internals, which are covered by no licence
-and carry no deprecation cycle (section 6). They were used in a real commander deck on
-2026-10-01 and work there — that live pass is what found the four wrong assumptions the
-port started with. They stay opt-in because a module that depends on an interface the site
-can change without notice should be something a reader turns on deliberately.
+tooltip markup. Both features run through `window.Scryfall` and `window.ScryfallAPI`,
+Scryfall's own application internals, which are covered by no licence and carry no
+deprecation cycle (section 6). That dependency is why each has its own switch: the deck
+tools are on by default, and a reader who would rather not have a module depending on an
+interface the site can change without notice can turn them off. They were used in a real
+commander deck on 2026-10-01 and work there — that live pass is what found the four wrong
+assumptions the port started with.
 
 Upstream's TypeScript types, webpack aliases and `framebus` dependency are not used, and
 no upstream file is present verbatim.

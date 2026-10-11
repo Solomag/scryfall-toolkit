@@ -22,8 +22,6 @@
   // below as undefined, and nothing would say so until a feature asked for a card page
   // that was not there.
   const {
-    language,
-    t,
     request
   } = await self.STK_CONTENT.context;
 
@@ -48,7 +46,7 @@
       if (!marked.length || !table || table.querySelector('.stk-finish-header')) return;
       const header = document.createElement('th');
       header.className = 'stk-finish-header';
-      header.title = t('Отделка выпуска');
+      header.title = 'Printing finish';
       header.setAttribute('aria-label', header.title);
       table.querySelector('thead th')?.after(header);
       const byLink = new Map(marked.map(item => [item.link, item]));
@@ -60,7 +58,7 @@
         if (!item) continue;
         const badge = document.createElement('span');
         badge.className = `stk-finish-badge stk-finish-${item.kind}`;
-        badge.title = item.kind === 'special' ? (language === 'ru' ? `Особый фойл: ${item.special}` : `Special foil: ${item.special}`) : t({ foil:'Только Foil', nonfoil:'Только Nonfoil', etched:'Только Etched Foil' }[item.kind]);
+        badge.title = item.kind === 'special' ? `Special foil: ${item.special}` : { foil:'Foil only', nonfoil:'Nonfoil only', etched:'Etched foil only' }[item.kind];
         badge.setAttribute('aria-label', badge.title);
         badge.textContent = { foil:'✶', nonfoil:'○', etched:'◈', special:'✧' }[item.kind];
         cell.append(badge);

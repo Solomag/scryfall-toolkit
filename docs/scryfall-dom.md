@@ -232,7 +232,7 @@ Scryfall knows nothing about.
 
 | Class | Rules reaching for it | Part |
 | --- | --- | --- |
-| `.button-n` | 48 | `01-card-page`, `02-shared-pages`, `03-account-and-marketing`, `04-surfaces`, `06-shared-surfaces` |
+| `.button-n` | 47 | `01-card-page`, `02-shared-pages`, `03-account-and-marketing`, `04-surfaces`, `06-shared-surfaces` |
 | `.prints-table` | 21 | `01-card-page`, `06-shared-surfaces` |
 | `.select-n` | 15 | `01-card-page`, `04-surfaces`, `06-shared-surfaces` |
 | `.inverted` | 10 | `01-card-page`, `04-surfaces`, `06-shared-surfaces` |
@@ -259,7 +259,6 @@ Scryfall knows nothing about.
 | `.form-row` | 4 | `01-card-page`, `02-shared-pages` |
 | `.form-row-label` | 4 | `01-card-page`, `02-shared-pages` |
 | `.modal-dialog` | 4 | `07-our-own-ui` |
-| `.primary-n` | 4 | `02-shared-pages`, `04-surfaces`, `06-shared-surfaces` |
 | `.search-info` | 4 | `02-shared-pages`, `04-surfaces` |
 | `.select2-results__option` | 4 | `02-shared-pages` |
 | `.account` | 3 | `02-shared-pages`, `03-account-and-marketing` |
@@ -275,6 +274,7 @@ Scryfall knows nothing about.
 | `.feedback-modal` | 3 | `02-shared-pages` |
 | `.pagination` | 3 | `02-shared-pages` |
 | `.pillbox-item` | 3 | `01-card-page`, `04-surfaces` |
+| `.primary-n` | 3 | `04-surfaces`, `06-shared-surfaces` |
 | `.profile` | 3 | `02-shared-pages`, `03-account-and-marketing` |
 | `.reference-block-icon` | 3 | `01-card-page`, `02-shared-pages` |
 | `.search-controls-pagination` | 3 | `02-shared-pages` |
@@ -439,7 +439,7 @@ name itself, without the leading `.` or `#`.
 | `card-grid-item-invisible-label` | class | src/card-page/clipboard.js |
 | `card-image` | class | src/card-page/clipboard.js, src/card-page/core.js, src/card-page/tagger-clipboard.js |
 | `card-layout` | class | src/card-page/tagger-clipboard.js |
-| `card-legality` | class | src/card-page/edhrec.js, src/card-page/legalities.js, src/core/theme.js |
+| `card-legality` | class | src/card-page/edhrec.js, src/card-page/legalities.js |
 | `card-legality-item` | class | src/card-page/edhrec.js, src/card-page/legalities.js |
 | `card-legality-row` | class | src/card-page/legalities.js |
 | `card-symbol` | class | src/card-page/card.js |
@@ -465,9 +465,8 @@ name itself, without the leading `.` or `#`.
 | `modal-dialog-close` | class | src/deck-page/edhrec.js, src/deck-page/search.js |
 | `modal-dialog-content` | class | src/deck-page/edhrec.js |
 | `prints` | class | src/card-page/clipboard.js, src/card-page/prices.js, src/card-page/prints.js, src/card-page/tags.js |
-| `prints-all` | class | src/core/theme.js |
-| `prints-table` | class | src/card-page/clipboard.js, src/card-page/core.js, src/card-page/legalities.js, src/card-page/prices.js, src/card-page/prints.js, src/card-page/sets.js, src/card-page/tags.js, src/core/theme.js |
-| `search-controls` | class | src/card-page/sets.js, src/core/theme.js |
+| `prints-table` | class | src/card-page/clipboard.js, src/card-page/core.js, src/card-page/legalities.js, src/card-page/prices.js, src/card-page/prints.js, src/card-page/sets.js, src/card-page/tags.js |
+| `search-controls` | class | src/card-page/sets.js |
 | `select2-container` | class | src/card-page/sets.js |
 | `select2-results__option` | class | src/card-page/sets.js |
 | `sidebar` | class | src/card-page/deck-lists.js |
@@ -477,8 +476,7 @@ name itself, without the leading `.` or `#`.
 | `toolbox-links` | class | src/card-page/prices.js |
 | `[data-entry]` | attribute | src/deck-page/clean-up.js |
 | `deckbuilder` | id | src/deck-page/edhrec.js, src/deck-page/search.js |
-| `header` | id | src/core/theme.js |
-| `header-search-field` | id | src/card-page/tags.js, src/core/theme.js |
+| `header-search-field` | id | src/card-page/tags.js |
 | `js-checklist` | id | src/card-page/sets.js |
 | `main` | id | src/card-page/card.js, src/card-page/clipboard.js, src/card-page/core.js, src/card-page/deck-lists.js, src/card-page/edhrec.js, src/card-page/legalities.js, src/card-page/prices.js, src/card-page/prints.js, src/card-page/sets.js, src/card-page/tags.js, src/core/theme.js |
 | `scryfall-toolkit-clipboard` | id | src/card-page/tagger-clipboard.js |

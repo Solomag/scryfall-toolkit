@@ -23,8 +23,6 @@
   // that was not there.
   const {
     settings,
-    language,
-    t,
     cardPath,
     cardPage,
     advancedPage,
@@ -80,7 +78,7 @@
     toolbar.className = "stk-toolbar";
     const list = document.createElement("div");
     list.className = "stk-list";
-    const open = iconButton('clip', t('Показать список карт'), () => { list.hidden = !list.hidden; });
+    const open = iconButton('clip', 'Show card list', () => { list.hidden = !list.hidden; });
     const badge = document.createElement('span');
     badge.className = 'stk-count';
     badge.setAttribute('aria-hidden', 'true');
@@ -88,7 +86,7 @@
     const writeClipboard = async (format, control, restLabel, stripSets) => {
       const text = clipboardText(cards, format, stripSets);
       try { await navigator.clipboard.writeText(text); flashCopied(control, restLabel); }
-      catch { control.title = t('Ошибка копирования'); }
+      catch { control.title = 'Copy failed'; }
     };
 
     // Copy keeps the export format; hovering it reveals a small menu above with a
@@ -109,13 +107,13 @@
     plain.type = 'button';
     plain.className = 'stk-copy-plain';
     menu.append(plain);
-    const copy = iconButton('duplicate', t('Копировать карты'), async () => {
+    const copy = iconButton('duplicate', 'Copy cards', async () => {
       const format = (await chrome.storage.local.get({ exportFormat: "moxfield" })).exportFormat;
-      await writeClipboard(format, copy, t('Копировать карты'));
+      await writeClipboard(format, copy, 'Copy cards');
     });
     const labelOf = other => {
       const entry = FORMATS[other] || FORMATS.names;
-      return language === 'ru' ? entry.ru : entry.en;
+      return entry.en;
     };
     let shownFormat = null;
     const paintMenu = format => {
@@ -123,7 +121,7 @@
       shownFormat = format;
       const other = otherFormat(format);
       plain.textContent = labelOf(other);
-      plain.title = `${t('Скопировать в формате')} ${labelOf(other)}`;
+      plain.title = `Copy in the format ${labelOf(other)}`;
     };
     paintMenu('moxfield');
     plain.addEventListener('click', async () => {
@@ -157,8 +155,8 @@
     for (const type of ['mouseenter', 'focusin']) wrap.addEventListener(type, showMenu);
     for (const type of ['mouseleave', 'focusout']) wrap.addEventListener(type, scheduleHideMenu);
     menu.addEventListener('mouseenter', showMenu);
-    const clear = iconButton('trash', t('Очистить буфер карт'), async () => {
-      if (!cards.length || !confirm(t('Очистить буфер карт?'))) return;
+    const clear = iconButton('trash', 'Clear card clipboard', async () => {
+      if (!cards.length || !confirm('Clear the card clipboard?')) return;
       cards = [];
       await persist();
     });
@@ -179,19 +177,19 @@
     function render() {
       badge.textContent = String(cards.length);
       badge.hidden = !cards.length;
-      open.setAttribute('aria-label', `${t('Показать список карт')} (${cards.length})`);
+      open.setAttribute('aria-label', `${'Show card list'} (${cards.length})`);
       list.replaceChildren();
-      if (!cards.length) { const empty = document.createElement("p"); empty.textContent = t('Список пуст'); list.append(empty); return; }
+      if (!cards.length) { const empty = document.createElement("p"); empty.textContent = 'List is empty'; list.append(empty); return; }
       for (const [index, card] of cards.entries()) {
         const row = document.createElement("div");
         row.className = "stk-list-row";
         const link = document.createElement("a");
         link.href = /^https:\/\/(?:www\.)?scryfall\.com\/card\//.test(card.url) ? card.url : "#";
         link.textContent = card.name;
-        const copyCard = iconButton('duplicate', `${t('Копировать карту')} ${card.name}`, async () => {
+        const copyCard = iconButton('duplicate', `${'Copy card'} ${card.name}`, async () => {
           const { exportFormat } = await chrome.storage.local.get({ exportFormat: 'moxfield' });
-          try { await navigator.clipboard.writeText(formatCard(card, exportFormat)); flashCopied(copyCard, `${t('Копировать карту')} ${card.name}`); }
-          catch { copyCard.title = t('Ошибка копирования'); }
+          try { await navigator.clipboard.writeText(formatCard(card, exportFormat)); flashCopied(copyCard, `${'Copy card'} ${card.name}`); }
+          catch { copyCard.title = 'Copy failed'; }
         });
         copyCard.classList.add('stk-copy-card');
         const set = document.createElement('span');
@@ -201,7 +199,7 @@
           cards.splice(index, 1);
           await persist();
         });
-        remove.setAttribute("aria-label", `${t('Удалить')} ${card.name}`);
+        remove.setAttribute("aria-label", `${'Remove'} ${card.name}`);
         row.append(link);
         if (set.textContent) row.append(set);
         row.append(copyCard, remove);
@@ -238,7 +236,7 @@
         }
         const selected = cards.some(c => entryKey(c) === key);
         add.textContent = selected ? "✓" : "+";
-        add.setAttribute("aria-label", `${t(selected ? 'Удалить' : 'Добавить')} ${name}`);
+        add.setAttribute("aria-label", `${selected ? 'Remove' : 'Add'} ${name}`);
         add.classList.toggle("stk-selected", selected);
       }
     }
@@ -284,7 +282,7 @@
       const set = parts[1];
       const number = decodeURIComponent(parts[2]);
       attachPrintButton(cell, printKey(set, number), { name, uri: link.href, set, number },
-        language === 'ru' ? 'Добавить это издание с сетом' : 'Add this printing with its set');
+        'Add this printing with its set');
     }
   }
 

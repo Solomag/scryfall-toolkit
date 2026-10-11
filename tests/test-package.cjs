@@ -171,7 +171,7 @@ async function popupPowersOnTest(dir) {
   run('src/ui/popup.js');
   await tick();
 
-  const ids = ['darkTheme', 'tags', 'clipboard', 'edhrecUsage', 'cardtraderPrices', 'openAll'];
+  const ids = ['darkTheme', 'tags', 'clipboard', 'edhrecUsage', 'openAll'];
   for (const id of ids) {
     assert(page.document.getElementById(id), `the popup has #${id} after starting`);
   }
@@ -185,8 +185,6 @@ async function popupPowersOnTest(dir) {
     'the popup shows the stored switch state');
   assertEqual(page.document.getElementById('edhrecUsage').checked, false,
     'and a switch that is off reads as off');
-  assertEqual(page.document.getElementById('cardtraderPrices').checked, false,
-    'and the optional features start off');
 }
 
 async function settingsPowerOnTest(dir) {
@@ -498,10 +496,13 @@ function packagedNoticesTest() {
       encoding: 'utf8', cwd: ROOT, maxBuffer: 32 * 1024 * 1024,
       env: { ...process.env, STK_CONTRACT_OUT: out }
     });
-    const fresh = fs.readFileSync(out, 'utf8');
+    // Line endings are normalised before the comparison: the tool writes LF, and git's
+    // autocrlf hands a Windows checkout CRLF, so a byte-for-byte compare would fail for a
+    // reason that has nothing to do with the contract.
+    const fresh = fs.readFileSync(out, 'utf8').replace(/\r\n/g, '\n');
     fs.rmSync(out, { force: true });
 
-    const committed = read('docs/scryfall-dom.md');
+    const committed = read('docs/scryfall-dom.md').replace(/\r\n/g, '\n');
 
     // Reported as the line that differs, not as the two documents. Both are about four
     // hundred lines, and a failure that prints both of them to say that one row

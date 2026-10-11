@@ -151,7 +151,6 @@ html.stk-dark.stk-info-page #main :is(.stk-account-light-bar,.stk-info-light-sur
 html.stk-dark #main :is(.search-results,.search-controls,.set-header-content,.set-header-title,.card-grid-header-content){background:transparent!important}
 html.stk-dark.stk-blog-page #main :is(.blog-content,.blog-index,.blog-category,.blog-articles,.posts){background:var(--stk-page)!important;color:var(--stk-ink)!important}
 html.stk-dark.stk-blog-page #main :is(img,video,picture){filter:none!important;mix-blend-mode:normal!important}
-html.stk-site-ru #caster-tray a.button-n.primary-n::after{content:"Кастер включён"}
 
 /* Deck editor controls and metadata use the same contrast as the card detail. */
 html.stk-dark #main #deckbuilder :is(.deckbuilder-section-title-bar,.deckbuilder-section-title-bar *,[class*="section-name"],[class*="section-count"],[class*="curve"]){color:#dcd8e2!important;text-shadow:none!important}

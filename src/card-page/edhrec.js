@@ -20,8 +20,6 @@
   // that was not there.
   const {
     settings,
-    language,
-    t,
     cardPath,
     cardPage,
     advancedPage,
@@ -65,10 +63,10 @@
         usage.className = 'stk-edhrec-item stk-edhrec-usage';
         const label = document.createElement('span');
         label.className = 'stk-edhrec-label';
-        label.textContent = t('В колодах');
+        label.textContent = 'In decks';
         const display = ['fraction','percent','both'].includes(settings.edhrecUsageDisplay) ? settings.edhrecUsageDisplay : 'both';
-        const number = new Intl.NumberFormat(language === 'ru' ? 'ru-RU' : 'en-US');
-        const percent = `${new Intl.NumberFormat(language === 'ru' ? 'ru-RU' : 'en-US', { maximumFractionDigits: 2, minimumFractionDigits: 2 }).format(stats.numDecks / stats.potentialDecks * 100)}%`;
+        const number = new Intl.NumberFormat('en-US');
+        const percent = `${new Intl.NumberFormat('en-US', { maximumFractionDigits: 2, minimumFractionDigits: 2 }).format(stats.numDecks / stats.potentialDecks * 100)}%`;
         const value = document.createElement('span');
         value.className = 'stk-edhrec-value stk-stat-badge';
         const metric = settings.usageColorMetric === 'percent' ? 'percent' : 'decks';
@@ -97,7 +95,7 @@
           percentage.textContent = percent;
           value.append(percentage);
         }
-        value.title = language === 'ru' ? `${number.format(stats.numDecks)} из ${number.format(stats.potentialDecks)} подходящих по цветовой идентичности колод EDHREC (${percent})` : `${number.format(stats.numDecks)} of ${number.format(stats.potentialDecks)} color-identity-eligible EDHREC decks (${percent})`;
+        value.title = `${number.format(stats.numDecks)} of ${number.format(stats.potentialDecks)} color-identity-eligible EDHREC decks (${percent})`;
         usage.append(value, label);
         if (display === 'both') usage.append(fraction);
         panel.append(usage);
@@ -115,7 +113,7 @@
         const tier = stats.salt >= (valid ? high : 2) ? 'high' : stats.salt >= (valid ? medium : 1) ? 'medium' : 'low';
         salt.className = `stk-salt-meter stk-stat-badge stk-salt-${tier}`;
         salt.textContent = stats.salt.toFixed(2) + (settings.showSaltScale ? ' / 4' : '');
-        salt.title = t('Средняя оценка раздражающего эффекта карты по опросу EDHREC; не мера силы карты');
+        salt.title = 'Average salt rating from EDHREC community votes; not a measure of card strength';
         item.append(salt, label);
         panel.append(item);
       }

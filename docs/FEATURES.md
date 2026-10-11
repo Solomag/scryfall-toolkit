@@ -9,10 +9,10 @@ integrations are off until you turn them on, because both of them send something
 what you are looking at to someone else. The other extras have their own defaults and
 each can be switched off.
 
-One language setting covers the whole extension: **Settings language** in the settings page
-chooses the language of the page, and of the controls the extension adds to Scryfall and
-Tagger. **As in the browser** resolves from the browser, so a Russian browser gets Russian
-everywhere and a pinned English gets English everywhere.
+**Settings language** in the settings page chooses the language of the settings page and the
+popup, and nothing else: the controls the extension adds to Scryfall and Tagger are English,
+on a site whose own language is English. **As in the browser** resolves from the browser, so a
+Russian browser gets a Russian settings page and a pinned English gets an English one.
 
 ---
 
@@ -217,23 +217,22 @@ Scryfall's own word is kept, because it is not one word: across every format it 
 "banned in Commander" rather than a paraphrase, and banned cards are listed above the ones
 that are merely outside the format.
 
-**Clean up improver** *(off by default)*. The first Shambleshark deck module to be
+**Clean up improver** *(on by default)*. The first Shambleshark deck module to be
 ported. When a deck is cleaned up it moves lands out of the nonland column and nonlands
 out of the land one, and it can sort every column by card type or by name and head each
 group with its name and count.
 
-It is worth being clear about why this one is off by default. Everything else in the
-extension works through the page's markup or Scryfall's documented API. This works
-through `window.Scryfall` and `window.ScryfallAPI`, which are Scryfall's application
-internals and were never published as an interface. So a script now runs in the page's
-own world to reach them, with a bridge back to the content script for settings.
+It works through `window.Scryfall` and `window.ScryfallAPI`, which are Scryfall's
+application internals and were never published as an interface. So a script runs in the
+page's own world to reach them, with a bridge back to the content script for settings.
+That is why it has its own switch: the deck tools are on out of the box, and a reader who
+would rather not have a script in Scryfall's page world can turn them off.
 
 The module is written to fail soft: if Scryfall reshapes any of the things it touches,
 that hook simply does not happen and the deck editor keeps working — the feature stops
-rather than breaking anything. Until it has been checked in a live deck editor it stays
-off, and turning it on is a deliberate choice.
+rather than breaking anything.
 
-**EDHREC suggestions** *(off by default)*. On a commander deck, an EDHREC button in the
+**EDHREC suggestions** *(on by default)*. On a commander deck, an EDHREC button in the
 toolbar opens the card lists EDHREC shows for that commander — its own grouping, its own
 ranking — with the share of the commander's decks that play each card, and a button that
 adds one to the deck through Scryfall.
@@ -255,7 +254,7 @@ and printed as an unchecked error, which is the bug the page already fixed once 
 help dialog asks for nothing. Once the access is there the chip and the warning are gone rather
 than left standing.
 
-**Scryfall search** *(off by default)*. A Search button in the deck editor's toolbar opens
+**Scryfall search** *(on by default)*. A Search button in the deck editor's toolbar opens
 a query box in Scryfall's own syntax, lists what comes back, and puts a card in the deck.
 Two checkboxes narrow it: only the commander's colours, and no funny cards. Requests go
 through the extension's Scryfall queue rather than firing out of the page.

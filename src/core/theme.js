@@ -37,8 +37,8 @@ if (systemDark && systemDark.addEventListener) {
 // answers synchronously, so the class is set before the first paint and storage
 // simply corrects it a moment later.
 if (themeMode('auto') === 'dark') document.documentElement.classList.add('stk-dark');
-chrome.storage.local.get({ darkTheme: 'auto', settingsLanguage: 'auto', setFilters: null, setFiltersMigrated: false })
-  .then(({ darkTheme, settingsLanguage, setFilters, setFiltersMigrated }) => {
+chrome.storage.local.get({ darkTheme: 'auto', setFilters: null, setFiltersMigrated: false })
+  .then(({ darkTheme, setFilters, setFiltersMigrated }) => {
   // The Caster marker goes through the model, not through the raw key. A stored value from before
   // the switch stopped reading "hide" carries `caster` and no `showCaster`, and a raw read sees
   // `undefined` and treats it as shown — the opposite of what that reader chose. The model is the
@@ -48,12 +48,10 @@ chrome.storage.local.get({ darkTheme: 'auto', settingsLanguage: 'auto', setFilte
   const casterShown = () =>
     window.STK_SET_FILTERS.read({ setFilters, setFiltersMigrated }).filters.showCaster !== false;
   document.documentElement.classList.toggle('stk-hide-caster', !casterShown());
-  // The site's own controls are translated for the same language the rest of the extension
-  // speaks. There used to be a separate setting for this; it is the General choice now, so
-  // "as in the browser" means the same thing on the settings page and on the site.
-  const siteRu = window.STK_I18N.resolveSettingsLanguage(settingsLanguage) === 'ru';
-  document.documentElement.classList.toggle('stk-site-ru', siteRu);
-  if (siteRu) translateSiteControls();
+  // Scryfall's own controls are left in English, and the settings language is not read here at
+  // all. Translating the site was a second answer to a question the settings page already
+  // answers, and it put Russian on a page that is otherwise English — on a site whose own
+  // language is English, in a language nobody chose for it.
   applyTheme(darkTheme);
 });
 if (/^\/(?:settings|profile|decks|@[^/]+(?:\/decks)?|users|account|contact)(?:\/|$)/.test(location.pathname)) {
@@ -78,10 +76,6 @@ chrome.storage.onChanged.addListener(changes => {
   }).filters;
   document.documentElement.classList.toggle('stk-hide-caster', next.showCaster === false);
 }
-  if (changes.settingsLanguage) {
-    document.documentElement.classList.toggle('stk-site-ru',
-      window.STK_I18N.resolveSettingsLanguage(changes.settingsLanguage.newValue) === 'ru');
-  }
   if (changes.darkTheme) applyTheme(changes.darkTheme.newValue);
 });
 
@@ -190,38 +184,6 @@ function repairBotsArtwork() {
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', scan, {once: true});
   else scan();
-}
-
-function translateSiteControls() {
-  // Translate navigational chrome and status labels only. Never rewrite card
-  // names, rules, user content or search queries: that would change their data.
-  const names = {
-    'Advanced':'Расширенный поиск','Syntax':'Синтаксис','Sets':'Сеты','Random':'Случайная',
-    'Prints':'Издания','View all prints →':'Показать все издания →',
-    'Legal':'Легально','Not Legal':'Нелегально','Banned':'Запрещено','Restricted':'Ограничено','Unavailable':'Недоступно',
-    'Search for Magic cards…':'Поиск карт Magic…'
-  };
-  let pending = false;
-  const scan = () => {
-    if (!document.documentElement.classList.contains('stk-site-ru')) return;
-    for (const node of document.querySelectorAll('#header a, #header button, #main .prints-table thead th, #main .prints-table .prints-all a, #main .card-legality dd, #main .search-controls button')) {
-      for (const child of node.childNodes) {
-        if (child.nodeType !== 3) continue;
-        const source = child.textContent;
-        const trimmed = source.trim();
-        if (names[trimmed]) child.textContent = source.replace(trimmed, names[trimmed]);
-      }
-    }
-    const search = document.getElementById('header-search-field');
-    if (search?.placeholder && names[search.placeholder]) search.placeholder = names[search.placeholder];
-  };
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', scan, {once:true});
-  else scan();
-  new MutationObserver(() => {
-    if (pending) return;
-    pending = true;
-    requestAnimationFrame(() => { pending = false; scan(); });
-  }).observe(document.documentElement, { childList:true, subtree:true });
 }
 
 function repairAccountColors() {

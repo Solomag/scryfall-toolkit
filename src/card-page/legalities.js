@@ -20,8 +20,6 @@
   // that was not there.
   const {
     settings,
-    language,
-    t,
     cardPath,
     cardPage,
     advancedPage,

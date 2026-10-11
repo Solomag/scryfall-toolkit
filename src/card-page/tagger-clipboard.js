@@ -10,11 +10,9 @@
  */
 // Share the Scryfall clipboard on Tagger without changing Tagger's own tagging UI.
 (async () => {
-  const settings = await chrome.storage.local.get({ clipboard: true, cards: [], exportFormat: 'moxfield', settingsLanguage: 'auto' });
-  // One language for the whole extension: the General choice, resolved. There used to be a
-  // second one for the site's injected controls, and the two could disagree.
-  const language = window.STK_I18N.resolveSettingsLanguage(settings.settingsLanguage);
-  const t = text => window.STK_I18N.t(text, language);
+  const settings = await chrome.storage.local.get({ clipboard: true, cards: [], exportFormat: 'moxfield' });
+  // The controls this adds to Tagger are English, and only English — see the note in
+  // src/card-page/core.js. The settings page keeps its language; the site does not.
   if (!settings.clipboard || document.getElementById('scryfall-toolkit-clipboard')) return;
   let cards = Array.isArray(settings.cards) ? settings.cards : [];
   const root = document.createElement('aside');
@@ -47,19 +45,19 @@
   const { entryKey, formatCard, clipboardText, FORMATS, otherFormat } = window.STK_CLIPBOARD_FORMAT;
   const formatLabel = format => {
     const entry = FORMATS[format] || FORMATS.names;
-    return language === 'ru' ? entry.ru : entry.en;
+    return entry.en;
   };
   badge.className = 'stk-count';
   badge.setAttribute('aria-hidden', 'true');
-  const open = iconButton('clip', t('Показать список карт'), () => { list.hidden = !list.hidden; });
+  const open = iconButton('clip', 'Show card list', () => { list.hidden = !list.hidden; });
   open.append(badge);
   const writeClipboard = async (format, control, restLabel) => {
     const value = clipboardText(cards, format);
     try {
       await navigator.clipboard.writeText(value);
-      control.title = t('Скопировано');
+      control.title = 'Copied';
       control.classList.add('stk-copied');
-    } catch { control.title = t('Ошибка копирования'); }
+    } catch { control.title = 'Copy failed'; }
     setTimeout(() => { control.title = restLabel; control.classList.remove('stk-copied'); }, 1000);
   };
   // Same shape as the Scryfall clipboard: the settings' format by default, and the
@@ -75,16 +73,16 @@
   plain.type = 'button';
   plain.className = 'stk-copy-plain';
   menu.append(plain);
-  const copy = iconButton('duplicate', t('Копировать карты'), async () => {
+  const copy = iconButton('duplicate', 'Copy cards', async () => {
     const { exportFormat } = await chrome.storage.local.get({ exportFormat: 'moxfield' });
-    await writeClipboard(exportFormat, copy, t('Копировать карты'));
+    await writeClipboard(exportFormat, copy, 'Copy cards');
   });
   let shownFormat = null;
   const paintMenu = format => {
     if (shownFormat === format) return;
     shownFormat = format;
     plain.textContent = formatLabel(otherFormat(format));
-    plain.title = `${t('Скопировать в формате')} ${formatLabel(otherFormat(format))}`;
+    plain.title = `Copy in the format ${formatLabel(otherFormat(format))}`;
   };
   paintMenu('moxfield');
   plain.addEventListener('click', async () => {
@@ -115,8 +113,8 @@
   for (const type of ['mouseenter', 'focusin']) wrap.addEventListener(type, showMenu);
   for (const type of ['mouseleave', 'focusout']) wrap.addEventListener(type, scheduleHideMenu);
   menu.addEventListener('mouseenter', showMenu);
-  const clear = iconButton('trash', t('Очистить буфер карт'), async () => {
-    if (!cards.length || !confirm(t('Очистить буфер карт?'))) return;
+  const clear = iconButton('trash', 'Clear card clipboard', async () => {
+    if (!cards.length || !confirm('Clear the card clipboard?')) return;
     cards = [];
     await persist();
   });
@@ -132,11 +130,11 @@
   function render() {
     badge.textContent = String(cards.length);
     badge.hidden = !cards.length;
-    open.setAttribute('aria-label', `${t('Показать список карт')} (${cards.length})`);
+    open.setAttribute('aria-label', `${'Show card list'} (${cards.length})`);
     list.replaceChildren();
     if (!cards.length) {
       const empty = document.createElement('p');
-      empty.textContent = t('Список пуст');
+      empty.textContent = 'List is empty';
       list.append(empty);
       return;
     }
@@ -146,17 +144,17 @@
       const link = document.createElement('a');
       link.href = /^https:\/\/(?:www\.)?scryfall\.com\/card\//.test(card.url) ? card.url : '#';
       link.textContent = card.name;
-      const copyCard = iconButton('duplicate', `${t('Копировать карту')} ${card.name}`, async () => {
+      const copyCard = iconButton('duplicate', `${'Copy card'} ${card.name}`, async () => {
         const { exportFormat } = await chrome.storage.local.get({ exportFormat: 'moxfield' });
-        try { await navigator.clipboard.writeText(formatCard(card, exportFormat)); copyCard.title = t('Скопировано'); copyCard.classList.add('stk-copied'); }
-        catch { copyCard.title = t('Ошибка копирования'); }
-        setTimeout(() => { copyCard.title = `${t('Копировать карту')} ${card.name}`; copyCard.classList.remove('stk-copied'); }, 1000);
+        try { await navigator.clipboard.writeText(formatCard(card, exportFormat)); copyCard.title = 'Copied'; copyCard.classList.add('stk-copied'); }
+        catch { copyCard.title = 'Copy failed'; }
+        setTimeout(() => { copyCard.title = `${'Copy card'} ${card.name}`; copyCard.classList.remove('stk-copied'); }, 1000);
       });
       copyCard.classList.add('stk-copy-card');
       const remove = document.createElement('button');
       remove.type = 'button';
       remove.textContent = '×';
-      remove.setAttribute('aria-label', `${t('Удалить')} ${card.name}`);
+      remove.setAttribute('aria-label', `${'Remove'} ${card.name}`);
       remove.addEventListener('click', async () => {
         cards = cards.filter(c => c.name !== card.name);
         await persist();
@@ -211,7 +209,7 @@
       const selected = cards.some(c => entryKey(c) === key);
       if (add.textContent !== (selected ? '✓' : '+')) add.textContent = selected ? '✓' : '+';
       add.classList.toggle('stk-selected', selected);
-      add.setAttribute('aria-label', `${t(selected ? 'Удалить' : 'Добавить')} ${name}`);
+      add.setAttribute('aria-label', `${selected ? 'Remove' : 'Add'} ${name}`);
     }
   }
   render();

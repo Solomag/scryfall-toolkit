@@ -19,7 +19,7 @@
   // invents its own defaults is a second answer to the same question.
   chrome.storage.local.get({
     darkTheme: 'auto', tags: true, clipboard: true,
-    edhrecUsage: false, cardtraderPrices: false, settingsLanguage: 'auto'
+    edhrecUsage: false, settingsLanguage: 'auto'
   }, values => {
     const language = window.STK_I18N.resolveSettingsLanguage(values.settingsLanguage);
     if (window.STK_I18N) window.STK_I18N.localizeOptions(language);
@@ -31,7 +31,7 @@
     const storedTheme = values.darkTheme === true ? 'dark' : values.darkTheme === false ? 'light' : values.darkTheme;
     theme.value = ['auto', 'light', 'dark'].includes(storedTheme) ? storedTheme : 'auto';
 
-    for (const id of ['tags', 'clipboard', 'edhrecUsage', 'cardtraderPrices']) {
+    for (const id of ['tags', 'clipboard', 'edhrecUsage']) {
       const box = document.getElementById(id);
       box.checked = Boolean(values[id]);
     }
@@ -41,8 +41,7 @@
 // off and on again is also how access is put back after an update or a revoke.
 const OPTIONAL_HOSTS = {
   edhrecUsage: ['https://json.edhrec.com/*'],
-  edhrecSalt: ['https://json.edhrec.com/*'],
-  cardtraderPrices: ['https://api.cardtrader.com/*']
+  edhrecSalt: ['https://json.edhrec.com/*']
 };
 // Asks for a host. Only ever from inside a click, and the refusal is always read.
 //
@@ -80,7 +79,7 @@ function requestHostAccess(key) {
       chrome.storage.local.set({ darkTheme: theme.value }, saved);
     });
 
-    for (const id of ['tags', 'clipboard', 'edhrecUsage', 'cardtraderPrices']) {
+    for (const id of ['tags', 'clipboard', 'edhrecUsage']) {
       document.getElementById(id).addEventListener('change', event => {
         const wanted = event.target.checked;
         if (wanted && OPTIONAL_HOSTS[id]) {

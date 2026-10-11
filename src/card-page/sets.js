@@ -21,8 +21,6 @@
   const {
     settings,
     setFilters,
-    language,
-    t,
     cardPath,
     cardPage,
     advancedPage,
@@ -118,7 +116,7 @@
         // rewritten; the label is found by what it labels, not by its place.
         const shown = rows.filter(row => !row.classList.contains('stk-digital-set-hidden')).length;
         for (const counter of main.querySelectorAll('.search-controls label[for="order"]')) {
-          counter.textContent = language === 'ru' ? `${shown} из ${rows.length} сетов в` : `${shown} of ${rows.length} sets in`;
+          counter.textContent = `${shown} of ${rows.length} sets in`;
         }
       };
       apply();
