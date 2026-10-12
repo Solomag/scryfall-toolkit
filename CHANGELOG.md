@@ -8,6 +8,15 @@ All releases: <https://github.com/Solomag/scryfall-toolkit/releases>
 
 ---
 
+### 2.3.2 - the panels are built as nodes, not parsed from a string
+
+addons-linter flagged four `innerHTML` assignments as an unsafe variable assignment: the tag icons,
+the deck clean-up heading, and the search and the EDHREC panels. All four are built with
+`document.createElement` now — the icons are parsed as SVG, which is what they are — so nothing
+reaches the HTML parser and the extension lints with no warnings at all. The clean-up heading was
+the one that mattered: its label and id come from Scryfall's deck data, and both go in through
+`textContent` now, where before a label carrying markup would have been markup.
+
 ### 2.3.1 - the Firefox manifest AMO asks for, and Android
 
 Two keys the Firefox manifest was missing, both still derived from the Chrome one. AMO has required

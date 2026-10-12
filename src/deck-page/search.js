@@ -50,31 +50,64 @@
   // --- the panel ------------------------------------------------------------
 
   function buildPanel() {
-    const holder = document.createElement('div');
-    holder.innerHTML = (
-      '<div class="modal-dialog-overlay stk-search-panel">' +
-        '<div class="modal-dialog stk-account-light-surface stk-search-panel">' +
-          '<h6 class="modal-dialog-title stk-account-light-bar">' +
-            'Search Scryfall' +
-            '<button type="button" title="Close this dialog" class="modal-dialog-close">' +
-              '<span aria-hidden="true">&#10005;</span>' +
-            '</button>' +
-          '</h6>' +
-          '<div class="modal-dialog-content stk-search-panel">' +
-            '<form class="stk-search-form">' +
-              '<input type="text" class="stk-search-input" placeholder="Try: t:creature cmc&lt;=3" autocomplete="off" spellcheck="false">' +
-              '<button type="submit" class="button-n primary-n">Search</button>' +
-            '</form>' +
-            '<p class="stk-search-options">' +
-              '<label><input type="checkbox" class="stk-search-identity"> Only the commander\'s colours</label> ' +
-              '<label><input type="checkbox" class="stk-search-no-funny" checked> Exclude funny cards</label>' +
-            '</p>' +
-            '<div class="stk-search-results"></div>' +
-          '</div>' +
-        '</div>' +
-      '</div>'
-    ).trim();
-    const overlay = holder.firstElementChild;
+    // The panel is built as nodes rather than parsed from a string, so nothing here
+    // reaches the HTML parser: the title, the labels and the close glyph are set as
+    // text and cannot be read as markup.
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-dialog-overlay stk-search-panel';
+    const dialog = document.createElement('div');
+    dialog.className = 'modal-dialog stk-account-light-surface stk-search-panel';
+    const title = document.createElement('h6');
+    title.className = 'modal-dialog-title stk-account-light-bar';
+    const closeButton = document.createElement('button');
+    closeButton.type = 'button';
+    closeButton.title = 'Close this dialog';
+    closeButton.className = 'modal-dialog-close';
+    const closeGlyph = document.createElement('span');
+    closeGlyph.setAttribute('aria-hidden', 'true');
+    closeGlyph.textContent = '\u2715';
+    closeButton.append(closeGlyph);
+    title.append('Search Scryfall', closeButton);
+    const content = document.createElement('div');
+    content.className = 'modal-dialog-content stk-search-panel';
+    const form = document.createElement('form');
+    form.className = 'stk-search-form';
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'stk-search-input';
+    input.placeholder = 'Try: t:creature cmc<=3';
+    // Set as attributes rather than properties: `autocomplete` and `spellcheck`
+    // are content attributes here, and only the attribute form is guaranteed to
+    // reach the markup across DOM implementations.
+    input.setAttribute('autocomplete', 'off');
+    input.setAttribute('spellcheck', 'false');
+    const submit = document.createElement('button');
+    submit.type = 'submit';
+    submit.className = 'button-n primary-n';
+    submit.textContent = 'Search';
+    form.append(input, submit);
+    const options = document.createElement('p');
+    options.className = 'stk-search-options';
+    const identityLabel = document.createElement('label');
+    const identity = document.createElement('input');
+    identity.type = 'checkbox';
+    identity.className = 'stk-search-identity';
+    identityLabel.append(identity, " Only the commander's colours");
+    const noFunnyLabel = document.createElement('label');
+    const noFunny = document.createElement('input');
+    noFunny.type = 'checkbox';
+    noFunny.className = 'stk-search-no-funny';
+    // `checked` is a content attribute, so it is set as one: the property alone
+    // would leave the markup without the default this panel has always had.
+    noFunny.setAttribute('checked', '');
+    noFunny.checked = true;
+    noFunnyLabel.append(noFunny, ' Exclude funny cards');
+    options.append(identityLabel, ' ', noFunnyLabel);
+    const body = document.createElement('div');
+    body.className = 'stk-search-results';
+    content.append(form, options, body);
+    dialog.append(title, content);
+    overlay.append(dialog);
     const close = () => { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); };
     overlay.querySelector('.modal-dialog-close').addEventListener('click', close);
     overlay.addEventListener('click', event => { if (event.target === overlay) close(); });
