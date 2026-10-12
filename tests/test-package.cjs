@@ -394,6 +394,30 @@ function documentsAgreeTest() {
   assert(notes.length >= 5, `the project states its own facts in one place (${notes.length})`);
 }
 
+// The release notes are the changelog's section for the tag, so the one document that says "the
+// detail lives in the release notes for that version" is where the detail comes from. This checks
+// the reader rather than the notes: a section is found by the version in its heading, a leading `v`
+// is accepted because the tag carries one, and a version with no section is an empty answer rather
+// than somebody else's.
+function releaseNotesTest() {
+  console.log('docs: the release notes are the changelog section for the tag');
+  const { notes } = require('../tools/release-notes.cjs');
+  const version = require('../package.json').version;
+  const own = notes(version);
+  assert(own.startsWith('### ' + version + ' '),
+    `the current version's section is found by its heading (${own.split('\n', 1)[0]})`);
+  assert(own.trim().split('\n').length > 2, 'and it has a body, not just the heading');
+  assertEqual(notes('v' + version), own, 'a leading v is accepted, because the tag carries one');
+  assertEqual(notes('9.9.9'), '', 'a version with no section is empty rather than somebody else’s');
+  assertEqual(notes(''), '', 'and so is no version at all');
+  assertEqual(notes('The'), '', 'and a prose heading is not a release');
+  // The workflow really uses it, rather than the tool existing beside a body typed into the yml.
+  const workflow = read('.github/workflows/release.yml');
+  assert(/node tools\/release-notes\.cjs/.test(workflow),
+    'the release workflow reads the notes from the changelog');
+  assert(/body_path: release-notes\.md/.test(workflow), 'and publishes them as the release body');
+}
+
 // Every host the manifest asks for, whether required or optional, as a bare
 // hostname. Chrome shows this list to the user and the store asks about it in
 // review, so what the code talks to and what the documents declare have to be the
@@ -937,6 +961,7 @@ async function shimTest() {
     documentationTest();
     storeShotsTest();
     documentsAgreeTest();
+    releaseNotesTest();
     await themeTurnsOnTest(dir);
     await popupPowersOnTest(dir);
     await settingsPowerOnTest(dir);

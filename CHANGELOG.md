@@ -8,6 +8,16 @@ All releases: <https://github.com/Solomag/scryfall-toolkit/releases>
 
 ---
 
+### The release notes come from the changelog
+
+The releases published the same CI note for every tag — the archive's hash and a link to the run —
+while this file said the detail lived in the release notes for that version. It lived nowhere: the
+notes were never written, and nothing compared the two. `tools/release-notes.cjs` now reads the
+section the tag names and the release workflow publishes it as the body, so the two documents say
+the same thing because one is made from the other. A tag with no entry is not an error: the CI note
+alone is still a release. The notes for the releases already published are those same sections,
+pasted in by hand.
+
 ### 2.4.2 - the CardTrader currency choice is gone
 
 The column's heading promised a currency the API cannot honour. CardTrader answers in the account's
