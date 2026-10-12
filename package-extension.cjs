@@ -54,8 +54,31 @@ function firefoxManifest(manifest) {
   }));
   // The id AMO and Firefox use to identify the extension, and the floor for `world: "MAIN"` in a
   // content script, which is what the deck modules are injected with.
+  //
+  // `data_collection_permissions` is required for every new extension on AMO since 2025-11-03,
+  // and it is what the install prompt shows the reader. The extension transmits the card it is
+  // showing — its set and number, and the whole deck list when EDHREC's suggestions are asked for
+  // — which is content from the page, and the reader's search queries to Scryfall; both are
+  // required for the extension to work at all. The CardTrader token, when the reader has set one,
+  // is a credential sent only to CardTrader, and that feature is off by default, so it is
+  // optional rather than required.
+  //
+  // `gecko_android` is what makes the extension available on Firefox for Android; without it the
+  // listing is desktop-only. The floor is 142 because `data_collection_permissions` is not read
+  // before that on Android, and the manifest must not claim a version that cannot enforce it.
+  //
+  // The desktop floor is 140 for the same reason: that is where `data_collection_permissions` was
+  // introduced, and the linter refuses a manifest whose minimum version predates a key it carries.
   copy.browser_specific_settings = {
-    gecko: { id: 'scryfall-toolkit@solomag.github.io', strict_min_version: '128.0' }
+    gecko: {
+      id: 'scryfall-toolkit@solomag.github.io',
+      strict_min_version: '140.0',
+      data_collection_permissions: {
+        required: ['websiteContent', 'searchTerms'],
+        optional: ['authenticationInfo']
+      }
+    },
+    gecko_android: { strict_min_version: '142.0' }
   };
   return copy;
 }

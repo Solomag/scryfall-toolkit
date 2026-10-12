@@ -1,4 +1,4 @@
-# Chrome Web Store listing — Scryfall Toolkit 2.3.0
+# Chrome Web Store listing — Scryfall Toolkit 2.3.1
 
 Everything here is written from the shipped code, so that the answers given in the store
 console match what the extension actually does. Where a field needs a decision from the
@@ -255,8 +255,12 @@ These cannot be done from here, and each is listed with the exact screen.
 `scryfall-toolkit-<version>-firefox.zip` beside the plain one, built from the same source by the
 same tool. Its `manifest.json` is derived from the one above — the background is a `scripts` event
 page rather than a service worker, and `src/core/browser-shim.js` points `chrome` at Firefox's
-promise-returning `browser` — so the two cannot drift apart. The Chrome Web Store item takes the
-plain archive; the Firefox one is for `about:debugging` and, later, addons.mozilla.org.
+promise-returning `browser` — so the two cannot drift apart. It also declares
+`browser_specific_settings.gecko.data_collection_permissions` (required for every new AMO
+extension since 2025-11-03): `websiteContent` and `searchTerms` as required, `authenticationInfo`
+as optional for the CardTrader token. And `gecko_android`, which is what makes it installable on
+Firefox for Android as well as desktop. The Chrome Web Store item takes the plain archive; the
+Firefox one is for `about:debugging` and addons.mozilla.org.
 
 ---
 

@@ -8,6 +8,18 @@ All releases: <https://github.com/Solomag/scryfall-toolkit/releases>
 
 ---
 
+### 2.3.1 - the Firefox manifest AMO asks for, and Android
+
+Two keys the Firefox manifest was missing, both still derived from the Chrome one. AMO has required
+`browser_specific_settings.gecko.data_collection_permissions` of every new extension since
+2025-11-03 and refuses a submission without it: it declares what the extension transmits, and
+Firefox shows it at install. Scryfall Toolkit transmits the card it is showing — its set and number,
+and the whole deck list when EDHREC's suggestions are asked for — and the reader's search queries,
+so `websiteContent` and `searchTerms` are required; the CardTrader token, sent only to CardTrader and
+off by default, makes `authenticationInfo` optional. `gecko_android` is the second key: without it a
+listing is desktop-only. The desktop floor moves to Firefox 140 and the Android one to 142, the
+versions where the data declaration is read.
+
 ### 2.3.0 - Firefox, from the same source
 
 The extension runs in Firefox as well as Chrome now. The release carries a second archive,
