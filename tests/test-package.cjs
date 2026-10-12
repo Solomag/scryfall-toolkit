@@ -416,6 +416,10 @@ function releaseNotesTest() {
   assert(/node tools\/release-notes\.cjs/.test(workflow),
     'the release workflow reads the notes from the changelog');
   assert(/body_path: release-notes\.md/.test(workflow), 'and publishes them as the release body');
+  // The tags published before that cannot be re-written at build time, so there is a one-off that
+  // does it by hand — it is the same reader, and it leaves a tag with no entry alone.
+  assert(fs.existsSync(path.join(ROOT, 'tools', 'update-release-notes.cjs')),
+    'and a one-off rewrites the releases that were published before this');
 }
 
 // Every host the manifest asks for, whether required or optional, as a bare
