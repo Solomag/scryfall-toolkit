@@ -542,6 +542,22 @@ const MUTATIONS = [
     expect: 'and the CardTrader column is there, which is the pair the old dropdown could not ask for'
   },
   {
+    // The heading keeping the currency the reader asked for instead of the one the numbers are in.
+    // The wanted currency is a preference the worker falls back from, so the two can differ, and a
+    // reader who asked for USD over euro offers read "USD" above "0,11 €".
+    name: 'the CardTrader heading keeps the wanted currency over the numbers',
+    file: 'prices',
+    run: 'test',
+    find: '              if (code && code.dataset.filled !== \'1\') {\n' +
+      '                code.textContent = price.currency;\n' +
+      '                code.dataset.filled = \'1\';\n' +
+      '              }',
+    replace: '              if (code && !code.textContent) {\n' +
+      '                code.textContent = price.currency;\n' +
+      '              }',
+    expect: 'when the offers are in another currency the heading says the currency of the numbers, not the one asked for'
+  },
+  {
     // And the disabled contrast going back to the grey nobody noticed. This was reported from
     // use — "the difference in brightness is too subtle" — and the fix is a colour, which is
     // exactly the kind of thing that drifts back without a check that names the number.
