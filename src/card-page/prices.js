@@ -49,37 +49,36 @@
   function initCardTrader() {
     const id = document.querySelector('meta[name="scryfall:card:id"]')?.content ||
       document.querySelector('#main .prints-table tbody tr.current a[data-card-id]')?.dataset.cardId;
-    const links = document.querySelector('#stores .toolbox-links');
-    if (!id || !links) return;
-    const sources = ['cm','ct','both','none'].includes(settings.euroPriceSources) ? settings.euroPriceSources : 'cm';
-    const showTable = sources === 'ct' || sources === 'both';
+    if (!id) return;
+    // The two CardTrader features are two switches: the added column in the prints table, and the
+    // links in the buy block. Either alone is a reason to be here, and neither is a reason for the
+    // other to run. The buy block is looked up further down, because a card page without one still
+    // has a table to put a column in — and it used to gate the column, which is how a page whose
+    // store markup had moved lost the column as well.
+    const showColumn = setFilters.prices.cardtrader !== false;
+    const showCardmarket = setFilters.prices.eur !== false;
     // Which currency the CardTrader column asks for. Empty means "as the account", which is what
     // CardTrader's own API answers in; a code is a preference the worker honours when an offer in
     // it exists, because the endpoint has no currency parameter of its own.
     const wantedCurrency = /^[A-Z]{3}$/.test(settings.cardtraderCurrency || '') ? settings.cardtraderCurrency : '';
     const table = document.querySelector('#main .prints > .prints-table');
     const eurIndex = [...(table?.querySelectorAll('thead th') || [])].findIndex(th => th.textContent.trim().toUpperCase() === 'EUR');
-    if (table && eurIndex >= 0) {
+    if (table && eurIndex >= 0 && (showColumn || !showCardmarket)) {
       const heading = table.querySelectorAll('thead th')[eurIndex];
       const nativeEurCells = [...table.querySelectorAll('tbody tr')].map(row => row.children[eurIndex]);
-      // The column is hidden by either answer: the EUR box in the price group, or the source
-      // being "show nothing". The settings page keeps the two in step, and this reads both
-      // because a value written by hand should not be able to put the column back against the
-      // reader's answer.
-      //
-      // `both` relabels the column as Cardmarket's, and `ct` replaces it with CardTrader's own
-      // column below — and both of those are moot when the column is hidden, which is why this
-      // comes first.
-      if (setFilters.prices.eur === false || sources === 'none' || sources === 'ct') {
+      // The euro column is Cardmarket's, and its own box is what hides it: the CardTrader column
+      // no longer stands in for it, so there is nothing here to keep in step. When both columns are
+      // shown the euro one is relabelled as Cardmarket's, because "EUR" beside a CardTrader column
+      // would read as the heading of the wrong one.
+      if (!showCardmarket) {
         heading.classList.add('stk-price-hidden');
         for (const cell of nativeEurCells) cell?.classList.add('stk-price-hidden');
-      }
-      if (sources === 'both') {
+      } else if (showColumn) {
         heading.classList.add('stk-cm-price-header');
         heading.replaceChildren(priceHeading('cardmarket', 'EUR'));
         heading.title = 'Cardmarket prices in EUR';
       }
-      if (showTable) {
+      if (showColumn) {
         const th = document.createElement('th');
         th.className = 'stk-ct-price-header';
         th.title = 'CardTrader: lowest offer for this printing';
@@ -93,7 +92,7 @@
         for (const row of rows) {
           const cell = document.createElement('td');
           cell.className = 'stk-ct-price-cell';
-          if (sources === 'both') row.children[eurIndex]?.classList.add('stk-cm-price-cell');
+          if (showCardmarket) row.children[eurIndex]?.classList.add('stk-cm-price-cell');
           row.children[eurIndex]?.after(cell);
           const print = row.querySelector('a[data-card-id]');
           const path = print?.href && new URL(print.href, location.href).pathname.match(/^\/card\/([^/]+)\//);
@@ -102,14 +101,6 @@
         // Start with the current printing. Remaining rows arrive gradually to respect the marketplace rate limit.
         queue.sort((a,b) => Number(b.id === id) - Number(a.id === id));
         queue.splice(75);
-        const showEurFallback = () => {
-          // The fallback exists for a CardTrader account in another currency: the column would
-          // otherwise be empty where a price was expected, so the native one comes back. It must
-          // not come back for a reader who said they want no euro column at all.
-          if (setFilters.prices.eur === false) return;
-          heading.classList.remove('stk-price-hidden');
-          for (const row of table.querySelectorAll('tbody tr')) row.children[eurIndex]?.classList.remove('stk-price-hidden');
-        };
         const fetchPrint = async print => {
           try {
             const result = await request({ type: 'cardtrader', id: print.id, set: print.set });
@@ -118,10 +109,6 @@
             // own currency rather than a fact about CardTrader, so an account in any other
             // currency showed nothing at all.
             const price = result.nonfoil || result.foil || null;
-            // With the source set to CardTrader alone the column replaces Scryfall's euro one, so
-            // a printing with no offer at all would be an empty cell where a price was expected:
-            // the native column comes back for that one.
-            if (print.id === id && sources === 'ct' && (!result.available || !price)) showEurFallback();
             if (price) {
               // The heading carries the currency, which is only known once the first offer
               // arrives when the setting says "as the account".
@@ -137,10 +124,10 @@
             }
           } catch {
             print.cell.title = 'CardTrader price unavailable';
-            if (print.id === id) {
-              if (sources === 'ct') showEurFallback();
-              return true;
-            }
+            // The current printing failing is the marketplace being unreachable, not this card
+            // having no offer, and every row asks the same endpoint: stopping keeps a broken
+            // service from costing one request per printing.
+            if (print.id === id) return true;
           }
           return false;
         };
@@ -163,7 +150,10 @@
         pump();
       }
     }
-    if (!settings.cardtraderPrices) return;
+    // The links go in the "Buy This Card" block, and nowhere else: without the block there is
+    // nowhere for them to be shown, which is the whole of why the lookup is here rather than above.
+    const links = document.querySelector('#stores .toolbox-links');
+    if (!links || !settings.cardtraderPrices) return;
     request({ type: 'cardtrader', id, set: identity.set }).then(result => {
       if (!result.available) return;
       for (const [kind, price] of [['nonfoil',result.nonfoil],['foil',result.foil]]) {
@@ -254,10 +244,9 @@
     //
     // Cardmarket is a shop here and nothing more, and EUR is a currency. The two are the same
     // shop's price from two sides — the euro column is Cardmarket's — and they are two switches
-    // because they are two things: one hides a link, the other hides a column. The settings page
-    // keeps the column's switch and the EUR source dropdown in step, and either of them being
-    // "off" is enough here, because a value written by hand should not be able to put the column
-    // back against the reader's answer.
+    // because they are two things: one hides a link, the other hides a column. The EUR box is the
+    // only switch for that column, and the CardTrader column beside it is its own price: neither
+    // reads the other.
     //
     // `shops` maps a hostname to the model's key for it, and the filter reads the *value*. It
     // read the key for a long time, which meant `prices.tcgplayer` was asked for and the model
@@ -314,11 +303,9 @@
 
   function initAdvancedPriceFilter() {
     const prices = setFilters.prices;
-    // The euro option follows both answers: the EUR box in the price group, and the source being
-    // "show nothing". They are kept in step on the settings page and read together here, because
-    // a search for a currency the reader has said they do not want to see is the opposite of
-    // hiding it.
-    const noEuro = prices.eur === false || settings.euroPriceSources === 'none';
+    // The euro option follows the EUR box alone. It used to follow the source dropdown too, when
+    // that dropdown was what removed the column; the box is the only thing that removes it now.
+    const noEuro = prices.eur === false;
     if (prices.usd !== false && prices.tix !== false && !noEuro) return;
     // The Prices filter on /advanced offers USD, Euros and MTGO Tickets per row. With a
     // currency hidden its option is dropped, because a filter that searches a currency

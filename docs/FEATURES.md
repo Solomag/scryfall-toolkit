@@ -131,19 +131,15 @@ who wants no shop links but keeps the dollar column can say so, and one more swi
 **Buy This Card** block — the column the links sit in, heading and all — because hiding each shop
 leaves the block behind. Existing Scryfall prices are never altered.
 
-**EUR source.** Scryfall's native euro column is Cardmarket's price, and two controls answer for it
-on the settings page, kept in step so they cannot disagree. The **EUR** box in the price group says
-whether the column exists; the dropdown beside the shops says whose number fills it — Cardmarket,
-CardTrader, both (a second column appears beside it), or **show nothing**, which removes the column.
-Unticking **EUR** sets the dropdown to **show nothing** and blocks it; a reader who reaches for the
-blocked field gets the box flashed and a line saying why, because a disabled select would swallow
-the click and explain nothing. Setting the dropdown to **show nothing** clears the box, and any
-other choice ticks it back. The shop box is a different question: hiding Cardmarket hides its links
-and not the column. CardTrader needs a personal token for the column, set in the CardTrader row
-above it, and the row's own switch is not required for it: that switch is about the buy-block links.
-CardTrader's own column is headed with the currency its prices come in — its API answers in the
-account's currency and has no currency parameter — and **CardTrader price currency**, under the
-source dropdown, prefers another one when offers in it exist.
+**Price columns.** Scryfall's native euro column is Cardmarket's price, and the **EUR** box in the
+price group shows or hides exactly that column. Beside it in the same group is **CardTrader**, a
+column this extension adds from your own account: it has a switch of its own, and neither box reads
+the other, so CardTrader's prices can be shown without Cardmarket's euro column and the other way
+round. It needs a personal token, set in the CardTrader row, and the row's own switch is not
+required for it: that switch is about the buy-block links. The column is headed with the currency
+its prices come in — the API answers in the account's currency and has no currency parameter — and
+**CardTrader price currency**, under the price groups, prefers another one when offers in it exist.
+The shop box is a different question again: hiding Cardmarket hides its links and not the column.
 
 **CardTrader prices.** With your own personal API token, the extension matches Scryfall
 print IDs against CardTrader blueprints, links the exact printing and shows the cheapest
@@ -250,8 +246,8 @@ frame, no page markup, no endpoint that was not already being used.
 — a later version added one to a feature that was already on, or the reader revoked it in
 Chrome's own settings — the row shows a chip: **Требуется разрешение**, or **Ограниченный режим**
 when only part of the access is there, because the feature falls back to something blander rather
-than stopping (EDHREC suggestions show the commander's page; the price sources show the native
-column). The button in the chip is the click that asks, and it asks only for that feature's
+than stopping (EDHREC suggestions show the commander's page; the CardTrader column stays empty
+rather than filling from somewhere else). The button in the chip is the click that asks, and it asks only for that feature's
 hosts. The page never asks on its own — a request made while loading is refused by the browser
 and printed as an unchecked error, which is the bug the page already fixed once — and opening a
 help dialog asks for nothing. Once the access is there the chip and the warning are gone rather
@@ -374,20 +370,18 @@ drawn in a state the model could not explain — a master off with a rule on.
   **Cardmarket is a shop here and nothing more.** Scryfall's native euro column *is* Cardmarket's
   price, and it is tempting to make one button hide both — but the column and the links are two
   questions, and answering one question in two places is the shape this file has been rewritten to
-  get out of three times. So the shop box hides the cardmarket.com link and the EUR source hides the
-  column, including with a "show nothing" of its own. The old "only Cardmarket" switch walked the
-  model's price keys to turn them all off, which would have hidden the very shop it is named after;
-  it names the four kinds it governed instead.
+  get out of three times. So the shop box hides the cardmarket.com link and the **EUR** box hides
+  the column. The old "only Cardmarket" switch walked the model's price keys to turn them all off,
+  which would have hidden the very shop it is named after; it names the four kinds it governed
+  instead.
 
-  **The EUR source sits with the prices it chooses between**, under the shops, and so does
-  CardTrader: it fills that column and adds a link to that block. It says whose number the euro
-  column carries, and it was in the other section with the card-page features — a price setting in a
-  list of things that are not prices. Its own **EUR** box is in the price group above it, and the two
-  are kept in step: unticking the box blocks the dropdown and sets it to **show nothing**, and
-  choosing **show nothing** clears the box. The dropdown carries its own "?", because choosing
-  CardTrader there needs a token that is set up in the CardTrader row and ticking
-  **Предложения CardTrader** is not required for it — the switch is about the buy-block links and the
-  column works without them.
+  **The CardTrader column sits with the prices**, in the price group, because it is a column of
+  numbers and not a shop link. It has a box of its own beside **EUR**, and the two are independent:
+  they were one question once — a dropdown that chose which of them filled the euro column, blocked
+  while **EUR** was clear — and a reader who wanted CardTrader's prices without Cardmarket's could
+  not ask for it. The column's box carries its own "?" for the currency under it, because the column
+  needs a token that is set up in the CardTrader row and ticking **Предложения CardTrader** is not
+  required for it — that switch is about the buy-block links and the column works without them.
 
 - **The Caster marker** — its own line in the left column, under the platforms table, with no
   heading of its own: a heading over a single box is a level of structure that holds nothing. It is
@@ -436,10 +430,9 @@ who has never opened the section gets the finish column and the type search.
   with their units, and **Вернуть стандартные настройки**.
 - **Salt Meter** — the «/4» scale, its two thresholds, its own reset.
 
-**CardTrader is not in this list.** It adds a euro column to the prints table and a link to the
-store block, so it lives in Visibility with the prices it fills, next to the EUR source that chooses
-whose number goes in that column. It was here because this section used to hold every switch that
-was not about sets.
+**CardTrader is not in this list.** It adds a column to the prints table and a link to the store
+block, so it lives in Visibility with the prices it fills, beside the **EUR** box. It was here
+because this section used to hold every switch that was not about sets.
 
 **Two features were cut in 1.7.6, and their rows and settings went with them.** *Historical card
 names* was a line under the prints table showing what Scryfall previewed a card as before it was

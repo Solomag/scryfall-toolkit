@@ -78,6 +78,19 @@ const hideOnly = (off = [], places = {}) => ({
 // quietly, since it is the state every reader starts in and a default that hides something
 // takes rows away from somebody who never asked.
 const showEverything = (places = {}) => hideOnly([], places);
+// The hiding shape a case needs when it wants the CardTrader column. It is the current shape with
+// the one price that starts off turned on, written once because `loadCardPage` hands its state
+// straight to storage and a partial `setFilters` is read as an older shape and its prices inverted.
+const cardtraderColumn = (extra = {}) => ({
+  setFiltersMigrated: true,
+  setFilters: {
+    platforms: Object.fromEntries(PLATFORMS.map(name =>
+      [name, { show: true, areas: { prints: true, search: true, sets: true } }])),
+    prices: { usd: true, tix: true, eur: true, tcg: true, cardhoarder: true, cardmarket: true, cardtrader: true },
+    tokens: true, showCaster: true, showStores: true
+  },
+  ...extra
+});
 
 const prints = [
   { id: 'p1', name: 'Test Card', uri: 'https://scryfall.com/card/tst/1/test-card', set: 'tst', setName: 'Test Set', number: '1', lang: 'en', digital: false, finishes: ['nonfoil'], prices: { eur: '1.00' } },
@@ -396,7 +409,7 @@ async function loadCardPage(state, pageRoutes = routes) {
 
 async function cardPageTest() {
   console.log('content scripts: card page');
-  const page = await loadCardPage({ cards: [], euroPriceSources: 'both' });
+  const page = await loadCardPage({ cards: [] });
   const { document, mock, location } = page;
 
   // Clipboard shell.
@@ -766,15 +779,15 @@ async function advancedPriceFilterTest() {
     'and hiding only the dollar column leaves the ticket search alone');
   assertEqual(await withPrices({}), ['usd', 'eur', 'tix'],
     'an empty prices object is no prices hidden, not all of them');
-  // The euro option follows the EUR source, not a shop's switch: `none` is the reader saying
-  // they want no euro column, and there is no price kind that means that. The euro option is
-  // Scryfall's `eur` and the source is one of four words, so the two are compared as words
-  // rather than assumed to be the same thing — the mismatch that left the TCGplayer links
-  // unhidden, in another file.
-  assertEqual(await withPrices({}, { euroPriceSources: 'none' }), ['usd', 'tix'],
-    'and the euro search goes with the EUR source being "show nothing"');
-  assertEqual(await withPrices({}, { euroPriceSources: 'ct' }), ['usd', 'eur', 'tix'],
-    'while choosing CardTrader as the source keeps the euro search, since the column is there');
+  // The euro option follows the EUR box, which is now the only thing that removes the column: the
+  // dropdown that used to be its second handle is gone, and CardTrader is a column of its own. The
+  // euro option is Scryfall's `eur` and the box is `prices.eur`, and the two are compared as the
+  // same word rather than assumed to be — the mismatch that left the TCGplayer links unhidden, in
+  // another file.
+  assertEqual(await withPrices({ eur: false }), ['usd', 'tix'],
+    'and the euro search goes with the EUR box being unticked');
+  assertEqual(await withPrices({ cardtrader: true }), ['usd', 'eur', 'tix'],
+    'while the CardTrader column is a column of its own and leaves the euro search alone');
   for (const prices of [{ usd: false }, { tix: false }, { usd: false, tix: false }]) {
     assert((await withPrices(prices)).includes('eur'),
       `the euro option survives with prices ${JSON.stringify(prices)}`);
@@ -795,8 +808,8 @@ async function priceFilterTest() {
     <meta name="scryfall:card:id" content="${PRINT_CURRENT}">
     <title>Test Card</title></head><body>
     <div id="main">
-      <!-- The card-image block is what makes this a card page, and the EUR source lives in a
-           step gated on that: without it the source cases below would test nothing. -->
+      <!-- The card-image block is what makes this a card page, and the CardTrader column lives in
+           a step gated on that: without it the column case below would test nothing. -->
       <div class="card-image"><img src="https://cards.scryfall.io/normal/x.jpg" alt=""></div>
       <div class="prints">
       <table class="prints-table">
@@ -816,10 +829,10 @@ async function priceFilterTest() {
   const load = async (prices, filters = {}, storage = {}) => {
     const page = createPage({
       url: 'https://scryfall.com/card/tst/1/test-card', html, routes,
-      // Two places, because the settings are in two places: the hiding group is one storage key
-      // and the EUR source is another. Putting the source inside `setFilters` is how this
-      // fixture first tested nothing at all — the page read the default and the case passed for
-      // the wrong reason.
+      // The hiding group is one storage key and the prices are inside it — the EUR box and the
+      // CardTrader column alike. Putting a price beside it rather than inside `setFilters` is how
+      // this fixture first tested nothing at all: the page read the default and the case passed
+      // for the wrong reason.
       state: {
         settingsLanguage: 'en',
         clipboard: false,
@@ -871,34 +884,35 @@ async function priceFilterTest() {
     'turning Cardhoarder off hides the Cardhoarder link and leaves the other two');
 
   // Cardmarket is a shop here and nothing more: its box hides the cardmarket.com link, and the
-  // euro column it prices is not this filter's business. That column is the EUR source setting's,
-  // which has a "show nothing" of its own — answering it in two places would be two controls for
-  // one question.
+  // euro column it prices is not this filter's business. That column has a box of its own —
+  // answering it in two places would be two controls for one question.
   const noCardmarket = await load({ usd: true, tix: true, tcg: true, cardhoarder: true, cardmarket: false });
   assertEqual(hiddenLinks(noCardmarket.document), ['www.cardmarket.com'],
     'turning Cardmarket off hides the Cardmarket link');
   assertEqual(hiddenHeads(noCardmarket.document), [],
-    'and hides no column: the euro column is the EUR source setting\'s to remove, not a shop\'s');
+    'and hides no column: the euro column is the EUR box\'s to remove, not a shop\'s');
 
-  // The euro column, removed by the source setting rather than by a shop.
-  const noEuro = await load({ usd: true, tix: true, tcg: true, cardhoarder: true, cardmarket: true },
-    {}, { euroPriceSources: 'none' });
-  assertEqual(hiddenHeads(noEuro.document), ['EUR'],
-    'and "show nothing" as the EUR source hides the euro column');
-  assertEqual(hiddenCells(noEuro.document), ['€3.92'],
-    'and the cells under it, so the column is gone rather than emptied');
-  assertEqual(hiddenLinks(noEuro.document), [],
-    'while no shop link is touched, because a source is not a shop');
-
-  // And the other handle on the same column: the EUR box in the price group. The settings page
-  // keeps the two in step, and the card page reads both, because a value written by hand should
-  // not be able to put the column back against the reader's answer.
+  // The euro column, removed by its own box. It used to have a second handle — a source dropdown
+  // that could be set to "show nothing" — and the CardTrader column used to be one of that
+  // dropdown's four values. CardTrader is a column of its own now, so the box is the only thing
+  // that removes this one.
   const noEurBox = await load({ usd: true, tix: true, eur: false, tcg: true, cardhoarder: true, cardmarket: true });
   assertEqual(hiddenHeads(noEurBox.document), ['EUR'],
-    'and unticking the EUR box hides the same column');
-  assertEqual(hiddenCells(noEurBox.document), ['€3.92'], 'with its cells');
+    'unticking the EUR box hides the euro column');
+  assertEqual(hiddenCells(noEurBox.document), ['€3.92'], 'with its cells, so it is gone rather than emptied');
   assertEqual(hiddenLinks(noEurBox.document), [],
     'and no link, because the euro column is a price and not a shop');
+
+  // The pair the old dropdown could not ask for: CardTrader's column without Cardmarket's. Unticking
+  // EUR used to block the only control that could ask for CardTrader, so a reader who wanted its
+  // prices and not the euro column had no answer at all. The two boxes are independent, and this is
+  // that pair.
+  const ctWithoutEuro = await load(
+    { usd: true, tix: true, eur: false, cardtrader: true, tcg: true, cardhoarder: true, cardmarket: true });
+  assertEqual(hiddenHeads(ctWithoutEuro.document), ['EUR'],
+    'with the euro box off and CardTrader on, the euro column is gone');
+  assert(ctWithoutEuro.document.querySelector('.stk-ct-price-header'),
+    'and the CardTrader column is there, which is the pair the old dropdown could not ask for');
 
   // The currencies, which are columns and not links.
   const noCurrencies = await load({ usd: false, tix: false, tcg: true, cardhoarder: true, cardmarket: true });
@@ -1325,7 +1339,7 @@ async function cardTraderCurrencyTest() {
     ...routes,
     cardtrader: () => ({ available: true, url: 'https://www.cardtrader.com/en/cards/test', nonfoil: { cents: 1234, currency: 'USD' } })
   };
-  const page = await loadCardPage({ cards: [], euroPriceSources: 'ct' }, usd);
+  const page = await loadCardPage({ cards: [], ...cardtraderColumn() }, usd);
   await sleep(80);
   const { document } = page;
   const header = document.querySelector('.stk-ct-price-header');
@@ -1338,7 +1352,7 @@ async function cardTraderCurrencyTest() {
 
   // A wanted currency is shown on the heading before any price arrives, and passed through to the
   // request — the worker prefers an offer in it when one exists.
-  const wanted = await loadCardPage({ cards: [], euroPriceSources: 'ct', cardtraderCurrency: 'USD' }, usd);
+  const wanted = await loadCardPage({ cards: [], ...cardtraderColumn({ cardtraderCurrency: 'USD' }) }, usd);
   await sleep(80);
   assertEqual(wanted.document.querySelector('.stk-ct-price-header .stk-price-code').textContent, 'USD',
     'a wanted currency is what the heading shows');

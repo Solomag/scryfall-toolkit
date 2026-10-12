@@ -11,7 +11,7 @@
 const defaults = {
   settingsLanguage: 'auto',
   clipboard: true, printAddButtons: true, darkTheme: 'auto', tags: true, cardTags: true, artTags: false, relationships: true,
-  finishBadges: true, cardtraderPrices: false, cardtraderToken: '', euroPriceSources: 'cm', cardtraderCurrency: '',
+  finishBadges: true, cardtraderPrices: false, cardtraderToken: '', cardtraderCurrency: '',
   edhrecUsage: false, edhrecSalt: false, showSaltScale: false, edhrecUsageDisplay: 'both',
   usageColorMetric: 'decks', usageMediumDecks: 50000, usageHighDecks: 100000,
   usageMediumPercent: 1, usageHighPercent: 2.6, saltMediumThreshold: 1, saltHighThreshold: 2,
@@ -38,7 +38,7 @@ const defaults = {
 // one flag, the two category rules carry a list under them, and the four price kinds are
 // told apart by the model rather than by an id. A key-by-key save would have to be kept
 // in step with all three, and there is no test that could tell that it was not.
-const basicFields = ["clipboard", "printAddButtons", "tags", "cardTags", "artTags", "relationships", "finishBadges", "cardtraderPrices", "euroPriceSources", "cardtraderCurrency", "edhrecUsage", "edhrecSalt", "showSaltScale", "edhrecUsageDisplay", "usageColorMetric", "legalities", "exportFormat", "taggerSearchLinks", "cardSearchLinks", "deckNoPrices", "stackedDeckCards", "deckLegality", "deckCleanUpImprover", "cleanUpLandsInSingleton", "sortEntriesPrimary", "insertSortingHeadings", "edhrecSuggestions", "deckSearch"];
+const basicFields = ["clipboard", "printAddButtons", "tags", "cardTags", "artTags", "relationships", "finishBadges", "cardtraderPrices", "cardtraderCurrency", "edhrecUsage", "edhrecSalt", "showSaltScale", "edhrecUsageDisplay", "usageColorMetric", "legalities", "exportFormat", "taggerSearchLinks", "cardSearchLinks", "deckNoPrices", "stackedDeckCards", "deckLegality", "deckCleanUpImprover", "cleanUpLandsInSingleton", "sortEntriesPrimary", "insertSortingHeadings", "edhrecSuggestions", "deckSearch"];
 // EDHREC and CardTrader are optional features, and so is the access they need.
 // Chrome has a place for exactly this: optional_host_permissions, granted only
 // when the user turns one of them on. Turning a switch off and on again is also
@@ -56,13 +56,12 @@ const OPTIONAL_HOSTS = {
 // feature with a host cannot leave the message showing a storage key to a reader.
 const OPTIONAL_HOST_NAMES = {
   edhrecUsage: 'EDHREC', edhrecSalt: 'EDHREC',
-  edhrecSuggestions: 'EDHREC', cardtraderPrices: 'CardTrader',
-  euroPriceSources: 'CardTrader'
+  edhrecSuggestions: 'EDHREC', cardtraderPrices: 'CardTrader'
 };
-// The hosts each optional feature needs, and what turns them on. euroPriceSources
-// is the one that is easy to miss: choosing CardTrader as the EUR source reaches
-// api.cardtrader.com whether or not the CardTrader switch is on, so it has to ask
-// for the host too.
+// The hosts each optional feature needs, and what turns them on. The CardTrader
+// column is the one that is easy to miss: it is a price kind inside the hiding
+// group rather than a key of its own, and it reaches api.cardtrader.com whether or
+// not the buy-block switch is on, so it has to ask for the host too.
 // A feature that is already on can still be missing a host it needs: hosts get
 // added over time and the grant the user gave covers only what existed then. A
 // missing host does not fail loudly — the feature quietly falls back to
@@ -105,11 +104,20 @@ function reconcileHostAccess(values) {
     if (!values[key] || !hosts.length) continue;
     checks.push(missingHostsFor(key).then(missing => missing.length ? key : null));
   }
+  // The CardTrader column is a price kind inside the hiding group rather than a key of its own, so
+  // the loop above cannot see it. Its host is the one its links use, and the name it is reported
+  // under is theirs for the same reason: it is one product either way.
+  if (values.setFilters?.prices?.cardtrader === true) {
+    checks.push(missingHostsFor('cardtraderPrices').then(missing => missing.length ? 'cardtraderPrices' : null));
+  }
   return Promise.all(checks).then(results => results.filter(Boolean));
 }
 function optionalHostsFor(key, value) {
-  if (key === 'euroPriceSources') {
-    return value === 'ct' || value === 'both' ? ['https://api.cardtrader.com/*'] : [];
+  // The CardTrader column's box is drawn by the price group's loop, so its id is the one the loop
+  // gives it rather than a storage key. It needs the same host its links do: either switch turned
+  // on is the moment to ask for it, and a refused ask turns that one back off.
+  if (key === 'price-cardtrader') {
+    return value ? ['https://api.cardtrader.com/*'] : [];
   }
   // A feature that is being turned *off* needs no host. Asking for one there is the interface
   // demanding access in order to stop using the thing the access is for — and if the reader
@@ -149,9 +157,11 @@ const status = document.getElementById("status");
 // the block lives with the hiding group. One of them publishes a repaint and the other calls it,
 // so there is one place that decides what the box looks like rather than two that disagree.
 let repaintCardtrader = null;
-// The EUR source dropdown is drawn from two things too — the EUR box and whether CardTrader has
-// the token its prices need — so the token callbacks publish a repaint the same way.
-let repaintEuro = null;
+// The CardTrader column is drawn from two things too — its own box and whether CardTrader has the
+// token its prices need — so the token callbacks publish a repaint the same way. `clear` is the
+// other direction: a token that has been removed takes the column with it.
+let repaintCardtraderColumn = null;
+let clearCardtraderColumn = null;
 let cardtraderWanted = false;
 chrome.storage.local.get(defaults, values => {
   // What the user chose and what the interface speaks are different things. The
@@ -199,10 +209,10 @@ chrome.storage.local.get(defaults, values => {
     tokenRow.hidden = stored && !replacing;
     tokenActions.hidden = !stored;
     if (!stored || replacing) token.value = '';
-    // Whatever the token state is, the box is redrawn: with a token it appears, and it appears
-    // disabled if the block its links go in is hidden. The EUR source follows the token too.
+    // Whatever the token state is, the boxes are redrawn: with a token they appear, and the links
+    // appear disabled if the block they go in is hidden. The column follows the token too.
     repaintCardtrader?.();
-    repaintEuro?.();
+    repaintCardtraderColumn?.();
   }
   showTokenState(Boolean(values.cardtraderToken));
   // The reader's own answer for CardTrader, kept here rather than read back from the box: the
@@ -241,12 +251,14 @@ chrome.storage.local.get(defaults, values => {
   remove.addEventListener('click', () => {
     chrome.storage.local.remove('cardtraderToken', () => {
       document.getElementById('cardtraderPrices').checked = false;
-      document.getElementById('euroPriceSources').value = 'cm';
+      // The column cannot fill from an account that is no longer connected, so it goes with the
+      // token too — otherwise it would be a switch left on over a box the page has drawn off.
+      clearCardtraderColumn?.();
       // The reader's own answer goes with the token: without it, saving a new token later
       // would redraw the box from a "wanted" that outlived the feature it belonged to, and the
       // box would say on while storage said off.
       cardtraderWanted = false;
-      chrome.storage.local.set({ cardtraderPrices: false, euroPriceSources: 'cm' });
+      chrome.storage.local.set({ cardtraderPrices: false });
       showTokenState(false);
       status.textContent = t('Токен удалён');
     });
@@ -347,19 +359,18 @@ chrome.storage.local.get(defaults, values => {
       caption: 'Предложения CardTrader',
       notes: [
         'Для цен CardTrader нужен токен. Он хранится локально в расширении и передаётся только в API CardTrader.',
-        'Цены в таблице появляются постепенно; учитываются предложения в EUR. Состояние и язык могут отличаться.',
+        'Цены в таблице появляются постепенно; столбец подписывается валютой вашего аккаунта. Состояние и язык могут отличаться.',
         'Сохранённый токен не проверяется этой страницей: она не делает запросов к CardTrader. Работает он или нет, видно на странице карты.'
       ]
     },
     eursource: {
-      caption: 'Цены в таблице изданий',
+      caption: 'Валюта цен CardTrader',
       notes: [
-        'Столбец EUR на Scryfall — это цена Cardmarket. Здесь выбирается, чем его заполнять: Cardmarket, CardTrader или обоими — тогда рядом появляется второй столбец. «Не показывать» убирает столбец целиком и снимает галочку EUR в группе «Цены»: это одна настройка с двумя ручками.',
-        'Пока галочка EUR снята, список заблокирован: выбирать источник для столбца, которого нет, нечего.',
-        'Цена CardTrader приходит в валюте вашего аккаунта CardTrader, и столбец подписывается этой валютой — а не евро. Параметр валюты у CardTrader нет, поэтому «Валюта цен CardTrader» — предпочтение: если в этой валюте есть предложения, берётся самое дешёвое из них; иначе показывается валюта аккаунта.',
-        'Для цен CardTrader нужен личный токен, и задаётся он в строке «Предложения CardTrader» выше, в том же блоке магазинов.',
-        'Пока токена нет, варианты CardTrader и «Cardmarket и CardTrader» заблокированы. Чтобы их открыть, нажмите «Подключить» в строке «Предложения CardTrader» выше и сохраните личный токен.',
-        'Включать саму галочку «Предложения CardTrader» для этого не обязательно: она добавляет ссылки CardTrader в блок покупки, а столбец работает и без них.'
+        'Столбец EUR на Scryfall — это цена Cardmarket, и галочка EUR в группе «Цены» показывает или прячет именно его.',
+        'CardTrader — отдельный столбец рядом, со своей галочкой в той же группе. Его цена приходит в валюте вашего аккаунта CardTrader, и столбец подписывается этой валютой — а не евро.',
+        'Параметр валюты у CardTrader нет, поэтому «Валюта цен CardTrader» — предпочтение: если в этой валюте есть предложения, берётся самое дешёвое из них; иначе показывается валюта аккаунта.',
+        'Для столбца CardTrader нужен личный токен, и задаётся он в строке «Предложения CardTrader» выше. Пока токена нет, галочка столбца заблокирована: нажмите «Подключить» и сохраните токен.',
+        'Галочка «Предложения CardTrader» — про другое: она добавляет ссылки CardTrader в блок покупки, а столбец работает и без неё.'
       ]
     },
     deckNoPrices: {
@@ -554,17 +565,6 @@ chrome.storage.local.get(defaults, values => {
     else element.value = values[key];
     element.addEventListener("change", () => {
       const wanted = element.type === "checkbox" ? element.checked : element.value;
-      // CardTrader's two euro sources are blocked without its token, so a change that reaches
-      // one anyway — a keyboard, a script, a value written back by an older build — is refused
-      // rather than stored as a source that cannot fill the column. The field says what is
-      // missing; see the dropdown's own paint for the blocked state itself.
-      if (key === 'euroPriceSources' && tokenStatus.dataset.stored !== 'yes' &&
-          (wanted === 'ct' || wanted === 'both')) {
-        element.value = 'cm';
-        chrome.storage.local.set({ euroPriceSources: 'cm' });
-        status.textContent = t('Введите личный API-ключ для отображения этой цены.');
-        return;
-      }
       // Turning an optional feature on is the moment the browser is asked for
       // its host. Refusing leaves the switch off rather than saving a feature
       // that cannot reach anything.
@@ -860,6 +860,28 @@ for (const group of FILTERS.PRICE_GROUP_NAMES) {
     box.checked = filters.prices[kind] !== false;
     box.setAttribute('aria-label', `${entry.label}: ${t('показывать')}`);
     box.addEventListener('change', () => {
+      // The CardTrader column is the one price with a host of its own behind it, so its box asks
+      // for that host the moment it is ticked and a refusal turns it back off rather than saving a
+      // column that can never fill. Turning it off needs no host and asks for none.
+      if (kind === 'cardtrader') {
+        // A box the page has drawn off — no token to fill the column with — is not an answer
+        // either: a script, or a value written back by an older build, can still reach it. The
+        // paint puts it back rather than storing a column that cannot fill.
+        if (box.disabled) { box.checked = filters.prices.cardtrader !== false; return; }
+        requestHostAccess(optionalHostsFor('price-cardtrader', box.checked)).then(answer => {
+          if (!answer.granted) {
+            box.checked = filters.prices.cardtrader !== false;
+            status.textContent = answer.reason
+              ? t('Браузер не дал спросить: ') + answer.reason
+              : t('Доступ не выдан.');
+            return;
+          }
+          filters.prices.cardtrader = box.checked;
+          repaintCardtraderColumn?.();
+          saveFilters();
+        });
+        return;
+      }
       filters.prices[kind] = box.checked;
       saveFilters();
     });
@@ -924,90 +946,38 @@ for (const group of FILTERS.PRICE_GROUP_NAMES) {
   });
   paintStores();
 
-  // The EUR box and the EUR source are two views of one question, and this is where they are kept
-  // in step. The box says whether the euro column exists; the dropdown says whose number is in it.
-  // The dropdown cannot choose a source for a column that is not there, so it is blocked while the
-  // box is unticked and set to "show nothing" to say so.
+  // The CardTrader column's box is drawn with the other prices, and this is where it is wired: it
+  // is the one price that needs a token, so it is out of reach until one is saved, and the
+  // currency below it only means something while it is on.
   //
-  // Blocking is a transparent button over the select rather than `disabled` on it, because a
-  // disabled select swallows the click and a reader who reaches for it would find a dead control
-  // with no explanation. The button is reachable by keyboard and says why when it is pressed.
-  const euroBox = priceBoxes.eur;
-  const euroSource = document.getElementById('euroPriceSources');
-  const euroShield = document.getElementById('euroSourceShield');
-  const euroHint = document.getElementById('euroSourceHint');
-  const euroCurrency = document.getElementById('cardtraderCurrency');
-  const euroOptions = [...euroSource.options];
-  const paintEuro = () => {
-    const on = filters.prices.eur !== false;
+  // The EUR box above it is a column like USD and TIX and answers only for itself now. It used to
+  // share one answer with a source dropdown, and the two were kept in step — which is what left a
+  // reader who wanted CardTrader's column unable to have it without Cardmarket's, on a dropdown
+  // that was blocked the moment they unticked EUR.
+  const cardtraderColumnBox = priceBoxes.cardtrader;
+  const cardtraderCurrency = document.getElementById('cardtraderCurrency');
+  const paintCardtraderColumn = () => {
     const connected = tokenStatus.dataset.stored === 'yes';
-    euroSource.disabled = !on;
-    euroShield.hidden = on;
-    euroShield.setAttribute('aria-label', t('Нельзя выбрать источник цены, пока цена не показывается.'));
-    // CardTrader's euro prices need the personal token, so its two choices are out of reach
-    // until one is saved. A source that cannot fill the column is not a choice, and offering it
-    // left a reader picking CardTrader and watching nothing appear — the column stayed empty
-    // because the request it needs cannot be made. The row says what is missing instead.
-    for (const option of euroOptions) {
-      if (option.value === 'ct' || option.value === 'both') option.disabled = !connected;
+    const on = connected && filters.prices.cardtrader !== false;
+    if (cardtraderColumnBox) {
+      cardtraderColumnBox.disabled = !connected;
+      cardtraderColumnBox.checked = on;
     }
-    euroHint.hidden = connected || !on;
-    // The currency only means something for a CardTrader column, so it is out of reach while the
-    // source is Cardmarket or "show nothing" — and while there is no token to ask with.
-    const usesCardTrader = euroSource.value === 'ct' || euroSource.value === 'both';
-    euroCurrency.disabled = !on || !connected || !usesCardTrader;
-    // A stored value from before the token was removed cannot stand: fall back to Cardmarket,
-    // the only source this page can pick without inventing a preference.
-    if (!connected && (euroSource.value === 'ct' || euroSource.value === 'both')) {
-      euroSource.value = 'cm';
-      chrome.storage.local.set({ euroPriceSources: 'cm' });
-    }
+    // The currency only means something for the column it heads, so it is out of reach while the
+    // column is off — and while there is no token to ask with.
+    cardtraderCurrency.disabled = !on;
   };
-  repaintEuro = paintEuro;
-  const flashEuro = () => {
-    euroBox.classList.remove('stk-blink');
-    // Read back a layout property so the class is re-added to an element the browser has already
-    // animated: without it, pressing the shield twice in a row flashes once.
-    void euroBox.offsetWidth;
-    euroBox.classList.add('stk-blink');
-    setTimeout(() => euroBox.classList.remove('stk-blink'), 1600);
-    status.textContent = t('Нельзя выбрать источник цены, пока цена не показывается.');
+  repaintCardtraderColumn = paintCardtraderColumn;
+  // A token that has gone cannot fill the column, so the column goes with it rather than staying
+  // on over a box the page has drawn off. `cardtraderWanted` is the links' copy of the same
+  // answer, and the token's own handler clears it.
+  clearCardtraderColumn = () => {
+    if (filters.prices.cardtrader === false) return;
+    filters.prices.cardtrader = false;
+    paintCardtraderColumn();
+    saveFilters();
   };
-  euroShield.addEventListener('click', flashEuro);
-  euroBox.addEventListener('change', () => {
-    filters.prices.eur = euroBox.checked;
-    if (!euroBox.checked) {
-      euroSource.value = 'none';
-      chrome.storage.local.set({ euroPriceSources: 'none' });
-    } else if (euroSource.value === 'none') {
-      // Something to fill the column with, because the box just said there is one. The default,
-      // and the only value this page can pick without inventing a preference.
-      euroSource.value = 'cm';
-      chrome.storage.local.set({ euroPriceSources: 'cm' });
-    }
-    paintEuro();
-    saveFilters();
-  });
-  euroSource.addEventListener('change', () => {
-    // The dropdown can still be set to "show nothing" by a reader who wants the column gone, and
-    // that is the same answer as unticking the box: they are one setting with two handles, so the
-    // box follows the dropdown the same way the dropdown follows the box.
-    filters.prices.eur = euroSource.value !== 'none';
-    euroBox.checked = filters.prices.eur;
-    paintEuro();
-    saveFilters();
-  });
-  // A profile written before the EUR box existed can carry "show nothing" as the source and no
-  // EUR key of its own; the model fills that key with its default (on), so on load the box and
-  // the dropdown would disagree — the box ticked, the dropdown blocked and set to "show nothing"
-  // only on paper. The source is what that reader chose, so it wins, and the pair is written back
-  // in step rather than left for the next edit to sort out.
-  if (euroSource.value === 'none' && filters.prices.eur !== false) {
-    filters.prices.eur = false;
-    euroBox.checked = false;
-    saveFilters();
-  }
-  paintEuro();
+  paintCardtraderColumn();
 
   // The rows above were written after the page was localized, so the page is localized
   // again over them. Their labels are the model's own Russian strings, so this is the

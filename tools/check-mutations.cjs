@@ -443,10 +443,10 @@ const MUTATIONS = [
   },
   {
     // And the advanced search filter dropping the euro option for the wrong reason — or not at
-    // all. The option is Scryfall's `eur` and the source is one of four words, so the two are
-    // compared as words; a filter that treats them as the same thing leaves the euro search
-    // standing when the reader has said they want no euro price.
-    name: 'the advanced price filter ignores the EUR source',
+    // all. The option is Scryfall's `eur` and the box is `prices.eur`, so the two are compared as
+    // the same word; a filter that treats them as different things leaves the euro search standing
+    // when the reader has said they want no euro price.
+    name: 'the advanced price filter ignores the EUR box',
     file: 'prices',
     run: 'test',
     find: '        if (option.value === \'eur\') {\n' +
@@ -458,7 +458,7 @@ const MUTATIONS = [
       '          option.textContent = \'Cardmarket (€)\';\n' +
       '          continue;\n' +
       '        }',
-    expect: 'and the euro search goes with the EUR source being "show nothing"'
+    expect: 'and the euro search goes with the EUR box being unticked'
   },
   {
     // The general switch over the store block, doing nothing. A reader who hid the whole block
@@ -506,10 +506,10 @@ const MUTATIONS = [
     expect: 'and the three shop boxes are drawn empty and disabled while the block is off'
   },
   {
-    // And the block switch writing the shops off as it goes, which loses the reader's choices:
-    // turning the block back on would bring back three unticked shops rather than the three they
-    // had chosen.
-    name: 'the block switch writes the shops off instead of drawing them off',
+    // And the block switch writing the prices off as it goes, which loses the reader's choices:
+    // turning the block back on would bring back unticked prices rather than the ones they had
+    // chosen.
+    name: 'the block switch writes the prices off instead of drawing them off',
     file: 'options',
     run: 'test-options',
     find: '      box.disabled = !on;\n' +
@@ -517,7 +517,7 @@ const MUTATIONS = [
     replace: '      box.disabled = !on;\n' +
       '      box.checked = on && filters.prices[kind] !== false;\n' +
       '      filters.prices[kind] = box.checked;',
-    expect: 'and it turns no shop off in storage'
+    expect: 'and it turns no price off in storage'
   },
   {
     // And CardTrader, which is the fourth link in that block: left in reach while the block is
@@ -530,15 +530,16 @@ const MUTATIONS = [
     expect: 'and takes it out of reach, because its link has nowhere to go'
   },
   {
-    // The EUR source's "show nothing" doing nothing. The column would stay on the page with a
-    // dropdown that says it is gone, and the reader who picked it has no other switch for it —
-    // the shop boxes answer a different question.
-    name: 'the EUR source "show nothing" leaves the euro column on the page',
+    // The CardTrader column tied to the euro box again, which is the defect this round is about:
+    // a reader who wanted CardTrader's prices and not Cardmarket's had no way to ask, because
+    // unticking EUR blocked the only control that could. A column that goes with the euro box
+    // puts that back, and the reader is left with the pair they reported.
+    name: 'the CardTrader column is tied to the euro box again',
     file: 'prices',
     run: 'test',
-    find: '      if (setFilters.prices.eur === false || sources === \'none\' || sources === \'ct\') {',
-    replace: '      if (setFilters.prices.eur === false || sources === \'ct\') {',
-    expect: 'and "show nothing" as the EUR source hides the euro column'
+    find: '    const showColumn = setFilters.prices.cardtrader !== false;',
+    replace: '    const showColumn = setFilters.prices.cardtrader !== false && setFilters.prices.eur !== false;',
+    expect: 'and the CardTrader column is there, which is the pair the old dropdown could not ask for'
   },
   {
     // And the disabled contrast going back to the grey nobody noticed. This was reported from
@@ -552,39 +553,38 @@ const MUTATIONS = [
     expect: 'and a disabled one is dark enough to be told apart from it at a glance'
   },
   {
-    // The two handles on the euro column disagreeing. The box says the column exists and the
-    // dropdown says whose number is in it; a dropdown set to "show nothing" while the box stays
-    // ticked is a page showing one setting in two states.
-    name: 'the EUR source can be set to nothing while the EUR box stays ticked',
+    // And the CardTrader column's box not asking for its host: it would turn on and reach nothing,
+    // because the request it needs cannot be made, and the box would be the kind of switch that
+    // lies about what it turned on.
+    name: 'the CardTrader column does not ask for its host',
     file: 'options',
     run: 'test-options',
-    find: '    filters.prices.eur = euroSource.value !== \'none\';\n' +
-      '    euroBox.checked = filters.prices.eur;',
-    replace: '    filters.prices.eur = euroSource.value !== \'none\';',
-    expect: 'and setting the dropdown to "show nothing" clears the box, because it is the same answer'
+    find: '        requestHostAccess(optionalHostsFor(\'price-cardtrader\', box.checked)).then(answer => {',
+    replace: '        requestHostAccess([]).then(answer => {',
+    expect: 'the CardTrader column asks for the CardTrader host'
   },
   {
-    // And the blocked dropdown left uncovered. `disabled` on a select swallows clicks, so without
-    // the shield a reader who reaches for it finds a dead control and no reason for it.
-    name: 'the blocked EUR source is left uncovered',
+    // And the CardTrader column's box answering while the page has drawn it off — a script, or a
+    // value written back by an older build, can reach it — so the column is stored on over a box
+    // the reader cannot turn on and does not know is off.
+    name: 'a blocked CardTrader column still answers',
     file: 'options',
     run: 'test-options',
-    find: '    euroShield.hidden = on;',
-    replace: '    euroShield.hidden = false;',
-    expect: 'with the EUR box ticked the source is free and nothing covers it'
+    find: '        if (box.disabled) { box.checked = filters.prices.cardtrader !== false; return; }',
+    replace: '        if (false) { box.checked = filters.prices.cardtrader !== false; return; }',
+    expect: 'and a box the page drew off cannot be turned on by a script'
   },
   {
-    // And the card page's currency map forgetting the euro column — the one place that decides
-    // whether a hidden currency's column is drawn. `initCardTrader` hides the column too, but only
-    // when it runs at all, which is when the EUR source is not the default `cm`; so with the
-    // default source this map is the only thing between a reader who unticked EUR and the column
-    // they said they did not want.
+    // And the card page's currency map forgetting the euro column — the one place that hides a
+    // hidden currency's column on every card page. `initCardTrader` hides it too, but only when a
+    // CardTrader feature is on; for a reader with neither of them, this map is the only thing
+    // between an unticked EUR box and the column they said they did not want.
     name: 'the euro column ignores the EUR box on the card page',
     file: 'prices',
     run: 'test',
     find: '    const currency = new Map([[\'USD\', \'usd\'], [\'TIX\', \'tix\'], [\'EUR\', \'eur\']]);',
     replace: '    const currency = new Map([[\'USD\', \'usd\'], [\'TIX\', \'tix\']]);',
-    expect: 'and unticking the EUR box hides the same column'
+    expect: 'unticking the EUR box hides the euro column'
   },
   {
     // And the whole-block switch drawn below the shops it governs, where it reads as a summary of
@@ -718,17 +718,18 @@ const MUTATIONS = [
     expect: 'two decks of the same size and commander are two requests, not one'
   },
   {
-    // A profile from before the EUR box, loaded with the box ticked and the dropdown blocked.
-    name: 'the EUR pair is not reconciled on load',
-    file: 'options',
-    run: 'test-options',
-    find: '  if (euroSource.value === \'none\' && filters.prices.eur !== false) {\n' +
-      '    filters.prices.eur = false;\n' +
-      '    euroBox.checked = false;\n' +
-      '    saveFilters();\n' +
-      '  }',
-    replace: '',
-    expect: 'a source of "show nothing" with no EUR key of its own loads with the box cleared'
+    // The CardTrader column's migration running again over a value that already has the switch, so
+    // a later edit is overwritten on the next page load by an answer the reader has moved past.
+    name: 'the CardTrader column migration runs over a value that already has the switch',
+    file: 'model',
+    run: 'test-model',
+    find: '    if (isPlainObject(raw?.prices) && typeof raw.prices.cardtrader === \'boolean\') {\n' +
+      '      return { filters, changed: false };\n' +
+      '    }',
+    replace: '    if (false) {\n' +
+      '      return { filters, changed: false };\n' +
+      '    }',
+    expect: 'and a value that already has the switch is left alone, so the translation runs once'
   },
   {
     // CardTrader's own copy of the reader's answer outliving the token, so a new token redraws
