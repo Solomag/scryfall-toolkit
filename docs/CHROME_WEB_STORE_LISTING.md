@@ -1,4 +1,4 @@
-# Chrome Web Store listing — Scryfall Toolkit 2.2.0
+# Chrome Web Store listing — Scryfall Toolkit 2.3.0
 
 Everything here is written from the shipped code, so that the answers given in the store
 console match what the extension actually does. Where a field needs a decision from the
@@ -250,6 +250,13 @@ These cannot be done from here, and each is listed with the exact screen.
 6. **Review and publish** — the submission is a *review*, not a publication. It becomes
    public only when Google approves it. Tick automatic publication after approval if the
    console offers it.
+
+**Firefox is a second archive, not a second store.** The release carries
+`scryfall-toolkit-<version>-firefox.zip` beside the plain one, built from the same source by the
+same tool. Its `manifest.json` is derived from the one above — the background is a `scripts` event
+page rather than a service worker, and `src/core/browser-shim.js` points `chrome` at Firefox's
+promise-returning `browser` — so the two cannot drift apart. The Chrome Web Store item takes the
+plain archive; the Firefox one is for `about:debugging` and, later, addons.mozilla.org.
 
 ---
 
