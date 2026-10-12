@@ -8,6 +8,17 @@ All releases: <https://github.com/Solomag/scryfall-toolkit/releases>
 
 ---
 
+### The AMO listing, and a test that keeps it honest
+
+The Firefox listing had nowhere to live: the Chrome one had a document and a set of checks, and the
+Firefox fields — the summary, the description, the categories, the licence, the privacy policy and
+the notes for reviewers — were being retyped into the AMO form from a chat. `docs/AMO_LISTING.md`
+holds them now, written from the shipped code, with the Firefox archive and the data declaration
+explained beside them. A test in the package suite holds the summary to the manifest's own
+`description` and the document to the generated Firefox manifest's gecko id and data declaration,
+and the host check reads this document too — so a host the code talks to but the listing never names
+fails the suite, the same way it does for the Chrome listing.
+
 ### 2.3.2 - the panels are built as nodes, not parsed from a string
 
 addons-linter flagged four `innerHTML` assignments as an unsafe variable assignment: the tag icons,

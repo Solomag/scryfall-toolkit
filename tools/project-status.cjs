@@ -101,6 +101,14 @@ const CURRENT_STATE = {
         'to type a name Chrome never shows. The two said different things about one fact for four releases.'
     }
   ],
+  // The AMO listing is the Chrome one's sibling and has the same trap: a name or a version typed
+  // here that the manifest does not show is a form asking a reviewer for something the extension
+  // never displays. The summary is held to the manifest's description by a test in the package
+  // suite; this is the half a regex can catch.
+  'docs/AMO_LISTING.md': [
+    { forbidden: [/Name:\*\* Scryfall Toolkit \(Preview\)/], why: 'the manifest has not called itself a preview since 0.46.0' },
+    { required: [/gecko_android/], why: 'the Android floor is stated where a submitter reads it' }
+  ],
   // Two documents, one fact, and they had been saying different things: FEATURES said
   // four deck modules were ported, the road map said the fourth was taken back out and no
   // code from it is in the package. Nothing here could see it, because each document was
