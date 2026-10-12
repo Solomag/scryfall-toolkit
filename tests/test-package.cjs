@@ -838,6 +838,13 @@ function firefoxArchiveTest(out) {
   assert(!firefox.background.service_worker, 'and no service_worker, which Firefox would refuse');
   assert(firefox.browser_specific_settings?.gecko?.id,
     'the gecko id is there, which is what Firefox identifies the extension by');
+  assertEqual(firefox.browser_specific_settings.gecko.data_collection_permissions?.required?.slice().sort(),
+    ['searchTerms', 'websiteContent'],
+    'the required data types are declared, which AMO has demanded of every new extension since 2025-11-03');
+  assertEqual(firefox.browser_specific_settings.gecko.data_collection_permissions.optional, ['authenticationInfo'],
+    'and the CardTrader token is optional, because that feature is off by default');
+  assert(firefox.browser_specific_settings.gecko_android,
+    'gecko_android is what makes it installable on Firefox for Android');
   for (const entry of firefox.content_scripts) {
     assertEqual(entry.js[0], 'src/core/browser-shim.js', 'every content script loads the shim first');
   }
