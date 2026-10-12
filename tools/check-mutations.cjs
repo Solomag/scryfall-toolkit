@@ -56,7 +56,15 @@ const TARGETS = {
   worker: path.join(ROOT, 'src/background/worker.js')
 };
 const before = {};
-for (const [key, file] of Object.entries(TARGETS)) before[key] = fs.readFileSync(file, 'utf8');
+const raw = {};
+// `before` is the source with its line endings normalised, and `raw` is the source as it is on
+// disk. The mutations are written against `\n`, and a Windows checkout hands the files CRLF, so
+// comparing against the raw text found nothing to mutate and called every one of them stale. The
+// raw text is kept so a restore puts the file back exactly as it was found.
+for (const [key, file] of Object.entries(TARGETS)) {
+  raw[key] = fs.readFileSync(file, 'utf8');
+  before[key] = raw[key].replace(/\r\n/g, '\n');
+}
 
 const MUTATIONS = [
   {
@@ -775,7 +783,7 @@ const RUNS = {
   };
 
 function restore(key) {
-  fs.writeFileSync(TARGETS[key], before[key], 'utf8');
+  fs.writeFileSync(TARGETS[key], raw[key], 'utf8');
 }
 
 let wrong = 0;

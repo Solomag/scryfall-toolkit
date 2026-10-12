@@ -1316,11 +1316,40 @@ async function setsIndexPlatformTest() {
     'and the Magic Online one with it');
 }
 
+// CardTrader's price is in the account's own currency, and the column has to say which one it is
+// rather than always "EUR". An account in any other currency showed a euro heading over a number
+// that was not euro, or — because the code insisted on EUR — showed nothing at all.
+async function cardTraderCurrencyTest() {
+  console.log('content scripts: the CardTrader column carries its own currency');
+  const usd = {
+    ...routes,
+    cardtrader: () => ({ available: true, url: 'https://www.cardtrader.com/en/cards/test', nonfoil: { cents: 1234, currency: 'USD' } })
+  };
+  const page = await loadCardPage({ cards: [], euroPriceSources: 'ct' }, usd);
+  await sleep(80);
+  const { document } = page;
+  const header = document.querySelector('.stk-ct-price-header');
+  assert(header, 'the CardTrader column is there');
+  assertEqual(header.querySelector('.stk-price-code').textContent, 'USD',
+    'and its heading carries the currency the price came back in, not euro');
+  const price = document.querySelector('.stk-ct-price-cell a');
+  assert(price && /12\D*34/.test(price.textContent) && /\$/.test(price.textContent),
+    'and the cell is formatted in that currency (' + (price && price.textContent) + ')');
+
+  // A wanted currency is shown on the heading before any price arrives, and passed through to the
+  // request — the worker prefers an offer in it when one exists.
+  const wanted = await loadCardPage({ cards: [], euroPriceSources: 'ct', cardtraderCurrency: 'USD' }, usd);
+  await sleep(80);
+  assertEqual(wanted.document.querySelector('.stk-ct-price-header .stk-price-code').textContent, 'USD',
+    'a wanted currency is what the heading shows');
+}
+
 (async () => {
   try {
     clipboardFormatTest();
     await setsIndexPlatformTest();
     await cardPageTest();
+    await cardTraderCurrencyTest();
     await bridgeRequestTest();
     await searchPageTest();
     await clipboardDisabledTest();
