@@ -753,6 +753,39 @@ async function scryfallHoldTest() {
       assertEqual(posted.map(body => body.cards.join(',')).sort(), ['1 Counterspell', '1 Sol Ring'],
         'and each request carries its own deck list');
     }
+    {
+      // CardTrader's API answers in the account's own currency and has no currency parameter, so a
+      // wanted currency is a preference: the cheapest offer in it when one exists, the account's
+      // currency otherwise. It used to insist on EUR, so an account in any other currency got an
+      // empty column.
+      const realFetch = ctx.fetch;
+      ctx.fetch = async (url, init) => {
+        const target = String(url);
+        if (target.endsWith('/expansions')) return jsonResponse([{ id: 1, game_id: 1, code: 'tst' }]);
+        if (target.includes('/blueprints/export')) return jsonResponse([{ id: 10, scryfall_id: CARD_ID }]);
+        if (target.includes('/marketplace/products')) return jsonResponse({ 10: [
+          { blueprint_id: 10, quantity: 1, price: { cents: 500, currency: 'EUR' }, properties_hash: { mtg_foil: false } },
+          { blueprint_id: 10, quantity: 1, price: { cents: 700, currency: 'USD' }, properties_hash: { mtg_foil: false } }
+        ] });
+        return realFetch(url, init);
+      };
+      try {
+        mock.state.cardtraderToken = 'ct-token-1';
+        mock.state.euroPriceSources = 'ct';
+        mock.state.cardtraderCurrency = 'USD';
+        const wanted = await send({ type: 'cardtrader', id: CARD_ID, set: 'tst' }, undefined, 5000);
+        assertEqual(wanted.data.nonfoil, { cents: 700, currency: 'USD' },
+          'a wanted currency takes the cheapest offer in it, not the first one seen');
+        // The products answer is cached; the currency is read from storage on every call, so the
+        // second answer comes from the same cached offers rather than a second request.
+        mock.state.cardtraderCurrency = '';
+        const auto = await send({ type: 'cardtrader', id: CARD_ID, set: 'tst' }, undefined, 5000);
+        assertEqual(auto.data.nonfoil, { cents: 500, currency: 'EUR' },
+          'and with no wanted currency the account’s own is used');
+      } finally {
+        ctx.fetch = realFetch;
+      }
+    }
 
 
     console.log('background.js: parseTaggerCard classifier direction');

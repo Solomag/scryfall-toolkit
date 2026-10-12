@@ -54,7 +54,7 @@ async function cardTrader(path, token) {
     headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' }, credentials: 'omit'
   });
 }
-async function cardTraderPrices(id, set, token) {
+async function cardTraderPrices(id, set, token, wanted = '') {
   const expansions = await traderMemo('trader:expansions', 24 * 3600000, () => cardTrader('expansions', token));
   const expansion = expansions.find(item => item.game_id === 1 && item.code?.toLowerCase() === set.toLowerCase());
   if (!expansion) return { available: false };
@@ -66,12 +66,19 @@ async function cardTraderPrices(id, set, token) {
     () => cardTrader(`marketplace/products?blueprint_id=${blueprint.id}`, token));
   const products = Array.isArray(raw) ? raw : Array.isArray(raw?.data) ? raw.data :
     Object.values(raw || {}).flatMap(value => Array.isArray(value) ? value : []);
+  // The price the API returns is in the account's own currency — CardTrader's docs say so, and
+  // the endpoint has no currency parameter — so a wanted currency is a preference rather than a
+  // request: the cheapest offer in it is used when one exists, and the account's own currency is
+  // the answer otherwise. Requiring a currency with no offers in it would leave the column empty
+  // on an account that never lists one.
+  const wantedCode = /^[A-Z]{3}$/.test(wanted) ? wanted : '';
   const cheapest = { foil: null, nonfoil: null };
   for (const product of products) {
     if (product.blueprint_id !== blueprint.id || product.quantity <= 0) continue;
     const cents = product.price?.cents ?? product.price_cents;
     const currency = product.price?.currency ?? product.price_currency;
     if (!Number.isFinite(cents) || !/^[A-Z]{3}$/.test(currency || '')) continue;
+    if (wantedCode && currency !== wantedCode) continue;
     const kind = product.properties_hash?.mtg_foil === true || product.properties?.mtg_foil === true ? 'foil' : 'nonfoil';
     if (!cheapest[kind] || (cheapest[kind].currency === currency && cents < cheapest[kind].cents)) {
       cheapest[kind] = { cents, currency };
@@ -637,9 +644,9 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
     if (message.type === 'cardtrader') {
       const id = String(message.id), set = String(message.set);
       if (!/^[0-9a-f-]{36}$/.test(id) || !/^[a-z0-9_-]{1,16}$/i.test(set)) throw new Error('Invalid card');
-      const stored = await chrome.storage.local.get(['cardtraderToken','cardtraderPrices','euroPriceSources']);
+      const stored = await chrome.storage.local.get(['cardtraderToken','cardtraderPrices','euroPriceSources','cardtraderCurrency']);
       if ((!stored.cardtraderPrices && !['ct','both'].includes(stored.euroPriceSources)) || !stored.cardtraderToken) throw new Error('CardTrader is not configured');
-      return cardTraderPrices(id, set, stored.cardtraderToken);
+      return cardTraderPrices(id, set, stored.cardtraderToken, stored.cardtraderCurrency);
     }
     if (message.type === "preview") {
       if (!/^(oracleid|illustrationid)$/.test(String(message.kind)) ||

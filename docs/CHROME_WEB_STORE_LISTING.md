@@ -1,4 +1,4 @@
-# Chrome Web Store listing — Scryfall Toolkit 2.1.0
+# Chrome Web Store listing — Scryfall Toolkit 2.2.0
 
 Everything here is written from the shipped code, so that the answers given in the store
 console match what the extension actually does. Where a field needs a decision from the
@@ -261,12 +261,12 @@ Ready in `store-assets/`, each exactly **1280×800** (PNG), in English:
 | --- | --- |
 | `store-assets/01-settings-01-of-05.png` | the header, General (settings language, theme), and the start of Tags |
 | `store-assets/02-settings-02-of-05.png` | the end of Tags, CardClip with its export format, and the start of Visibility |
-| `store-assets/03-settings-03-of-05.png` | the rest of Visibility — the prices, the shop block, CardTrader unconnected, and the EUR source with the personal key it needs — Additional info as a list of one-line features, and the start of Legality |
+| `store-assets/03-settings-03-of-05.png` | the rest of Visibility - the prices, the shop block, CardTrader unconnected, and the price source with the personal key it needs and the currency its column is headed with - Additional info as a list of one-line features, and the start of Legality |
 | `store-assets/04-settings-04-of-05.png` | the format grid, and the start of Scryfall Deckbuilder with its switches on |
 | `store-assets/05-settings-05-of-05.png` | the rest of Scryfall Deckbuilder (EDHREC suggestions asking for its permission), the collapsed **Diagnostics** section, and Credits and third-party projects |
 
 All five come from one real capture of the settings page
-(`store-assets/settings-page-full.png`, 1280×3030), so nothing is repeated or cropped
+(`store-assets/settings-page-full.png`, 1280×3104), so nothing is repeated or cropped
 away between them. Each tile is scaled uniformly to 800 rows and the margins continue
 the page's own colour, so no screenshot is stretched.
 
@@ -478,7 +478,7 @@ box per host, use the matching line:
 > request URL when they are on. edhrec.com — optional; used only by the deck editor's
 > suggestion feature, which sends the commander and the whole deck list to EDHREC's own
 > recommendation endpoint when its button is pressed. api.cardtrader.com — optional;
-> with the user's own token, the exact printing and its cheapest EUR offers. Content
+> with the user's own token, the exact printing and its cheapest offers, in the account's currency. Content
 > scripts run only on scryfall.com, www.scryfall.com and tagger.scryfall.com.
 
 Per host, if the form asks separately:
@@ -490,7 +490,7 @@ Per host, if the form asks separately:
 | `tagger.scryfall.com` | Core feature. A POST to `graphql/registry` carrying the set code and collector number of the card the user is viewing, for card and art tags and related cards. |
 | `json.edhrec.com` | Optional permission. The EDHREC indicators send the card name as part of the request URL to read its public JSON when they are on. |
 | `edhrec.com` | Optional permission, used only by the deck editor's EDHREC suggestions. When its button is pressed, it sends the commander and the whole deck list — every card with its count — to EDHREC's own recommendation endpoint. No account, no other decks, no collection. |
-| `api.cardtrader.com` | Optional feature, off by default. With the user's own personal access token, looks up the exact printing and its cheapest listed EUR offers. The token is sent only to this host. |
+| `api.cardtrader.com` | Optional feature, off by default. With the user's own personal access token, looks up the exact printing and its cheapest listed offers, in the account's own currency. The token is sent only to this host. |
 
 **Remote code — answer "No".** If the form still asks for text:
 

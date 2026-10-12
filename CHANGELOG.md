@@ -8,6 +8,17 @@ All releases: <https://github.com/Solomag/scryfall-toolkit/releases>
 
 ---
 
+### 2.2.0 - CardTrader's price is not always in euro
+
+CardTrader answers with each offer's price in the account's own currency, and there is no
+currency parameter to ask it for another one - so an account that is not in euro was shown a euro
+heading over a number that was not euro, or, because the column insisted on EUR, shown nothing at
+all. The column is now headed with the currency the offers actually come in, and a new
+**CardTrader price currency** choice under the source dropdown prefers another one when offers in
+it exist, falling back to the account's currency when they do not. The setting is called
+**Prices in the prints table** rather than "EUR price sources", because CardTrader's number is not
+a euro price.
+
 ### 2.1.0 - the site in English, the deck tools on, and a key before CardTrader
 
 The settings language is the settings page's own again. It had been merged with the language of

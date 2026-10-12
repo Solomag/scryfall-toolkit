@@ -11,7 +11,7 @@
 const defaults = {
   settingsLanguage: 'auto',
   clipboard: true, printAddButtons: true, darkTheme: 'auto', tags: true, cardTags: true, artTags: false, relationships: true,
-  finishBadges: true, cardtraderPrices: false, cardtraderToken: '', euroPriceSources: 'cm',
+  finishBadges: true, cardtraderPrices: false, cardtraderToken: '', euroPriceSources: 'cm', cardtraderCurrency: '',
   edhrecUsage: false, edhrecSalt: false, showSaltScale: false, edhrecUsageDisplay: 'both',
   usageColorMetric: 'decks', usageMediumDecks: 50000, usageHighDecks: 100000,
   usageMediumPercent: 1, usageHighPercent: 2.6, saltMediumThreshold: 1, saltHighThreshold: 2,
@@ -38,7 +38,7 @@ const defaults = {
 // one flag, the two category rules carry a list under them, and the four price kinds are
 // told apart by the model rather than by an id. A key-by-key save would have to be kept
 // in step with all three, and there is no test that could tell that it was not.
-const basicFields = ["clipboard", "printAddButtons", "tags", "cardTags", "artTags", "relationships", "finishBadges", "cardtraderPrices", "euroPriceSources", "edhrecUsage", "edhrecSalt", "showSaltScale", "edhrecUsageDisplay", "usageColorMetric", "legalities", "exportFormat", "taggerSearchLinks", "cardSearchLinks", "deckNoPrices", "stackedDeckCards", "deckLegality", "deckCleanUpImprover", "cleanUpLandsInSingleton", "sortEntriesPrimary", "insertSortingHeadings", "edhrecSuggestions", "deckSearch"];
+const basicFields = ["clipboard", "printAddButtons", "tags", "cardTags", "artTags", "relationships", "finishBadges", "cardtraderPrices", "euroPriceSources", "cardtraderCurrency", "edhrecUsage", "edhrecSalt", "showSaltScale", "edhrecUsageDisplay", "usageColorMetric", "legalities", "exportFormat", "taggerSearchLinks", "cardSearchLinks", "deckNoPrices", "stackedDeckCards", "deckLegality", "deckCleanUpImprover", "cleanUpLandsInSingleton", "sortEntriesPrimary", "insertSortingHeadings", "edhrecSuggestions", "deckSearch"];
 // EDHREC and CardTrader are optional features, and so is the access they need.
 // Chrome has a place for exactly this: optional_host_permissions, granted only
 // when the user turns one of them on. Turning a switch off and on again is also
@@ -352,10 +352,11 @@ chrome.storage.local.get(defaults, values => {
       ]
     },
     eursource: {
-      caption: 'Источники EUR-цен в таблице изданий',
+      caption: 'Цены в таблице изданий',
       notes: [
         'Столбец EUR на Scryfall — это цена Cardmarket. Здесь выбирается, чем его заполнять: Cardmarket, CardTrader или обоими — тогда рядом появляется второй столбец. «Не показывать» убирает столбец целиком и снимает галочку EUR в группе «Цены»: это одна настройка с двумя ручками.',
         'Пока галочка EUR снята, список заблокирован: выбирать источник для столбца, которого нет, нечего.',
+        'Цена CardTrader приходит в валюте вашего аккаунта CardTrader, и столбец подписывается этой валютой — а не евро. Параметр валюты у CardTrader нет, поэтому «Валюта цен CardTrader» — предпочтение: если в этой валюте есть предложения, берётся самое дешёвое из них; иначе показывается валюта аккаунта.',
         'Для цен CardTrader нужен личный токен, и задаётся он в строке «Предложения CardTrader» выше, в том же блоке магазинов.',
         'Пока токена нет, варианты CardTrader и «Cardmarket и CardTrader» заблокированы. Чтобы их открыть, нажмите «Подключить» в строке «Предложения CardTrader» выше и сохраните личный токен.',
         'Включать саму галочку «Предложения CardTrader» для этого не обязательно: она добавляет ссылки CardTrader в блок покупки, а столбец работает и без них.'
@@ -935,6 +936,7 @@ for (const group of FILTERS.PRICE_GROUP_NAMES) {
   const euroSource = document.getElementById('euroPriceSources');
   const euroShield = document.getElementById('euroSourceShield');
   const euroHint = document.getElementById('euroSourceHint');
+  const euroCurrency = document.getElementById('cardtraderCurrency');
   const euroOptions = [...euroSource.options];
   const paintEuro = () => {
     const on = filters.prices.eur !== false;
@@ -950,6 +952,10 @@ for (const group of FILTERS.PRICE_GROUP_NAMES) {
       if (option.value === 'ct' || option.value === 'both') option.disabled = !connected;
     }
     euroHint.hidden = connected || !on;
+    // The currency only means something for a CardTrader column, so it is out of reach while the
+    // source is Cardmarket or "show nothing" — and while there is no token to ask with.
+    const usesCardTrader = euroSource.value === 'ct' || euroSource.value === 'both';
+    euroCurrency.disabled = !on || !connected || !usesCardTrader;
     // A stored value from before the token was removed cannot stand: fall back to Cardmarket,
     // the only source this page can pick without inventing a preference.
     if (!connected && (euroSource.value === 'ct' || euroSource.value === 'both')) {

@@ -53,6 +53,10 @@
     if (!id || !links) return;
     const sources = ['cm','ct','both','none'].includes(settings.euroPriceSources) ? settings.euroPriceSources : 'cm';
     const showTable = sources === 'ct' || sources === 'both';
+    // Which currency the CardTrader column asks for. Empty means "as the account", which is what
+    // CardTrader's own API answers in; a code is a preference the worker honours when an offer in
+    // it exists, because the endpoint has no currency parameter of its own.
+    const wantedCurrency = /^[A-Z]{3}$/.test(settings.cardtraderCurrency || '') ? settings.cardtraderCurrency : '';
     const table = document.querySelector('#main .prints > .prints-table');
     const eurIndex = [...(table?.querySelectorAll('thead th') || [])].findIndex(th => th.textContent.trim().toUpperCase() === 'EUR');
     if (table && eurIndex >= 0) {
@@ -72,15 +76,18 @@
       }
       if (sources === 'both') {
         heading.classList.add('stk-cm-price-header');
-        heading.replaceChildren(priceHeading('cardmarket'));
+        heading.replaceChildren(priceHeading('cardmarket', 'EUR'));
         heading.title = 'Cardmarket prices in EUR';
       }
       if (showTable) {
         const th = document.createElement('th');
         th.className = 'stk-ct-price-header';
-        th.title = 'CardTrader: lowest EUR offer for this printing';
-        th.append(priceHeading('cardtrader'));
+        th.title = 'CardTrader: lowest offer for this printing';
+        th.append(priceHeading('cardtrader', wantedCurrency));
         heading.after(th);
+        // The heading's currency code, filled in when the first offer is answered if the setting
+        // says "as the account" and the wanted code is therefore empty.
+        const ctCode = () => th.querySelector('.stk-price-code');
         const rows = [...table.querySelectorAll('tbody tr')];
         const queue = [];
         for (const row of rows) {
@@ -106,20 +113,26 @@
         const fetchPrint = async print => {
           try {
             const result = await request({ type: 'cardtrader', id: print.id, set: print.set });
-            const price = result.nonfoil?.currency === 'EUR' ? result.nonfoil : result.foil?.currency === 'EUR' ? result.foil : null;
-            // A CardTrader account in another currency answers with a real
-            // price in that currency, and the EUR column cannot use it. For the
-            // printing being viewed that is the same as having nothing to show,
-            // so the native EUR column comes back rather than leaving an empty
-            // one where a price was expected.
+            // The cheapest offer, in whichever currency it came back in — nonfoil preferred, the
+            // foil one when that is all there is. It used to insist on EUR, which is an account's
+            // own currency rather than a fact about CardTrader, so an account in any other
+            // currency showed nothing at all.
+            const price = result.nonfoil || result.foil || null;
+            // With the source set to CardTrader alone the column replaces Scryfall's euro one, so
+            // a printing with no offer at all would be an empty cell where a price was expected:
+            // the native column comes back for that one.
             if (print.id === id && sources === 'ct' && (!result.available || !price)) showEurFallback();
             if (price) {
+              // The heading carries the currency, which is only known once the first offer
+              // arrives when the setting says "as the account".
+              const code = ctCode();
+              if (code && !code.textContent) code.textContent = price.currency;
               const a = document.createElement('a');
               a.href = result.url;
               a.target = '_blank';
               a.rel = 'noopener noreferrer';
               a.title = 'Lowest CardTrader offer; condition and language may vary';
-              a.textContent = new Intl.NumberFormat('en-IE', { style:'currency', currency:'EUR' }).format(price.cents / 100);
+              a.textContent = new Intl.NumberFormat(undefined, { style:'currency', currency: price.currency }).format(price.cents / 100);
               print.cell.append(a);
             }
           } catch {
@@ -195,7 +208,7 @@
   // mark is used as a CSS mask, which means what shows is the alpha of their
   // file while the colour is `currentColor` — right on either theme without
   // having to know which theme it is on, and never the wrong shade.
-  function priceHeading(provider) {
+  function priceHeading(provider, code) {
     const wrapper = document.createElement('span');
     wrapper.className = 'stk-price-heading';
     const logo = brandLogo(provider);
@@ -215,7 +228,12 @@
       icon.alt = '';
       wrapper.append(icon);
     }
-    wrapper.append(document.createTextNode('EUR'));
+    // The currency code, written into its own span so CardTrader's heading can be filled in once
+    // the first offer arrives — the account's currency is not known before a request is answered.
+    const label = document.createElement('span');
+    label.className = 'stk-price-code';
+    label.textContent = code || '';
+    wrapper.append(label);
     return wrapper;
   }
 
