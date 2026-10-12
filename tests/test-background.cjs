@@ -754,10 +754,11 @@ async function scryfallHoldTest() {
         'and each request carries its own deck list');
     }
     {
-      // CardTrader's API answers in the account's own currency and has no currency parameter, so a
-      // wanted currency is a preference: the cheapest offer in it when one exists, the account's
-      // currency otherwise. It used to insist on EUR, so an account in any other currency got an
-      // empty column.
+      // CardTrader's API answers in the account's own currency and has no currency parameter, so
+      // there is no currency to ask for: the cheapest offer of each kind is the answer, whichever
+      // currency it came in. The old code insisted on EUR, and then on a wanted code the API could
+      // not honour, so an account in another currency got an empty column — and a reader who picked
+      // a currency their account never lists got one too.
       const realFetch = ctx.fetch;
       ctx.fetch = async (url, init) => {
         const target = String(url);
@@ -774,23 +775,15 @@ async function scryfallHoldTest() {
         // The column's switch lives in the hiding group with the other columns now, and either
         // CardTrader feature being on is what lets the request through.
         mock.state.setFilters = { prices: { cardtrader: true } };
+        const cheapest = await send({ type: 'cardtrader', id: CARD_ID, set: 'tst' }, undefined, 5000);
+        assertEqual(cheapest.data.nonfoil, { cents: 500, currency: 'EUR' },
+          'the cheapest offer is the answer, in whichever currency it came in');
+        // A leftover `cardtraderCurrency` from a build that had the dropdown is not read: the
+        // setting is gone, and nothing filters the offers by it any more.
         mock.state.cardtraderCurrency = 'USD';
-        const wanted = await send({ type: 'cardtrader', id: CARD_ID, set: 'tst' }, undefined, 5000);
-        assertEqual(wanted.data.nonfoil, { cents: 700, currency: 'USD' },
-          'a wanted currency takes the cheapest offer in it, not the first one seen');
-        // The products answer is cached; the currency is read from storage on every call, so the
-        // second answer comes from the same cached offers rather than a second request.
-        mock.state.cardtraderCurrency = '';
-        const auto = await send({ type: 'cardtrader', id: CARD_ID, set: 'tst' }, undefined, 5000);
-        assertEqual(auto.data.nonfoil, { cents: 500, currency: 'EUR' },
-          'and with no wanted currency the account’s own is used');
-        // The wanted currency is a preference, not a filter: an account whose offers are in another
-        // currency, and a reader who asked for one it never lists, still has to see a price. This
-        // came back empty, which is the other half of "CardTrader shows nothing at all".
-        mock.state.cardtraderCurrency = 'GBP';
-        const absent = await send({ type: 'cardtrader', id: CARD_ID, set: 'tst' }, undefined, 5000);
-        assertEqual(absent.data.nonfoil, { cents: 500, currency: 'EUR' },
-          'a wanted currency with no offers falls back to the account’s own rather than showing nothing');
+        const ignored = await send({ type: 'cardtrader', id: CARD_ID, set: 'tst' }, undefined, 5000);
+        assertEqual(ignored.data.nonfoil, { cents: 500, currency: 'EUR' },
+          'a leftover currency key from an older build does not filter the offers');
       } finally {
         ctx.fetch = realFetch;
       }

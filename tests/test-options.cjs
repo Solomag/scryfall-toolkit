@@ -95,7 +95,10 @@ const REMOVED_IDS = [
   // The EUR source dropdown and the shield that covered it while the EUR box was clear. CardTrader
   // is a column of its own now, with a box in the price group like USD and TIX, so the dropdown
   // that chose between the two — and the hint that told a reader why it was blocked — are gone.
-  'euroPriceSources', 'euroSourceShield', 'euroSourceHint'
+  'euroPriceSources', 'euroSourceShield', 'euroSourceHint',
+  // And the currency dropdown. CardTrader answers in the account's own currency and their API has
+  // no parameter for another, so the control promised a choice that could not be honoured.
+  'cardtraderCurrency'
 ];
 
 // What the archive ships is not the same as what the working tree holds, so the
@@ -981,9 +984,8 @@ function sectionOrderTest() {
     'the first column is the platforms, under its own heading');
   assert(inFirst('platformBody') && inFirst('setCaster'),
     'and holds the table and the Caster marker, which is not a price and has no heading of its own');
-  assert(inSecond('priceList') && inSecond('cardtraderPrices') && inSecond('cardtraderCurrency'),
-    'the second is the prices: the price groups, CardTrader with the stores it belongs to, and the ' +
-    'currency its column is headed with');
+  assert(inSecond('priceList') && inSecond('cardtraderPrices'),
+    'the second is the prices: the price groups and CardTrader with the stores it belongs to');
   assert(!inSecond('setCaster'),
     'and the Caster marker is not among them, because it is not about money');
   // The general switch over the shop block sits inside the shop group and above the shops it
@@ -1106,7 +1108,7 @@ function sectionOrderTest() {
   // link — so it lives with the prices now, and the EUR source with the shops it chooses
   // between. A price setting in a list of things that are not prices is a setting nobody looks
   // for where it is.
-  for (const id of ['cardtraderCurrency', 'cardtraderPrices', 'cardtraderToken', 'cardtraderPanel']) {
+  for (const id of ['cardtraderPrices', 'cardtraderToken', 'cardtraderPanel']) {
     assert(!additional.includes(`id="${id}"`), `${id} is not in Additional info at all`);
     assertEqual(sectionOf(id), 'Видимость', `${id} sits in Visibility`);
   }
@@ -1908,13 +1910,11 @@ async function hidingGroupTest() {
     'while the CardTrader box shows its column on');
 
   // The CardTrader column needs the token, so its box is out of reach until one is saved: a box
-  // that could turn on a request that cannot be made is a box that lies. The currency follows it.
+  // that could turn on a request that cannot be made is a box that lies.
   const noToken = await groupReady(loadOptions({ settingsLanguage: 'en' }));
   const noTokenColumn = noToken.document.getElementById('price-cardtrader');
   assertEqual([noTokenColumn.disabled, noTokenColumn.checked], [true, false],
     'without a token the CardTrader column is blocked and drawn off');
-  assertEqual(noToken.document.getElementById('cardtraderCurrency').disabled, true,
-    'and so is the currency its heading would carry');
   noTokenColumn.checked = true;
   fireEvent(noTokenColumn, 'change');
   await tick();
@@ -1923,7 +1923,7 @@ async function hidingGroupTest() {
   assertEqual(noToken.mock.state.setFilters.prices.cardtrader !== true, true,
     'so nothing that cannot work is stored');
 
-  // Saving a token unlocks it, and the currency with it.
+  // Saving a token unlocks it.
   const reconnect = await groupReady(loadOptions({ settingsLanguage: 'en', cardtraderToken: 'ct-token-1' }));
   const reconnectColumn = reconnect.document.getElementById('price-cardtrader');
   assertEqual(reconnectColumn.disabled, false, 'with a token the CardTrader column is reachable');
@@ -1932,8 +1932,6 @@ async function hidingGroupTest() {
   await tick();
   await tick();
   assertEqual(reconnect.mock.state.setFilters.prices.cardtrader, true, 'and turning it on stores it');
-  assertEqual(reconnect.document.getElementById('cardtraderCurrency').disabled, false,
-    'and the currency its heading carries becomes reachable too');
 
   // The Caster marker. Its old switch read "hide" and this one reads "show", so the stored key
   // was renamed rather than inverted in place — the rename is what lets the migration tell the

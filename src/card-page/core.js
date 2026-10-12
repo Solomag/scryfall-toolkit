@@ -64,7 +64,6 @@
     clipboard: true, tags: true, cardTags: true, artTags: false, relationships: true,
     printAddButtons: true,
     legalities: true, finishBadges: true, cardtraderPrices: false,
-    cardtraderCurrency: '',
     edhrecUsage: false, edhrecSalt: false, showSaltScale: false, edhrecUsageDisplay: 'both',
     usageColorMetric: 'decks', usageMediumDecks: 50000, usageHighDecks: 100000,
     usageMediumPercent: 1, usageHighPercent: 2.6, saltMediumThreshold: 1, saltHighThreshold: 2,

@@ -57,10 +57,8 @@
     // store markup had moved lost the column as well.
     const showColumn = setFilters.prices.cardtrader !== false;
     const showCardmarket = setFilters.prices.eur !== false;
-    // Which currency the CardTrader column asks for. Empty means "as the account", which is what
-    // CardTrader's own API answers in; a code is a preference the worker honours when an offer in
-    // it exists, because the endpoint has no currency parameter of its own.
-    const wantedCurrency = /^[A-Z]{3}$/.test(settings.cardtraderCurrency || '') ? settings.cardtraderCurrency : '';
+    // There is no currency to ask for: CardTrader answers in the account's own currency and the
+    // endpoint has no parameter for another, so the column is headed with whatever comes back.
     const table = document.querySelector('#main .prints > .prints-table');
     const eurIndex = [...(table?.querySelectorAll('thead th') || [])].findIndex(th => th.textContent.trim().toUpperCase() === 'EUR');
     if (table && eurIndex >= 0 && (showColumn || !showCardmarket)) {
@@ -82,13 +80,11 @@
         const th = document.createElement('th');
         th.className = 'stk-ct-price-header';
         th.title = 'CardTrader: lowest offer for this printing';
-        th.append(priceHeading('cardtrader', wantedCurrency));
+        th.append(priceHeading('cardtrader'));
         heading.after(th);
-        // The heading's currency code. It is a hint until the first offer is answered — the code
-        // the reader asked for, or nothing when the setting says "as the account" — and the first
-        // offer then says what the column's numbers are actually in, because the wanted currency
-        // is a preference the worker falls back from when the account lists none of it. Left as
-        // the hint, a reader who asked for USD over euro offers read "USD" above "0,11 €".
+        // The heading's currency code, filled in when the first offer is answered: the account's
+        // currency is not known before a request is answered, and there is no setting to read it
+        // from — CardTrader has no currency parameter.
         const ctCode = () => th.querySelector('.stk-price-code');
         const rows = [...table.querySelectorAll('tbody tr')];
         const queue = [];
