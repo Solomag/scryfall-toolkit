@@ -1350,12 +1350,28 @@ async function cardTraderCurrencyTest() {
   assert(price && /12\D*34/.test(price.textContent) && /\$/.test(price.textContent),
     'and the cell is formatted in that currency (' + (price && price.textContent) + ')');
 
-  // A wanted currency is shown on the heading before any price arrives, and passed through to the
-  // request — the worker prefers an offer in it when one exists.
+  // A wanted currency is passed through to the request — the worker prefers an offer in it when one
+  // exists — and the heading shows it before any price arrives, as a hint of what the column
+  // prefers.
   const wanted = await loadCardPage({ cards: [], ...cardtraderColumn({ cardtraderCurrency: 'USD' }) }, usd);
   await sleep(80);
   assertEqual(wanted.document.querySelector('.stk-ct-price-header .stk-price-code').textContent, 'USD',
-    'a wanted currency is what the heading shows');
+    'a wanted currency is what the heading shows while offers in it are there');
+
+  // But the wanted currency is a preference the worker falls back from, so the heading has to
+  // follow the numbers rather than the request: a reader who asked for USD over an account that
+  // lists euro read "USD" above "0,11 €", which is the report this case is for.
+  const euros = {
+    ...routes,
+    cardtrader: () => ({ available: true, url: 'https://www.cardtrader.com/en/cards/test', nonfoil: { cents: 11, currency: 'EUR' } })
+  };
+  const fallback = await loadCardPage({ cards: [], ...cardtraderColumn({ cardtraderCurrency: 'USD' }) }, euros);
+  await sleep(80);
+  assertEqual(fallback.document.querySelector('.stk-ct-price-header .stk-price-code').textContent, 'EUR',
+    'when the offers are in another currency the heading says the currency of the numbers, not the one asked for');
+  const fallbackPrice = fallback.document.querySelector('.stk-ct-price-cell a');
+  assert(fallbackPrice && /€/.test(fallbackPrice.textContent),
+    'and the cell is formatted in it (' + (fallbackPrice && fallbackPrice.textContent) + ')');
 }
 
 (async () => {

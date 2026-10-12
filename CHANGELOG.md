@@ -8,6 +8,14 @@ All releases: <https://github.com/Solomag/scryfall-toolkit/releases>
 
 ---
 
+### 2.4.1 - the CardTrader heading says the currency of the numbers
+
+The column's heading carried the currency the reader asked for, and the numbers carried the currency
+the offers came in. The wanted currency is a preference the worker falls back from when the account
+lists none of it, so the two can differ — and a reader who asked for USD over euro offers read "USD"
+above "0,11 €". The first offer now sets the heading, because that is what the column's numbers are
+actually in; the wanted code is only the hint shown before one arrives.
+
 ### 2.4.0 - the CardTrader column is a column of its own
 
 CardTrader's prices are not in euro, and the setting that showed them was. They arrived through a

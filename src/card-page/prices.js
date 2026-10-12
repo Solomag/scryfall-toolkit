@@ -84,8 +84,11 @@
         th.title = 'CardTrader: lowest offer for this printing';
         th.append(priceHeading('cardtrader', wantedCurrency));
         heading.after(th);
-        // The heading's currency code, filled in when the first offer is answered if the setting
-        // says "as the account" and the wanted code is therefore empty.
+        // The heading's currency code. It is a hint until the first offer is answered — the code
+        // the reader asked for, or nothing when the setting says "as the account" — and the first
+        // offer then says what the column's numbers are actually in, because the wanted currency
+        // is a preference the worker falls back from when the account lists none of it. Left as
+        // the hint, a reader who asked for USD over euro offers read "USD" above "0,11 €".
         const ctCode = () => th.querySelector('.stk-price-code');
         const rows = [...table.querySelectorAll('tbody tr')];
         const queue = [];
@@ -110,10 +113,14 @@
             // currency showed nothing at all.
             const price = result.nonfoil || result.foil || null;
             if (price) {
-              // The heading carries the currency, which is only known once the first offer
-              // arrives when the setting says "as the account".
+              // The heading carries the currency the numbers are in, which is only known once an
+              // offer arrives. The first one sets it — the current printing is queued first — and
+              // later rows do not move it: the account's currency does not change per card.
               const code = ctCode();
-              if (code && !code.textContent) code.textContent = price.currency;
+              if (code && code.dataset.filled !== '1') {
+                code.textContent = price.currency;
+                code.dataset.filled = '1';
+              }
               const a = document.createElement('a');
               a.href = result.url;
               a.target = '_blank';
