@@ -11,7 +11,7 @@
 const defaults = {
   settingsLanguage: 'auto',
   clipboard: true, printAddButtons: true, darkTheme: 'auto', tags: true, cardTags: true, artTags: false, relationships: true,
-  finishBadges: true, cardtraderPrices: false, cardtraderToken: '', cardtraderCurrency: '',
+  finishBadges: true, cardtraderPrices: false, cardtraderToken: '',
   edhrecUsage: false, edhrecSalt: false, showSaltScale: false, edhrecUsageDisplay: 'both',
   usageColorMetric: 'decks', usageMediumDecks: 50000, usageHighDecks: 100000,
   usageMediumPercent: 1, usageHighPercent: 2.6, saltMediumThreshold: 1, saltHighThreshold: 2,
@@ -38,7 +38,7 @@ const defaults = {
 // one flag, the two category rules carry a list under them, and the four price kinds are
 // told apart by the model rather than by an id. A key-by-key save would have to be kept
 // in step with all three, and there is no test that could tell that it was not.
-const basicFields = ["clipboard", "printAddButtons", "tags", "cardTags", "artTags", "relationships", "finishBadges", "cardtraderPrices", "cardtraderCurrency", "edhrecUsage", "edhrecSalt", "showSaltScale", "edhrecUsageDisplay", "usageColorMetric", "legalities", "exportFormat", "taggerSearchLinks", "cardSearchLinks", "deckNoPrices", "stackedDeckCards", "deckLegality", "deckCleanUpImprover", "cleanUpLandsInSingleton", "sortEntriesPrimary", "insertSortingHeadings", "edhrecSuggestions", "deckSearch"];
+const basicFields = ["clipboard", "printAddButtons", "tags", "cardTags", "artTags", "relationships", "finishBadges", "cardtraderPrices", "edhrecUsage", "edhrecSalt", "showSaltScale", "edhrecUsageDisplay", "usageColorMetric", "legalities", "exportFormat", "taggerSearchLinks", "cardSearchLinks", "deckNoPrices", "stackedDeckCards", "deckLegality", "deckCleanUpImprover", "cleanUpLandsInSingleton", "sortEntriesPrimary", "insertSortingHeadings", "edhrecSuggestions", "deckSearch"];
 // EDHREC and CardTrader are optional features, and so is the access they need.
 // Chrome has a place for exactly this: optional_host_permissions, granted only
 // when the user turns one of them on. Turning a switch off and on again is also
@@ -360,17 +360,9 @@ chrome.storage.local.get(defaults, values => {
       notes: [
         'Для цен CardTrader нужен токен. Он хранится локально в расширении и передаётся только в API CardTrader.',
         'Цены в таблице появляются постепенно; столбец подписывается валютой вашего аккаунта. Состояние и язык могут отличаться.',
+        'Выбрать другую валюту нельзя: у API CardTrader нет параметра валюты, он всегда отвечает в валюте аккаунта. Это и есть валюта столбца CardTrader в таблице изданий, а не евро.',
+        'Галочка «Предложения CardTrader» добавляет ссылки CardTrader в блок покупки; галочка CardTrader в группе «Цены» — отдельный столбец, и он работает и без ссылок.',
         'Сохранённый токен не проверяется этой страницей: она не делает запросов к CardTrader. Работает он или нет, видно на странице карты.'
-      ]
-    },
-    eursource: {
-      caption: 'Валюта цен CardTrader',
-      notes: [
-        'Столбец EUR на Scryfall — это цена Cardmarket, и галочка EUR в группе «Цены» показывает или прячет именно его.',
-        'CardTrader — отдельный столбец рядом, со своей галочкой в той же группе. Его цена приходит в валюте вашего аккаунта CardTrader, и столбец подписывается этой валютой — а не евро.',
-        'Параметр валюты у CardTrader нет, поэтому «Валюта цен CardTrader» — предпочтение: если в этой валюте есть предложения, берётся самое дешёвое из них; иначе показывается валюта аккаунта.',
-        'Для столбца CardTrader нужен личный токен, и задаётся он в строке «Предложения CardTrader» выше. Пока токена нет, галочка столбца заблокирована: нажмите «Подключить» и сохраните токен.',
-        'Галочка «Предложения CardTrader» — про другое: она добавляет ссылки CardTrader в блок покупки, а столбец работает и без неё.'
       ]
     },
     deckNoPrices: {
@@ -947,25 +939,19 @@ for (const group of FILTERS.PRICE_GROUP_NAMES) {
   paintStores();
 
   // The CardTrader column's box is drawn with the other prices, and this is where it is wired: it
-  // is the one price that needs a token, so it is out of reach until one is saved, and the
-  // currency below it only means something while it is on.
+  // is the one price that needs a token, so it is out of reach until one is saved.
   //
   // The EUR box above it is a column like USD and TIX and answers only for itself now. It used to
   // share one answer with a source dropdown, and the two were kept in step — which is what left a
   // reader who wanted CardTrader's column unable to have it without Cardmarket's, on a dropdown
   // that was blocked the moment they unticked EUR.
   const cardtraderColumnBox = priceBoxes.cardtrader;
-  const cardtraderCurrency = document.getElementById('cardtraderCurrency');
   const paintCardtraderColumn = () => {
     const connected = tokenStatus.dataset.stored === 'yes';
-    const on = connected && filters.prices.cardtrader !== false;
     if (cardtraderColumnBox) {
       cardtraderColumnBox.disabled = !connected;
-      cardtraderColumnBox.checked = on;
+      cardtraderColumnBox.checked = connected && filters.prices.cardtrader !== false;
     }
-    // The currency only means something for the column it heads, so it is out of reach while the
-    // column is off — and while there is no token to ask with.
-    cardtraderCurrency.disabled = !on;
   };
   repaintCardtraderColumn = paintCardtraderColumn;
   // A token that has gone cannot fill the column, so the column goes with it rather than staying

@@ -81,15 +81,14 @@ const showEverything = (places = {}) => hideOnly([], places);
 // The hiding shape a case needs when it wants the CardTrader column. It is the current shape with
 // the one price that starts off turned on, written once because `loadCardPage` hands its state
 // straight to storage and a partial `setFilters` is read as an older shape and its prices inverted.
-const cardtraderColumn = (extra = {}) => ({
+const cardtraderColumn = () => ({
   setFiltersMigrated: true,
   setFilters: {
     platforms: Object.fromEntries(PLATFORMS.map(name =>
       [name, { show: true, areas: { prints: true, search: true, sets: true } }])),
     prices: { usd: true, tix: true, eur: true, tcg: true, cardhoarder: true, cardmarket: true, cardtrader: true },
     tokens: true, showCaster: true, showStores: true
-  },
-  ...extra
+  }
 });
 
 const prints = [
@@ -1334,7 +1333,7 @@ async function setsIndexPlatformTest() {
 // rather than always "EUR". An account in any other currency showed a euro heading over a number
 // that was not euro, or — because the code insisted on EUR — showed nothing at all.
 async function cardTraderCurrencyTest() {
-  console.log('content scripts: the CardTrader column carries its own currency');
+  console.log('content scripts: the CardTrader column carries the account’s currency');
   const usd = {
     ...routes,
     cardtrader: () => ({ available: true, url: 'https://www.cardtrader.com/en/cards/test', nonfoil: { cents: 1234, currency: 'USD' } })
@@ -1345,30 +1344,22 @@ async function cardTraderCurrencyTest() {
   const header = document.querySelector('.stk-ct-price-header');
   assert(header, 'the CardTrader column is there');
   assertEqual(header.querySelector('.stk-price-code').textContent, 'USD',
-    'and its heading carries the currency the price came back in, not euro');
+    'and its heading carries the currency the price came back in');
   const price = document.querySelector('.stk-ct-price-cell a');
   assert(price && /12\D*34/.test(price.textContent) && /\$/.test(price.textContent),
     'and the cell is formatted in that currency (' + (price && price.textContent) + ')');
 
-  // A wanted currency is passed through to the request — the worker prefers an offer in it when one
-  // exists — and the heading shows it before any price arrives, as a hint of what the column
-  // prefers.
-  const wanted = await loadCardPage({ cards: [], ...cardtraderColumn({ cardtraderCurrency: 'USD' }) }, usd);
-  await sleep(80);
-  assertEqual(wanted.document.querySelector('.stk-ct-price-header .stk-price-code').textContent, 'USD',
-    'a wanted currency is what the heading shows while offers in it are there');
-
-  // But the wanted currency is a preference the worker falls back from, so the heading has to
-  // follow the numbers rather than the request: a reader who asked for USD over an account that
-  // lists euro read "USD" above "0,11 €", which is the report this case is for.
+  // There is no currency to ask for — the setting is gone, because the API has no parameter for
+  // one — so the heading follows the numbers. An account whose offers are in euro gets euro on the
+  // heading, and there is no way (and no promise) to get anything else.
   const euros = {
     ...routes,
     cardtrader: () => ({ available: true, url: 'https://www.cardtrader.com/en/cards/test', nonfoil: { cents: 11, currency: 'EUR' } })
   };
-  const fallback = await loadCardPage({ cards: [], ...cardtraderColumn({ cardtraderCurrency: 'USD' }) }, euros);
+  const fallback = await loadCardPage({ cards: [], ...cardtraderColumn() }, euros);
   await sleep(80);
   assertEqual(fallback.document.querySelector('.stk-ct-price-header .stk-price-code').textContent, 'EUR',
-    'when the offers are in another currency the heading says the currency of the numbers, not the one asked for');
+    'an account whose offers are in another currency gets that currency on the heading');
   const fallbackPrice = fallback.document.querySelector('.stk-ct-price-cell a');
   assert(fallbackPrice && /€/.test(fallbackPrice.textContent),
     'and the cell is formatted in it (' + (fallbackPrice && fallbackPrice.textContent) + ')');

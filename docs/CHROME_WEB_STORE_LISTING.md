@@ -1,4 +1,4 @@
-# Chrome Web Store listing — Scryfall Toolkit 2.4.1
+# Chrome Web Store listing — Scryfall Toolkit 2.4.2
 
 Everything here is written from the shipped code, so that the answers given in the store
 console match what the extension actually does. Where a field needs a decision from the
@@ -272,12 +272,12 @@ Ready in `store-assets/`, each exactly **1280×800** (PNG), in English:
 | --- | --- |
 | `store-assets/01-settings-01-of-05.png` | the header, General (settings language, theme), and the start of Tags |
 | `store-assets/02-settings-02-of-05.png` | the end of Tags, CardClip with its export format, and the start of Visibility: the platform table and the prices, with the CardTrader column's box beside USD, TIX and EUR |
-| `store-assets/03-settings-03-of-05.png` | the rest of Visibility - the shop block, CardTrader unconnected, and the currency its column is headed with - Additional info as a list of one-line features, and the start of Legality |
+| `store-assets/03-settings-03-of-05.png` | the rest of Visibility - the shop block, CardTrader unconnected, and the Caster marker - Additional info as a list of one-line features, and the start of Legality |
 | `store-assets/04-settings-04-of-05.png` | the format grid, and the start of Scryfall Deckbuilder with its switches on |
 | `store-assets/05-settings-05-of-05.png` | the rest of Scryfall Deckbuilder (EDHREC suggestions asking for its permission), the collapsed **Diagnostics** section, and Credits and third-party projects |
 
 All five come from one real capture of the settings page
-(`store-assets/settings-page-full.png`, 1280×3000), so nothing is repeated or cropped
+(`store-assets/settings-page-full.png`, 1280×2921), so nothing is repeated or cropped
 away between them. Each tile is scaled uniformly to 800 rows and the margins continue
 the page's own colour, so no screenshot is stretched.
 

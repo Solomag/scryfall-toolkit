@@ -85,15 +85,6 @@ label{display:block;margin:9px 0;cursor:pointer}input{accent-color:#aa85b5}
 .pair-caption{margin:0 0 8px;font-size:14px;color:#e9e5ee}
 .pair-items{display:flex;flex-wrap:wrap;gap:8px 18px}
 .pair-item{display:flex;align-items:center;gap:8px;margin:0;font-size:14px;cursor:pointer}
-/* The currency the CardTrader column is headed with. The same shape as the price groups above it —
-   a caption and the control it names — because it is the same kind of setting, and it sits under
-   them rather than in the other section, where it was a price setting in a list of things that are
-   not prices. */
-.price-source{margin:16px 0 0}
-.price-source-head{display:flex;align-items:center;gap:8px;margin:0 0 8px}
-.price-source .pair-caption{margin:0}
-.price-source select{width:auto;min-width:190px;max-width:260px;margin-top:0}
-.price-source select:disabled{opacity:.45;cursor:not-allowed}
 /* The general switch over the shop block, above the shops it governs and inside their group. */
 .stores-row{margin:0 0 10px}
 /* One row and one box, on its own line in the left column under the platforms table. It is a

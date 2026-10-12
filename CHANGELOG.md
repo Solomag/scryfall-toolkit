@@ -8,6 +8,15 @@ All releases: <https://github.com/Solomag/scryfall-toolkit/releases>
 
 ---
 
+### 2.4.2 - the CardTrader currency choice is gone
+
+The column's heading promised a currency the API cannot honour. CardTrader answers in the account's
+own currency and their reference has no parameter for another, so **CardTrader price currency** was a
+control that could only ever do nothing — and when the account's offers were in euro, picking
+dollars left the heading saying USD over euro numbers. The dropdown is gone; the column is headed
+with whatever the account's offers come in, which is all that was ever possible. The explanation
+moved into the CardTrader row's help, beside the token that sets the column up.
+
 ### 2.4.1 - the CardTrader heading says the currency of the numbers
 
 The column's heading carried the currency the reader asked for, and the numbers carried the currency

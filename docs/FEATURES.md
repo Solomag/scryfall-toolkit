@@ -137,15 +137,15 @@ column this extension adds from your own account: it has a switch of its own, an
 the other, so CardTrader's prices can be shown without Cardmarket's euro column and the other way
 round. It needs a personal token, set in the CardTrader row, and the row's own switch is not
 required for it: that switch is about the buy-block links. The column is headed with the currency
-its prices come in — the API answers in the account's currency and has no currency parameter — and
-**CardTrader price currency**, under the price groups, prefers another one when offers in it exist.
-The shop box is a different question again: hiding Cardmarket hides its links and not the column.
+its prices come in — CardTrader answers in your account's currency and their API has no parameter
+for another, so there is no currency to choose and nothing to prefer. The shop box is a different
+question again: hiding Cardmarket hides its links and not the column.
 
 **CardTrader prices.** With your own personal API token, the extension matches Scryfall
 print IDs against CardTrader blueprints, links the exact printing and shows the cheapest
 listed foil and nonfoil offers. Its column fills gradually to respect the marketplace
-rate limit, and it is headed with the currency the account's offers come in. If CardTrader fails, a CardTrader-only table
-restores the native Cardmarket column unless the reader has hidden Cardmarket. Listed prices
+rate limit, and it is headed with the currency the account's offers come in. A printing with no
+offer leaves its cell empty rather than filling it from somewhere else. Listed prices
 exclude shipping and do not guarantee language, condition or stock. The token is stored locally
 and sent only to `api.cardtrader.com`. On the settings page the feature cannot be switched on
 before there is a token, because a switch that turns on a request that cannot be made is a switch
