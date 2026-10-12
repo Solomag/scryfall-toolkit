@@ -452,7 +452,7 @@ function packagedNoticesTest() {
   //
   // The deck suggestions are what made this bite: `edhrec.com` was added to the
   // manifest, and the listing still said five hosts and offered no text for it.
-  for (const [file, label] of [['PRIVACY.md', 'privacy policy'], ['docs/CHROME_WEB_STORE_LISTING.md', 'store listing']]) {
+  for (const [file, label] of [['PRIVACY.md', 'privacy policy'], ['docs/CHROME_WEB_STORE_LISTING.md', 'store listing'], ['docs/AMO_LISTING.md', 'AMO listing']]) {
     const text = read(file);
     for (const host of declaredHosts(manifest)) {
       assert(text.includes(host), `${label} names ${host}, which the manifest asks for`);
@@ -854,6 +854,24 @@ function firefoxArchiveTest(out) {
   assertEqual(firefox.host_permissions, manifest.host_permissions, 'and ask for the same hosts');
   assertEqual(firefox.optional_host_permissions, manifest.optional_host_permissions, 'the optional ones too');
   assertEqual(firefox.action.default_popup, manifest.action.default_popup, 'and the same popup');
+  return firefox;
+}
+
+// The AMO listing and the manifest it describes. The summary AMO shows in search is the manifest's
+// own description, and the gecko id and the data declaration live in the generated Firefox manifest,
+// so the document and the code have to agree about all three.
+function amoListingTest(firefox) {
+  console.log('docs: the AMO listing agrees with the manifest');
+  const listing = read('docs/AMO_LISTING.md');
+  const manifest = JSON.parse(read('manifest.json'));
+  assert(listing.includes('> ' + manifest.description),
+    "the summary is the manifest's description, which is what AMO shows in search");
+  assert(listing.includes(firefox.browser_specific_settings.gecko.id), 'the listing names the gecko id');
+  const declared = firefox.browser_specific_settings.gecko.data_collection_permissions;
+  for (const type of [...declared.required, ...(declared.optional || [])]) {
+    assert(listing.includes(type), `the listing names the declared data type ${type}`);
+  }
+  assert(listing.includes('blob/main/PRIVACY.md'), 'and links the privacy policy that ships');
 }
 
 // The shim itself: what it does on Firefox, and that it touches nothing on Chrome.
@@ -909,7 +927,8 @@ async function shimTest() {
 (async () => {
   try {
     const dir = buildArchive();
-    firefoxArchiveTest(path.dirname(dir));
+    const firefox = firefoxArchiveTest(path.dirname(dir));
+    amoListingTest(firefox);
     await shimTest();
     packagedNoticesTest(dir);
     packagedArchiveTest(dir);
