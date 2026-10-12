@@ -31,7 +31,7 @@ const REQUIRED_IDS = [
   'usageMediumPercent', 'usageHighPercent', 'saltMediumThreshold',
   'saltHighThreshold', 'clipboard', 'printAddButtons', 'darkTheme',
   'tags', 'cardTags', 'artTags', 'relationships', 'finishBadges',
-  'cardtraderPrices', 'euroPriceSources', 'edhrecUsage',
+  'cardtraderPrices', 'edhrecUsage',
   'edhrecSalt', 'showSaltScale', 'edhrecUsageDisplay',
   'legalities', 'exportFormat', 'taggerSearchLinks', 'cardSearchLinks',
   'deckNoPrices', 'stackedDeckCards', 'deckLegality',
@@ -91,7 +91,11 @@ const REMOVED_IDS = [
   // and the full-page link it configured, the same-tab link, and the second language setting.
   // They are named here rather than left out: a control that is gone by accident and one that
   // is gone by decision look the same to a reader, and only one of them is a decision.
-  'printGrouping', 'printFoldGroups', 'printFullPageLink', 'printPageSameTab', 'siteLanguage'
+  'printGrouping', 'printFoldGroups', 'printFullPageLink', 'printPageSameTab', 'siteLanguage',
+  // The EUR source dropdown and the shield that covered it while the EUR box was clear. CardTrader
+  // is a column of its own now, with a box in the price group like USD and TIX, so the dropdown
+  // that chose between the two — and the hint that told a reader why it was blocked — are gone.
+  'euroPriceSources', 'euroSourceShield', 'euroSourceHint'
 ];
 
 // What the archive ships is not the same as what the working tree holds, so the
@@ -507,10 +511,10 @@ async function settingsLanguageChainTest() {
 }
 
 
-// Choosing CardTrader as the EUR source reaches api.cardtrader.com whether or not
-// the CardTrader switch is on. It used to save without asking for the host, so a
-// user could end up with a setting that looked on and reached nothing. This walks
-// the flow rather than checking that the domain appears in the manifest.
+// Turning the CardTrader column on reaches api.cardtrader.com whether or not the
+// buy-block switch is on. It used to save without asking for the host, so a user
+// could end up with a setting that looked on and reached nothing. This walks the
+// flow rather than checking that the domain appears in the manifest.
 
 // The old test began with every platform checked, so it never reached the case
 // that broke: one platform left, and the user takes it away.
@@ -561,33 +565,28 @@ const tick = () => new Promise(resolve => setTimeout(resolve, 0));
 async function optionalHostsTest() {
   console.log('settings: optional features ask for their host before saving');
   const page = await loadOptions({
-    cardtraderPrices: false, euroPriceSources: 'cm', cardtraderToken: 'ct-token-1',
+    cardtraderPrices: false, cardtraderToken: 'ct-token-1',
     edhrecUsage: false, edhrecSalt: false
   });
   const { document, mock } = page;
-  const select = document.getElementById('euroPriceSources');
+  // The column's box is drawn by the price group's loop, so it is reached by the id that loop
+  // gives it rather than by a storage key.
+  const column = document.getElementById('price-cardtrader');
 
-  // Choosing Cardmarket needs no host at all.
-  select.value = 'cm';
-  fireEvent(select, 'change');
+  // Turning the column off needs no host at all.
+  column.checked = false;
+  fireEvent(column, 'change');
   await tick();
   assertEqual(mock.permissions.grantedOrigins.length, 0,
-    'the Cardmarket source asks for nothing');
+    'turning the CardTrader column off asks for nothing');
 
-  // Choosing CardTrader does.
-  select.value = 'ct';
-  fireEvent(select, 'change');
+  // Turning it on does. It is the same host the buy-block links need, because it is one product.
+  column.checked = true;
+  fireEvent(column, 'change');
   await tick();
   assertEqual(mock.permissions.grantedOrigins, ['https://api.cardtrader.com/*'],
-    'the CardTrader source asks for the CardTrader host');
-  assertEqual(mock.state.euroPriceSources, 'ct', 'and the choice is saved once granted');
-
-  // Both is the same case.
-  select.value = 'both';
-  fireEvent(select, 'change');
-  await tick();
-  assert(mock.permissions.grantedOrigins.includes('https://api.cardtrader.com/*'),
-    '"both" is covered too');
+    'the CardTrader column asks for the CardTrader host');
+  assertEqual(mock.state.setFilters.prices.cardtrader, true, 'and the choice is saved once granted');
 
   // And the EDHREC switches ask for EDHREC.
   const usage = document.getElementById('edhrecUsage');
@@ -601,18 +600,18 @@ async function optionalHostsTest() {
 
   // Refusing the permission must not leave a setting saved that cannot work.
   const second = await loadOptions({
-    cardtraderPrices: false, euroPriceSources: 'cm', cardtraderToken: 'ct-token-1', edhrecUsage: false
+    cardtraderPrices: false, cardtraderToken: 'ct-token-1', edhrecUsage: false
   });
   second.mock.permissions.deny = true;
-  const refused = second.document.getElementById('euroPriceSources');
-  refused.value = 'ct';
+  const refused = second.document.getElementById('price-cardtrader');
+  refused.checked = true;
   fireEvent(refused, 'change');
   await tick();
   // The request resolves on the next turn even when it is granted at once.
   await tick();
-  assertEqual(second.mock.state.euroPriceSources, 'cm',
-    'a refused permission leaves the previous source in storage');
-  assertEqual(refused.value, 'cm', 'and the control goes back to it');
+  assertEqual(second.mock.state.setFilters?.prices?.cardtrader !== true, true,
+    'a refused permission leaves the column off in storage');
+  assertEqual(refused.checked, false, 'and the control goes back to it');
 }
 
 
@@ -982,9 +981,9 @@ function sectionOrderTest() {
     'the first column is the platforms, under its own heading');
   assert(inFirst('platformBody') && inFirst('setCaster'),
     'and holds the table and the Caster marker, which is not a price and has no heading of its own');
-  assert(inSecond('priceList') && inSecond('cardtraderPrices') && inSecond('euroPriceSources'),
+  assert(inSecond('priceList') && inSecond('cardtraderPrices') && inSecond('cardtraderCurrency'),
     'the second is the prices: the price groups, CardTrader with the stores it belongs to, and the ' +
-    'EUR source');
+    'currency its column is headed with');
   assert(!inSecond('setCaster'),
     'and the Caster marker is not among them, because it is not about money');
   // The general switch over the shop block sits inside the shop group and above the shops it
@@ -1107,7 +1106,7 @@ function sectionOrderTest() {
   // link — so it lives with the prices now, and the EUR source with the shops it chooses
   // between. A price setting in a list of things that are not prices is a setting nobody looks
   // for where it is.
-  for (const id of ['euroPriceSources', 'cardtraderPrices', 'cardtraderToken', 'cardtraderPanel']) {
+  for (const id of ['cardtraderCurrency', 'cardtraderPrices', 'cardtraderToken', 'cardtraderPanel']) {
     assert(!additional.includes(`id="${id}"`), `${id} is not in Additional info at all`);
     assertEqual(sectionOf(id), 'Видимость', `${id} sits in Visibility`);
   }
@@ -1816,24 +1815,27 @@ async function hidingGroupTest() {
     'the two groups are the model\'s two, in the model\'s order, each with its own caption');
   assertEqual(priceGroups.map(row => [...row.querySelectorAll('.pair-items input[data-which]')]
     .map(box => box.dataset.which)),
-    [['usd', 'tix', 'eur'], ['tcg', 'cardhoarder', 'cardmarket']],
+    [['usd', 'tix', 'eur', 'cardtrader'], ['tcg', 'cardhoarder', 'cardmarket']],
     'and each holds the kinds the model put in it, so a kind cannot be left out of a group');
   assert(priceGroups.every(group => group.firstElementChild.classList.contains('pair-caption')),
     'with the caption above the boxes rather than beside them, so there is no empty column ' +
     'between a label and the control it labels');
+  // The CardTrader column is the one price that starts off. It is not a column Scryfall draws, and
+  // without a token there is nothing to put in it, so "on" would draw an empty column for every
+  // reader who has never heard of the feature.
   assertEqual([...priceList.querySelectorAll('input[data-which]')].map(box => box.checked),
-    [true, true, true, true, true, true],
-    'all six start shown, which is what a default has to mean');
+    [true, true, true, false, true, true, true],
+    'every price but the CardTrader column starts shown, which is what a default has to mean');
   assertEqual([...priceList.querySelectorAll('input[data-which]')]
     .map(box => box.getAttribute('aria-label')),
-    ['USD: show', 'TIX: show', 'EUR: show', 'TCGplayer: show', 'Cardhoarder: show', 'Cardmarket: show'],
+    ['USD: show', 'TIX: show', 'EUR: show', 'CardTrader: show', 'TCGplayer: show', 'Cardhoarder: show', 'Cardmarket: show'],
     'and each is announced by its name and what it is for');
   const priceBox = kind => q('price-' + kind);
   priceBox('tcg').checked = false;
   fireEvent(priceBox('tcg'), 'change');
   await tick();
   assertEqual(mock.state.setFilters.prices,
-    { usd: true, tix: true, eur: true, tcg: false, cardhoarder: true, cardmarket: true },
+    { usd: true, tix: true, eur: true, cardtrader: false, tcg: false, cardhoarder: true, cardmarket: true },
     'unticking one kind of price turns that one off alone');
   assertEqual(mock.state.setFilters.platforms.paper.areas.prints, true,
     'and touching a price touches no platform');
@@ -1856,60 +1858,37 @@ async function hidingGroupTest() {
   fireEvent(priceBox('tcg'), 'change');
   await tick();
   assertEqual([...priceList.querySelectorAll('input[data-which]')].map(box => box.checked),
-    [true, true, true, true, true, true],
-    'and ticking it back shows all six again rather than leaving one stuck');
+    [true, true, true, false, true, true, true],
+    'and ticking it back shows the prices it started with rather than leaving one stuck');
 
-  // The EUR box and the EUR source are two handles on one question, and this is where they are
-  // kept in step. The box says whether the euro column exists; the dropdown says whose number is
-  // in it. A dropdown that chooses what fills a column that is not there has nothing to do, so it
-  // is blocked and set to "show nothing" while the box is clear.
+  // The EUR box and the CardTrader column are two columns with two boxes, and this is what the
+  // rework is about. They used to be one question — a source dropdown that chose which of the two
+  // filled the euro column, blocked while the EUR box was clear — so a reader who wanted
+  // CardTrader's prices and not Cardmarket's could not ask for it at all. The two boxes are
+  // independent now, and each answers for its own column.
   const euroBox = q('price-eur');
-  const euroSource = q('euroPriceSources');
-  const euroShield = q('euroSourceShield');
-  assertEqual([euroBox.checked, euroSource.disabled, euroShield.hidden], [true, false, true],
-    'with the EUR box ticked the source is free and nothing covers it');
+  const columnBox = q('price-cardtrader');
   euroBox.checked = false;
   fireEvent(euroBox, 'change');
   await tick();
   assertEqual(mock.state.setFilters.prices.eur, false, 'unticking EUR stores that the column is off');
-  assertEqual(mock.state.euroPriceSources, 'none',
-    'and sets the source to "show nothing" rather than leaving it choosing a column that is gone');
-  assertEqual([euroSource.value, euroSource.disabled, euroShield.hidden], ['none', true, false],
-    'with the dropdown blocked and covered');
-  // A disabled select swallows clicks, so the thing a reader presses is the shield over it. It is
-  // a real button, it is reachable by keyboard, and it says why.
-  euroShield.click();
-  await tick();
-  assert(euroBox.classList.contains('stk-blink'),
-    'pressing the blocked dropdown flashes the box that has to change first');
-  assert(/price source cannot be chosen/.test(q('status').textContent),
-    'and says why, in the page\'s own status line (' + q('status').textContent.slice(0, 60) + ')');
-  // The dropdown is the other handle: a reader who sets it to "show nothing" has said the same
-  // thing as clearing the box, and the two must not be able to disagree.
+  assertEqual([columnBox.disabled, columnBox.checked], [true, false],
+    'and leaves the CardTrader column exactly as it was — blocked for want of a token, not by EUR');
   euroBox.checked = true;
   fireEvent(euroBox, 'change');
   await tick();
-  assertEqual([mock.state.setFilters.prices.eur, mock.state.euroPriceSources], [true, 'cm'],
-    'ticking the box back gives the source something to fill the column with');
-  assertEqual([euroSource.disabled, euroShield.hidden], [false, true], 'and frees the dropdown');
-  euroSource.value = 'none';
-  fireEvent(euroSource, 'change');
-  await tick();
-  assertEqual([euroBox.checked, mock.state.setFilters.prices.eur], [false, false],
-    'and setting the dropdown to "show nothing" clears the box, because it is the same answer');
-  euroSource.value = 'both';
-  fireEvent(euroSource, 'change');
-  await tick();
-  assertEqual([euroBox.checked, mock.state.setFilters.prices.eur], [true, true],
-    'while any real source ticks it back, since a column that is filled is a column that is there');
+  assertEqual(mock.state.setFilters.prices.eur, true, 'ticking it back turns the euro column back on');
 
-  // A profile from before the EUR box existed: the source says "show nothing" and there is no
-  // EUR key of its own, so the model fills that key with its default (on). On load the source
-  // wins and the pair is written back in step, rather than the box reading ticked while the
-  // dropdown says the column is gone.
-  const legacyEuro = await groupReady(loadOptions({
+  // A profile from before the CardTrader column had a box: its answer is in `euroPriceSources`, and
+  // the migration translates it once into the two columns it described. `ct` meant a CardTrader
+  // column and no Cardmarket one, `both` meant both, `none` meant neither. This is the reader who
+  // reported the old behaviour as a bug, and their answer has to come across.
+  const legacyColumn = await groupReady(loadOptions({
     settingsLanguage: 'en',
-    euroPriceSources: 'none',
+    euroPriceSources: 'ct',
+    // A token, because the column's box is drawn off without one and this case is about what the
+    // migration did with the reader's answer rather than about the block.
+    cardtraderToken: 'ct-token-1',
     setFiltersMigrated: true,
     setFilters: {
       platforms: {
@@ -1921,63 +1900,40 @@ async function hidingGroupTest() {
       tokens: true, showCaster: true, showStores: true
     }
   }));
-  assertEqual(legacyEuro.document.getElementById('price-eur').checked, false,
-    'a source of "show nothing" with no EUR key of its own loads with the box cleared');
-  assertEqual(legacyEuro.document.getElementById('euroPriceSources').value, 'none',
-    'and the dropdown still says so');
-  assertEqual(legacyEuro.document.getElementById('euroPriceSources').disabled, true,
-    'and is blocked, because the column is off');
-  assertEqual(legacyEuro.mock.state.setFilters.prices.eur, false,
-    'and the pair is written back in step');
+  assertEqual([legacyColumn.mock.state.setFilters.prices.eur, legacyColumn.mock.state.setFilters.prices.cardtrader],
+    [false, true], 'a stored "ct" becomes CardTrader on and the euro column off, which is what it meant');
+  assertEqual(legacyColumn.document.getElementById('price-eur').checked, false,
+    'and the EUR box shows the euro column off');
+  assertEqual(legacyColumn.document.getElementById('price-cardtrader').checked, true,
+    'while the CardTrader box shows its column on');
 
-  // A refused permission rolls the dropdown back to what storage holds, not to what the page
-  // opened with: cm → both (stored), then both → ct refused, has to leave both. A token is
-  // stored, because CardTrader's choices are blocked without one — the block itself is checked
-  // just below.
-  const denied = await groupReady(loadOptions({
-    settingsLanguage: 'en', euroPriceSources: 'cm', cardtraderToken: 'ct-token-1'
-  }));
-  const deniedSource = denied.document.getElementById('euroPriceSources');
-  deniedSource.value = 'both';
-  fireEvent(deniedSource, 'change');
+  // The CardTrader column needs the token, so its box is out of reach until one is saved: a box
+  // that could turn on a request that cannot be made is a box that lies. The currency follows it.
+  const noToken = await groupReady(loadOptions({ settingsLanguage: 'en' }));
+  const noTokenColumn = noToken.document.getElementById('price-cardtrader');
+  assertEqual([noTokenColumn.disabled, noTokenColumn.checked], [true, false],
+    'without a token the CardTrader column is blocked and drawn off');
+  assertEqual(noToken.document.getElementById('cardtraderCurrency').disabled, true,
+    'and so is the currency its heading would carry');
+  noTokenColumn.checked = true;
+  fireEvent(noTokenColumn, 'change');
   await tick();
-  await tick();
-  assertEqual(denied.mock.state.euroPriceSources, 'both', 'a granted source is stored');
-  denied.mock.permissions.deny = true;
-  deniedSource.value = 'ct';
-  fireEvent(deniedSource, 'change');
-  await tick();
-  await tick();
-  assertEqual(deniedSource.value, 'both',
-    'a refused source rolls back to the last one stored, not to the one the page opened with');
-  assertEqual(denied.mock.state.euroPriceSources, 'both', 'and storage is unchanged');
+  assertEqual(noTokenColumn.checked, false,
+    'and a box the page drew off cannot be turned on by a script');
+  assertEqual(noToken.mock.state.setFilters.prices.cardtrader !== true, true,
+    'so nothing that cannot work is stored');
 
-  // CardTrader's euro prices need the token, so its two choices are blocked until one is saved,
-  // and the field says what is missing rather than letting a reader pick a source that cannot
-  // fill the column.
-  const noToken = await groupReady(loadOptions({ settingsLanguage: 'en', euroPriceSources: 'cm' }));
-  const noTokenSource = noToken.document.getElementById('euroPriceSources');
-  const euroOption = value => [...noTokenSource.options].find(item => item.value === value);
-  assertEqual([Boolean(euroOption('ct').disabled), Boolean(euroOption('both').disabled)], [true, true],
-    'without a token the CardTrader choices are blocked');
-  assertEqual([Boolean(euroOption('cm').disabled), Boolean(euroOption('none').disabled)], [false, false],
-    'while Cardmarket and "show nothing" are still reachable');
-  assertEqual(noToken.document.getElementById('euroSourceHint').hidden, false,
-    'and the field says the personal API key is missing');
-  noTokenSource.value = 'both';
-  fireEvent(noTokenSource, 'change');
+  // Saving a token unlocks it, and the currency with it.
+  const reconnect = await groupReady(loadOptions({ settingsLanguage: 'en', cardtraderToken: 'ct-token-1' }));
+  const reconnectColumn = reconnect.document.getElementById('price-cardtrader');
+  assertEqual(reconnectColumn.disabled, false, 'with a token the CardTrader column is reachable');
+  reconnectColumn.checked = true;
+  fireEvent(reconnectColumn, 'change');
   await tick();
-  assertEqual(noTokenSource.value, 'cm', 'choosing a blocked source falls back to Cardmarket');
-  assertEqual(noToken.mock.state.euroPriceSources, 'cm',
-    'and nothing that cannot work is stored');
-
-  // Saving a token unlocks them, and the field stops asking for one.
-  const reconnectEuro = await groupReady(loadOptions({ settingsLanguage: 'en', euroPriceSources: 'cm', cardtraderToken: 'ct-token-1' }));
-  const reconnectSource = reconnectEuro.document.getElementById('euroPriceSources');
-  assertEqual(Boolean([...reconnectSource.options].find(item => item.value === 'ct').disabled), false,
-    'with a token the CardTrader choice is reachable');
-  assertEqual(reconnectEuro.document.getElementById('euroSourceHint').hidden, true,
-    'and the field stops asking for a key');
+  await tick();
+  assertEqual(reconnect.mock.state.setFilters.prices.cardtrader, true, 'and turning it on stores it');
+  assertEqual(reconnect.document.getElementById('cardtraderCurrency').disabled, false,
+    'and the currency its heading carries becomes reachable too');
 
   // The Caster marker. Its old switch read "hide" and this one reads "show", so the stored key
   // was renamed rather than inverted in place — the rename is what lets the migration tell the
@@ -2007,22 +1963,23 @@ async function hidingGroupTest() {
   assertEqual(mock.state.setFilters.showStores, false,
     'unticking it stores that the whole block is hidden');
   assertEqual(mock.state.setFilters.prices,
-    { usd: true, tix: true, eur: true, tcg: true, cardhoarder: true, cardmarket: true },
-    'and it turns no shop off in storage: the block is the general switch and the shops are the ' +
-    'particular ones, so hiding the block does not lose the reader\'s per-shop choices');
+    { usd: true, tix: true, eur: true, cardtrader: false, tcg: true, cardhoarder: true, cardmarket: true },
+    'and it turns no price off in storage: the block is the general switch and the prices are the ' +
+    'particular ones, so hiding the block does not lose the reader\'s per-price choices');
   // What the reader sees instead: a shop is a link inside that block, so with the block hidden
   // its box has nowhere to be shown and is drawn off and out of reach. The three currencies are
   // columns and are not in the block, so they are left alone.
   assertEqual([...priceList.querySelectorAll('input[data-which]')].map(box => [box.checked, box.disabled]),
-    [[true, false], [true, false], [true, false], [false, true], [false, true], [false, true]],
-    'and the three shop boxes are drawn empty and disabled while the block is off');
+    [[true, false], [true, false], [true, false], [false, true], [false, true], [false, true], [false, true]],
+    'and the three shop boxes are drawn empty and disabled while the block is off, and the ' +
+    'CardTrader column stays blocked for want of a token rather than by the block');
   q('setStores').checked = true;
   fireEvent(q('setStores'), 'change');
   await tick();
   assertEqual(mock.state.setFilters.showStores, true, 'and ticking it back stores "shown"');
   assertEqual([...priceList.querySelectorAll('input[data-which]')].map(box => [box.checked, box.disabled]),
-    [[true, false], [true, false], [true, false], [true, false], [true, false], [true, false]],
-    'with the shops back as the reader left them, which is what drawing them from the stored ' +
+    [[true, false], [true, false], [true, false], [false, true], [true, false], [true, false], [true, false]],
+    'with the prices back as the reader left them, which is what drawing them from the stored ' +
     'values rather than writing to them buys');
 
   // The old flat keys are gone from the page. A control that still wrote one of them
@@ -2083,9 +2040,10 @@ async function hidingMigrationTest() {
     'while the stored places under them are untouched, so the platforms come back as they were');
   assertEqual([...document.getElementById('priceList').querySelectorAll('input[data-which]')]
     .map(box => box.checked),
-  [false, false, true, false, false, true],
+  [false, false, true, false, false, false, true],
   'and the kinds that one switch used to turn off are all drawn as off — which is what "only ' +
-  'Cardmarket" meant — while Cardmarket and the euro column, which is its price, stay ticked');
+  'Cardmarket" meant — while Cardmarket and the euro column, which is its price, stay ticked, and ' +
+  'the CardTrader column stays off, which is its default');
   // The marker used to be stored as "hide". Its box now reads "show", so a reader who had it
   // hidden is drawn with it unticked. Reading the old boolean the new way round would have
   // drawn it ticked — a box that looks like the setting they had, meaning the opposite.

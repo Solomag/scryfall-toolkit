@@ -771,7 +771,9 @@ async function scryfallHoldTest() {
       };
       try {
         mock.state.cardtraderToken = 'ct-token-1';
-        mock.state.euroPriceSources = 'ct';
+        // The column's switch lives in the hiding group with the other columns now, and either
+        // CardTrader feature being on is what lets the request through.
+        mock.state.setFilters = { prices: { cardtrader: true } };
         mock.state.cardtraderCurrency = 'USD';
         const wanted = await send({ type: 'cardtrader', id: CARD_ID, set: 'tst' }, undefined, 5000);
         assertEqual(wanted.data.nonfoil, { cents: 700, currency: 'USD' },
@@ -782,6 +784,13 @@ async function scryfallHoldTest() {
         const auto = await send({ type: 'cardtrader', id: CARD_ID, set: 'tst' }, undefined, 5000);
         assertEqual(auto.data.nonfoil, { cents: 500, currency: 'EUR' },
           'and with no wanted currency the account’s own is used');
+        // The wanted currency is a preference, not a filter: an account whose offers are in another
+        // currency, and a reader who asked for one it never lists, still has to see a price. This
+        // came back empty, which is the other half of "CardTrader shows nothing at all".
+        mock.state.cardtraderCurrency = 'GBP';
+        const absent = await send({ type: 'cardtrader', id: CARD_ID, set: 'tst' }, undefined, 5000);
+        assertEqual(absent.data.nonfoil, { cents: 500, currency: 'EUR' },
+          'a wanted currency with no offers falls back to the account’s own rather than showing nothing');
       } finally {
         ctx.fetch = realFetch;
       }

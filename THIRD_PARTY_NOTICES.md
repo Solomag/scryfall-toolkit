@@ -305,8 +305,8 @@ GET https://api.cardtrader.com/api/v2/products     → 401
 So the data is public in the sense that any account may read it — CardTrader's support said as
 much, below — but it is an account-bound API, and the account is the user's own. The extension
 has no token of its own and asks for none. It stores the user's own token, in the browser, and
-sends it only to CardTrader's API; the price source stays off until the user supplies that token,
-and without one the background refuses the request rather than calling out and being turned away.
+sends it only to CardTrader's API; the CardTrader feature stays off until the user supplies that
+token, and without one the background refuses the request rather than calling out and being turned away.
 The token is what makes the request; it is not a redistribution of anything.
 
 ### Their answer on the API
@@ -332,7 +332,7 @@ appear only on the CardTrader price controls and beside CardTrader prices, unmod
 undistorted, and never as our own identity. The settings page states in its own words that this
 extension is not created, endorsed or sponsored by CardTrader.
 
-Note that the mark here is not load-bearing in any way the data is not: the price source
+Note that the mark here is not load-bearing in any way the data is not: the CardTrader feature
 is off unless the user pastes a token from their own CardTrader account, so the one thing
 that would be wrong to distribute — their prices obtained without their say — cannot
 happen unless the user supplies their own credential to fetch it.

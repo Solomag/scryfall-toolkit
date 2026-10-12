@@ -8,6 +8,26 @@ All releases: <https://github.com/Solomag/scryfall-toolkit/releases>
 
 ---
 
+### 2.4.0 - the CardTrader column is a column of its own
+
+CardTrader's prices are not in euro, and the setting that showed them was. They arrived through a
+dropdown that chose which of Cardmarket and CardTrader filled Scryfall's euro column, and that
+dropdown was blocked whenever the **EUR** box was clear — so a reader who wanted CardTrader's prices
+and not Cardmarket's had no way to ask for the pair, and unchecking **EUR** to get rid of the euro
+column took CardTrader with it. CardTrader is a **column of its own** now, with a box beside USD,
+TIX and EUR in the prices group; the two boxes are independent, and the dropdown, the shield that
+stood over it and the strings that explained it are gone. A stored `euroPriceSources` is translated
+once into the two columns it described, so nobody's answer is lost: `ct` becomes CardTrader on and
+the euro column off, `both` becomes both, and `none` becomes neither.
+
+**And the price that was missing when it was there.** A wanted currency was a preference with no
+fallback: the worker skipped every offer that was not in it, so a reader who picked a currency their
+account never lists saw an empty column and an empty link — which is what "CardTrader shows nothing
+at all" was. The cheapest offer in the wanted currency is used when one exists, and the account's
+own currency is the answer otherwise, which is what the comment beside it has said since the
+preference was added. And `initCardTrader` no longer gives up when the page has no store block: the
+column it builds needs no block, and the lookup that did gate it was the whole function.
+
 ### The AMO listing, and a test that keeps it honest
 
 The Firefox listing had nowhere to live: the Chrome one had a document and a set of checks, and the

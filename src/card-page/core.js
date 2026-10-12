@@ -63,7 +63,7 @@
   const defaults = {
     clipboard: true, tags: true, cardTags: true, artTags: false, relationships: true,
     printAddButtons: true,
-    legalities: true, finishBadges: true, cardtraderPrices: false, euroPriceSources: 'cm',
+    legalities: true, finishBadges: true, cardtraderPrices: false,
     cardtraderCurrency: '',
     edhrecUsage: false, edhrecSalt: false, showSaltScale: false, edhrecUsageDisplay: 'both',
     usageColorMetric: 'decks', usageMediumDecks: 50000, usageHighDecks: 100000,
@@ -129,7 +129,16 @@
   // The "Buy This Card" block is in here too: it is not a price kind, so it cannot be found by
   // walking `prices`, and a reader who hid the whole block and nothing else would otherwise get a
   // feature that never boots — a switch that saves and does nothing.
-  settings.onlyCardmarket = Object.values(setFilters.prices).some(price => price === false);
+  //
+  // The CardTrader column is the one price that starts off, and it is not a Scryfall column this
+  // filter hides: it is a column the CardTrader feature adds. Counting it here would say "something
+  // is hidden" for every reader who has never turned CardTrader on, and boot the price filter on
+  // every card page to hide nothing.
+  settings.onlyCardmarket = Object.entries(setFilters.prices)
+    .some(([kind, shown]) => kind !== 'cardtrader' && shown === false);
+  // The two price columns the CardTrader feature draws from, read from the model like every other
+  // switch. `cardtraderColumn` is the added column; `cardtraderPrices` is the buy-block links.
+  settings.cardtraderColumn = setFilters.prices.cardtrader !== false;
   settings.showStores = setFilters.showStores !== false;
   settings.deckTokens = setFilters.tokens;
   // The Caster marker, kept under the name that means *hide* so nothing downstream has to be
@@ -528,7 +537,7 @@
     ["priceFilter", () => settings.onlyCardmarket || settings.showStores === false, false],
     ["advancedPriceFilter", () => advancedPage, false],
     ["advancedSetFilter", () => advancedPage, false],
-    ["cardTrader", () => cardPage && (settings.cardtraderPrices || settings.euroPriceSources !== 'cm'), false],
+    ["cardTrader", () => cardPage && (settings.cardtraderPrices || settings.cardtraderColumn), false],
     ["cardSearchLinks", () => cardPage && settings.cardSearchLinks, false],
     ["searchTaggerLinks", () => settings.taggerSearchLinks, false],
     ["deckPriceOption", () => settings.deckNoPrices, false],

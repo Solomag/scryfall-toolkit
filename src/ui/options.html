@@ -97,7 +97,7 @@
 </div>
 </div>
 <!-- CardTrader's offers, with the stores they belong to: it adds a link to that block and a euro
-     column to the prints table, and it sits here rather than under the EUR source so that the
+     column to the prints table, and it sits here rather than with the price groups so that the
      store links are one place. -->
 <div class="feature-row" id="cardtraderRow">
 <label class="feature-main" id="cardtraderMain"><input type="checkbox" class="stk-check" id="cardtraderPrices"> Предложения CardTrader</label>
@@ -116,26 +116,14 @@
 <button type="button" class="feature-help" data-help="cardtrader" aria-haspopup="dialog" title="Что это">?</button>
 </div>
 </div>
-<!-- Which shop's euro price the prints table's column carries. It needs CardTrader's token to
-     offer CardTrader at all, which is not obvious from a dropdown of names, so it carries its
-     own help.
-
-     It is blocked while the EUR box in the price group above is unticked, because the two answer
-     the same question and a dropdown that chooses what fills a column that is not there is a
-     control with nothing to do. A disabled select swallows clicks, so the blocking is a
-     transparent button laid over it: a reader who reaches for it is told why instead of finding
-     a dead control. -->
+<!-- Which currency the CardTrader column is headed with. The column's own switch is drawn with the
+     other prices, and it needs CardTrader's token to fill at all — not obvious from a currency
+     code — so this carries its own help. -->
 <div class="price-source">
 <div class="price-source-head">
-<label class="pair-caption" for="euroPriceSources">Цены в таблице изданий</label>
+<label class="pair-caption" for="cardtraderCurrency">Валюта цен CardTrader</label>
 <button type="button" class="feature-help" data-help="eursource" aria-haspopup="dialog" title="Что это">?</button>
 </div>
-<div class="price-source-field">
-<select id="euroPriceSources"><option value="cm">Cardmarket</option><option value="ct">CardTrader</option><option value="both">Cardmarket и CardTrader</option><option value="none">Не показывать</option></select>
-<button type="button" class="price-source-shield" id="euroSourceShield" hidden></button>
-</div>
-<p class="hint" id="euroSourceHint" hidden>Введите личный API-ключ для отображения этой цены.</p>
-<label for="cardtraderCurrency">Валюта цен CardTrader</label>
 <select id="cardtraderCurrency"><option value="">Как на CardTrader</option><option value="EUR">EUR</option><option value="USD">USD</option><option value="GBP">GBP</option><option value="JPY">JPY</option><option value="CAD">CAD</option><option value="AUD">AUD</option><option value="CHF">CHF</option><option value="PLN">PLN</option><option value="SEK">SEK</option><option value="NOK">NOK</option><option value="DKK">DKK</option><option value="CZK">CZK</option></select>
 </div>
 </div>

@@ -84,31 +84,39 @@
   // Every storage key the migration has to be able to see, in one list, because two files need
   // it: the card page migrates what the reader chose and the settings page has to show the
   // migrated values or it draws one reader's old switches as another's defaults.
+  // `euroPriceSources` is the odd one in this list: it is not a shape of the hiding group, it is
+  // the retired answer to "which of Cardmarket and CardTrader fills the euro column". It is here
+  // because the two files that read this list are the two that translate it, and a key the
+  // migration needs but neither read would be a key it can never see.
   const LEGACY_KEYS = [
     'hideDigitalSets', 'hideNonTournamentSets', 'hideOversizedSets',
     'hideForeignBlackBorder', 'hideNonEnglishPrints', 'setPlatforms', 'onlyCardmarket',
     'hideCasterIndicator', 'deckTokens', 'setFilters', 'setFiltersMigrated',
-    'hideForeignOnlySets'
+    'hideForeignOnlySets', 'euroPriceSources'
   ];
 
-  // The six prices, in two groups rather than six switches. `group` is what puts the three
-  // currencies and the euro on one line and the three shops on another, and it lives here rather
-  // than in the markup for the reason the area labels do: options.js draws both groups from these
-  // two tables, and a line typed into options.html would be a second place to forget a price.
+  // The prices, in two groups rather than one switch each. `group` is what puts the columns of
+  // numbers on one line and the shops on another, and it lives here rather than in the markup for
+  // the reason the area labels do: options.js draws both groups from these two tables, and a line
+  // typed into options.html would be a second place to forget a price.
   //
-  // The split is not cosmetic. A currency is a column of numbers and a shop is a link, and on the
-  // page they are different things that happen to both be prices — which is why one switch for all
-  // of them was wrong, and why the grouping says so without a paragraph saying so.
+  // The split is not cosmetic. A column of numbers and a shop link are different things that
+  // happen to both be prices — which is why one switch for all of them was wrong, and why the
+  // grouping says so without a paragraph saying so.
   //
-  // EUR is the third currency and the one Scryfall draws from Cardmarket. It is a currency rather
-  // than a shop: it is a column of numbers in the same table as USD and TIX. Its box and the EUR
-  // source dropdown below it are two views of one question — whether that column exists — and the
-  // settings page keeps them in step rather than letting them disagree.
+  // EUR is the column Scryfall draws from Cardmarket. CardTrader is a column too, added beside it
+  // from the reader's own account, and it is here rather than with the CardTrader row because it
+  // is a column and the row is about the buy-block links. The two used to be one question — a
+  // dropdown saying which of the two filled the euro column, and the EUR box saying whether that
+  // column existed at all. CardTrader's prices are not euro, so it stopped being a source for
+  // that column and became a column of its own; see `columnFromSource` for the reader's old
+  // answer, translated once.
   const PRICE_GROUPS = { prices: 'Цены', links: 'Ссылки на магазины' };
   const PRICE_KINDS = {
     usd: { label: 'USD', group: 'prices' },
     tix: { label: 'TIX', group: 'prices' },
     eur: { label: 'EUR', group: 'prices' },
+    cardtrader: { label: 'CardTrader', group: 'prices' },
     tcg: { label: 'TCGplayer', group: 'links' },
     cardhoarder: { label: 'Cardhoarder', group: 'links' },
     cardmarket: { label: 'Cardmarket', group: 'links' }
@@ -140,7 +148,12 @@
     // Inverted, so the switches say what every other switch in the settings says and the
     // group above them does not need a sentence explaining which way round they run. The
     // inversion is in the migration, not here.
-    prices: { usd: true, tix: true, eur: true, tcg: true, cardhoarder: true, cardmarket: true },
+    //
+    // CardTrader is the one that starts off, and it is the only price that does. It is not a
+    // column Scryfall draws: it is one this extension adds from the reader's own account, and
+    // without a token there is nothing to put in it. A default of "on" would draw an empty
+    // column for every reader who has never heard of the feature, which is not showing a price.
+    prices: { usd: true, tix: true, eur: true, cardtrader: false, tcg: true, cardhoarder: true, cardmarket: true },
     tokens: true,
     showCaster: true,
     // The whole "Buy This Card" block on a card page, heading and disclaimer included — the
@@ -265,11 +278,39 @@
   // 1.5.1+ (a shared list of areas beside the platforms), and every one of them carries
   // fields this shape has no place for.
   function read(stored) {
+    const first = stored.setFiltersMigrated !== true;
+    const base = first ? migrate(stored) : upgrade(stored.setFilters);
+    const column = columnFromSource(base, stored);
+    return { filters: column.filters, migrated: first || column.changed };
+  }
+
+  // The CardTrader column used to be one of four answers to "what fills the euro column", kept
+  // outside this shape under `euroPriceSources`. It has a switch of its own now, so the old
+  // answer is translated once into the two columns it described: `ct` and `both` had a
+  // CardTrader column, and `ct` and `none` had no Cardmarket one. The guard is the new key
+  // itself — once `prices.cardtrader` is a boolean the reader has an answer of their own, and
+  // running this again would overwrite it with a value they have already moved past.
+  //
+  // `changed` rather than a second migration flag: the readers already write the whole shape
+  // back when `read` says it migrated, and a reader whose only change is this one has to be
+  // written back too or the translation runs on every page load.
+  function columnFromSource(filters, stored) {
+    const raw = stored?.setFilters;
+    if (isPlainObject(raw?.prices) && typeof raw.prices.cardtrader === 'boolean') {
+      return { filters, changed: false };
+    }
+    const source = stored?.euroPriceSources;
+    if (!['cm', 'ct', 'both', 'none'].includes(source)) return { filters, changed: false };
     return {
-      filters: stored.setFiltersMigrated === true
-        ? upgrade(stored.setFilters)
-        : migrate(stored),
-      migrated: stored.setFiltersMigrated !== true
+      filters: {
+        ...filters,
+        prices: {
+          ...filters.prices,
+          cardtrader: source === 'ct' || source === 'both',
+          eur: source === 'cm' || source === 'both'
+        }
+      },
+      changed: true
     };
   }
 

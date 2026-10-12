@@ -72,19 +72,29 @@ async function cardTraderPrices(id, set, token, wanted = '') {
   // the answer otherwise. Requiring a currency with no offers in it would leave the column empty
   // on an account that never lists one.
   const wantedCode = /^[A-Z]{3}$/.test(wanted) ? wanted : '';
+  // The cheapest offer in the wanted currency, and beside it the cheapest in any currency. The
+  // preference above has always said a wanted currency is a preference and the account's own is
+  // the answer otherwise; the loop did not, and a reader who picked a currency their account never
+  // lists saw an empty column and an empty link. The fallback is what makes the sentence true.
   const cheapest = { foil: null, nonfoil: null };
+  const fallback = { foil: null, nonfoil: null };
+  const cheaper = (held, cents, currency) => !held || (held.currency === currency && cents < held.cents);
   for (const product of products) {
     if (product.blueprint_id !== blueprint.id || product.quantity <= 0) continue;
     const cents = product.price?.cents ?? product.price_cents;
     const currency = product.price?.currency ?? product.price_currency;
     if (!Number.isFinite(cents) || !/^[A-Z]{3}$/.test(currency || '')) continue;
-    if (wantedCode && currency !== wantedCode) continue;
     const kind = product.properties_hash?.mtg_foil === true || product.properties?.mtg_foil === true ? 'foil' : 'nonfoil';
-    if (!cheapest[kind] || (cheapest[kind].currency === currency && cents < cheapest[kind].cents)) {
-      cheapest[kind] = { cents, currency };
-    }
+    if (cheaper(fallback[kind], cents, currency)) fallback[kind] = { cents, currency };
+    if (wantedCode && currency !== wantedCode) continue;
+    if (cheaper(cheapest[kind], cents, currency)) cheapest[kind] = { cents, currency };
   }
-  return { available: true, url: `https://www.cardtrader.com/en/cards/${blueprint.id}`, ...cheapest };
+  return {
+    available: true,
+    url: `https://www.cardtrader.com/en/cards/${blueprint.id}`,
+    foil: cheapest.foil || fallback.foil,
+    nonfoil: cheapest.nonfoil || fallback.nonfoil
+  };
 }
 // EDHREC publishes a data policy for community projects: at most one request a
 // second, at least two seconds before trying again after a 429, and no repeated
@@ -644,8 +654,14 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
     if (message.type === 'cardtrader') {
       const id = String(message.id), set = String(message.set);
       if (!/^[0-9a-f-]{36}$/.test(id) || !/^[a-z0-9_-]{1,16}$/i.test(set)) throw new Error('Invalid card');
-      const stored = await chrome.storage.local.get(['cardtraderToken','cardtraderPrices','euroPriceSources','cardtraderCurrency']);
-      if ((!stored.cardtraderPrices && !['ct','both'].includes(stored.euroPriceSources)) || !stored.cardtraderToken) throw new Error('CardTrader is not configured');
+      const stored = await chrome.storage.local.get(['cardtraderToken','cardtraderPrices','setFilters','cardtraderCurrency']);
+      // Either CardTrader feature being on is enough, and the column's own switch lives in the
+      // hiding group with the other columns. A value written before that switch existed has no
+      // `cardtrader` key of its own, so it is read as "not off": the page only asks when a switch
+      // it drew is on, and refusing a request the page has already decided to make would be the
+      // wrong side of that guess.
+      const column = stored.setFilters?.prices?.cardtrader;
+      if ((!stored.cardtraderPrices && column === false) || !stored.cardtraderToken) throw new Error('CardTrader is not configured');
       return cardTraderPrices(id, set, stored.cardtraderToken, stored.cardtraderCurrency);
     }
     if (message.type === "preview") {
