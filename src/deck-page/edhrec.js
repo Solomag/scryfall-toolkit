@@ -56,25 +56,29 @@
 
   // --- the panel ------------------------------------------------------------
 
-  function panelMarkup() {
-    return '' +
-      '<div class="modal-dialog-overlay stk-edhrec-panel">' +
-        '<div class="modal-dialog stk-account-light-surface stk-edhrec-panel">' +
-          '<h6 class="modal-dialog-title stk-account-light-bar">' +
-            'EDHREC suggestions' +
-            '<button type="button" title="Close this dialog" class="modal-dialog-close">' +
-              '<span aria-hidden="true">&#10005;</span>' +
-            '</button>' +
-          '</h6>' +
-          '<div class="modal-dialog-content stk-edhrec-panel"></div>' +
-        '</div>' +
-      '</div>';
-  }
-
   function buildPanel() {
-    const holder = document.createElement('div');
-    holder.innerHTML = panelMarkup().trim();
-    const overlay = holder.firstElementChild;
+    // The panel is built as nodes rather than parsed from a string, so nothing here
+    // reaches the HTML parser: the title and the close glyph are set as text and
+    // cannot be read as markup.
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-dialog-overlay stk-edhrec-panel';
+    const dialog = document.createElement('div');
+    dialog.className = 'modal-dialog stk-account-light-surface stk-edhrec-panel';
+    const title = document.createElement('h6');
+    title.className = 'modal-dialog-title stk-account-light-bar';
+    const closeButton = document.createElement('button');
+    closeButton.type = 'button';
+    closeButton.title = 'Close this dialog';
+    closeButton.className = 'modal-dialog-close';
+    const closeGlyph = document.createElement('span');
+    closeGlyph.setAttribute('aria-hidden', 'true');
+    closeGlyph.textContent = '\u2715';
+    closeButton.append(closeGlyph);
+    title.append('EDHREC suggestions', closeButton);
+    const content = document.createElement('div');
+    content.className = 'modal-dialog-content stk-edhrec-panel';
+    dialog.append(title, content);
+    overlay.append(dialog);
     const close = () => { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); };
     overlay.querySelector('.modal-dialog-close').addEventListener('click', close);
     overlay.addEventListener('click', event => { if (event.target === overlay) close(); });

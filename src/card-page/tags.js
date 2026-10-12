@@ -76,9 +76,14 @@
       if (["WITHOUT_BODY"].includes(type)) icon.classList.add("icon-upside-down");
       if (["COMES_BEFORE", "DEPICTS", "REFERENCES_TO", "WORSE_THAN"].includes(type)) icon.classList.add("icon-flipped");
       // Only render SVG literals bundled from Shambleshark; never insert API markup.
+      // The icon is built as nodes rather than parsed from a string, so the markup
+      // is our own SVG literal and never anything Scryfall or Tagger sent. It is
+      // parsed as SVG rather than HTML because that is what it is.
       const icons = window.STK_TAG_ICONS;
-      icon.innerHTML = Object.prototype.hasOwnProperty.call(icons, type)
+      const markup = Object.prototype.hasOwnProperty.call(icons, type)
         ? icons[type] : icons.ORACLE_CARD_TAG;
+      const parsed = new DOMParser().parseFromString(markup, 'image/svg+xml').documentElement;
+      icon.append(parsed);
       icon.title = type.toLowerCase().replaceAll("_", " ");
       return icon;
     }

@@ -355,6 +355,11 @@ function createPage(options) {
     Element: window.Element,
     Node: window.Node,
     HTMLInputElement: window.HTMLInputElement,
+    // The tag panel parses its own bundled SVG literals with DOMParser. A browser
+    // has it on the content-script global; linkedom has one on its window, so it is
+    // carried over rather than left out, or the panel throws and the tags tests see
+    // only the fallback link.
+    DOMParser: window.DOMParser,
     fetch: options.fetch || (() => { throw new Error('Unexpected fetch'); })
   };
   context.window = context;

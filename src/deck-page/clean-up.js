@@ -94,25 +94,32 @@
     return {};
   }
 
-  function createElement(html) {
-    const holder = document.createElement('ul');
-    holder.innerHTML = String(html).trim();
-    return holder.firstElementChild;
-  }
-
   function createHeadingElement(heading, subtotal) {
     const db = deckbuilder();
     const total = db && typeof db.totalCount === 'function' ? db.totalCount() : 0;
-    return createElement(
-      '<li class="cleanup-improver__deck-section-heading" data-heading-section-id="' + heading.id + '">' +
-        '<h6 class="deckbuilder-section-title-bar">' +
-          '<span class="deckbuilder-section-title">' + heading.label + '</span>' +
-          '<span class="deckbuilder-section-count">' +
-            '<span class="modify-cleanup-subtotal-count">' + subtotal + '</span>/' +
-            '<span class="modify-cleanup-total-count">' + total + '</span> cards</span>' +
-        '</h6>' +
-      '</li>'
-    );
+    // The heading is built as nodes rather than parsed from a string: the id and
+    // the label are the only dynamic parts, and textContent keeps them text even
+    // if a label ever arrives carrying something that looks like markup.
+    const row = document.createElement('li');
+    row.className = 'cleanup-improver__deck-section-heading';
+    row.dataset.headingSectionId = heading.id;
+    const bar = document.createElement('h6');
+    bar.className = 'deckbuilder-section-title-bar';
+    const title = document.createElement('span');
+    title.className = 'deckbuilder-section-title';
+    title.textContent = heading.label;
+    const count = document.createElement('span');
+    count.className = 'deckbuilder-section-count';
+    const subtotalEl = document.createElement('span');
+    subtotalEl.className = 'modify-cleanup-subtotal-count';
+    subtotalEl.textContent = subtotal;
+    const totalEl = document.createElement('span');
+    totalEl.className = 'modify-cleanup-total-count';
+    totalEl.textContent = total;
+    count.append(subtotalEl, '/', totalEl, ' cards');
+    bar.append(title, count);
+    row.append(bar);
+    return row;
   }
 
   function resetDefaultHeadings() {
