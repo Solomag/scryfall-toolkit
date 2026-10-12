@@ -39,14 +39,27 @@ jobs:
           sha256sum dist/*.zip
           unzip -l dist/*.zip | tail -n 5
 
+      # The release notes are the changelog's own section for this tag, so the one document that
+      # says "the detail lives in the release notes" is where the detail comes from. A tag with no
+      # entry is not an error: the CI note alone is still a release.
+      - name: Build the release notes
+        run: |
+          {
+            node tools/release-notes.cjs "${{ github.ref_name }}"
+            echo
+            echo "---"
+            echo
+            echo "Built by CI from this tag. The SHA-256 is printed in the workflow run that"
+            echo "produced this file, so the bytes published here can be tied to the commit and"
+            echo "the runner that made them."
+            echo
+            echo "Verify against the run: **Actions → Release → ${{ github.ref_name }}**"
+          } > release-notes.md
+          cat release-notes.md
+
       - name: Publish the release
         uses: softprops/action-gh-release@v2
         with:
           files: dist/*.zip
           generate_release_notes: true
-          body: |
-            Built by CI from this tag. The SHA-256 is printed in the workflow run
-            that produced this file, so the bytes published here can be tied to
-            the commit and the runner that made them.
-
-            Verify against the run: **Actions → Release → ${{ github.ref_name }}**
+          body_path: release-notes.md
