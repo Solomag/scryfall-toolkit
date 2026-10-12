@@ -8,10 +8,10 @@ what the extension is; [FEATURES.md](FEATURES.md) says exactly what each setting
 ## Getting it
 
 **Where do I get it?**
-From the [Chrome Web Store](https://chromewebstore.google.com/detail/scryfall-toolkit-preview/ofpociogpmmgfjgjnfppnllabhjjnclf), or from a [release](https://github.com/Solomag/scryfall-toolkit/releases) as an unpacked extension.
+From the [Chrome Web Store](https://chromewebstore.google.com/detail/scryfall-toolkit-preview/ofpociogpmmgfjgjnfppnllabhjjnclf), or from a [release](https://github.com/Solomag/scryfall-toolkit/releases) as an unpacked extension — take the `-firefox.zip` for Firefox and the plain `.zip` for everything else.
 
 **How do I install it by hand?**
-Unzip the release into a folder you keep, then `opera://extensions` → **Developer mode** → **Load unpacked** → choose the folder that has `manifest.json` in it.
+Unzip the release into a folder you keep. In Chrome, Chromium or Opera: `chrome://extensions` (or `opera://extensions`) → **Developer mode** → **Load unpacked** → choose the folder that has `manifest.json` in it. In Firefox: `about:debugging#/runtime/this-firefox` → **Load Temporary Add-on** → pick that same `manifest.json`.
 
 **How do I update?**
 Replace the contents of that same folder and press **Reload** on the extension. Keeping

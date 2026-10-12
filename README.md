@@ -42,11 +42,12 @@ a cut-out of one panel says what it looks like and nothing about where it goes.
 
 ## Install
 
-1. Download `scryfall-toolkit-<version>.zip` from the [latest release](https://github.com/Solomag/scryfall-toolkit/releases/latest).
+1. Download the archive for your browser from the [latest release](https://github.com/Solomag/scryfall-toolkit/releases/latest): `scryfall-toolkit-<version>.zip` for Chrome, Chromium and Opera, or `scryfall-toolkit-<version>-firefox.zip` for Firefox.
 2. Unzip it into a folder you keep.
-3. Open `opera://extensions` (or `chrome://extensions`), turn on **Developer mode**, choose **Load unpacked** and pick the unzipped folder — the one that contains `manifest.json`.
+3. Chrome, Chromium or Opera: open `chrome://extensions` (or `opera://extensions`), turn on **Developer mode**, choose **Load unpacked** and pick the unzipped folder — the one that contains `manifest.json`.
+4. Firefox: open `about:debugging#/runtime/this-firefox`, choose **Load Temporary Add-on**, and pick the `manifest.json` in the unzipped folder. Firefox only keeps it until it is closed: a permanent install needs the file signed on addons.mozilla.org, or Developer Edition with `xpinstall.signatures.required` turned off.
 
-To update, replace the contents of that folder and press **Reload** on the extension. Keeping the same folder keeps your clipboard and settings.
+To update, replace the contents of that folder and press **Reload** on the extension (in Firefox, load the add-on again). Keeping the same folder keeps your clipboard and settings.
 
 To build the archive yourself: `npm run package`. It writes `dist/scryfall-toolkit-<version>.zip` and then reads the archive back, failing if any file a page needs is missing.
 

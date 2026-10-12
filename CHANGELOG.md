@@ -8,6 +8,17 @@ All releases: <https://github.com/Solomag/scryfall-toolkit/releases>
 
 ---
 
+### 2.3.0 - Firefox, from the same source
+
+The extension runs in Firefox as well as Chrome now. The release carries a second archive,
+`scryfall-toolkit-<version>-firefox.zip`, built by the same tool from the same files: its
+`manifest.json` is derived from the Chrome one, so the two cannot drift apart. Two things differ,
+and both are Firefox's. Its MV3 background is a `scripts` event page rather than a service worker.
+And `chrome` there is the old callback namespace while the promise API is `browser`, so a small
+shim — `src/core/browser-shim.js`, loaded first in every context — points `chrome` at `browser`
+and gives the three calls still made with a callback (sendMessage, and permissions request and
+contains) their callback form back. On Chrome the shim does nothing at all.
+
 ### 2.2.0 - CardTrader's price is not always in euro
 
 CardTrader answers with each offer's price in the account's own currency, and there is no

@@ -819,6 +819,82 @@ function packagedArchiveTest() {
   fs.rmSync(out, { recursive: true, force: true });
 }
 
+// The Firefox archive, and the two things that make it Firefox: a `background.scripts` event page
+// rather than a service worker, and the shim loaded before everything else in every context.
+function firefoxArchiveTest(out) {
+  console.log('smoke: the Firefox archive has a Firefox manifest and the shim first');
+  const manifest = JSON.parse(read('manifest.json'));
+  const zip = path.join(out, `scryfall-toolkit-${manifest.version}-firefox.zip`);
+  assert(fs.existsSync(zip), 'the build produced the Firefox archive');
+  const unpacked = path.join(out, 'unpacked-firefox');
+  fs.rmSync(unpacked, { recursive: true, force: true });
+  fs.mkdirSync(unpacked, { recursive: true });
+  extractZip(zip, unpacked);
+  const firefox = JSON.parse(fs.readFileSync(path.join(unpacked, 'manifest.json'), 'utf8'));
+
+  assertEqual(firefox.background.scripts,
+    ['src/core/browser-shim.js', manifest.background.service_worker],
+    'the Firefox background is a scripts event page with the shim first, not a service worker');
+  assert(!firefox.background.service_worker, 'and no service_worker, which Firefox would refuse');
+  assert(firefox.browser_specific_settings?.gecko?.id,
+    'the gecko id is there, which is what Firefox identifies the extension by');
+  for (const entry of firefox.content_scripts) {
+    assertEqual(entry.js[0], 'src/core/browser-shim.js', 'every content script loads the shim first');
+  }
+  assert(fs.existsSync(path.join(unpacked, 'src/core/browser-shim.js')), 'and the shim is in the archive');
+  // Everything else is the Chrome manifest, unchanged.
+  assertEqual(firefox.version, manifest.version, 'both archives carry the same version');
+  assertEqual(firefox.host_permissions, manifest.host_permissions, 'and ask for the same hosts');
+  assertEqual(firefox.optional_host_permissions, manifest.optional_host_permissions, 'the optional ones too');
+  assertEqual(firefox.action.default_popup, manifest.action.default_popup, 'and the same popup');
+}
+
+// The shim itself: what it does on Firefox, and that it touches nothing on Chrome.
+async function shimTest() {
+  console.log('the shim points chrome at browser on Firefox, and leaves Chrome alone');
+  const source = read('src/core/browser-shim.js');
+
+  // Firefox: `browser` is the promise API, `chrome` is the old callback one. After the shim,
+  // `chrome` is `browser`, and the three callback calls answer.
+  const browser = {
+    storage: { local: { get: () => Promise.resolve({}) } },
+    runtime: { sendMessage: message => Promise.resolve({ ok: true, data: message }), lastError: undefined },
+    permissions: {
+      request: () => Promise.resolve(true),
+      contains: () => Promise.resolve(false)
+    }
+  };
+  const firefox = { browser };
+  vm.createContext(firefox);
+  vm.runInContext(source, firefox, { filename: 'browser-shim.js' });
+  assert(firefox.chrome === browser, 'chrome is the browser namespace after the shim');
+  const answer = await new Promise(resolve => {
+    firefox.chrome.runtime.sendMessage({ type: 'x' }, resolve);
+  });
+  assertEqual(answer, { ok: true, data: { type: 'x' } }, 'sendMessage answers its callback');
+  assertEqual(await new Promise(resolve => firefox.chrome.permissions.request(['https://x/*'], resolve)), true,
+    'permissions.request answers its callback too');
+  assertEqual(await new Promise(resolve => firefox.chrome.permissions.contains(['https://x/*'], resolve)), false,
+    'and so does contains');
+  // A refusal reaches the callback through `runtime.lastError`, which is how the callers check it.
+  const refused = { ...browser, runtime: { sendMessage: () => Promise.reject(new Error('no')), lastError: undefined } };
+  refused.permissions = browser.permissions;
+  const page2 = { browser: refused };
+  vm.createContext(page2);
+  vm.runInContext(source, page2, { filename: 'browser-shim.js' });
+  const reason = await new Promise(resolve => {
+    page2.chrome.runtime.sendMessage({}, () => resolve(page2.chrome.runtime.lastError));
+  });
+  assertEqual(String(reason && reason.message), 'no', 'a rejection is put on lastError for the callback');
+
+  // Chrome: no `browser`, so nothing is touched.
+  const chrome = { storage: {}, runtime: {} };
+  const page = { chrome };
+  vm.createContext(page);
+  vm.runInContext(source, page, { filename: 'browser-shim.js' });
+  assert(page.chrome === chrome, 'with no browser, chrome is left exactly as it was');
+}
+
 // The toolbar popup is a compact view of the same settings the full page edits.
 // It has to reach for the same keys, or the two views will disagree and the user
 // will not know which one is true.
@@ -826,6 +902,8 @@ function packagedArchiveTest() {
 (async () => {
   try {
     const dir = buildArchive();
+    firefoxArchiveTest(path.dirname(dir));
+    await shimTest();
     packagedNoticesTest(dir);
     packagedArchiveTest(dir);
     scriptsParseTest(dir);
