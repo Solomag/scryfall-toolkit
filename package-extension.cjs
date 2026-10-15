@@ -43,10 +43,14 @@ const chromeManifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'manifest.json
 // Derived from the Chrome one, so a change to one is a change to both. The shim is named first in
 // every list it belongs to, because it has to have run before any file that reads `chrome`.
 const SHIM = 'src/core/browser-shim.js';
+// The worker loads these two through importScripts on Chrome. Firefox's background page has no
+// importScripts — calling it threw and the whole background was dead there — so the Firefox
+// manifest names them here, ahead of the worker, and the worker's own guard skips its calls.
+const BACKGROUND_DATA = ['assets/data/set-platforms.js', 'src/core/format-overrides.js'];
 function firefoxManifest(manifest) {
   const copy = JSON.parse(JSON.stringify(manifest));
   if (manifest.background && manifest.background.service_worker) {
-    copy.background = { scripts: [SHIM, manifest.background.service_worker] };
+    copy.background = { scripts: [SHIM, ...BACKGROUND_DATA, manifest.background.service_worker] };
   }
   copy.content_scripts = (manifest.content_scripts || []).map(entry => ({
     ...entry,

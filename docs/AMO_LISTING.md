@@ -105,7 +105,9 @@ for both, and the Firefox `manifest.json` is derived from the Chrome one, so not
 by hand. Two things differ, and both are Firefox's:
 
 - **The background is a `scripts` event page**, not a `service_worker`. Firefox's MV3 does not run a
-  service worker, so `background.scripts` names the same worker file.
+  service worker, so `background.scripts` names the shim, the two data files the worker loads with
+  `importScripts` on Chrome — a Firefox background page has no `importScripts` at all — and then the
+  worker file.
 - **`chrome` there is the old callback namespace**, while the promise API is `browser`. The
   extension is written against `chrome` with promises, so `src/core/browser-shim.js` is loaded first
   in every context — the content scripts and the background alike — and points `chrome` at

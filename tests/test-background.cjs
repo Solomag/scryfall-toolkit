@@ -473,6 +473,50 @@ async function scryfallHoldTest() {
     JSON.stringify(delays) + ')');
 }
 
+// Firefox's background is a page, not a worker, and has no importScripts at all. The Firefox
+// manifest names the two files the worker would import ahead of it instead, and the worker's own
+// guard skips its calls. This loads exactly that shape — a context with no importScripts — which
+// is what a run against the shipped Chrome-shaped harness could never do: there the worker threw
+// before registering a listener, and every request the card page makes went unanswered.
+async function firefoxBackgroundTest() {
+  console.log('background.js: the Firefox background shape, with no importScripts');
+  const fxMock = createChrome({});
+  const fx = createPage({
+    url: 'chrome-extension://scryfall-toolkit/background.html',
+    html: '<!DOCTYPE html><html><body></body></html>',
+    mock: fxMock,
+    fetch: fetchMock
+  });
+  // The Firefox manifest's background.scripts, in order: the shim, then the two data files, then
+  // the worker. Nothing here defines importScripts, and the worker must come up without it.
+  let loadError = null;
+  try {
+    for (const file of ['src/core/browser-shim.js', 'assets/data/set-platforms.js',
+      'src/core/format-overrides.js', 'src/background/worker.js']) {
+      fx.script(file);
+    }
+  } catch (error) {
+    loadError = error;
+  }
+  assertEqual(loadError && loadError.message, null,
+    'the worker loads on a background page with no importScripts, which is what the guard is for');
+  assert(typeof fx.context.importScripts !== 'function',
+    'the Firefox background page has no importScripts, which is the whole point of the test');
+  assert(fx.context.STK_FORMAT_OVERRIDES,
+    'the format overrides the manifest names ahead of the worker are in place');
+  assertEqual(fxMock.messageListeners.length, 1,
+    'the worker registered its listener, which it could not when importScripts threw');
+  const answer = await new Promise(resolve => {
+    let done = false;
+    const respond = response => { if (!done) { done = true; resolve(response); } };
+    fxMock.messageListeners[0]({ type: 'card', id: 'nope' },
+      { url: 'https://scryfall.com/card/tst/1/test-card' }, respond);
+    setTimeout(() => { if (!done) { done = true; resolve({ noResponse: true }); } }, 2000);
+  });
+  assertEqual(answer, { ok: false, error: 'Invalid Scryfall ID' },
+    'and it answers a request, which is what the card page needs for tags and everything else');
+}
+
 (async () => {
   try {
     console.log('background.js: registration');
@@ -1087,6 +1131,7 @@ console.log('background.js: allPrints message');
 
     await edhrecThrottleTest();
     await scryfallHoldTest();
+    await firefoxBackgroundTest();
     summary('test-background');
     process.exit(0);
   } catch (error) {

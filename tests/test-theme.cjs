@@ -160,6 +160,14 @@ function themePartsTest() {
 function importScriptsCheck() {
   console.log('static: importScripts targets');
   const background = read('src/background/worker.js');
+  // Firefox's background is a page, not a worker, and has no importScripts at all: an unguarded
+  // call threw before the worker registered a single listener, and the whole background was dead
+  // there. Every call has to sit behind the typeof guard, with the Firefox manifest naming the
+  // same files ahead of the worker. Dropping the guard block and looking again is what says so.
+  const guarded = background.replace(/if \(typeof importScripts === "function"\) \{[\s\S]*?\n\}/, '');
+  assert(guarded !== background, 'the worker guards its importScripts calls');
+  assert(!/importScripts\s*\(/.test(guarded),
+    'no importScripts call is left outside the guard, because Firefox has none');
   const targets = [...background.matchAll(/importScripts\(([^)]*)\)/g)]
     .flatMap(match => [...match[1].matchAll(/"([^"]+)"/g)].map(hit => hit[1]));
   assert(targets.length > 0, 'background declares importScripts');

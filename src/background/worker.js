@@ -9,8 +9,16 @@
  * are described in THIRD_PARTY_NOTICES.md. The MPL does not cover them.
  */
 // Bundled compact tag data originates from MoxTags v1.8.3 (MIT).
-importScripts("../../assets/data/set-platforms.js");
-importScripts("../core/format-overrides.js");
+// Chrome loads these two through importScripts, which resolves against this file. Firefox's
+// background is a page, not a worker, and has no importScripts at all: the call threw before a
+// single listener below was registered, so the whole background was dead there and every request
+// the card page makes — tags included — went unanswered. The Firefox manifest names the same two
+// files ahead of this one instead, so they are already in place when the guard is false. One file,
+// working in both.
+if (typeof importScripts === "function") {
+  importScripts("../../assets/data/set-platforms.js");
+  importScripts("../core/format-overrides.js");
+}
 const cache = new Map();
 const traderCache = new Map();
 let digitalSetRequest;
