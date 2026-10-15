@@ -53,7 +53,9 @@ const TARGETS = {
   deck: path.join(ROOT, 'src/card-page/deck-lists.js'),
   bridge: path.join(ROOT, 'src/deck-page/bridge.js'),
   popup: path.join(ROOT, 'src/ui/popup.js'),
-  worker: path.join(ROOT, 'src/background/worker.js')
+  worker: path.join(ROOT, 'src/background/worker.js'),
+  shim: path.join(ROOT, 'src/core/browser-shim.js'),
+  packaging: path.join(ROOT, 'package-extension.cjs')
 };
 const before = {};
 const raw = {};
@@ -786,6 +788,44 @@ const MUTATIONS = [
     replace: '      if (!/^[a-zA-Z]+$/.test(String(name))) return reply(false, \'Unknown request\');',
     expect: 'a name outside the deck modules\' list is not forwarded'
   },
+  {
+    // Firefox's background page has no importScripts, so an unguarded call threw before the
+    // worker registered a listener: the whole background was dead and every request the card
+    // page makes — tags included — went unanswered. The Firefox shape is loaded without it.
+    name: 'the worker calls importScripts unguarded',
+    file: 'worker',
+    run: 'test-background',
+    find: 'if (typeof importScripts === "function") {\n' +
+      '  importScripts("../../assets/data/set-platforms.js");\n' +
+      '  importScripts("../core/format-overrides.js");\n}',
+    replace: 'importScripts("../../assets/data/set-platforms.js");\n' +
+      'importScripts("../core/format-overrides.js");',
+    expect: 'the worker loads on a background page with no importScripts'
+  },
+  {
+    // The Firefox manifest is what names the two files the worker cannot import there. Dropping
+    // them leaves the platform snapshot and the format overrides missing on Firefox, silently.
+    name: 'the Firefox manifest stops naming the files the worker cannot import',
+    file: 'packaging',
+    run: 'test-package',
+    find: 'copy.background = { scripts: [SHIM, ...BACKGROUND_DATA, manifest.background.service_worker] };',
+    replace: 'copy.background = { scripts: [SHIM, manifest.background.service_worker] };',
+    expect: 'the Firefox background is a scripts event page'
+  },
+  {
+    // Firefox makes `lastError` getter-only. Without the shim's own writable property the write
+    // that reports an error throws inside the promise handler, so the callback never runs and
+    // the caller waits for ever — which is what left the tag panel on "Loading tags…".
+    name: 'the shim leaves Firefox\'s getter-only lastError in place',
+    file: 'shim',
+    run: 'test-package',
+    find: '  try {\n' +
+      "    Object.defineProperty(root.browser.runtime, 'lastError',\n" +
+      '      { value: undefined, writable: true, configurable: true });\n' +
+      "  } catch { /* an object that will not take it keeps Firefox's own behaviour */ }\n",
+    replace: '',
+    expect: 'a getter-only lastError does not stop the callback'
+  },
 ];
 
 const RUNS = {
@@ -797,6 +837,7 @@ const RUNS = {
   'test-options': () => [path.join(ROOT, 'tests/test-options.cjs')],
   'test-deck-modules': () => [path.join(ROOT, 'tests/test-deck-modules.cjs')],
   'test-theme': () => [path.join(ROOT, 'tests/test-theme.cjs')],
+  'test-package': () => [path.join(ROOT, 'tests/test-package.cjs')],
   };
 
 function restore(key) {

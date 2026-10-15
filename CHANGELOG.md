@@ -8,6 +8,25 @@ All releases: <https://github.com/Solomag/scryfall-toolkit/releases>
 
 ---
 
+### 2.4.3 - the Firefox background comes up, and the tag panel with it
+
+The Firefox archive's background never started at all. Firefox's MV3 background is a page, not a
+worker, and a page has no `importScripts`: the worker's first two lines called it, the call threw,
+and the file died before it reached the `runtime.onMessage` listener that answers the card page. On
+Firefox every request the page makes to the worker went unanswered — tags, the extra legalities,
+EDHREC, the finish column — and nothing said so, because a background that throws on load looks
+exactly like a background with nothing to do. The Firefox manifest names those two files ahead of
+the worker now, and the worker calls `importScripts` only where it exists, so one file works in
+both browsers.
+
+**And the shim's callback never ran.** The shim gives `runtime.sendMessage`, `permissions.request`
+and `permissions.contains` their callback form back on Firefox, and reports a failure by writing
+`runtime.lastError` — which Firefox makes getter-only. The write threw inside the promise handler,
+so the callback was never reached: a caller that was waiting for an answer waited for ever, and one
+whose request nothing answered resolved into nothing instead of saying so. That is what left every
+tag panel on a card page reading "Loading tags…". The shim puts an own, writable `lastError` in
+front of Firefox's getter now, so the callback runs and the error reaches it, as it does on Chrome.
+
 ### The release notes come from the changelog
 
 The releases published the same CI note for every tag — the archive's hash and a link to the run —

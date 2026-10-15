@@ -19,9 +19,16 @@
 // contains) are given their callback form back, because Firefox's `browser` methods ignore a
 // callback and the promise would otherwise resolve into nothing while the caller waited.
 //
-// Loaded first in every context — the content scripts, the background script and the two pages —
-// by the Firefox manifest, which names this file before the others. On Chrome it does nothing at
-// all: `browser` is not there, so the guard returns before anything is touched.
+// Those callbacks read the error from `chrome.runtime.lastError`, and Firefox makes that property
+// getter-only: the write that reports an error threw instead, inside the promise handler, so the
+// callback never ran at all and the caller waited for an answer that could not come. Every tag
+// panel on a card page hung on "Loading tags…" because of it. An own, writable property is put in
+// front of the getter below, and the callbacks work as they do on Chrome.
+//
+// Loaded first in the content scripts and the background script by the Firefox manifest, which
+// names this file before the others. The two extension pages do not load it: they use Firefox's
+// own callback-shaped `chrome`. On Chrome it does nothing at all: `browser` is not there, so the
+// guard returns before anything is touched.
 (() => {
   'use strict';
   const root = typeof globalThis !== 'undefined' ? globalThis : self;
@@ -30,6 +37,12 @@
   // A promise method, with the callback form Chrome gives it. An error is put on
   // `chrome.runtime.lastError` for the callback to read, which is how Chrome reports one and how
   // the callers here already check it.
+  const setLastError = value => {
+    // Firefox's `lastError` is getter-only, so this write threw and the callback below never ran.
+    // The own property defined before the first callbackify shadows the getter, so the write lands
+    // — and a browser that still refuses it must not take the callback down with it.
+    try { root.browser.runtime.lastError = value; } catch { /* read-only on this browser */ }
+  };
   const callbackify = (owner, name) => {
     const promise = owner[name];
     if (typeof promise !== 'function') return;
@@ -39,12 +52,17 @@
       const answer = promise.apply(owner, args);
       if (!callback) return answer;
       answer.then(
-        value => { root.browser.runtime.lastError = undefined; callback(value); },
-        error => { root.browser.runtime.lastError = error; callback(undefined); }
+        value => { setLastError(undefined); callback(value); },
+        error => { setLastError(error); callback(undefined); }
       );
       return answer;
     };
   };
+
+  try {
+    Object.defineProperty(root.browser.runtime, 'lastError',
+      { value: undefined, writable: true, configurable: true });
+  } catch { /* an object that will not take it keeps Firefox's own behaviour */ }
 
   callbackify(root.browser.runtime, 'sendMessage');
   if (root.browser.permissions) {

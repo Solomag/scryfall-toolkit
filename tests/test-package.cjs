@@ -861,9 +861,14 @@ function firefoxArchiveTest(out) {
   const firefox = JSON.parse(fs.readFileSync(path.join(unpacked, 'manifest.json'), 'utf8'));
 
   assertEqual(firefox.background.scripts,
-    ['src/core/browser-shim.js', manifest.background.service_worker],
-    'the Firefox background is a scripts event page with the shim first, not a service worker');
+    ['src/core/browser-shim.js', 'assets/data/set-platforms.js', 'src/core/format-overrides.js',
+      manifest.background.service_worker],
+    'the Firefox background is a scripts event page: the shim first, then the two files the worker '
+    + 'cannot importScripts there, then the worker — and no service worker, which Firefox would refuse');
   assert(!firefox.background.service_worker, 'and no service_worker, which Firefox would refuse');
+  for (const file of ['assets/data/set-platforms.js', 'src/core/format-overrides.js']) {
+    assert(fs.existsSync(path.join(unpacked, file)), `the background names ${file} and it is in the archive`);
+  }
   assert(firefox.browser_specific_settings?.gecko?.id,
     'the gecko id is there, which is what Firefox identifies the extension by');
   assertEqual(firefox.browser_specific_settings.gecko.data_collection_permissions?.required?.slice().sort(),
@@ -939,6 +944,24 @@ async function shimTest() {
     page2.chrome.runtime.sendMessage({}, () => resolve(page2.chrome.runtime.lastError));
   });
   assertEqual(String(reason && reason.message), 'no', 'a rejection is put on lastError for the callback');
+
+  // Firefox makes `lastError` getter-only. Writing it threw inside the promise handler, so the
+  // callback never ran and the caller waited for an answer that could not come — which is what
+  // left every tag panel on "Loading tags…". The shim's own writable property has to survive a
+  // getter-only `lastError` on the namespace it is handed.
+  const readOnly = {
+    storage: { local: { get: () => Promise.resolve({}) } },
+    runtime: { sendMessage: () => Promise.reject(new Error('refused')) }
+  };
+  Object.defineProperty(readOnly.runtime, 'lastError', { get: () => undefined, configurable: true });
+  const page3 = { browser: readOnly };
+  vm.createContext(page3);
+  vm.runInContext(source, page3, { filename: 'browser-shim.js' });
+  const seen = await new Promise(resolve => {
+    page3.chrome.runtime.sendMessage({}, () => resolve(page3.chrome.runtime.lastError));
+  });
+  assertEqual(String(seen && seen.message), 'refused',
+    'a getter-only lastError does not stop the callback, and the error still reaches it');
 
   // Chrome: no `browser`, so nothing is touched.
   const chrome = { storage: {}, runtime: {} };
