@@ -68,6 +68,7 @@ jobs:
           cat release-notes.md
 
       - name: Publish the release
+        id: publish
         uses: softprops/action-gh-release@v2
         with:
           files: dist/*.zip
@@ -78,15 +79,20 @@ jobs:
       # review there. Publishing waits on Google's review; nothing here can skip it.
       - name: Upload to the Chrome Web Store
         if: env.CWS_CLIENT_ID != '' && env.CWS_CLIENT_SECRET != '' && env.CWS_REFRESH_TOKEN != ''
+        # A secret set from a Windows shell can carry a trailing CR or newline, and Google then
+        # answers "client not found". Strip whitespace before use.
         run: |
-          npx --yes chrome-webstore-upload-cli@3.3.1             --source "dist/scryfall-toolkit-${GITHUB_REF_NAME#v}.zip"             --extension-id "$CWS_EXTENSION_ID"             --client-id "$CWS_CLIENT_ID"             --client-secret "$CWS_CLIENT_SECRET"             --refresh-token "$CWS_REFRESH_TOKEN"
+          trim() { printf '%s' "$1" | tr -d '[:space:]'; }
+          npx --yes chrome-webstore-upload-cli@3.3.1             --source "dist/scryfall-toolkit-${GITHUB_REF_NAME#v}.zip"             --extension-id "$CWS_EXTENSION_ID"             --client-id "$(trim "$CWS_CLIENT_ID")"             --client-secret "$(trim "$CWS_CLIENT_SECRET")"             --refresh-token "$(trim "$CWS_REFRESH_TOKEN")"
 
       # web-ext signs a folder, not an archive, so the Firefox archive is unpacked first — the
       # bytes submitted are the ones in the release. Listed channel: the version goes to AMO's
       # review and appears on the listing once it passes. The step does not wait for that.
       - name: Submit to addons.mozilla.org
-        if: env.AMO_JWT_ISSUER != '' && env.AMO_JWT_SECRET != ''
+        # Runs even when the Chrome upload failed: the two stores do not depend on each other.
+        if: ${{ !cancelled() && steps.publish.outcome != 'failure' && env.AMO_JWT_ISSUER != '' && env.AMO_JWT_SECRET != '' }}
         run: |
+          trim() { printf '%s' "$1" | tr -d '[:space:]'; }
           mkdir -p amo-src
           unzip -q "dist/scryfall-toolkit-${GITHUB_REF_NAME#v}-firefox.zip" -d amo-src
-          npx --yes web-ext@8.3.0 sign             --source-dir amo-src             --artifacts-dir amo-artifacts             --channel listed             --approval-timeout 0             --api-key "$AMO_JWT_ISSUER"             --api-secret "$AMO_JWT_SECRET"
+          npx --yes web-ext@8.3.0 sign             --source-dir amo-src             --artifacts-dir amo-artifacts             --channel listed             --approval-timeout 0             --api-key "$(trim "$AMO_JWT_ISSUER")"             --api-secret "$(trim "$AMO_JWT_SECRET")"
