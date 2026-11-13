@@ -25,9 +25,9 @@ jobs:
       AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
       AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -69,7 +69,7 @@ jobs:
 
       - name: Publish the release
         id: publish
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: dist/*.zip
           generate_release_notes: true
@@ -95,4 +95,13 @@ jobs:
           trim() { printf '%s' "$1" | tr -d '[:space:]'; }
           mkdir -p amo-src
           unzip -q "dist/scryfall-toolkit-${GITHUB_REF_NAME#v}-firefox.zip" -d amo-src
-          npx --yes web-ext@8.3.0 sign             --source-dir amo-src             --artifacts-dir amo-artifacts             --channel listed             --approval-timeout 0             --api-key "$(trim "$AMO_JWT_ISSUER")"             --api-secret "$(trim "$AMO_JWT_SECRET")"
+          # A re-run of a release AMO already has answers "Version ... already exists". That
+          # version is submitted, so the step passes instead of turning the run red.
+          set +e
+          npx --yes web-ext@8.3.0 sign             --source-dir amo-src             --artifacts-dir amo-artifacts             --channel listed             --approval-timeout 0             --api-key "$(trim "$AMO_JWT_ISSUER")"             --api-secret "$(trim "$AMO_JWT_SECRET")" 2>&1 | tee amo.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ] && grep -q "already exists" amo.log; then
+            echo "::notice::AMO already has version ${GITHUB_REF_NAME#v}; nothing to submit."
+            exit 0
+          fi
+          exit "$status"
