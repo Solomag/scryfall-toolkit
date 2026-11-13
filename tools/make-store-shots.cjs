@@ -13,8 +13,14 @@
 // for an English listing and an English README — a page in a language nobody chose. The
 // language is stored rather than guessed, because there is no other way to ask for it.
 //
+// The first two store slots are not the settings page: they are scryfall.com as the reader
+// sees it with the extension loaded — a card page, and a search page with the clipboard
+// open — taken in Chrome for Testing, which still loads an unpacked extension (`npm run cft`).
+// They are viewport captures at the store's own 1280x800, so nothing is cropped, scaled or
+// drawn over: the page as the browser drew it, card and copyright line included.
+//
 //   node tools/make-store-shots.cjs
-//   powershell -File store-assets/make-store-shots.ps1 -Source store-assets/settings-page-full.png -OutDir store-assets -Tiles 5
+//   powershell -File store-assets/make-store-shots.ps1 -Source store-assets/settings-page-full.png -OutDir store-assets -Tiles 3 -FirstSlot 3
 const fs = require('node:fs');
 const path = require('node:path');
 const { ROOT, copyPage, Session, sizeOf } = require('./shots/render.cjs');
@@ -86,10 +92,62 @@ async function main() {
     await session.shoot(readme, { clip: { x: 0, y: 0, width: WIDTH, height: 1080, scale: 1 } });
     console.log('readme: ' + sizeOf(readme).width + ' x ' + sizeOf(readme).height +
       '  (' + Math.round(fs.statSync(readme).size / 1024) + ' KB)');
+  } finally {
+    session.close();
+  }
 
-    console.log('\nnow cut the full capture into the five the store takes:');
-    console.log('  powershell -File store-assets/make-store-shots.ps1 ' +
-      '-Source store-assets/settings-page-full.png -OutDir store-assets -Tiles 5');
+  await liveShots();
+  console.log('\nnow cut the settings capture into store slots 3 to 5:');
+  console.log('  powershell -File store-assets/make-store-shots.ps1 ' +
+    '-Source store-assets/settings-page-full.png -OutDir store-assets -Tiles 3 -FirstSlot 3');
+}
+
+const STORE_W = 1280;
+const STORE_H = 800;
+const CARD = 'https://scryfall.com/card/dsc/114/counterspell';
+const SEARCH = 'https://scryfall.com/search?q=' + encodeURIComponent('!"Counterspell" or !"Brainstorm" or !"Ponder"') + '&unique=cards';
+
+async function waitFor(session, expression, what) {
+  for (let attempt = 0; attempt < 150; attempt++) {
+    if (await session.evaluate(expression)) return;
+    await new Promise(resolve => setTimeout(resolve, 200));
+  }
+  throw new Error('waited 30 s for ' + what + ' on the live page');
+}
+
+async function liveShots() {
+  const session = new Session({ extension: path.resolve(ROOT) });
+  try {
+    await session.open();
+    await session.go('https://scryfall.com/', { width: STORE_W, height: STORE_H, settle: 1500 });
+    await session.inExtension('chrome.storage.local.clear().then(() => chrome.storage.local.set(' +
+      JSON.stringify({ settingsLanguage: LANGUAGE, clipboard: true }) + ')).then(() => true)');
+
+    // 1. A card page: the prints with their finishes, the tag tables, the extra formats.
+    await session.go(CARD, { width: STORE_W, height: STORE_H, settle: 2000 });
+    await waitFor(session, "document.querySelectorAll('#stk-tags .prints-table tbody tr').length >= 3", 'the tag tables');
+    await session.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 1, y: 1 });
+    await new Promise(resolve => setTimeout(resolve, 500));
+    await session.shoot(path.join(STORE, '01-card-page.png'), { width: STORE_W, height: STORE_H });
+
+    // 2. A search page of three cards — one row, so the clipboard list in the corner sits on
+    // the page and over no card (section 7 of the store listing) — the three put into the clipboard with their own add buttons and
+    // the list opened with its own button.
+    await session.go(SEARCH, { width: STORE_W, height: STORE_H, settle: 2000 });
+    await waitFor(session, "document.querySelectorAll('.card-grid-item .stk-add').length >= 3", 'the add buttons');
+    await session.evaluate("(() => { [...document.querySelectorAll('.card-grid-item .stk-add')].slice(0, 3).forEach(b => b.click()); return true; })()");
+    await waitFor(session, "document.querySelectorAll('#scryfall-toolkit-clipboard .stk-list-row').length >= 3", 'three clipboard rows');
+    await session.evaluate("(() => { const list = document.querySelector('#scryfall-toolkit-clipboard .stk-list');" +
+      " if (list.hidden) document.querySelector('#scryfall-toolkit-clipboard .stk-icon-clip').click(); return true; })()");
+    await session.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 1, y: 1 });
+    await new Promise(resolve => setTimeout(resolve, 600));
+    await session.shoot(path.join(STORE, '02-search-clipboard.png'), { width: STORE_W, height: STORE_H });
+
+    for (const file of ['01-card-page.png', '02-search-clipboard.png']) {
+      const size = sizeOf(path.join(STORE, file));
+      if (size.width !== STORE_W || size.height !== STORE_H) throw new Error(file + ' is ' + size.width + 'x' + size.height);
+      console.log('live: ' + file + '  ' + size.width + ' x ' + size.height);
+    }
   } finally {
     session.close();
   }

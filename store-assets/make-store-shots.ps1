@@ -10,7 +10,10 @@
 param(
   [Parameter(Mandatory = $true)][string]$Source,
   [Parameter(Mandatory = $true)][string]$OutDir,
-  [int]$Tiles = 5
+  [int]$Tiles = 3,
+  # The store slot the first tile goes in. Slots 1 and 2 are the live card-page captures
+  # tools/make-store-shots.cjs takes, so the settings tiles start at 3.
+  [int]$FirstSlot = 3
 )
 
 Add-Type -AssemblyName System.Drawing
@@ -85,7 +88,7 @@ for ($index = 0; $index -lt $Tiles; $index++) {
   $outGraphics.Dispose()
   $scaled.Dispose()
 
-  $name = '{0:D2}-settings-{1:D2}-of-{2:D2}.png' -f ($index + 1), ($index + 1), $Tiles
+  $name = '{0:D2}-settings-{1:D2}-of-{2:D2}.png' -f ($index + $FirstSlot), ($index + 1), $Tiles
   $out.Save((Join-Path $OutDir $name), [System.Drawing.Imaging.ImageFormat]::Png)
   $out.Dispose()
   Write-Output ("  {0}  page rows {1}-{2}  -> 1280x800" -f $name, $Start, ($Start + $Rows))

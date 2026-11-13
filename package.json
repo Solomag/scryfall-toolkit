@@ -8,6 +8,7 @@
     "render": "node tools/check-card-render.cjs && node tools/check-deck-render.cjs",
     "mutations": "node tools/check-mutations.cjs",
     "shots": "node tools/make-feature-shots.cjs",
+    "cft": "npx --yes @puppeteer/browsers@2.10.10 install chrome@stable --path dist/cft",
     "package": "node package-extension.cjs",
     "version": "node tools/set-version.cjs",
     "verify": "node tools/set-version.cjs"

@@ -1,64 +1,42 @@
 // The illustrations in the settings: what the reader gets if they turn that section
-// on, cut out of Scryfall's own page.
+// on, photographed on scryfall.com with this extension loaded and doing the drawing.
 //
-// The first set of these was a picture of our panels on a container of our own, and
-// it read as a different program — giant serif links, purple underlined tag names,
-// panels at no proportion to anything, and a light page where the product is dark. The
-// panels were right. The stage was not a place the extension ever runs.
+// The first set of these was a picture of our panels on a container of our own, and it
+// read as a different program. The second cut them out of Scryfall's own page, saved to
+// disk, with the panels placed there by this tool, because stable Chrome refuses
+// --load-extension and no service worker of ours could talk to a live page. That left
+// the one thing a reader cannot check: whether the code that paints the panels is the
+// code in the picture.
 //
-// So the stage is the page: Scryfall's markup, Scryfall's stylesheet, our theme on top
-// of it, and our panels where our own feature files put them. That is the arrangement
-// on the reader's screen, down to the CSS that makes a tag name small and white instead
-// of a large underlined heading.
+// Chrome for Testing still loads an unpacked extension, so this is now the real thing:
+// the repository is loaded as the extension, its settings are written through
+// chrome.storage from its own options page, and the shot is taken of the live card page
+// once the content scripts have drawn on it. Session refuses to start if the extension's
+// service worker is not among the targets, so a run cannot quietly photograph a page
+// without it. `npm run cft` installs the browser.
 //
-// What it still is not: the extension running in a browser. Stable Chrome 154 refuses
-// --load-extension outright — tried headless, tried with an offscreen window, tried
-// with --enable-unsafe-extension-debugging — so no service worker of ours is talking to
-// a live page here. The panels are driven by the same feature files the extension
-// loads, over data fetched from the same two APIs, and placed on the page by hand
-// instead of by a content script.
-//
-// Two things are deliberately not here:
-//
-//   Scryfall's scripts. They are stripped from the document: they would run against a
-//   page whose chrome.* is a stub and whose extension is not installed, and they are
-//   tooltips and analytics that have nothing to do with the panels. Their markup and
-//   their stylesheet, which is what is being photographed, are untouched.
-//
-//   EDHREC's numbers. json.edhrec.com answers 403 to anything outside their own site,
-//   so a real deck count cannot be fetched when the pictures are made. Rather than
-//   print a plausible four thousand decks, the section that would have shown it shows
-//   the column of finish badges instead.
+// EDHREC is still not in a picture: its permission is optional and Chrome only grants it
+// after a click, and a plausible invented deck count is what the first pictures were
+// full of. The column of finish badges illustrates that section instead.
 const fs = require('node:fs');
 const path = require('node:path');
-const { ROOT, Session, sizeOf, fileUrl } = require('./shots/render.cjs');
-const {
-  fixture, buildCardPage, waitForSelector, waitForCount, reveal, renderableHtml
-} = require('./shots/cardpage.cjs');
+const { ROOT, Session, sizeOf } = require('./shots/render.cjs');
 
 const OUT = path.join(ROOT, 'assets', 'shots');
-const WORK = path.join(ROOT, 'dist', 'feature-shots');
 
-// The card page picks its language from storage or from the browser, and the harness these
-// shots are built in is deliberately a Russian browser (tests/testlib.cjs) — so without this
-// the panels come out in Russian for an English README and an English settings page, which is
-// exactly the trap store-assets/make-store-shots.cjs documents for the settings capture. The
-// language is stored rather than guessed, because there is no other way to ask for it.
+// The language is stored rather than guessed: the card page picks it from storage or
+// from the browser, and a picture for an English README must not depend on the machine.
 const LANGUAGE = 'en';
 
+// The card every column shot is of, and the cards put into the clipboard by pressing
+// their own add buttons on a search page, the way a reader fills it.
+const HERO = 'https://scryfall.com/card/dsc/114/counterspell';
+const CLIPBOARD_FROM = 'https://scryfall.com/search?q=' + encodeURIComponent('!"Sol Ring" or !"Lightning Bolt" or !"Dark Ritual"') + '&unique=cards';
+
 // Wide enough for the card page's two columns and the toolbox, at the width the reader
-// most likely has. Narrower and the right-hand column is pushed down the page, which
-// makes the column of panels come out as a very tall thin strip.
+// most likely has.
 const STAGE_WIDTH = 1600;
 const STAGE_HEIGHT = 2300;
-
-// Scryfall's own stylesheet draws our panels. These are the two numbers it needs and
-// does not carry: our tag icons have no size in it, and without one they stretch to
-// fill their cell — which made the tag panel five thousand pixels tall and read as a
-// page rather than a panel.
-const STAGE_CSS = `
-  #stk-tags .stk-tag-icon svg { width: 16px; height: 16px; }
-`;
 
 // The card page's right-hand column: the prints table with its price columns, and every
 // panel this extension adds under it — the tag tables go inside `.prints` on Scryfall's
@@ -127,13 +105,9 @@ const SHOTS = [
     // with a count of three, which is not what a reader with three cards in the
     // clipboard sees. The cards are real ones, looked up by name.
     storage: { clipboard: true, exportFormat: 'moxfield' },
-    prepare: card => reveal(card, '.stk-list'),
+    fillClipboard: true,
     waitFor: '#scryfall-toolkit-clipboard .stk-list-row',
-    waitCount: ['#scryfall-toolkit-clipboard .stk-list-row', 3],
-    // The clipboard is an aside fixed to the corner of a page, outside every column.
-    // It is put below the card rather than on top of it: a panel floating over the
-    // card's own text is a panel photographed through somebody's typesetting.
-    extraCss: 'aside { position: absolute !important; right: 40px; top: 1700px; width: 420px; }'
+    waitCount: ['#scryfall-toolkit-clipboard .stk-list-row', 3]
   },
   {
     // Not EDHREC: their API refuses this machine, and a plausible invented deck count
@@ -170,7 +144,9 @@ const SHOTS = [
     waitCount: ['.card-profile .card-legality .card-legality-item', 3],
     // No margin here: the block sits beside the card image, so a few pixels of slack
     // on the left is a strip of somebody's artwork along the edge of the picture.
-    pad: 0
+    // Inside the block by a few pixels: on the live page the card image's shadow reaches
+    // over the column's left edge, and a strip of artwork came along with it.
+    pad: -8
   },
   {
     file: 'hide-extra.png',
@@ -205,69 +181,74 @@ const SHOTS = [
   }
 ];
 
-// A printing shown twice in the group it belongs to.
-//
-// This is not a hypothetical. It happened because the fixture sent each printing's API
-// address where the worker sends the address of the card's page — and the table decides
-// whether Scryfall has already drawn a printing by comparing that address with the rows
-// on the page. An API address matches nothing, so every printing Scryfall had already
-// listed was added again: ten duplicated rows, in a picture of a defect the extension
-// does not have, next to a claim that nothing in the pictures was invented.
-//
-// The picture was not wrong about the product and wrong about itself at the same time,
-// which is the worst kind of wrong.
-function assertNoRepeatedPrinting(page, file) {
-  const table = page.document.querySelector('.card-profile .prints > .prints-table');
-  if (!table) return;
-  const seen = new Map();
-  const repeated = [];
-  for (const row of table.querySelectorAll('tbody tr')) {
-    const link = row.querySelector('a');
-    if (!link) continue;
-    // Keyed on what the reader sees, not on the card id — because the row that was
-    // duplicated had no id to key on, which is why the first version of this check
-    // passed over the very defect it was written for. A printing in another language
-    // reads "#2 · JA", so the same number twice is not the same label twice.
+// A printing shown twice in the group it belongs to — the defect an earlier fixture
+// photographed and the extension does not have. Checked on the live page now, keyed on
+// what the reader sees.
+const REPEATED_PRINTINGS = `(() => {
+  const table = document.querySelector('.card-profile .prints > .prints-table');
+  if (!table) return [];
+  const seen = new Set(), repeated = [];
+  for (const link of table.querySelectorAll('tbody tr a')) {
     const label = link.textContent.trim();
     if (!label) continue;
-    if (seen.has(label)) repeated.push('"' + label + '"');
-    else seen.set(label, true);
+    if (seen.has(label)) repeated.push(label); else seen.add(label);
   }
-  if (repeated.length) {
-    throw new Error(file + ': ' + repeated.length + ' printings appear twice (' +
-      repeated.slice(0, 3).join('; ') + '). Either the page is adding what Scryfall already lists, ' +
-      'or the data gives one printing an address the page does not use.');
+  return repeated;
+})()`;
+
+async function waitFor(session, expression, what) {
+  for (let attempt = 0; attempt < 150; attempt++) {
+    if (await session.evaluate(expression)) return;
+    await new Promise(resolve => setTimeout(resolve, 200));
   }
+  throw new Error('waited 30 s for ' + what + ' on the live page, and it never came');
+}
+
+// Settings go in through the extension's own storage, from its content-script world, so the content
+// scripts read them exactly as they read a user's.
+async function setStorage(session, storage) {
+  if (!/^https:\/\/scryfall\.com\//.test(await session.evaluate('location.href'))) {
+    await session.go('https://scryfall.com/', { settle: 1500 });
+  }
+  await session.inExtension(`chrome.storage.local.clear().then(() => chrome.storage.local.set(${JSON.stringify(storage)})).then(() => true)`);
+}
+
+async function fillClipboard(session) {
+  await session.go(CLIPBOARD_FROM, { width: STAGE_WIDTH, height: STAGE_HEIGHT, settle: 3000 });
+  await waitFor(session, `document.querySelectorAll('.card-grid-item .stk-add').length >= 3`, 'three add buttons');
+  await session.evaluate(`(() => { [...document.querySelectorAll('.card-grid-item .stk-add')].slice(0, 3).forEach(b => b.click()); return true; })()`);
+  await new Promise(resolve => setTimeout(resolve, 800));
 }
 
 async function main() {
   fs.mkdirSync(OUT, { recursive: true });
-  fs.mkdirSync(WORK, { recursive: true });
-  const data = await fixture();
-  console.log('page: ' + data.page.title);
-  console.log('  ' + data.prints.length + ' printings, ' + data.hero.cardTags.length + ' card tags, ' +
-    data.hero.artTags.length + ' art tags, legal in ' + (data.hero.extraFormats || []).join(', '));
-  console.log('  stage: ' + data.page.url);
-  console.log("  stylesheet: " + Math.round(data.page.css.length / 1024) + " KB of Scryfall's own, inlined\n");
-
-  const session = new Session();
+  const session = new Session({ extension: path.resolve(ROOT) });
   const done = [];
   try {
     await session.open();
+    console.log('extension ' + session.extensionId + ' loaded; stage ' + HERO + '\n');
     for (const shot of SHOTS) {
-      const storage = { settingsLanguage: LANGUAGE, ...shot.storage };
-      if (shot.file === 'cardclip.png') storage.cards = data.clipboard;
-      const card = await buildCardPage({ data, storage });
-      if (shot.prepare) await shot.prepare(card);
-      await waitForSelector(card, shot.waitFor);
-      if (shot.waitCount) await waitForCount(card, shot.waitCount[0], shot.waitCount[1]);
-      assertNoRepeatedPrinting(card, shot.file);
+      await setStorage(session, { settingsLanguage: LANGUAGE, ...shot.storage });
+      if (shot.fillClipboard) await fillClipboard(session);
+      await session.go(HERO, { width: STAGE_WIDTH, height: STAGE_HEIGHT, settle: 2000 });
+      await waitFor(session, `!!document.querySelector(${JSON.stringify(shot.waitFor)})`, shot.waitFor);
+      if (shot.waitCount) {
+        await waitFor(session, `document.querySelectorAll(${JSON.stringify(shot.waitCount[0])}).length >= ${shot.waitCount[1]}`,
+          shot.waitCount[1] + ' of ' + shot.waitCount[0]);
+      }
+      if (shot.fillClipboard) {
+        // The list opens on its own button, the one a reader presses.
+        await session.evaluate(`(() => { const list = document.querySelector('#scryfall-toolkit-clipboard .stk-list');
+          if (list.hidden) document.querySelector('#scryfall-toolkit-clipboard .stk-icon-clip').click();
+          return !list.hidden; })()`);
+        await new Promise(resolve => setTimeout(resolve, 400));
+      }
+      const repeated = await session.evaluate(REPEATED_PRINTINGS);
+      if (repeated.length) throw new Error(shot.file + ': printings appear twice: ' + repeated.slice(0, 3).join('; '));
+      // Hover effects and the hover preview are not part of any panel.
+      await session.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 1, y: 1 });
+      await new Promise(resolve => setTimeout(resolve, 400));
 
-      const htmlFile = path.join(WORK, shot.file.replace(/\.png$/, '.html'));
-      fs.writeFileSync(htmlFile, renderableHtml(card.document, data, { extraCss: shot.extraCss || STAGE_CSS }),
-        'utf8');
-
-      await session.open_(htmlFile, { width: STAGE_WIDTH, height: STAGE_HEIGHT });
       // One selector, or several: a shot about a toolbar and the panel it opens has to
       // be the two of them, and cropping the element that owns both gives a strip of
       // empty page between them.
@@ -340,7 +321,7 @@ async function main() {
       const kb = Math.round(fs.statSync(out).size / 1024);
       done.push({ file: shot.file, kb });
       console.log('  ' + shot.file.padEnd(16) + String(size.width).padStart(5) + ' x ' +
-        String(size.height).padStart(4) + '  ' + String(kb).padStart(4) + ' KB  ' + shot.about +
+        String(size.height).padStart(4) + '  ' + String(kb).padStart(4) + ' KB  ' + wanted_by.join(', ') +
         (cut ? '  (cut at ' + wanted + ' of ' + Math.round(box.height) + ' px)' : ''));
     }
   } finally {

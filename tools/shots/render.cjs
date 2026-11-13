@@ -44,6 +44,23 @@ function findChrome() {
   process.exit(1);
 }
 
+// Chrome for Testing, the build that still loads an unpacked extension. STK_CFT names it;
+// otherwise the copy `npm run cft` puts under dist/cft is used.
+function findChromeForTesting() {
+  if (process.env.STK_CFT && fs.existsSync(process.env.STK_CFT)) return process.env.STK_CFT;
+  const base = path.join(ROOT, 'dist', 'cft', 'chrome');
+  const found = fs.existsSync(base) ? fs.readdirSync(base).sort().reverse()
+    .map(dir => ['chrome-win64/chrome.exe', 'chrome-linux64/chrome',
+      'chrome-mac-x64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing',
+      'chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing']
+      .map(rel => path.join(base, dir, rel)).find(file => fs.existsSync(file)))
+    .find(Boolean) : null;
+  if (found) return found;
+  console.error('Chrome for Testing is not installed, and stable Chrome will not load the extension.');
+  console.error('  run `npm run cft`, or set STK_CFT to its chrome executable');
+  process.exit(1);
+}
+
 function fileUrl(file) {
   return 'file:///' + path.resolve(file).split(path.sep).join('/');
 }
@@ -145,36 +162,40 @@ function copyPage(pageFile, outFile, { stub = null, css = [], storage = {} } = {
 // One browser, many pages. Launching per shot costs about a second each and adds
 // up, and the profile is what makes the port discoverable: Chrome writes it there.
 //
-// There is no way to load this extension into this browser, which is worth saying
-// here because it was tried. Stable Chrome 154 refuses --load-extension outright:
-// headless or not, in front of an offscreen window, with --enable-unsafe-extension-
-// debugging or with the removal feature flag turned off. The extension simply never
-// appears among the targets. So a shot cannot be a picture of the extension on
-// scryfall.com from here, and the data in it comes from Scryfall and Tagger instead.
-// An option that accepts an extension path is therefore deliberately absent: it
-// would launch a browser without the extension and photograph our panels anyway,
-// which is the quiet failure this project keeps running into.
+// Stable Chrome refuses --load-extension outright (tried on 154: headless or not, in
+// front of an offscreen window, with --enable-unsafe-extension-debugging, with the
+// removal flag off). Chrome for Testing still honours it, so `new Session({ extension })`
+// insists on that build and on seeing the extension's own service worker among the
+// targets before it hands back a session — a browser that silently started without the
+// extension would photograph a page with none of our panels on it, or worse, the panels
+// the tool placed by hand, and call it real. See tools/shots/extension.cjs.
 class Session {
-  constructor() {
-    this.chrome = findChrome();
-    this.dir = path.join(os.tmpdir(), 'stk-shot-profile-' + process.pid);
+  constructor({ extension = null, headless = true } = {}) {
+    this.extension = extension;
+    this.chrome = extension ? findChromeForTesting() : findChrome();
+    this.dir = path.join(os.tmpdir(), 'stk-shot-profile-' + process.pid + '-' + (++Session.count));
     fs.rmSync(this.dir, { recursive: true, force: true });
     fs.mkdirSync(this.dir, { recursive: true });
-    this.child = spawn(this.chrome, [
-      '--headless=new',
+    const args = [
       '--disable-gpu',
       '--hide-scrollbars',
       '--force-device-scale-factor=1',
       '--no-first-run',
       '--no-default-browser-check',
-      '--disable-extensions',
       '--remote-debugging-port=0',
       '--user-data-dir=' + this.dir,
-      'about:blank'
-    ], { stdio: ['ignore', 'ignore', 'ignore'] });
+      // An English browser: the extension and Scryfall both follow its language.
+      '--lang=en-US'
+    ];
+    if (headless) args.unshift('--headless=new');
+    if (extension) args.push('--load-extension=' + extension, '--disable-extensions-except=' + extension);
+    else args.push('--disable-extensions');
+    args.push('about:blank');
+    this.child = spawn(this.chrome, args, { stdio: ['ignore', 'ignore', 'ignore'] });
     this.nextId = 1;
     this.waiting = new Map();
     this.events = [];
+    this.contexts = [];
   }
 
   async port() {
@@ -214,11 +235,60 @@ class Session {
         if (message.error) reject(new Error(message.method + ': ' + message.error.message));
         else resolve(message.result);
       } else if (message.method) {
+        if (message.method === 'Runtime.executionContextCreated') this.contexts.push(message.params.context);
+        if (message.method === 'Runtime.executionContextsCleared') this.contexts.length = 0;
         this.events.push(message);
       }
     });
     await this.send('Page.enable');
     await this.send('Runtime.enable');
+    this.debugPort = port;
+    if (this.extension) this.extensionId = await this.waitForExtension(port);
+    return this;
+  }
+
+  // The extension's service worker, or a failure: the one thing a picture "of the
+  // extension" cannot be allowed to do is go ahead without it.
+  async waitForExtension(port) {
+    for (let attempt = 0; attempt < 100; attempt++) {
+      const list = await (await fetch('http://127.0.0.1:' + port + '/json/list')).json();
+      const worker = list.find(entry => entry.type === 'service_worker' &&
+        /^chrome-extension:\/\/[a-p]{32}\//.test(entry.url));
+      if (worker) return worker.url.split('/')[2];
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    throw new Error('the extension never started: no service worker of ours among the targets');
+  }
+
+  // Evaluates in the extension's content-script world on the page that is open, where
+  // chrome.storage is the very one the content scripts read. (An extension page cannot be
+  // opened over CDP — it comes up as chrome-error:// — and a service worker may be asleep.)
+  async inExtension(expression) {
+    let context = null;
+    for (let attempt = 0; attempt < 100 && !context; attempt++) {
+      const created = this.contexts.filter(c => c.auxData && c.auxData.type === 'isolated');
+      context = created[created.length - 1];
+      if (!context) await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    if (!context) throw new Error('no content-script world of the extension on this page');
+    const result = await this.send('Runtime.evaluate', { expression, contextId: context.id, returnByValue: true, awaitPromise: true });
+    if (result.exceptionDetails) throw new Error('the extension threw: ' +
+      ((result.exceptionDetails.exception || {}).description || result.exceptionDetails.text));
+    return result.result.value;
+  }
+
+  // A page on the web rather than a file, waited on the same way.
+  async go(url, { width = 1600, height = 1200, settle = 2500 } = {}) {
+    this.events.length = 0;
+    await this.send('Emulation.setDeviceMetricsOverride', {
+      width, height, deviceScaleFactor: 1, mobile: false
+    });
+    await this.send('Page.navigate', { url });
+    for (let attempt = 0; attempt < 300; attempt++) {
+      if (this.events.some(e => e.method === 'Page.loadEventFired')) break;
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    await new Promise(resolve => setTimeout(resolve, settle));
     return this;
   }
 
@@ -314,4 +384,5 @@ function sizeOf(png) {
   return { width: head.readUInt32BE(16), height: head.readUInt32BE(20) };
 }
 
-module.exports = { ROOT, findChrome, copyPage, Session, sizeOf, STUB, fileUrl };
+Session.count = 0;
+module.exports = { ROOT, findChrome, findChromeForTesting, copyPage, Session, sizeOf, STUB, fileUrl };

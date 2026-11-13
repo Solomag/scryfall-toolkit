@@ -92,7 +92,6 @@ deciding rather than stumbling into it.
 - **The deck editor modules depend on undocumented internals.** `window.Scryfall` and
   `window.ScryfallAPI` are theirs and covered by no licence. They are on by default, with a
   switch each for that reason.
-- **The illustrations in the settings are not a photograph of the extension running.** They
-  are cut from a real card page with the real feature files over it, because Chrome 154
-  refuses `--load-extension`. The panels are placed by the tool rather than by a content
-  script.
+- **The illustrations in the settings are photographs of the extension running** on
+  scryfall.com in Chrome for Testing (`npm run cft`, then `npm run shots`). Stable Chrome
+  refuses `--load-extension`, so the tools insist on that build.

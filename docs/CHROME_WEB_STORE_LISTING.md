@@ -270,13 +270,20 @@ Ready in `store-assets/`, each exactly **1280×800** (PNG), in English:
 
 | File | What it shows |
 | --- | --- |
-| `store-assets/01-settings-01-of-05.png` | the header, General (settings language, theme), and the start of Tags |
-| `store-assets/02-settings-02-of-05.png` | the end of Tags, CardClip with its export format, and the start of Visibility: the platform table and the prices, with the CardTrader column's box beside USD, TIX and EUR |
-| `store-assets/03-settings-03-of-05.png` | the rest of Visibility - the shop block, CardTrader unconnected, and the Caster marker - Additional info as a list of one-line features, and the start of Legality |
-| `store-assets/04-settings-04-of-05.png` | the format grid, and the start of Scryfall Deckbuilder with its switches on |
-| `store-assets/05-settings-05-of-05.png` | the rest of Scryfall Deckbuilder (EDHREC suggestions asking for its permission), the collapsed **Diagnostics** section, and Credits and third-party projects |
+| `store-assets/01-card-page.png` | a live card page on scryfall.com with the extension loaded: the dark theme, the prints with their finish marks, the extra formats in the legality block, the card tags, and the clipboard toolbar in the corner |
+| `store-assets/02-search-clipboard.png` | a live search page: three cards added with their own add buttons, and the clipboard list opened beside the page, over no card |
+| `store-assets/03-settings-01-of-03.png` | the settings page from the header through General, Tags, and CardClip |
+| `store-assets/04-settings-02-of-03.png` | Visibility (the platform table, the prices, the shop block) and Additional info |
+| `store-assets/05-settings-03-of-03.png` | Legality, Scryfall Deckbuilder, Diagnostics, and Credits |
 
-All five come from one real capture of the settings page
+**The first two are scryfall.com itself.** `tools/make-store-shots.cjs` loads the repository
+as an unpacked extension in Chrome for Testing (`npm run cft` installs it — stable Chrome
+refuses `--load-extension`), writes the settings through the extension's own storage, and
+captures the browser's viewport at 1280×800. Nothing is cropped, scaled or drawn over: the
+cards keep their copyright and artist lines, and the search is one row of cards so the
+clipboard list sits on the page rather than on top of a card.
+
+The three settings tiles come from one real capture of the settings page
 (`store-assets/settings-page-full.png`, 1280×2921), so nothing is repeated or cropped
 away between them. Each tile is scaled uniformly to 800 rows and the margins continue
 the page's own colour, so no screenshot is stretched.
@@ -329,7 +336,7 @@ page changed.
 
 ```
 node tools/make-store-shots.cjs
-powershell -File store-assets/make-store-shots.ps1 -Source store-assets/settings-page-full.png -OutDir store-assets -Tiles 5
+powershell -File store-assets/make-store-shots.ps1 -Source store-assets/settings-page-full.png -OutDir store-assets -Tiles 3 -FirstSlot 3
 ```
 
 The first command needs Chrome or Edge on the machine and finds either; set
@@ -388,14 +395,11 @@ what is inside matters:
   left edge is the column's own, so no strip of the card beside it comes along either. So
   the conditions in the next subsection are not engaged by the illustrations, though they
   are by the store screenshots below.
-- **They are not photographs taken by the extension running in a browser**, and it is
-  worth being exact about why: stable Chrome 154 refuses `--load-extension` outright —
-  tried headless, tried with an offscreen window, tried with
-  `--enable-unsafe-extension-debugging`. So no service worker of ours is talking to a
-  live page here. The panels are driven by the same feature files the extension loads,
-  over the same two APIs, and placed on the page by the tool rather than by a content
-  script. Scryfall's own scripts are stripped from the document; their markup and
-  stylesheet, which is what is being photographed, are not.
+- **They are photographs of the extension running in a browser.** `tools/make-feature-shots.cjs`
+  loads the repository as an unpacked extension in Chrome for Testing, refuses to go on unless
+  the extension's service worker is among the browser's targets, writes each picture's settings
+  through the extension's own storage, and photographs the live card page on scryfall.com after
+  the content scripts have drawn on it.
 - **EDHREC's deck counts are in none of them.** `json.edhrec.com` answers 403 to anything
   outside their own site, so a real count cannot be fetched when the pictures are made.
   Rather than show a plausible invented number, the Additional info section illustrates
