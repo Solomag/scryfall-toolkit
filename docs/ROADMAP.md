@@ -3,7 +3,7 @@
 Things that are known, agreed, and not being worked on right now. Nothing here is a
 defect: each is either a deliberate deferral or work waiting on a decision.
 
-Last updated 2026-10-01.
+Last updated 2026-11-13.
 
 ---
 
@@ -25,7 +25,6 @@ than the answer and is the first thing a reader will otherwise re-litigate.
 | | What | Where it stands |
 |---|---|---|
 | 3 | **Scryfall's acceptable-use rules** | Their Terms say "You may not scrape Scryfall" and "You may not place undue burden on Scryfall through the use of automated means". This project reads the page being viewed and calls the documented API; it does not crawl and keeps no copy of their data. Their published rate limits are per endpoint class, and the extension was **over the tightest one by about four times** — see the closed item below. That is now fixed and checked by a test. What is still not established is whether they consider this pattern acceptable at all, which is a question for them and not for the repository. |
-| 4 | **Chrome Web Store review** | 0.48.0 went in. Later versions follow once it clears. The store is the only place users get the extension, so nothing is "released" until it is there. |
 
 ## To do
 
@@ -65,6 +64,7 @@ section 7 of the store listing.
 | 2 | **A fourth Shambleshark module** | Ported and removed. `card-input-modifier` showed a card image on hovering a deck row; Scryfall's own tooltip covered the deck and the site already previews cards on hover, so it made the editor worse and duplicated the site. No code from it is in the package. |
 | 3 | **Rate limits, checked against the page that states them** | Done, 2026-10-01. Reading <https://scryfall.com/docs/api/rate-limits> rather than trusting the number already in the code found that one 130 ms slot for everything was about four times their limit for `/cards/search`, `/cards/named` and `/cards/collection` — the endpoints the finish column, the EDHREC artwork, the deck search and the hover preview all use. There was also no hold-back on a 429, and their page says a 429 means thirty seconds of limitation and then a possible ban. Each class now has its own queue at their published ceiling plus a margin, every call to the host goes through one of them, and a 429 holds all of them. The test that checks this reads the ceilings out of the source, because a `const` in a `vm` script is not reachable from the test context and because the numbers are the thing being asserted. |
 | 4 | **Split `content.js`** | Done, 2026-10-01. `content.js` was 1901 lines in one closure holding the clipboard, tags, print manipulation, CardTrader, EDHREC, formats, the deck page and the set filters. It is now `src/card-page/core.js` (the settings, what page this is, the request wrapper, the shared clipboard, the hover preview, and the boot) and nine feature files. Every line of logic was moved as it stands rather than retyped, and a check confirmed it: of 1692 code lines, the only ones absent afterwards are the four `let` declarations that became one `shared` object and the eighteen `if (settings.x) initY();` lines that became the boot list. Nothing else moved. The CSS half of this item is still open, and so is the contract layer it was really about. |
+| 5 | **Chrome Web Store review** | Cleared. 2.4.3 is live in the Chrome Web Store (updated 2026-10-16) and on addons.mozilla.org, the same version as the latest GitHub release. |
 
 **The second layer, done.** 270 names of Scryfall's own markup are no longer reached for from
 wherever they are needed. `docs/scryfall-dom.md` lists every one of them, the page family it
