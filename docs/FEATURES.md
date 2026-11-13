@@ -64,6 +64,29 @@ ordered by relationship type and card name, and can be hidden independently.
 - These need a separate request to Tagger's card-edge service. If that service is
   unavailable, the bundled Card and Art Tags still appear with a small notice.
 
+## Search help
+
+**Syntax suggestions.** Typing in any of Scryfall's search boxes — the header, the home page —
+opens a list under it for the word under the caret. A bare word is matched against Scryfall's
+keywords (`t`, `otag`, `set`, `f`, `is`…); a word with an operator (`otag:ram`, `-s:mh`, `f=pau`)
+is matched against that keyword's values:
+
+- `otag:` and `atag:` — every oracle and art tag name, from the same snapshot the tag panels use;
+- `s:` / `set:` — every set, by code, with its name beside it, and found by name as well;
+- `f:`, `legal:`, `banned:` — formats; `c:` and `id:` — colours and their guild and shard names;
+- `r:`, `is:`, `game:`, `lang:`, `frame:`, `border:`, `order:`, `unique:`, `prefer:` and others.
+
+Arrow keys choose, Enter or Tab inserts, Esc closes. Enter with nothing chosen submits the form as
+Scryfall always does. The tag and set lists are asked of the worker once, on the first word that
+needs them, and kept for a day.
+
+**Saved searches.** On a search page a star sits at the start of the line that counts the results;
+it saves that query, and pressed again forgets it. Focusing an empty search box lists the saved
+queries, newest first; picking one runs it, and × forgets it. Up to fifty are kept, in the
+browser's own storage and nowhere else.
+
+Both have a switch under **Search** on the settings page and are on by default.
+
 ## Prints
 
 The prints table is Scryfall's own. The extension adds one narrow column to it — the finish

@@ -667,6 +667,77 @@ async function searchViewsTest() {
   assertEqual(mock.state.cards[2].set + '/' + mock.state.cards[2].number, 'neo/131', 'the printing that card shows');
 }
 
+// The search box: syntax suggestions for the word under the caret, and saved searches.
+async function searchAssistTest() {
+  console.log('content scripts: search suggestions and saved searches');
+  const html = `<!DOCTYPE html><html><body>
+    <form action="https://scryfall.com/search"><input id="header-search-field" name="q" value="t:goblin"></form>
+    <div class="search-info"><p><strong>1 – 60 of 561 cards</strong></p></div>
+    <div id="main"></div></body></html>`;
+  const vocabulary = { oracle: ['mana-ramp', 'ramp', 'ramp-artifact'], art: ['sky'], sets: [['mh3', 'Modern Horizons 3', '2024-06-14']] };
+  let asked = 0;
+  const page = createPage({
+    url: 'https://scryfall.com/search?q=t%3Agoblin', html,
+    state: { settingsLanguage: 'en', savedSearchList: ['c:u f:pauper'] },
+    routes: { ...routes, searchVocabulary: () => { asked++; return vocabulary; } }
+  });
+  await page.script('src/core/i18n.js');
+  await page.script('src/core/format-catalog.js');
+  await page.script('src/core/tag-icons.js');
+  await page.cardPage();
+  await sleep(60);
+  const { document, mock } = page;
+  const input = document.getElementById('header-search-field');
+  const box = document.getElementById('stk-suggest');
+  const labels = () => [...box.querySelectorAll('.stk-suggest-label')].map(node => node.textContent);
+  assert(box && box.hidden, 'the list is on the page and closed until something is typed');
+
+  // A keyword, then its value.
+  input.value = 'otag:ra';
+  fireEvent(input, 'input');
+  await waitFor(() => !box.hidden, 'the list opens for a value of a known keyword');
+  assertEqual(asked, 1, 'the vocabulary is asked for once, on the first word that needs it');
+  assertEqual(labels(), ['otag:ramp', 'otag:ramp-artifact', 'otag:mana-ramp'],
+    'tags that begin with the word come first, then tags that contain it');
+  fireEvent(input, 'keydown', { key: 'ArrowDown' });
+  const enter = fireEvent(input, 'keydown', { key: 'Enter' });
+  assertEqual(input.value, 'otag:ramp ', 'Enter on a chosen suggestion puts it in the box');
+  assert(enter.defaultPrevented, 'and does not submit the form');
+  assert(box.hidden, 'and closes the list');
+
+  input.value = 'otag:ramp s:mh';
+  fireEvent(input, 'input');
+  await waitFor(() => !box.hidden, 'sets are suggested by code');
+  assertEqual(labels(), ['s:mh3'], 'with the set named beside it');
+  assertEqual(box.querySelector('.stk-suggest-hint').textContent, 'Modern Horizons 3', 'the set name is the hint');
+  fireEvent(input, 'keydown', { key: 'Escape' });
+  assert(box.hidden, 'Escape closes the list');
+  const plain = fireEvent(input, 'keydown', { key: 'Enter' });
+  assert(!plain.defaultPrevented, 'and Enter with nothing chosen is the form\'s own again');
+
+  input.value = 'goblin guide';
+  fireEvent(input, 'input');
+  await sleep(30);
+  assert(box.hidden, 'a word that matches no keyword opens nothing');
+
+  // The star saves the search on screen, and the saved ones show on an empty box.
+  const star = document.querySelector('.search-info p > .stk-save-search');
+  assert(star, 'the star sits in the line that counts the results');
+  assertEqual(star.textContent, '☆', 'and is empty for a search that is not saved');
+  click(star);
+  await waitFor(() => (mock.state.savedSearchList || []).length === 2, 'the search is saved');
+  assertEqual(mock.state.savedSearchList[0], 't:goblin', 'newest first');
+  assertEqual(star.textContent, '★', 'and the star fills');
+
+  input.value = '';
+  fireEvent(input, 'focus');
+  await waitFor(() => !box.hidden, 'an empty box shows the saved searches');
+  assertEqual(labels(), ['t:goblin', 'c:u f:pauper'], 'all of them, newest first');
+  fireEvent(box.querySelectorAll('.stk-suggest-remove')[1], 'mousedown');
+  await waitFor(() => mock.state.savedSearchList.length === 1, 'the × forgets one');
+  assertEqual(mock.state.savedSearchList, ['t:goblin'], 'only that one');
+}
+
 async function searchPageTest() {
   console.log('content scripts: search page');
   const html = `<!DOCTYPE html><html><body><div id="main" class="card-grid">
@@ -1438,6 +1509,7 @@ async function cardTraderCurrencyTest() {
     await bridgeRequestTest();
     await searchPageTest();
     await searchViewsTest();
+    await searchAssistTest();
     await clipboardDisabledTest();
     await legacyMigrationTest();
     await advancedPriceFilterTest();

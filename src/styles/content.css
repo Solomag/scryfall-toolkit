@@ -202,3 +202,17 @@ html.stk-dark #stk-tags.stk-loading{background:#292b2c;color:#c9c3cf;border-colo
 #caster-tray a.button-n.primary-n::after{content:"Caster ON";display:block;position:relative;top:-1px;color:#eee7f6;font:11px/1 system-ui,sans-serif}
 #caster-tray a.button-n.primary-n:hover,#caster-tray a.button-n.primary-n:focus-visible{opacity:1!important}
 html.stk-hide-caster #caster-tray{display:none!important}
+/* The search box's suggestions and saved searches: a list under the box, fixed to the
+   viewport so it follows the header field as well as the home page's. */
+#stk-suggest{position:fixed;z-index:2147483641;max-height:min(60vh,420px);overflow-y:auto;padding:4px 0;background:#292b2c;color:#e9e4ee;border:1px solid #66646a;border-radius:8px;box-shadow:0 6px 22px #0009;font:14px/1.35 system-ui,sans-serif}
+#stk-suggest[hidden]{display:none}
+#stk-suggest .stk-suggest-title{padding:4px 12px 6px;color:#a9a4b2;font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+#stk-suggest .stk-suggest-item{display:flex;align-items:center;gap:12px;padding:5px 12px;cursor:pointer;white-space:nowrap}
+#stk-suggest .stk-suggest-item:hover,#stk-suggest .stk-suggest-item.stk-active{background:#3d3a45}
+#stk-suggest .stk-suggest-label{font-family:ui-monospace,Consolas,monospace;font-size:13px}
+#stk-suggest .stk-suggest-hint{margin-left:auto;color:#a9a4b2;font-size:12px;overflow:hidden;text-overflow:ellipsis;max-width:260px}
+#stk-suggest .stk-suggest-remove{margin-left:auto;padding:0 4px;background:none;border:0;color:#a9a4b2;font-size:16px;cursor:pointer}
+#stk-suggest .stk-suggest-hint+.stk-suggest-remove{margin-left:8px}
+#stk-suggest .stk-suggest-remove:hover{color:#fff}
+.stk-save-search{margin-right:8px;padding:0 4px;background:none;border:0;color:inherit;font-size:18px;line-height:1;vertical-align:-2px;cursor:pointer;opacity:.7}
+.stk-save-search:hover,.stk-save-search.stk-selected{opacity:1;color:#e8c15a}

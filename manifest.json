@@ -80,7 +80,8 @@
         "src/card-page/prices.js",
         "src/card-page/sets.js",
         "src/card-page/card.js",
-        "src/card-page/deck-lists.js"
+        "src/card-page/deck-lists.js",
+        "src/card-page/search-assist.js"
       ],
       "css": [
         "src/styles/content.css"

@@ -392,6 +392,23 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
       if (!setPlatformRequest) setPlatformRequest = loadSetPlatforms().finally(() => { setPlatformRequest = null; });
       return await setPlatformRequest;
     }
+    if (message.type === 'searchVocabulary') {
+      // The words the search box suggests: every oracle and art tag name this extension
+      // already holds for its tag panels, and the sets by code and name. Asked once per
+      // page, on the first keystroke, and kept for a day.
+      return await cached('searchVocabulary', 24 * 3600000, async () => {
+        await loadStoredIndexes();
+        let sets = [];
+        try {
+          const setIndex = await scryfallJSON('https://api.scryfall.com/sets',
+            { headers: { Accept: 'application/json' }, credentials: 'omit' });
+          sets = (setIndex?.data || [])
+            .filter(set => /^[a-z0-9_-]+$/i.test(set.code || '') && typeof set.name === 'string')
+            .map(set => [String(set.code).toLowerCase(), set.name, set.released_at || '']);
+        } catch { /* Tags still help without the set list. */ }
+        return { oracle: tagIndexes.oracle?.t || [], art: tagIndexes.art1?.t || [], sets };
+      });
+    }
     if (message.type === "finishes") {
       const ids = message.ids;
       if (!Array.isArray(ids) || ids.length > 75 || ids.some(id => !/^[0-9a-f-]{36}$/.test(String(id)))) {

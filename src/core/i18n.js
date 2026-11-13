@@ -92,6 +92,11 @@ const resolveSettingsLanguage = value => {
     'Scryfall Deckbuilder': 'Scryfall Deckbuilder',
     'Какие теги показывать': 'Tags to display', 'Связанные карты': 'Related cards',
     'Плюс для отдельного издания при наведении в полном списке': 'Show add button on hover for each printing in the expanded list',
+    'Поиск': 'Search',
+    'Подсказки синтаксиса в поиске Scryfall': 'Syntax suggestions in Scryfall search',
+    'Подсказывает ключевые слова (t:, otag:, set:…) и их значения: теги из Tagger, сеты, форматы, цвета. Стрелки выбирают, Enter или Tab вставляют, Esc закрывает.': 'Suggests keywords (t:, otag:, set:…) and their values: Tagger tags, sets, formats, colours. Arrow keys choose, Enter or Tab inserts, Esc closes.',
+    'Сохранённые поиски': 'Saved searches',
+    'Звёздочка рядом с числом найденных карт сохраняет поиск. Сохранённые поиски появляются, когда пустое поле поиска в фокусе.': 'The star beside the result count saves a search. Saved searches appear when the empty search box is focused.',
     // The feature rows of Additional info. Each is the name of a feature and nothing more: what
     // it does and how to change it are the help button and the panel behind the second button.
     // The names are short because they are read as a list, and a list of paragraphs is not a

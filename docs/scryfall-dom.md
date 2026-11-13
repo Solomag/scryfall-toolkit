@@ -471,6 +471,7 @@ name itself, without the leading `.` or `#`.
 | `prints` | class | src/card-page/clipboard.js, src/card-page/prices.js, src/card-page/prints.js, src/card-page/tags.js |
 | `prints-table` | class | src/card-page/clipboard.js, src/card-page/core.js, src/card-page/legalities.js, src/card-page/prices.js, src/card-page/prints.js, src/card-page/sets.js, src/card-page/tags.js |
 | `search-controls` | class | src/card-page/sets.js |
+| `search-info` | class | src/card-page/search-assist.js |
 | `select2-container` | class | src/card-page/sets.js |
 | `select2-results__option` | class | src/card-page/sets.js |
 | `sidebar` | class | src/card-page/deck-lists.js |

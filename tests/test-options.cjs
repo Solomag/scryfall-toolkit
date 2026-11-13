@@ -896,7 +896,7 @@ function sectionOrderTest() {
   console.log('options.html: section order and grouping');
   const html = read('src/ui/options.html');
   const headings = [...html.matchAll(/<h2>([^<]+)<\/h2>/g)].map(match => match[1]);
-  assertEqual(headings, ['Общее', 'Tags', 'CardClip', 'Видимость', 'Дополнительная информация',
+  assertEqual(headings, ['Общее', 'Tags', 'CardClip', 'Поиск', 'Видимость', 'Дополнительная информация',
     'Легальность', 'Scryfall Deckbuilder', 'Диагностика', 'Авторы и сторонние проекты'],
     'sections follow the agreed order, with the experimental card gone and diagnostics before ' +
     'the credits block');
