@@ -19,6 +19,8 @@
 // 320 of its printings say Magic Online and 5 say Arena as well, and nothing
 // marks those five. Read from a single card, this entry said "mtgo" and the
 // filter reported that Vintage Masters had never been on Arena.
+// yfra (Alchemy: Reality Fracture, released 2026-10-13) was added on 2026-11-13, read the
+// same way.
 self.__STK_SET_PLATFORMS = {
   aa1: ["arena"],
   aa2: ["arena"],
@@ -70,6 +72,7 @@ self.__STK_SET_PLATFORMS = {
   ydmu: ["arena"],
   yecl: ["arena"],
   yeoe: ["arena"],
+  yfra: ["arena"],
   ylci: ["arena"],
   ymid: ["arena"],
   ymkm: ["arena"],
