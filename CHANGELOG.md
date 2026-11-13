@@ -8,6 +8,18 @@ All releases: <https://github.com/Solomag/scryfall-toolkit/releases>
 
 ---
 
+### 2.4.4 - review fixes, and the release goes to both stores by itself
+
+A review pass over the background and the page bridge. EDHREC answers are read inside their own
+queue slot, and only a server error (5xx) slows the queue down. Tags, previews and the print lists
+share one cache with a size limit instead of growing for as long as the browser stays open.
+CardTrader's cheapest price is compared within one currency, the one most offers are in. The deck
+editor stops waiting for an answer after 90 seconds and says the extension did not answer, instead
+of spinning for ever. The price disclaimer hides only when every store link is hidden.
+
+**The release uploads itself.** A `v*` tag now sends the Chrome archive to the Chrome Web Store and
+the Firefox archive to AMO, each only when its keys are set in the repository's secrets.
+
 ### 2.4.3 - the Firefox background comes up, and the tag panel with it
 
 The Firefox archive's background never started at all. Firefox's MV3 background is a page, not a
