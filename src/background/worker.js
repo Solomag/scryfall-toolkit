@@ -19,7 +19,19 @@ if (typeof importScripts === "function") {
   importScripts("../../assets/data/set-platforms.js");
   importScripts("../core/format-overrides.js");
 }
+// Answers kept while the worker lives — which on Firefox, whose background is a persistent
+// page, can be hours. So each entry expires, and the oldest go first past a fixed count.
 const cache = new Map();
+const CACHE_LIMIT = 500;
+function cached(key, ttl, load) {
+  const hit = cache.get(key);
+  if (hit && hit.expires > Date.now()) return hit.promise;
+  cache.delete(key);
+  const promise = load().catch(error => { if (cache.get(key)?.promise === promise) cache.delete(key); throw error; });
+  cache.set(key, { expires: Date.now() + ttl, promise });
+  while (cache.size > CACHE_LIMIT) cache.delete(cache.keys().next().value);
+  return promise;
+}
 const traderCache = new Map();
 let digitalSetRequest;
 
@@ -77,17 +89,24 @@ async function cardTraderPrices(id, set, token) {
   // The price the API returns is in the account's own currency — CardTrader's docs say so, and the
   // endpoint has no currency parameter — so there is nothing to prefer and nothing to fall back
   // from: the cheapest offer of each kind is the answer, in whichever currency it came in.
-  const cheapest = { foil: null, nonfoil: null };
+  // Cheapest per kind *and* currency: two prices in different currencies cannot be compared, and
+  // keeping only the first currency seen made the answer depend on the order of the response.
+  const byCurrency = { foil: {}, nonfoil: {} };
+  const counts = {};
   for (const product of products) {
     if (product.blueprint_id !== blueprint.id || product.quantity <= 0) continue;
     const cents = product.price?.cents ?? product.price_cents;
     const currency = product.price?.currency ?? product.price_currency;
     if (!Number.isFinite(cents) || !/^[A-Z]{3}$/.test(currency || '')) continue;
     const kind = product.properties_hash?.mtg_foil === true || product.properties?.mtg_foil === true ? 'foil' : 'nonfoil';
-    if (!cheapest[kind] || (cheapest[kind].currency === currency && cents < cheapest[kind].cents)) {
-      cheapest[kind] = { cents, currency };
-    }
+    counts[currency] = (counts[currency] || 0) + 1;
+    const best = byCurrency[kind][currency];
+    if (!best || cents < best.cents) byCurrency[kind][currency] = { cents, currency };
   }
+  // The account's currency is the one most offers come back in.
+  const order = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+  const pick = kind => order.map(code => byCurrency[kind][code]).find(Boolean) || null;
+  const cheapest = { foil: pick('foil'), nonfoil: pick('nonfoil') };
   return { available: true, url: `https://www.cardtrader.com/en/cards/${blueprint.id}`, ...cheapest };
 }
 // EDHREC publishes a data policy for community projects: at most one request a
@@ -189,8 +208,15 @@ function edhrecRun(key, task) {
   return run;
 }
 
+// Resolves to the parsed body, not the Response: callers that coalesce onto one request share
+// this promise, and a Response body can be read only once — the second reader used to fail with
+// "body already used".
 function edhrecFetch(path) {
-  return edhrecRun('GET:' + path, () => edhrecRoundTrip(path));
+  return edhrecRun('GET:' + path, async () => {
+    const response = await edhrecRoundTrip(path);
+    if (!response.ok) throw new Error(`EDHREC HTTP ${response.status}`);
+    return response.json();
+  });
 }
 
 // What EDHREC themselves make of a deck. This is the endpoint their own site
@@ -284,9 +310,11 @@ async function edhrecRoundTrip(path) {
     edhrecPenalty();
     throw new Error('EDHREC HTTP 429');
   }
-  if (!response.ok) {
+  // A 4xx other than 429 is an answer — EDHREC has no page for this card — not a sign that
+  // something is broken, so it does not hold back the queue. Only server errors do.
+  if (response.status >= 500) {
     edhrecPenalty();
-  } else {
+  } else if (response.ok) {
     edhrecState.failures = 0;
   }
   return response;
@@ -346,10 +374,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
       if (!/^[a-zA-Z0-9_-]{1,16}$/.test(set) || !/^[a-zA-Z0-9★-]{1,24}$/.test(number)) {
         throw new Error("Invalid card identity");
       }
-      const key = `${set}/${number}`;
-      if (!cache.has(key)) cache.set(key, fetchTags(set, number));
-      try { return await cache.get(key); }
-      catch (error) { cache.delete(key); throw error; }
+      return await cached(`${set}/${number}`, 3600000, () => fetchTags(set, number));
     }
     if (message.type === "card") {
       if (!/^[0-9a-f-]{36}$/.test(String(message.id))) throw new Error("Invalid Scryfall ID");
@@ -585,9 +610,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
       const already = edhrecCached(path);
       if (already) return already.value;
       const promise = (async () => {
-        const response = await edhrecFetch(path);
-        if (!response.ok) throw new Error(`EDHREC HTTP ${response.status}`);
-        const body = await response.json();
+        const body = await edhrecFetch(path);
         if (message.type === 'edhrecCommander') return edhrecCommanderLists(body);
         const card = body?.container?.json_dict?.card;
         const canonical = value => String(value || '').toLowerCase().replace(/[^a-z0-9]/g,'');
@@ -664,7 +687,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
       const key = `preview:${message.kind}:${message.id}`;
       // /cards/search, and this one is asked for every card the reader hovers, so
       // it goes through the paced queue like every other call to that endpoint.
-      if (!cache.has(key)) cache.set(key, scryfallJSON(
+      return await cached(key, 3600000, () => scryfallJSON(
         `https://api.scryfall.com/cards/search?q=${encodeURIComponent(`${message.kind}:${message.id}`)}`
       ).then(result => {
         const card = result.data?.[0];
@@ -675,14 +698,13 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
         if (page?.protocol !== 'https:' || !['scryfall.com','www.scryfall.com'].includes(page.hostname) || !page.pathname.startsWith('/card/')) throw new Error('Invalid card page');
         return { name: card.name, image, uri: page.href };
       }));
-      try { return await cache.get(key); }
-      catch (error) { cache.delete(key); throw error; }
     }
     if (message.type === 'allPrints') {
       const oracleId = String(message.oracleId || '');
       if (!/^[0-9a-f-]{36}$/i.test(oracleId)) throw new Error('Invalid Oracle ID');
       const key = `allPrints:${oracleId}`;
-      if (!cache.has(key)) cache.set(key, (async () => {
+      // Ten minutes: the list carries prices, and they move.
+      return await cached(key, 600000, async () => {
         let url = `https://api.scryfall.com/cards/search?q=${encodeURIComponent(`oracleid:${oracleId}`)}&unique=prints&order=released&dir=desc`;
         const prints = [];
         let truncated = false;
@@ -710,9 +732,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
           truncated = Boolean(url);
         }
         return { prints, truncated };
-      })());
-      try { return await cache.get(key); }
-      catch (error) { cache.delete(key); throw error; }
+      });
     }
     if (message.type === "query") {
       if (!/^[0-9a-f-]{36}$/.test(String(message.oracleId))) throw new Error("Invalid Oracle ID");

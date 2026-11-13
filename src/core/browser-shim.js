@@ -55,7 +55,9 @@
         value => { setLastError(undefined); callback(value); },
         error => { setLastError(error); callback(undefined); }
       );
-      return answer;
+      // Nothing to return when a callback is given, as on Chrome: handing back `answer` left a
+      // rejected promise nobody awaited, and Firefox logged every failed request as uncaught.
+      return undefined;
     };
   };
 

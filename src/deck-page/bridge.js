@@ -32,6 +32,8 @@
   // worker, and this is the only path to it from the page world.
   const waiting = Object.create(null);
   let nextId = 0;
+  // Long enough for a paced batch of Scryfall calls plus an EDHREC hold-back.
+  const REQUEST_TIMEOUT_MS = 90000;
 
   function post(type, value) {
     self.postMessage({ channel: CHANNEL, version: VERSION, source: 'page', type: type, value: value }, '*');
@@ -42,7 +44,17 @@
   function request(name, value) {
     return new Promise((resolve, reject) => {
       const id = 'r' + (++nextId);
-      waiting[id] = { resolve, reject };
+      // An answer that never comes — the extension reloaded under an open editor, so the content
+      // script is gone — must still end the wait, or the panel spins forever.
+      const timer = setTimeout(() => {
+        if (!waiting[id]) return;
+        delete waiting[id];
+        reject(new Error('The extension did not answer. Reload the page.'));
+      }, REQUEST_TIMEOUT_MS);
+      waiting[id] = {
+        resolve: value => { clearTimeout(timer); resolve(value); },
+        reject: error => { clearTimeout(timer); reject(error); }
+      };
       post('request', { id: id, name: name, value: value || {} });
     });
   }

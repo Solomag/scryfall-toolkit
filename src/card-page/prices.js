@@ -295,7 +295,11 @@
       const links = [...row.querySelectorAll('a[href]')];
       if (links.length && links.every(link => link.classList.contains('stk-price-hidden'))) row.classList.add('stk-price-hidden');
     }
-    stores?.querySelector('.toolbox-disclaimer')?.classList.add('stk-price-hidden');
+    // Scryfall's disclaimer belongs to the shop links, so it goes only when none of them is left.
+    const storeLinks = [...(stores?.querySelectorAll('a[href]') || [])];
+    if (storeLinks.length && storeLinks.every(link => link.classList.contains('stk-price-hidden'))) {
+      stores?.querySelector('.toolbox-disclaimer')?.classList.add('stk-price-hidden');
+    }
     if (/^\/(?:@[^/]+\/decks\/|decks\/)/.test(location.pathname)) {
       for (const control of document.querySelectorAll('#main .sidebar-toolbox :is(a,button)')) {
         const shop = hiddenShops.find(name => new RegExp(`^Buy on ${name}\\b`, 'i').test(control.textContent.trim()));
