@@ -91,8 +91,8 @@ function syntaxCheck() {
     'src/background/worker.js', 'src/card-page/core.js', 'src/card-page/prices.js', 'src/core/theme.js', 'src/core/i18n.js', 'src/ui/options.js',
     'src/core/format-catalog.js', 'src/core/format-overrides.js', 'src/core/tag-icons.js',
     'src/card-page/tagger-clipboard.js',
-    'assets/data/oracle-tags.js', 'assets/data/illustration-tags-1.js',
-    'assets/data/illustration-tags-2.js'
+    'assets/data/oracle-tags.txt', 'assets/data/illustration-tags-1.txt',
+    'assets/data/illustration-tags-2.txt'
   ];
   const failures = [];
   for (const file of files) {

@@ -324,10 +324,14 @@ async function edhrecRoundTrip(path) {
 // global. Its value is JSON, so it is read as text and parsed here rather than
 // executed -- and rather than being parsed at every worker start through
 // importScripts, which cannot be deferred.
+//
+// The files end in .txt for the same reason: they are never run, and Mozilla's
+// add-on linter refuses to parse a .js file over 4 MB (illustration-tags-1 is 4.6),
+// reporting the archive with an error. The bytes are upstream's; only the name changed.
 const BUNDLED_TAG_FILES = {
-  oracle: 'assets/data/oracle-tags.js',
-  art1: 'assets/data/illustration-tags-1.js',
-  art2: 'assets/data/illustration-tags-2.js'
+  oracle: 'assets/data/oracle-tags.txt',
+  art1: 'assets/data/illustration-tags-1.txt',
+  art2: 'assets/data/illustration-tags-2.txt'
 };
 
 async function loadBundledIndex(part) {

@@ -442,17 +442,20 @@ name itself, without the leading `.` or `#`.
 | `card-legality` | class | src/card-page/edhrec.js, src/card-page/legalities.js |
 | `card-legality-item` | class | src/card-page/edhrec.js, src/card-page/legalities.js |
 | `card-legality-row` | class | src/card-page/legalities.js |
+| `card-profile` | class | src/card-page/clipboard.js |
 | `card-symbol` | class | src/card-page/card.js |
 | `card-text` | class | src/card-page/edhrec.js |
 | `card-text-card-name` | class | src/card-page/clipboard.js, src/card-page/edhrec.js |
 | `card-text-mana-cost` | class | src/card-page/card.js |
+| `card-text-title` | class | src/card-page/clipboard.js |
 | `card-text-type-line` | class | src/card-page/card.js |
+| `checklist` | class | src/card-page/clipboard.js |
 | `color-indicator` | class | src/card-page/card.js |
 | `currency-eur` | class | src/card-page/prints.js |
 | `currency-tix` | class | src/card-page/prints.js |
 | `currency-usd` | class | src/card-page/prints.js |
 | `currency-usd-promo` | class | src/card-page/prints.js |
-| `current` | class | src/card-page/legalities.js, src/card-page/prices.js |
+| `current` | class | src/card-page/clipboard.js, src/card-page/legalities.js, src/card-page/prices.js |
 | `deck-list` | class | src/card-page/deck-lists.js, src/core/theme.js |
 | `deck-list-entry` | class | src/card-page/deck-lists.js, src/core/theme.js |
 | `deck-list-entry-axial-data` | class | src/card-page/deck-lists.js |
@@ -464,6 +467,7 @@ name itself, without the leading `.` or `#`.
 | `marketing-features-item-image` | class | src/core/theme.js |
 | `modal-dialog-close` | class | src/deck-page/edhrec.js, src/deck-page/search.js |
 | `modal-dialog-content` | class | src/deck-page/edhrec.js |
+| `print-langs-item` | class | src/card-page/clipboard.js |
 | `prints` | class | src/card-page/clipboard.js, src/card-page/prices.js, src/card-page/prints.js, src/card-page/tags.js |
 | `prints-table` | class | src/card-page/clipboard.js, src/card-page/core.js, src/card-page/legalities.js, src/card-page/prices.js, src/card-page/prints.js, src/card-page/sets.js, src/card-page/tags.js |
 | `search-controls` | class | src/card-page/sets.js |
@@ -472,6 +476,7 @@ name itself, without the leading `.` or `#`.
 | `sidebar` | class | src/card-page/deck-lists.js |
 | `sidebar-prices` | class | src/card-page/deck-lists.js |
 | `sidebar-toolbox` | class | src/card-page/prices.js |
+| `text-grid-item` | class | src/card-page/clipboard.js |
 | `toolbox-disclaimer` | class | src/card-page/prices.js |
 | `toolbox-links` | class | src/card-page/prices.js |
 | `[data-entry]` | attribute | src/deck-page/clean-up.js |

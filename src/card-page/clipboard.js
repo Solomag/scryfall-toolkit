@@ -207,32 +207,82 @@
       }
     }
 
+    // Every place Scryfall lists a card, and how to read a card off each. The grid is the
+    // default search view; the other three are the views its "as" menu offers. A card page
+    // is the one card, and the full view is a column of card pages, one per result.
+    //
+    // A text result is a single <a>, so a button put inside it would follow the link as
+    // well; that click is stopped before it reaches the link. A checklist row gets a cell
+    // of its own instead, so the table keeps its columns.
+    const textOf = node => node ? [...node.childNodes].filter(n => n.nodeType === 3)
+      .map(n => n.textContent).join(" ").replace(/\s+/g, " ").trim() : "";
+    const cardName = scope => [...scope.querySelectorAll(".card-text-card-name")]
+      .map(e => e.textContent.trim()).filter(Boolean).join(" // ");
+    function placesToAdd() {
+      if (cardPage) {
+        const target = document.querySelector(".card-image");
+        return target ? [{ target, link: location.href, name: cardName(document) }] : [];
+      }
+      const places = [];
+      for (const target of document.querySelectorAll(".card-grid-item:not([aria-hidden='true'])")) {
+        places.push({ target, link: target.querySelector("a.card-grid-item-card[href]")?.href,
+          name: target.querySelector(".card-grid-item-invisible-label")?.textContent.trim() ||
+            target.querySelector("img[alt]")?.getAttribute("alt")?.split(" (")[0] });
+      }
+      // The full view: a .card-profile per result, each with its own image.
+      for (const profile of document.querySelectorAll(".card-profile")) {
+        const target = profile.querySelector(".card-image");
+        const link = profile.querySelector("a.print-langs-item.current[href]")?.href ||
+          profile.querySelector("a[href*='/card/']")?.href;
+        if (target) places.push({ target, link, name: cardName(profile) });
+      }
+      for (const target of document.querySelectorAll("a.text-grid-item[href]")) {
+        places.push({ target, link: target.href, name: textOf(target.querySelector(".card-text-title")), stop: true });
+      }
+      for (const row of document.querySelectorAll("table.checklist tbody tr")) {
+        const anchor = row.querySelector("a[href*='/card/']:not([tabindex])") || row.querySelector("a[href*='/card/']");
+        places.push({ target: row, link: anchor && new URL(anchor.getAttribute("href"), location.href).href,
+          name: anchor?.textContent.trim(), cell: true });
+      }
+      return places;
+    }
+
     function scan() {
-      const targets = cardPage ? [document.querySelector(".card-image")].filter(Boolean) :
-        [...document.querySelectorAll(".card-grid-item:not([aria-hidden='true'])")];
-      for (const target of targets) {
-        const link = cardPage ? location.href : target.querySelector("a.card-grid-item-card[href]")?.href;
-        if (!link) continue;
+      // The checklist's header gets the column the rows get, or every row is one cell
+      // longer than its heading.
+      const head = document.querySelector("table.checklist thead tr");
+      if (head && !head.querySelector(":scope > .stk-add-cell")) {
+        const th = document.createElement("th");
+        th.className = "stk-add-cell";
+        head.append(th);
+      }
+      for (const { target, link, name, stop, cell } of placesToAdd()) {
+        if (!link || !name) continue;
         const match = new URL(link).pathname.match(/^\/card\/([^/]+)\/([^/]+)/);
         if (!match) continue;
-        const name = (cardPage ?
-          [...document.querySelectorAll(".card-text-card-name")].map(e => e.textContent.trim()).filter(Boolean).join(" // ") :
-          target.querySelector(".card-grid-item-invisible-label")?.textContent.trim()) ||
-          target.querySelector("img[alt]")?.getAttribute("alt")?.split(" (")[0];
-        if (!name) continue;
         const set = match[1];
         const number = decodeURIComponent(match[2]);
         const key = entryKey({ set, number });
-        let add = target.querySelector(":scope > .stk-add");
+        let holder = target;
+        if (cell) {
+          holder = target.querySelector(":scope > td.stk-add-cell");
+          if (!holder) {
+            holder = document.createElement("td");
+            holder.className = "stk-add-cell";
+            target.append(holder);
+          }
+        }
+        let add = holder.querySelector(":scope > .stk-add");
         if (!add) {
-          add = button("+", async () => {
+          add = button("+", async event => {
+            if (stop) { event.preventDefault(); event.stopPropagation(); }
             const idx = cards.findIndex(c => entryKey(c) === key);
             if (idx >= 0) cards.splice(idx, 1);
             else cards.push({ name, url: link, set, number });
             await persist();
           });
           add.className = "stk-add";
-          target.append(add);
+          holder.append(add);
         }
         const selected = cards.some(c => entryKey(c) === key);
         add.textContent = selected ? "✓" : "+";
@@ -243,9 +293,10 @@
     render();
     scan();
     let pending = false;
+    const ADDABLE = ".card-grid-item, .card-image, a.text-grid-item, table.checklist tr";
     new MutationObserver(mutations => {
       if (!mutations.some(m => [...m.addedNodes].some(n => n.nodeType === 1 &&
-        (n.matches?.(".card-grid-item, .card-image") || n.querySelector?.(".card-grid-item, .card-image"))))) return;
+        (n.matches?.(ADDABLE) || n.querySelector?.(ADDABLE))))) return;
       if (pending) return;
       pending = true;
       setTimeout(() => { pending = false; scan(); }, 100);

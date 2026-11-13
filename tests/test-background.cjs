@@ -346,9 +346,9 @@ page.context.importScripts = (...files) => {
 // The worker reads the bundled tag snapshot as text and parses it. The mock
 // serves fixtures in the same shape: a global assignment whose value is JSON.
 const bundledTagFixtures = {
-  'assets/data/oracle-tags.js': { t: ['aggro', 'combo'], d: { [ORACLE_ID]: [0, 1] } },
-  'assets/data/illustration-tags-1.js': { t: ['sky'], d: { [ILLUS_ID]: [0] } },
-  'assets/data/illustration-tags-2.js': { t: [], d: {} }
+  'assets/data/oracle-tags.txt': { t: ['aggro', 'combo'], d: { [ORACLE_ID]: [0, 1] } },
+  'assets/data/illustration-tags-1.txt': { t: ['sky'], d: { [ILLUS_ID]: [0] } },
+  'assets/data/illustration-tags-2.txt': { t: [], d: {} }
 };
 // The platform snapshot is bundled as data; the fixture keeps a few sets and
 // leaves "mtgo" out so the runtime lookup is exercised.

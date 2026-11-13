@@ -156,7 +156,7 @@ function referencedBy(file) {
     // the "?" and into a dialog, the only place a name appeared was a string in the
     // script — so the walk found nothing and shipped a settings page whose six "?"
     // buttons open nothing. The build reported itself complete.
-    for (const m of text.matchAll(/["']([^"'\s]+\.(?:js|css|png|svg|jpg|jpeg|webp|json|woff2?))["']/g)) {
+    for (const m of text.matchAll(/["']([^"'\s]+\.(?:js|css|png|svg|jpg|jpeg|webp|json|txt|woff2?))["']/g)) {
       // A name that climbs out of its own folder is relative, not from the root:
       // options.js sits two folders down and reaches its pictures as
       // "../../assets/shots/x.png". Resolved against the root that becomes a path

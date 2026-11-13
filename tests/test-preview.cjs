@@ -603,6 +603,70 @@ async function bridgeRequestTest() {
   assertEqual(sent[0].type, 'cardImages', 'with the type the bridge set, not one from the payload');
 }
 
+// The other three views Scryfall's "as" menu offers. A text result is one link, so the
+// button inside it must not follow it; a checklist row gets a cell of its own, and the
+// header one more, so the columns still line up; the full view is a card page per result.
+async function searchViewsTest() {
+  console.log('content scripts: text, checklist and full search views');
+  const html = `<!DOCTYPE html><html><body><div class="main">
+    <div class="text-grid"><div class="text-grid-inner">
+      <a class="card-text text-grid-item" href="https://scryfall.com/card/lrw/148/adder-staff-boggart">
+        <h6 class="card-text-title">Adder-Staff Boggart <span class="card-text-mana-cost">{1}{R}</span></h6></a>
+    </div></div>
+    <div class="checklist-wrapper"><table class="checklist"><thead><tr><th>Set</th><th>Name</th></tr></thead><tbody>
+      <tr><td><a tabindex="-1" href="/card/chk/151/akki-avalanchers">CHK</a></td>
+        <td><a href="/card/chk/151/akki-avalanchers">Akki Avalanchers</a></td></tr>
+    </tbody></table></div>
+    <div class="card-profile"><div class="card-image"></div>
+      <h1 class="card-text-title"><span class="card-text-card-name">Akki Raider</span></h1>
+      <div class="prints"><a class="print-langs-item current" href="https://scryfall.com/card/bok/92/akki-raider">en</a></div></div>
+    <div class="card-profile"><div class="card-image"></div>
+      <h1 class="card-text-title"><span class="card-text-card-name">Akki Ronin</span></h1>
+      <div class="prints"><a class="print-langs-item current" href="https://scryfall.com/card/neo/131/akki-ronin">en</a></div></div>
+  </div></body></html>`;
+  const page = createPage({
+    url: 'https://scryfall.com/search?q=goblin&as=text', html,
+    state: { settingsLanguage: 'en', cards: [] }, routes
+  });
+  await page.script('src/core/i18n.js');
+  await page.script('src/core/format-catalog.js');
+  await page.script('src/core/tag-icons.js');
+  await page.cardPage();
+  await sleep(60);
+  const { document, mock } = page;
+
+  const text = document.querySelector('a.text-grid-item > .stk-add');
+  assert(text, 'a text result gets an add button');
+  assertEqual(text.getAttribute('aria-label'), 'Add Adder-Staff Boggart',
+    'named by the title, without its mana cost');
+  let followed = false;
+  document.querySelector('a.text-grid-item').addEventListener('click', () => { followed = true; });
+  click(text);
+  await waitFor(() => mock.state.cards.length === 1, 'text result added');
+  assert(!followed, 'and the click does not reach the result\'s own link');
+  assertEqual(mock.state.cards[0], {
+    name: 'Adder-Staff Boggart', url: 'https://scryfall.com/card/lrw/148/adder-staff-boggart', set: 'lrw', number: '148'
+  }, 'saved with set and number');
+
+  const row = document.querySelector('table.checklist tbody tr');
+  const cell = row.querySelector(':scope > td.stk-add-cell > .stk-add');
+  assert(cell, 'a checklist row gets the button in a cell of its own');
+  assertEqual(document.querySelector('table.checklist thead tr').children.length, row.children.length,
+    'and the header gets the column too');
+  assertEqual(cell.getAttribute('aria-label'), 'Add Akki Avalanchers', 'named by the name column');
+  click(cell);
+  await waitFor(() => mock.state.cards.length === 2, 'checklist row added');
+  assertEqual(mock.state.cards[1].url, 'https://scryfall.com/card/chk/151/akki-avalanchers',
+    'with the row\'s link made absolute');
+
+  const full = [...document.querySelectorAll('.card-profile .card-image > .stk-add')];
+  assertEqual(full.map(b => b.getAttribute('aria-label')), ['Add Akki Raider', 'Add Akki Ronin'],
+    'each card in the full view gets its own button');
+  click(full[1]);
+  await waitFor(() => mock.state.cards.length === 3, 'full-view card added');
+  assertEqual(mock.state.cards[2].set + '/' + mock.state.cards[2].number, 'neo/131', 'the printing that card shows');
+}
+
 async function searchPageTest() {
   console.log('content scripts: search page');
   const html = `<!DOCTYPE html><html><body><div id="main" class="card-grid">
@@ -1373,6 +1437,7 @@ async function cardTraderCurrencyTest() {
     await cardTraderCurrencyTest();
     await bridgeRequestTest();
     await searchPageTest();
+    await searchViewsTest();
     await clipboardDisabledTest();
     await legacyMigrationTest();
     await advancedPriceFilterTest();

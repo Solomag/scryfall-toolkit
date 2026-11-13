@@ -198,7 +198,9 @@ const REPEATED_PRINTINGS = `(() => {
 
 async function waitFor(session, expression, what) {
   for (let attempt = 0; attempt < 150; attempt++) {
-    if (await session.evaluate(expression)) return;
+    // A page that is still replacing its own document throws "context destroyed" for a
+    // moment; that is a page not ready yet, not a failure.
+    if (await session.evaluate(expression).catch(() => false)) return;
     await new Promise(resolve => setTimeout(resolve, 200));
   }
   throw new Error('waited 30 s for ' + what + ' on the live page, and it never came');

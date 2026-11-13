@@ -445,8 +445,8 @@ function packagedNoticesTest() {
     'src/styles/content.css', 'src/core/theme.js',
     'src/styles/theme/01-card-page.css', 'src/styles/theme/02-shared-pages.css', 'src/styles/theme/03-account-and-marketing.css', 'src/styles/theme/04-surfaces.css', 'src/styles/theme/05-tagger.css', 'src/styles/theme/06-shared-surfaces.css', 'src/styles/theme/07-our-own-ui.css',
     'src/ui/options.html', 'src/ui/options.js', 'src/ui/options.css', 'src/core/i18n.js', 'src/core/tag-icons.js', 'src/card-page/tagger-clipboard.js',
-    'src/core/format-catalog.js', 'src/core/format-overrides.js', 'assets/data/oracle-tags.js', 'assets/data/illustration-tags-1.js',
-    'assets/data/illustration-tags-2.js', 'assets/data/set-platforms.js',
+    'src/core/format-catalog.js', 'src/core/format-overrides.js', 'assets/data/oracle-tags.txt', 'assets/data/illustration-tags-1.txt',
+    'assets/data/illustration-tags-2.txt', 'assets/data/set-platforms.js',
     'THIRD_PARTY_NOTICES.md', 'LICENSE', 'README.md', 'PRIVACY.md'
   ];
   for (const file of shipped) {
@@ -675,7 +675,7 @@ function packagedNoticesTest() {
   }
   // Data copied from another project names its source, author, version and licence
   // in the file itself, not only in the notices document.
-  for (const file of ['assets/data/oracle-tags.js', 'assets/data/illustration-tags-1.js', 'assets/data/illustration-tags-2.js']) {
+  for (const file of ['assets/data/oracle-tags.txt', 'assets/data/illustration-tags-1.txt', 'assets/data/illustration-tags-2.txt']) {
     const head = read(file).slice(0, 600);
     for (const statement of ['MoxTags v1.8.3', 'natefinch/moxtags', 'Copyright (c) 2026 Nate Finch', 'MIT']) {
       assert(head.includes(statement), `${file} header states ${statement}`);
@@ -698,9 +698,9 @@ function packagedNoticesTest() {
       return JSON.parse(text.slice(text.indexOf('=', at) + 1).replace(/;\s*$/, ''));
     };
     const indexes = {
-      oracle: parse('assets/data/oracle-tags.js'),
-      art1: parse('assets/data/illustration-tags-1.js'),
-      art2: parse('assets/data/illustration-tags-2.js')
+      oracle: parse('assets/data/oracle-tags.txt'),
+      art1: parse('assets/data/illustration-tags-1.txt'),
+      art2: parse('assets/data/illustration-tags-2.txt')
     };
     for (const [label, index] of Object.entries(indexes)) {
       const names = index.t;
@@ -786,10 +786,10 @@ function packagedArchiveTest() {
   // And the second: the tag snapshot is named through a map in background.js
   // rather than a literal, and a walker that only read literals let it leave the
   // archive -- a 143 KB package with no tags in it.
-  for (const file of ['assets/data/oracle-tags.js', 'assets/data/illustration-tags-1.js', 'assets/data/illustration-tags-2.js']) {
+  for (const file of ['assets/data/oracle-tags.txt', 'assets/data/illustration-tags-1.txt', 'assets/data/illustration-tags-2.txt']) {
     assert(listed.includes(file), `${file} is inside the archive, so the tag panels have data`);
   }
-  const tagBytes = ['assets/data/oracle-tags.js', 'assets/data/illustration-tags-1.js', 'assets/data/illustration-tags-2.js']
+  const tagBytes = ['assets/data/oracle-tags.txt', 'assets/data/illustration-tags-1.txt', 'assets/data/illustration-tags-2.txt']
     .reduce((sum, file) => sum + fs.statSync(path.join(ROOT, file)).size, 0);
   assert(tagBytes > 10 * 1024 * 1024, 'the bundled tag snapshot is the size it should be');
   // Whatever the manifest names has to be in the archive. This is what let the

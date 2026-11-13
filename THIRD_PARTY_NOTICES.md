@@ -162,11 +162,13 @@ package.
 
 | File in this repo | Upstream file (`src/data/`) |
 | --- | --- |
-| `assets/data/oracle-tags.js` | `oracle-tags.js` |
-| `assets/data/illustration-tags-1.js` | `illustration-tags-1.js` |
-| `assets/data/illustration-tags-2.js` | `illustration-tags-2.js` |
+| `assets/data/oracle-tags.txt` | `oracle-tags.js` |
+| `assets/data/illustration-tags-1.txt` | `illustration-tags-1.js` |
+| `assets/data/illustration-tags-2.txt` | `illustration-tags-2.js` |
 
-All three were verified byte-identical to MoxTags v1.8.3 by SHA-256 on 2026-09-25; each
+The files are named `.txt` here rather than `.js` (2026-11-13): the extension reads them as
+text and never runs them, and Mozilla's add-on linter refuses to parse a `.js` file over 4 MB.
+The contents are unchanged. All three were verified byte-identical to MoxTags v1.8.3 by SHA-256 on 2026-09-25; each
 file now carries a header naming the source, version, author and licence, and MoxTags'
 MIT notice is retained in `assets/licences/MoxTags-LICENSE`.
 

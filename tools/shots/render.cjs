@@ -49,7 +49,7 @@ function findChrome() {
 function findChromeForTesting() {
   if (process.env.STK_CFT && fs.existsSync(process.env.STK_CFT)) return process.env.STK_CFT;
   const base = path.join(ROOT, 'dist', 'cft', 'chrome');
-  const found = fs.existsSync(base) ? fs.readdirSync(base).sort().reverse()
+  const found = fs.existsSync(base) ? fs.readdirSync(base).sort((a, b) => b.localeCompare(a, 'en', { numeric: true }))
     .map(dir => ['chrome-win64/chrome.exe', 'chrome-linux64/chrome',
       'chrome-mac-x64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing',
       'chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing']
@@ -266,7 +266,10 @@ class Session {
   async inExtension(expression) {
     let context = null;
     for (let attempt = 0; attempt < 100 && !context; attempt++) {
-      const created = this.contexts.filter(c => c.auxData && c.auxData.type === 'isolated');
+      // The top frame's world only: an iframe on the page has worlds of its own, and the
+      // extension's name tells its world from any other isolated one.
+      const created = this.contexts.filter(c => c.auxData && c.auxData.type === 'isolated' &&
+        c.auxData.frameId === this.topFrameId && c.name === 'Scryfall Toolkit');
       context = created[created.length - 1];
       if (!context) await new Promise(resolve => setTimeout(resolve, 100));
     }
@@ -283,11 +286,16 @@ class Session {
     await this.send('Emulation.setDeviceMetricsOverride', {
       width, height, deviceScaleFactor: 1, mobile: false
     });
-    await this.send('Page.navigate', { url });
-    for (let attempt = 0; attempt < 300; attempt++) {
-      if (this.events.some(e => e.method === 'Page.loadEventFired')) break;
-      await new Promise(resolve => setTimeout(resolve, 100));
+    const navigation = await this.send('Page.navigate', { url });
+    if (navigation.errorText) throw new Error(url + ' did not load: ' + navigation.errorText);
+    this.topFrameId = navigation.frameId;
+    let loaded = false;
+    for (let attempt = 0; attempt < 300 && !loaded; attempt++) {
+      loaded = this.events.some(e => e.method === 'Page.loadEventFired');
+      if (!loaded) await new Promise(resolve => setTimeout(resolve, 100));
     }
+    // A picture of a page that never finished loading is a picture of the wrong thing.
+    if (!loaded) throw new Error(url + ' did not finish loading in 30 s');
     await new Promise(resolve => setTimeout(resolve, settle));
     return this;
   }

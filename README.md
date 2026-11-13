@@ -114,7 +114,7 @@ Material from other projects keeps its own licence and its own notice. The MPL c
 
 | Files | Terms |
 | --- | --- |
-| `assets/data/oracle-tags.js`, `assets/data/illustration-tags-1.js`, `assets/data/illustration-tags-2.js` | MoxTags v1.8.3 data — MIT, © 2026 Nate Finch |
+| `assets/data/oracle-tags.txt`, `assets/data/illustration-tags-1.txt`, `assets/data/illustration-tags-2.txt` | MoxTags v1.8.3 data — MIT, © 2026 Nate Finch |
 | `assets/icons/clip.svg`, `assets/icons/duplicate.svg`, `assets/icons/trash.svg` | CardClip icons — MIT, © 2022 Jacob Hearst |
 | `assets/icons/cardtrader.svg`, `assets/icons/cardtrader.png` | Third-party brand marks, **not covered by any licence of this project**. No permission was requested from those services and none was received; they ship on the basis set out in `THIRD_PARTY_NOTICES.md` — the mark says whose data is on screen, is never altered, and sits on a control that already carries the name in words. |
 | `assets/icons/cardmarket-white.png` | **Cardmarket's symbol**, cropped out of the logo file they publish for download and used on their terms. Drawn as a mask, so the shape is theirs and the colour is the heading's own ink. Their rights stay theirs and the goodwill from use is theirs; `THIRD_PARTY_NOTICES.md` quotes the terms and says what is done to stay inside them. |

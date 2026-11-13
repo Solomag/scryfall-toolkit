@@ -140,7 +140,7 @@ function licenceAndPrivacyTest() {
       `${file} names its copyright holder`);
   }
   const thirdParty = [
-    'assets/data/oracle-tags.js', 'assets/data/illustration-tags-1.js', 'assets/data/illustration-tags-2.js'
+    'assets/data/oracle-tags.txt', 'assets/data/illustration-tags-1.txt', 'assets/data/illustration-tags-2.txt'
   ];
   for (const file of thirdParty) {
     assert(!read(file).includes('Mozilla Public License'),
