@@ -65,6 +65,21 @@ that cannot be automated.
    build: the archive in a release has to come from the tag, or the SHA-256 printed in the
    release notes describes something nobody installed.
 
+## Store uploads
+
+The release workflow sends the tagged archives to both stores itself, once the repository has
+these secrets (**Settings → Secrets and variables → Actions**). Without them the stores are
+skipped and the GitHub release is made as before.
+
+| Secret | Where it comes from |
+|---|---|
+| `CWS_CLIENT_ID`, `CWS_CLIENT_SECRET` | A Google Cloud project with the *Chrome Web Store API* enabled, and an OAuth client of type *Desktop app* in it. |
+| `CWS_REFRESH_TOKEN` | Obtained once for that client with the `https://www.googleapis.com/auth/chromewebstore` scope, signed in as the store's publisher account. |
+| `AMO_JWT_ISSUER`, `AMO_JWT_SECRET` | <https://addons.mozilla.org/developers/addon/api/key/> — the "JWT issuer" and "JWT secret". |
+
+Both stores still review every version: the workflow submits, it does not publish past review.
+The Firefox upload is on the listed channel and uses the add-on id from the Firefox manifest.
+
 ## Known limits that are not defects
 
 Recorded so that finding them during a pass is not a surprise, and so that fixing one means
