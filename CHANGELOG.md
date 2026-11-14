@@ -8,6 +8,25 @@ All releases: <https://github.com/Solomag/scryfall-toolkit/releases>
 
 ---
 
+### 2.4.5 - search suggestions, saved searches, and the clipboard's + in every search view
+
+**Search help.** Scryfall's search boxes suggest the syntax as it is typed: the keywords, and the
+values for them — every oracle and art tag name, sets by code and by name, formats, colours,
+rarities and more. The arrow keys choose, Enter or Tab inserts, Esc closes, and Enter with nothing
+chosen submits as before. **Saved searches:** a star at the start of the result-count line saves the
+query, and an empty, focused search box lists the saved ones — up to 50, kept in browser storage.
+Each of the two has its own switch in a new Search section of the settings page.
+
+The clipboard's add button appears in the Text Only, Checklist and Full search views as well, not
+only in Images. A text result's button does not follow the link; a checklist row gets its own cell,
+and the header a matching column.
+
+Alchemy: Reality Fracture (`yfra`) is in the bundled set-platform snapshot, so "Paper only" hides
+it from the first use.
+
+The bundled MoxTags tag data is named `.txt` instead of `.js`, its bytes unchanged, so Mozilla's
+add-on linter no longer reports a file too large to parse.
+
 ### 2.4.4 - review fixes, and the release goes to both stores by itself
 
 A review pass over the background and the page bridge. EDHREC answers are read inside their own
