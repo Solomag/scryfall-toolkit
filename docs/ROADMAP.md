@@ -89,6 +89,21 @@ alias a selector, so closing this properly means either a build step that expand
 one table, or a runtime lookup. Both are a real cost against a project that has otherwise
 chosen plain files and no bundler, and the honest position is that it is not decided.
 
+**What is done instead: notice a rename the week it happens.** The real cost of a renamed class
+is not the edits, it is that nothing says anything — `querySelector` returns `null` and a panel
+quietly stops appearing. `npm run check:live-dom` (`tools/check-live-dom.cjs`) opens about twenty
+public pages of scryfall.com and tagger.scryfall.com, collects every class and id on them, and
+compares with this contract. Names that only appear after a click or behind a sign-in are kept in
+`tools/live-dom-baseline.json` as `unseen`, so the run fails only when a name that *was* on a public
+page is gone. A scheduled task runs it every Monday and reports only a change.
+
+Its first run, 2026-11-17, found three pages Scryfall has already rebuilt, kept as `stale` in the
+baseline until fixed: the bots page (`.bot`, `.bot-card`, `.bots-list` are now `bot-marketing-*`
+panels), the blog (`.blog-index`, `.blog-post`, `.blog-content` and six more are now
+`blog-post-large` and `blog-post-small`), and the shop disclaimer under "Buy this card"
+(`.toolbox-disclaimer`, which `prices.js` reaches for with `?.` and so survives). The theme rules
+for the first two no longer match anything.
+
 The tool meant to support it, `tools/dom-contract.cjs`, was itself an example of the
 problem. It had its own list of scripts to scan, that list named `content.js`, and when
 `content.js` was split it did not fail: a file that is not there is skipped. So it went on
