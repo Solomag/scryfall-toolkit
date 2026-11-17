@@ -19,7 +19,7 @@
   // invents its own defaults is a second answer to the same question.
   chrome.storage.local.get({
     darkTheme: 'auto', tags: true, clipboard: true,
-    edhrecUsage: false, settingsLanguage: 'auto'
+    edhrecUsage: false, settingsLanguage: 'auto', edhrecPermissionPending: null
   }, values => {
     const language = window.STK_I18N.resolveSettingsLanguage(values.settingsLanguage);
     if (window.STK_I18N) window.STK_I18N.localizeOptions(language);
@@ -40,15 +40,20 @@
     // off here, the next time the popup opens, so the switch says what the extension can do.
     // On a microtask: the host table below is declared after this callback is set up.
     queueMicrotask(() => {
-      for (const [id, origins] of Object.entries(OPTIONAL_HOSTS)) {
-        if (!values[id] || !chrome.permissions || !chrome.permissions.contains) continue;
-        chrome.permissions.contains({ origins }, has => {
-          void chrome.runtime.lastError;
-          if (has) return;
-          document.getElementById(id).checked = false;
+      // Only the switch an answer is still owed for: one that is on without the host for any
+      // other reason (EDHREC's public JSON answers without it) is the reader's choice.
+      const id = values.edhrecPermissionPending;
+      const origins = OPTIONAL_HOSTS[id];
+      if (!origins || !chrome.permissions || !chrome.permissions.contains) return;
+      chrome.permissions.contains({ origins }, has => {
+        void chrome.runtime.lastError;
+        if (!has) {
+          const box = document.getElementById(id);
+          if (box) box.checked = false;
           chrome.storage.local.set({ [id]: false });
-        });
-      }
+        }
+        chrome.storage.local.remove('edhrecPermissionPending');
+      });
     });
 
 // EDHREC and CardTrader are optional, and so is the access they need. The browser
@@ -99,22 +104,24 @@ function requestHostAccess(key) {
         const wanted = event.target.checked;
         if (wanted && OPTIONAL_HOSTS[id]) {
           // Saved first, then asked: in Firefox the permission prompt closes the popup, and a
-          // save that waited for the answer would never run. A refusal turns it back off,
-          // here if the popup is still open, or on its next opening if it is not.
-          chrome.storage.local.set({ [id]: true });
+          // save that waited for the answer would never run. The marker says an answer is
+          // still owed; whoever next sees it — this popup when the answer comes, the popup
+          // when it next opens, or the worker before the first EDHREC request — settles it
+          // against the permission, and a refusal turns the switch back off.
+          chrome.storage.local.set({ [id]: true, edhrecPermissionPending: id });
           requestHostAccess(id).then(answer => {
             if (!answer.granted) {
               // A switch that goes back without a word reads as a checkbox that does not
               // work; the browser's own refusal is the useful thing to show.
               event.target.checked = false;
-              chrome.storage.local.set({ [id]: false });
+              chrome.storage.local.set({ [id]: false, edhrecPermissionPending: null });
               status.textContent = answer.reason
                 ? (window.STK_I18N ? window.STK_I18N.t('Браузер не дал спросить: ', language) : 'Browser would not ask: ') +
                   answer.reason
                 : (window.STK_I18N ? window.STK_I18N.t('Доступ не выдан.', language) : 'Access not granted.');
               return;
             }
-            chrome.storage.local.set({ [id]: true }, saved);
+            chrome.storage.local.set({ [id]: true, edhrecPermissionPending: null }, saved);
           });
           return;
         }

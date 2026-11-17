@@ -885,7 +885,8 @@ async function firefoxBackgroundTest() {
         'and each request carries its own deck list');
     }
     {
-      // EDHREC names a double-faced card by its front face, a split card by both halves.
+      // EDHREC names a double-faced card by its front face, a split card by both halves; its answer
+      // for Delver is written as EDHREC writes it (2026-11-17): the front face, and the faces in `names`.
       const realFetch = ctx.fetch;
       const asked = [];
       ctx.fetch = async (url, init) => {
@@ -893,11 +894,13 @@ async function firefoxBackgroundTest() {
         if (text.startsWith('https://json.edhrec.com/pages/cards/')) {
           asked.push(text.replace('https://json.edhrec.com/pages/cards/', ''));
           if (text.endsWith('/delver-of-secrets.json')) {
-            return new Response(JSON.stringify({ container: { json_dict: { card: { name: 'Delver of Secrets // Insectile Aberration', names: ['Delver of Secrets'], num_decks: 10, potential_decks: 100 } } } }), { status: 200 });
+            return new Response(JSON.stringify({ container: { json_dict: { card: { name: 'Delver of Secrets', names: ['Delver of Secrets', 'Insectile Aberration'], num_decks: 10, potential_decks: 100 } } } }), { status: 200 });
           }
           if (text.endsWith('/fire-ice.json')) {
-            return new Response(JSON.stringify({ container: { json_dict: { card: { name: 'Fire // Ice', num_decks: 5, potential_decks: 50 } } } }), { status: 200 });
+            return new Response(JSON.stringify({ container: { json_dict: { card: { name: 'Fire // Ice', names: ['Fire // Ice'], num_decks: 5, potential_decks: 50 } } } }), { status: 200 });
           }
+          // The front half of a split card answers 200 with no card in it, as EDHREC does.
+          if (text.endsWith('/fire.json')) return new Response(JSON.stringify({ container: { json_dict: {} } }), { status: 200 });
           return new Response('{}', { status: 404 });
         }
         return realFetch(url, init);
@@ -908,12 +911,29 @@ async function firefoxBackgroundTest() {
           'a double-faced card is found by its front face');
         const fire = await send({ type: 'edhrec', name: 'Fire // Ice' }, undefined, 15000);
         assertEqual([fire.ok, asked.slice(-2)], [true, ['fire.json', 'fire-ice.json']],
-          'a split card falls back to both halves when the front half has no page');
+          'a split card falls back to both halves when the front half has no card page');
         const before = asked.length;
         const none = await send({ type: 'edhrec', name: 'Nonexistent Card' }, undefined, 15000);
         const again = await send({ type: 'edhrec', name: 'Nonexistent Card' }, undefined, 15000);
         assertEqual([none.ok, again.ok, asked.length - before], [false, false, 1],
           'a card EDHREC has no page for is asked about once and then remembered');
+        // A switch turned on from the popup in Firefox, whose prompt closed the popup before the
+        // answer was saved: the worker settles it before sending anything.
+        mock.state.edhrecUsage = true;
+        mock.state.edhrecPermissionPending = 'edhrecUsage';
+        mock.permissions.grantedOrigins.length = 0;
+        const sentBefore = asked.length;
+        const refused = await send({ type: 'edhrec', name: 'Sol Ring' }, undefined, 15000);
+        assertEqual([refused.error, mock.state.edhrecUsage, mock.state.edhrecPermissionPending, asked.length - sentBefore],
+          ['EDHREC access was not granted', false, undefined, 0],
+          'refused in a popup that closed: the switch goes off and nothing reaches EDHREC');
+        mock.permissions.grantedOrigins.push('https://json.edhrec.com/*', 'https://edhrec.com/*');
+        mock.state.edhrecUsage = true;
+        mock.state.edhrecPermissionPending = 'edhrecUsage';
+        await send({ type: 'edhrec', name: 'Delver of Secrets // Insectile Aberration' }, undefined, 15000);
+        assertEqual([mock.state.edhrecUsage, mock.state.edhrecPermissionPending], [true, undefined],
+          'granted: the marker goes and the switch stays on');
+        delete mock.state.edhrecUsage;
       } finally {
         ctx.fetch = realFetch;
         mock.permissions.grantedOrigins.push('https://json.edhrec.com/*', 'https://edhrec.com/*');

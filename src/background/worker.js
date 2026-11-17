@@ -189,6 +189,28 @@ function edhrecRemember(path, value) {
   saveEdhrecState(true);
 }
 
+// A switch turned on from the popup in Firefox, whose permission prompt closed the popup
+// before the answer could be saved. The popup leaves `edhrecPermissionPending` naming the
+// switch; here, before anything goes to EDHREC, it is settled: with the host granted the
+// marker goes, without it the switch goes off and nothing is sent. Only that one case is
+// checked — EDHREC's public JSON answers without the permission, and a reader who never
+// went through the popup has the features working without ever being asked.
+async function settlePendingEdhrecPermission() {
+  const { edhrecPermissionPending: pending } = await chrome.storage.local.get({ edhrecPermissionPending: null });
+  if (!pending || !['edhrecUsage', 'edhrecSalt'].includes(pending)) return;
+  const granted = !chrome.permissions?.contains || await new Promise(resolve => {
+    try { chrome.permissions.contains({ origins: ['https://json.edhrec.com/*'] }, has => { void chrome.runtime.lastError; resolve(Boolean(has)); }); }
+    catch { resolve(true); }
+  });
+  if (granted) {
+    await chrome.storage.local.remove('edhrecPermissionPending');
+    return;
+  }
+  await chrome.storage.local.set({ [pending]: false });
+  await chrome.storage.local.remove('edhrecPermissionPending');
+  throw new Error('EDHREC access was not granted');
+}
+
 function edhrecCached(slug) {
   const hit = edhrecState.cache[slug];
   return hit && hit.expires > Date.now() ? hit : null;
@@ -736,6 +758,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
       await loadEdhrecState();
       return edhrecRecs(commanders.map(name), cards.map(name));
     }
+    if (message.type === 'edhrec') await settlePendingEdhrecPermission();
     if (message.type === 'edhrec' || message.type === 'edhrecCommander') {
       const name = String(message.name || '').trim();
       if (!name || name.length > 180 || /[<>\u0000-\u001f]/.test(name)) throw new Error('Invalid card name');
@@ -759,7 +782,12 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
         let body = null;
         for (const candidate of slugs) {
           try {
-            body = await edhrecFetch(kind + candidate);
+            const answer = await edhrecFetch(kind + candidate);
+            // A 200 is not always the card: EDHREC answers "protect" (the front half of
+            // Protect // Serve) with a page that has no card in it. That is a miss as well.
+            const json = answer && answer.container && answer.container.json_dict;
+            if (!(kind === 'cards/' ? json && json.card : json && Array.isArray(json.cardlists))) continue;
+            body = answer;
             slug = candidate;
             break;
           } catch (error) {
@@ -775,8 +803,12 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
         if (message.type === 'edhrecCommander') return edhrecCommanderLists(body);
         const card = body?.container?.json_dict?.card;
         const canonical = value => String(value || '').toLowerCase().replace(/[^a-z0-9]/g,'');
-        if (!card || (canonical(card.name) !== canonical(name) &&
-          !card.names?.some(part => canonical(part) === canonical(name)))) throw new Error('EDHREC card mismatch');
+        // EDHREC names a double-faced card by its front face and lists the faces in `names`;
+        // the page here joins them with " // ". Any of those spellings is the same card.
+        const ours = new Set([canonical(name), canonical(name.split(' // ')[0])]);
+        const theirs = [card?.name, ...(Array.isArray(card?.names) ? card.names : []),
+          Array.isArray(card?.names) ? card.names.join(' // ') : ''].map(canonical).filter(Boolean);
+        if (!card || !theirs.some(value => ours.has(value))) throw new Error('EDHREC card mismatch');
         return {
           numDecks: Number.isFinite(card.num_decks) ? card.num_decks : null,
           potentialDecks: Number.isFinite(card.potential_decks) ? card.potential_decks : null,
