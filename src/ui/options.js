@@ -19,7 +19,7 @@ const defaults = {
   // here would make every old key look as though it had a value, and the migration
   // reads those keys to decide what the reader had chosen.
   setFilters: null, setFiltersMigrated: false,
-  taggerSearchLinks: false, cardSearchLinks: true, searchAutocomplete: true, savedSearches: true, defaultSearchFilter: '', extraShopLinks: true, queryBuilder: true, deckTagSummary: true, deckTagList: '', deckNoPrices: true, stackedDeckCards: true, deckLegality: true,
+  taggerSearchLinks: false, cardSearchLinks: true, searchAutocomplete: true, savedSearches: true, defaultSearchFilter: '', extraShopLinks: true, queryBuilder: true, deckTagSummary: true, deckTagList: '', showOwned: true, deckNoPrices: true, stackedDeckCards: true, deckLegality: true,
   deckCleanUpImprover: true, cleanUpLandsInSingleton: true, sortEntriesPrimary: 'none', insertSortingHeadings: true,
   edhrecSuggestions: true, deckSearch: true,
   legalities: true, exportFormat: "moxfield", formatOrder: null, formatVisibility: null,
@@ -38,7 +38,7 @@ const defaults = {
 // one flag, the two category rules carry a list under them, and the four price kinds are
 // told apart by the model rather than by an id. A key-by-key save would have to be kept
 // in step with all three, and there is no test that could tell that it was not.
-const basicFields = ["clipboard", "printAddButtons", "tags", "cardTags", "artTags", "relationships", "finishBadges", "cardtraderPrices", "edhrecUsage", "edhrecSalt", "showSaltScale", "edhrecUsageDisplay", "usageColorMetric", "legalities", "exportFormat", "taggerSearchLinks", "cardSearchLinks", "searchAutocomplete", "savedSearches", "defaultSearchFilter", "extraShopLinks", "queryBuilder", "deckTagSummary", "deckTagList", "deckNoPrices", "stackedDeckCards", "deckLegality", "deckCleanUpImprover", "cleanUpLandsInSingleton", "sortEntriesPrimary", "insertSortingHeadings", "edhrecSuggestions", "deckSearch"];
+const basicFields = ["clipboard", "printAddButtons", "tags", "cardTags", "artTags", "relationships", "finishBadges", "cardtraderPrices", "edhrecUsage", "edhrecSalt", "showSaltScale", "edhrecUsageDisplay", "usageColorMetric", "legalities", "exportFormat", "taggerSearchLinks", "cardSearchLinks", "searchAutocomplete", "savedSearches", "defaultSearchFilter", "extraShopLinks", "queryBuilder", "deckTagSummary", "deckTagList", "showOwned", "deckNoPrices", "stackedDeckCards", "deckLegality", "deckCleanUpImprover", "cleanUpLandsInSingleton", "sortEntriesPrimary", "insertSortingHeadings", "edhrecSuggestions", "deckSearch"];
 // EDHREC and CardTrader are optional features, and so is the access they need.
 // Chrome has a place for exactly this: optional_host_permissions, granted only
 // when the user turns one of them on. Turning a switch off and on again is also
@@ -1148,3 +1148,45 @@ for (const group of FILTERS.PRICE_GROUP_NAMES) {
   }
   render();
 });
+
+// The collection: a CSV export read here, in the settings page, and kept as two count
+// tables in storage. Only the counts are kept, not the file, and nothing leaves the browser.
+(() => {
+  const file = document.getElementById('collectionFile');
+  const status = document.getElementById('collectionStatus');
+  const clear = document.getElementById('clearCollection');
+  if (!file || !status || !clear || !self.STK_COLLECTION) return;
+  const t = text => (window.STK_I18N && window.STK_I18N.t) ? window.STK_I18N.t(text, document.documentElement.lang === 'en' ? 'en' : 'ru') : text;
+  const paint = collection => {
+    if (collection && collection.byCard) {
+      const when = collection.importedAt ? new Date(collection.importedAt).toLocaleDateString() : '';
+      status.textContent = `${collection.copies} ${t('копий')}, ${collection.cards} ${t('разных карт')}` +
+        (collection.source ? ` · ${collection.source}` : '') + (when ? ` · ${when}` : '');
+      clear.hidden = false;
+    } else {
+      status.textContent = t('Коллекция не загружена');
+      clear.hidden = true;
+    }
+  };
+  chrome.storage.local.get({ collection: null }).then(({ collection }) => paint(collection));
+  file.addEventListener('change', async () => {
+    const chosen = file.files && file.files[0];
+    if (!chosen) return;
+    try {
+      const parsed = self.STK_COLLECTION.parseCollection(await chosen.text());
+      const collection = { byPrint: parsed.byPrint, byCard: parsed.byCard, copies: parsed.copies,
+        cards: parsed.cards, skipped: parsed.skipped, source: chosen.name.slice(0, 80), importedAt: Date.now() };
+      await chrome.storage.local.set({ collection });
+      paint(collection);
+      if (parsed.skipped) status.textContent += ` · ${t('пропущено строк')}: ${parsed.skipped}`;
+    } catch (error) {
+      status.textContent = t('Не удалось прочитать файл') + ': ' + (error && error.message || error);
+    }
+    file.value = '';
+  });
+  clear.addEventListener('click', async () => {
+    if (!confirm(t('Удалить коллекцию') + '?')) return;
+    await chrome.storage.local.remove('collection');
+    paint(null);
+  });
+})();

@@ -267,6 +267,14 @@
      and asks for nothing — it is a place to read, not a step. The technical details (the page
      path, the object names, the adapter's own words) live in here rather than in the feature
      descriptions, which are about what a feature does and not how it reaches Scryfall. -->
+<section id="collectionGroup"><h2>Коллекция</h2>
+<label><input type="checkbox" id="showOwned"> Показывать, сколько у вас копий</label>
+<p class="hint">Загрузите CSV-экспорт коллекции из Moxfield, Manabox, Archidekt, Deckbox или похожего сервиса. Нужные колонки (название, количество, сет, номер) находятся по заголовкам. Коллекция хранится только в этом браузере и никуда не отправляется. На страницах карт, в результатах поиска и в колодах появится, сколько у вас копий.</p>
+<label for="collectionFile">Файл CSV</label>
+<input id="collectionFile" type="file" accept=".csv,text/csv,text/plain">
+<p class="hint" id="collectionStatus">Коллекция не загружена</p>
+<button type="button" id="clearCollection" hidden>Удалить коллекцию</button>
+</section>
 <section id="diagnosticsGroup"><div class="section-head"><h2>Диагностика</h2>
 <button type="button" class="feature-toggle" id="diagnosticsToggle" aria-expanded="false" aria-controls="diagnosticsPanel" data-toggle-text="Показать|Скрыть">Показать</button></div>
 <div class="feature-panel feature-panel-wide" id="diagnosticsPanel" hidden>
@@ -292,4 +300,4 @@
 <div id="shotNotes" class="shot-notes" hidden></div>
 <img id="shotImage" alt="">
 </dialog>
-<script src="../core/set-filters.js"></script><script src="../core/i18n.js"></script><script src="../core/format-catalog.js"></script><script src="options.js"></script></body></html>
+<script src="../core/set-filters.js"></script><script src="../core/i18n.js"></script><script src="../core/format-catalog.js"></script><script src="../core/collection.js"></script><script src="options.js"></script></body></html>

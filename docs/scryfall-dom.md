@@ -434,9 +434,9 @@ name itself, without the leading `.` or `#`.
 | --- | --- | --- |
 | `card` | class | src/card-page/tagger-clipboard.js |
 | `card-grid` | class | src/card-page/deck-lists.js |
-| `card-grid-item` | class | src/card-page/clipboard.js, src/card-page/deck-lists.js, src/card-page/tagger-clipboard.js, src/card-page/tags.js |
-| `card-grid-item-card` | class | src/card-page/clipboard.js, src/card-page/deck-lists.js, src/card-page/tags.js |
-| `card-grid-item-invisible-label` | class | src/card-page/clipboard.js |
+| `card-grid-item` | class | src/card-page/clipboard.js, src/card-page/deck-lists.js, src/card-page/owned.js, src/card-page/tagger-clipboard.js, src/card-page/tags.js |
+| `card-grid-item-card` | class | src/card-page/clipboard.js, src/card-page/deck-lists.js, src/card-page/owned.js, src/card-page/tags.js |
+| `card-grid-item-invisible-label` | class | src/card-page/clipboard.js, src/card-page/owned.js |
 | `card-image` | class | src/card-page/clipboard.js, src/card-page/core.js, src/card-page/tagger-clipboard.js |
 | `card-layout` | class | src/card-page/tagger-clipboard.js |
 | `card-legality` | class | src/card-page/edhrec.js, src/card-page/legalities.js |
@@ -445,9 +445,9 @@ name itself, without the leading `.` or `#`.
 | `card-profile` | class | src/card-page/clipboard.js |
 | `card-symbol` | class | src/card-page/card.js |
 | `card-text` | class | src/card-page/edhrec.js |
-| `card-text-card-name` | class | src/card-page/clipboard.js, src/card-page/edhrec.js, src/card-page/prices.js |
+| `card-text-card-name` | class | src/card-page/clipboard.js, src/card-page/edhrec.js, src/card-page/owned.js, src/card-page/prices.js |
 | `card-text-mana-cost` | class | src/card-page/card.js |
-| `card-text-title` | class | src/card-page/clipboard.js |
+| `card-text-title` | class | src/card-page/clipboard.js, src/card-page/owned.js |
 | `card-text-type-line` | class | src/card-page/card.js |
 | `checklist` | class | src/card-page/clipboard.js |
 | `color-indicator` | class | src/card-page/card.js |
@@ -457,9 +457,10 @@ name itself, without the leading `.` or `#`.
 | `currency-usd-promo` | class | src/card-page/prints.js |
 | `current` | class | src/card-page/clipboard.js, src/card-page/legalities.js, src/card-page/prices.js |
 | `deck-list` | class | src/card-page/deck-lists.js, src/core/theme.js |
-| `deck-list-entry` | class | src/card-page/deck-lists.js, src/core/theme.js |
+| `deck-list-entry` | class | src/card-page/deck-lists.js, src/card-page/owned.js, src/core/theme.js |
 | `deck-list-entry-axial-data` | class | src/card-page/deck-lists.js |
-| `deck-list-entry-name` | class | src/card-page/deck-lists.js |
+| `deck-list-entry-count` | class | src/card-page/owned.js |
+| `deck-list-entry-name` | class | src/card-page/deck-lists.js, src/card-page/owned.js |
 | `deckbuilder-section-title` | class | src/deck-page/edhrec.js |
 | `deckbuilder-section-title-bar` | class | src/deck-page/clean-up.js |
 | `deckbuilder-toolbar` | class | src/deck-page/edhrec.js, src/deck-page/search.js |
@@ -485,7 +486,7 @@ name itself, without the leading `.` or `#`.
 | `deckbuilder` | id | src/deck-page/edhrec.js, src/deck-page/search.js |
 | `header-search-field` | id | src/card-page/tags.js |
 | `js-checklist` | id | src/card-page/sets.js |
-| `main` | id | src/card-page/card.js, src/card-page/clipboard.js, src/card-page/core.js, src/card-page/deck-lists.js, src/card-page/edhrec.js, src/card-page/legalities.js, src/card-page/prices.js, src/card-page/prints.js, src/card-page/sets.js, src/card-page/tags.js, src/core/theme.js |
+| `main` | id | src/card-page/card.js, src/card-page/clipboard.js, src/card-page/core.js, src/card-page/deck-lists.js, src/card-page/edhrec.js, src/card-page/legalities.js, src/card-page/owned.js, src/card-page/prices.js, src/card-page/prints.js, src/card-page/sets.js, src/card-page/tags.js, src/core/theme.js |
 | `scryfall-toolkit-clipboard` | id | src/card-page/tagger-clipboard.js |
 | `stores` | id | src/card-page/prices.js |
 | `with` | id | src/card-page/deck-lists.js |

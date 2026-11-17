@@ -67,7 +67,7 @@
     edhrecUsage: false, edhrecSalt: false, showSaltScale: false, edhrecUsageDisplay: 'both',
     usageColorMetric: 'decks', usageMediumDecks: 50000, usageHighDecks: 100000,
     usageMediumPercent: 1, usageHighPercent: 2.6, saltMediumThreshold: 1, saltHighThreshold: 2,
-    taggerSearchLinks: false, cardSearchLinks: true, searchAutocomplete: true, savedSearches: true, defaultSearchFilter: '', extraShopLinks: true, queryBuilder: true, deckTagSummary: true, deckTagList: '', deckNoPrices: true, stackedDeckCards: true, deckLegality: true,
+    taggerSearchLinks: false, cardSearchLinks: true, searchAutocomplete: true, savedSearches: true, defaultSearchFilter: '', extraShopLinks: true, queryBuilder: true, deckTagSummary: true, deckTagList: '', showOwned: true, deckNoPrices: true, stackedDeckCards: true, deckLegality: true,
     premodern: true, heritage: false, classic: false, peak: false,
     formatOrder: null, formatVisibility: null,
     deckCleanUpImprover: true, cleanUpLandsInSingleton: true,
@@ -566,6 +566,7 @@
     ["stackedDeckCards", () => settings.stackedDeckCards, false],
     ["deckTokens", () => settings.deckTokens, false],
     ["deckLegality", () => settings.deckLegality && /^\/@[^/]+\/decks\//.test(location.pathname), false],
+    ["ownedCounts", () => settings.showOwned, false],
     ["deckTags", () => settings.deckTagSummary && /^\/@[^/]+\/decks\//.test(location.pathname), false],
   ];
 

@@ -247,4 +247,12 @@ form.homepage-form + .stk-builder-open{display:block;margin:10px auto 0}
 .stk-search-save{margin-left:6px}
 #scryfall-toolkit-clipboard .stk-total{margin:0 0 6px;padding:0 0 6px;border-bottom:1px solid #8884;font-weight:600;font-size:13px}
 #scryfall-toolkit-clipboard .stk-list-picker{display:block;width:100%;margin:0 0 6px;padding:3px 6px;font:inherit;font-size:13px}
+.stk-owned{display:inline-block;margin-left:10px;padding:1px 8px;border-radius:10px;background:#2e7d4f;color:#fff;font-size:12px;font-weight:600;vertical-align:middle}
+.stk-owned.stk-owned-none{background:none;color:inherit;border:1px solid currentColor;font-weight:400;opacity:.6}
+.card-grid-item{position:relative}
+.stk-owned-count{position:absolute;left:6px;bottom:6px;z-index:2;padding:0 6px;border-radius:9px;background:#2e7d4fe6;color:#fff;font:600 12px/18px system-ui,sans-serif;pointer-events:auto}
+.stk-owned-row{margin-left:6px;font-size:11px;font-weight:600;color:#2e7d4f}
+.stk-owned-row.stk-owned-short{color:#b3402f}
+html.stk-dark .stk-owned-row{color:#6fcf97}
+html.stk-dark .stk-owned-row.stk-owned-short{color:#ff8a7a}
 .stk-filter-note{margin-left:10px;font-size:12px;opacity:.75}.stk-filter-note a{color:inherit;text-decoration:underline}

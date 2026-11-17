@@ -62,6 +62,25 @@ bottom right. Each row shows the card's set code and collector number beside its
   export wants; newly added cards have both. An older build that already saved an empty
   `cards` array prevents a later import.
 
+## Your collection
+
+Load a CSV export of your collection under **Collection** in the settings — from Moxfield,
+Manabox, Archidekt, Deckbox or anything similar. There is one reader for all of them: it finds
+the name, count, set and collector-number columns by their headers, so an export it has never
+seen works as long as it names them in one of the usual ways. Only the counts are kept, in the
+browser's storage; the file is not, and nothing from it leaves the browser.
+
+- **Card pages** say *Owned ×3 (this printing ×2)*, or *Not in your collection*.
+- **Search results** carry a small count on each card you own, and nothing on the rest.
+- **Deck pages** put *✓2* beside a row you can cover, and *1/4* in red beside one you cannot, so
+  what is still missing reads straight down the list.
+
+A card is matched by its name (the front face of a double-faced card, case and accents folded)
+and a printing by set code and collector number. An export that writes the set's full name
+instead of its code, as Deckbox does, still counts towards the card. Loading a new file replaces
+the old counts; **Delete the collection** removes them. The switch next to it hides the counts
+without deleting anything.
+
 ## Card and art tags
 
 On a single card page, tags appear in the right column below Prints as separate **Card

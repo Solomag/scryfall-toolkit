@@ -32,7 +32,9 @@ synchronised to any account.
 
 | Stored | Why |
 | --- | --- |
-| Your card clipboard: card name, set code, collector number, Scryfall link | the shared clipboard feature |
+| Your card clipboard: card name, set code, collector number, Scryfall link — and any other named lists you keep | the shared clipboard feature |
+| Your collection, if you load one: how many copies of each card and printing (names, set codes, collector numbers, counts), the file's name and when it was loaded | showing how many copies you own. The file is read in the settings page and only these counts are kept; nothing from it is sent anywhere. **Delete the collection** in the settings removes them. |
+| Saved searches, and saved searches per deck (the deck's id and the queries) | the saved-search features |
 | Every setting in the popup: theme, tag and price options, thresholds, format order and visibility, language choices | so the extension behaves the same next time |
 | Your CardTrader personal access token | the optional CardTrader price feature |
 | Cached data: tag indexes, Scryfall set categories, set platforms, discovered format names | to avoid re-downloading large lists |

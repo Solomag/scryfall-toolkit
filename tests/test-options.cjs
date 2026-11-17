@@ -897,7 +897,7 @@ function sectionOrderTest() {
   const html = read('src/ui/options.html');
   const headings = [...html.matchAll(/<h2>([^<]+)<\/h2>/g)].map(match => match[1]);
   assertEqual(headings, ['Общее', 'Tags', 'CardClip', 'Поиск', 'Видимость', 'Дополнительная информация',
-    'Легальность', 'Scryfall Deckbuilder', 'Диагностика', 'Авторы и сторонние проекты'],
+    'Легальность', 'Scryfall Deckbuilder', 'Коллекция', 'Диагностика', 'Авторы и сторонние проекты'],
     'sections follow the agreed order, with the experimental card gone and diagnostics before ' +
     'the credits block');
   // The installed extension has to say out loud what it is not, and where the

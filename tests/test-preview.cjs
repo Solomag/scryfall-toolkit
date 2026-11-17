@@ -955,6 +955,46 @@ async function clipboardListsTest() {
   assertEqual(mock.state.clipLists.lists.Second.map(card => card.number), ['2'], 'and puts the second one away');
 }
 
+// The collection, as the pages show it: the card page, search results and a deck.
+async function ownedCountsTest() {
+  console.log('content scripts: how many copies the reader owns');
+  const collection = { byCard: { 'test card': 3, 'card 2': 1 }, byPrint: { 'tst/1': 2 }, copies: 4, cards: 2 };
+  const card = await loadCardPage({ cards: [], collection });
+  const badge = card.document.querySelector('.stk-owned');
+  assert(badge, 'a card page says whether the card is in the collection');
+  assertEqual(badge.textContent, 'Owned ×3 (this printing ×2)', 'with the copies of the card and of this printing');
+
+  const none = await loadCardPage({ cards: [], collection: { byCard: {}, byPrint: {}, copies: 0, cards: 0 } });
+  assertEqual(none.document.querySelector('.stk-owned')?.textContent, 'Not in your collection', 'and says so when it is not');
+  const off = await loadCardPage({ cards: [], collection, showOwned: false });
+  assert(!off.document.querySelector('.stk-owned'), 'nothing is shown with the switch off');
+
+  const item = n => `<div class="card-grid-item"><a class="card-grid-item-card" href="https://scryfall.com/card/tst/${n}/c${n}">
+    <span class="card-grid-item-invisible-label">Card ${n}</span></a></div>`;
+  const grid = createPage({
+    url: 'https://scryfall.com/search?q=t%3Agoblin',
+    html: `<!DOCTYPE html><html><body><div class="card-grid">${[1, 2].map(item).join('')}</div></body></html>`,
+    state: { settingsLanguage: 'en', cards: [], collection }, routes
+  });
+  await grid.script('src/core/i18n.js');
+  await grid.script('src/core/format-catalog.js');
+  await grid.script('src/core/tag-icons.js');
+  await grid.cardPage();
+  await sleep(60);
+  const counts = [...grid.document.querySelectorAll('.card-grid-item')].map(node => node.querySelector('.stk-owned-count')?.textContent || '');
+  assertEqual(counts, ['', '×1'], 'search results carry a count on the cards the reader owns, and nothing on the rest');
+
+  const deckHtml = `<!DOCTYPE html><html><body><div id="main"><div class="deck-list">
+    <li class="deck-list-entry"><span class="deck-list-entry-count">4</span><span class="deck-list-entry-name"><a href="https://scryfall.com/card/tst/1/x">Test Card</a></span></li>
+    <li class="deck-list-entry"><span class="deck-list-entry-count">1</span><span class="deck-list-entry-name"><a href="https://scryfall.com/card/tst/2/y">Card 2</a></span></li>
+  </div></div></body></html>`;
+  const deck = await loadDeckPage({ collection, clipboard: false, deckLegality: false, deckTagSummary: false }, routes, deckHtml);
+  const marks = [...deck.document.querySelectorAll('.stk-owned-row')];
+  assertEqual(marks.map(mark => mark.textContent), ['3/4', '✓1'], 'a deck row says how many are owned against how many it plays');
+  assert(marks[0].classList.contains('stk-owned-short') && !marks[1].classList.contains('stk-owned-short'),
+    'and a row the collection does not cover is marked short');
+}
+
 async function searchPageTest() {
   console.log('content scripts: search page');
   const html = `<!DOCTYPE html><html><body><div id="main" class="card-grid">
@@ -1735,6 +1775,7 @@ await priceFilterTest();
     await deckLegalityTest();
 await clipboardRangeAndTotalTest();
 await clipboardListsTest();
+await ownedCountsTest();
 await deckTagsTest();
 await deckButtonPlacementTest();
     await setPlatformTest();
