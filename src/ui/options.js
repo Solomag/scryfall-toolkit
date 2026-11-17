@@ -542,7 +542,7 @@ chrome.storage.local.get(defaults, values => {
     if (missing.length) {
       const named = [...new Set(missing.map(key => (OPTIONAL_HOST_NAMES[key] || key)))];
       status.textContent = t('Не выдан доступ к хостам для: ') + named.join(', ') +
-        '. Выключи и включи нужную функцию, чтобы запросить доступ.';
+        t('. Выключи и включи нужную функцию, чтобы запросить доступ.');
     }
     refreshPermissions();
   });

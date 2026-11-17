@@ -38,7 +38,12 @@
     landsInNonLands.forEach(c => { c.section = 'lands'; });
     nonLandsInLands.forEach(c => { c.section = 'nonlands'; });
 
-    return Promise.all(landsInNonLands.concat(nonLandsInLands).map(c => scryfall.updateEntry(c)));
+    // One at a time, in order, rather than thirty at once: a refusal part-way stops there
+    // with the rest of the deck as it was, instead of some moved and the clean-up running
+    // over the half-moved deck anyway.
+    return landsInNonLands.concat(nonLandsInLands).reduce(
+      (done, card) => done.then(results => scryfall.updateEntry(card).then(result => results.concat([result]))),
+      Promise.resolve([]));
   }
 
   // --- the headings ---------------------------------------------------------

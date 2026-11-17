@@ -137,6 +137,9 @@
   // qualifiers the checkboxes promise.
   function buildQuery(panel) {
     let query = panel.input.value.trim();
+    // "t:goblin or t:elf id<=r" is "t:goblin or (t:elf id<=r)" to Scryfall; bracketed, the
+    // two qualifiers below apply to both sides.
+    if (/(^|\s)or(\s|$)/i.test(query)) query = '(' + query + ')';
     if (panel.identity.checked && panel.identity.dataset.identity) {
       query += ' id<=' + panel.identity.dataset.identity;
     }
@@ -296,11 +299,15 @@
         panel.identity.closest('label').style.display = 'none';
         return;
       }
-      return bridge().request('cardIdentity', { name: names[0] }).then(reply => {
-        const identity = unwrap(reply) && unwrap(reply).colorIdentity;
-        if (identity) panel.identity.dataset.identity = identity;
-        else panel.identity.closest('label').style.display = 'none';
-      }).catch(() => {
+      // Every commander, not the first: a deck led by partners (Thrasios and Tymna) plays the
+      // colours of both, and the first one's alone would hide half the legal cards.
+      return Promise.all(names.slice(0, 2).map(name => bridge().request('cardIdentity', { name: name })))
+        .then(replies => {
+          const colours = new Set(replies.map(reply => (unwrap(reply) && unwrap(reply).colorIdentity) || '').join(''));
+          const identity = 'wubrg'.split('').filter(colour => colours.has(colour)).join('');
+          if (identity) panel.identity.dataset.identity = identity;
+          else panel.identity.closest('label').style.display = 'none';
+        }).catch(() => {
         panel.identity.closest('label').style.display = 'none';
       });
     }).catch(() => {});

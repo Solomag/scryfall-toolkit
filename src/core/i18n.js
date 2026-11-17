@@ -98,6 +98,7 @@ const resolveSettingsLanguage = value => {
     'Сохранённые поиски': 'Saved searches',
     'Звёздочка рядом с числом найденных карт сохраняет поиск. Сохранённые поиски появляются, когда пустое поле поиска в фокусе.': 'The star beside the result count saves a search. Saved searches appear when the empty search box is focused.',
     'Фильтр для каждого поиска': 'Filter added to every search',
+    '. Выключи и включи нужную функцию, чтобы запросить доступ.': '. Turn the feature off and on again to ask for access.',
     'Коллекция': 'Collection',
     'Показывать, сколько у вас копий': 'Show how many copies you own',
     'Загрузите CSV-экспорт коллекции из Moxfield, Manabox, Archidekt, Deckbox или похожего сервиса. Нужные колонки (название, количество, сет, номер) находятся по заголовкам. Коллекция хранится только в этом браузере и никуда не отправляется. На страницах карт, в результатах поиска и в колодах появится, сколько у вас копий.': 'Load a CSV export of your collection from Moxfield, Manabox, Archidekt, Deckbox or a similar service. The columns it needs (name, count, set, number) are found by their headers. The collection is kept in this browser only and is not sent anywhere. Card pages, search results and decks then show how many copies you own.',

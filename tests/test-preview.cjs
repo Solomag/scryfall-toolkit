@@ -639,14 +639,15 @@ async function cardPageTest() {
 // and the payload must not be able to replace the type through the spread.
 async function bridgeRequestTest() {
   console.log('content scripts: the page bridge only forwards the deck modules\' requests');
-  const page = await loadCardPage({ cards: [] });
-  const { mock } = page;
   // The harness delivers a window message from this window, which is what the page-world module
   // sends — and what any other script on the page could send too, which is the point.
-  const post = (name, value) => page.context.postMessage({
+  const poster = page => (name, value) => page.context.postMessage({
     channel: 'scryfall-toolkit', version: 1, source: 'page', type: 'request',
     value: { id: 'r-' + name, name, value }
   });
+  const page = await loadDeckPage({ cards: [], deckSearch: true, edhrecSuggestions: true }, routes, CARD_HTML);
+  const { mock } = page;
+  const post = poster(page);
   const before = mock.sentMessages.length;
   // A name the deck modules do not use is refused, even when the payload names a real worker
   // request — this is how page code could reach any request before.
@@ -660,6 +661,32 @@ async function bridgeRequestTest() {
   const sent = mock.sentMessages.slice(before);
   assertEqual(sent.length, 1, 'a request the deck modules make is forwarded');
   assertEqual(sent[0].type, 'cardImages', 'with the type the bridge set, not one from the payload');
+
+  // Off the deck pages, and with the feature off, nothing crosses at all.
+  const card = await loadCardPage({ cards: [], deckSearch: true, edhrecSuggestions: true });
+  const cardBefore = card.mock.sentMessages.length;
+  poster(card)('cardImages', { ids: ['11111111-1111-4111-8111-111111111111'] });
+  await sleep(20);
+  assertEqual(card.mock.sentMessages.length, cardBefore, 'a card page forwards nothing for the deck modules');
+  const off = await loadDeckPage({ cards: [], deckSearch: true, edhrecSuggestions: false }, routes, CARD_HTML);
+  const offBefore = off.mock.sentMessages.length;
+  poster(off)('edhrecRecs', { commanders: ['Tameshi'], cards: ['1 Counterspell'] });
+  await sleep(20);
+  assertEqual(off.mock.sentMessages.length, offBefore, 'with EDHREC suggestions off, nothing on the page reaches EDHREC');
+
+  // The status message is rebuilt from what the modules send, not copied as it came.
+  page.context.postMessage({ channel: 'scryfall-toolkit', version: 1, source: 'page', type: 'status',
+    value: { wired: true, problems: 5, junk: 'x'.repeat(100000), scryfall: { problems: ['a'], hooksInstalled: true } } });
+  await sleep(20);
+  const status = mock.state.deckModuleStatus;
+  assertEqual([status.problems, status.junk, status.scryfall.problems], [[], undefined, ['a']],
+    'a status from the page keeps only the fields the modules send, in their shapes');
+  // A burst inside two seconds is written once, at its end, and it is the latest that is kept —
+  // including the `off` the modules send when every one of them is switched off.
+  page.context.postMessage({ channel: 'scryfall-toolkit', version: 1, source: 'page', type: 'status', value: { wired: true } });
+  page.context.postMessage({ channel: 'scryfall-toolkit', version: 1, source: 'page', type: 'status', value: { off: true } });
+  await sleep(2200);
+  assertEqual(mock.state.deckModuleStatus.off, true, 'the latest status of a burst is the one kept, with its off flag');
 }
 
 // The other three views Scryfall's "as" menu offers. A text result is one link, so the
@@ -1016,6 +1043,24 @@ async function ownedCountsTest() {
   assertEqual(deck.document.querySelectorAll('.stk-owned-row').length, 0, 'and a deleted one takes its marks with it');
 }
 
+// Two clipboard races and mismatches the full review found.
+async function clipboardEdgeCasesTest() {
+  console.log('content scripts: clipboard by printing, and a list switched in another tab');
+  const entry = { name: 'Front Face', url: 'https://scryfall.com/card/tst/2/test-card', set: 'tst', number: '2' };
+  const page = await loadCardPage({ cards: [entry] });
+  await page.context.STK_ADD_PRINT({ name: 'Front Face // Back Face', set: 'tst', number: '2', uri: entry.url });
+  await waitFor(() => page.mock.state.cards.length === 0,
+    'the printing button takes out the entry for its printing, whatever spelling of the name it was saved under');
+
+  const other = await loadCardPage({ cards: [entry] });
+  // Another tab switches to a list called Other; this tab has not heard yet.
+  other.mock.state.clipLists = { active: 'Other', lists: { Main: [entry] } };
+  other.mock.state.cards = [{ name: 'Other Card', url: 'https://scryfall.com/card/oth/1/x', set: 'oth', number: '1' }];
+  await other.context.STK_ADD_PRINT({ name: 'Test Card', set: 'tst', number: '1', uri: 'https://scryfall.com/card/tst/1/test-card' });
+  await waitFor(() => (other.mock.state.clipLists.lists.Main || []).length === 2, 'the edit goes into the list it was made in');
+  assertEqual(other.mock.state.cards.map(card => card.set), ['oth'], 'and the list the other tab switched to is left as it was');
+}
+
 async function searchPageTest() {
   console.log('content scripts: search page');
   const html = `<!DOCTYPE html><html><body><div id="main" class="card-grid">
@@ -1067,6 +1112,7 @@ async function searchPageTest() {
   const janeway = addButtons.slice(1);
   click(janeway[0]);
   await waitFor(() => mock.state.cards.length === 1, 'first printing added');
+  await waitFor(() => janeway[0].textContent === '✓', 'and its tick is drawn');
   assertEqual(janeway[0].textContent, '✓', 'the printing that was clicked is ticked');
   assertEqual([janeway[1].textContent, janeway[2].textContent], ['+', '+'],
     'the other printings of the same card are not ticked along with it');
@@ -1796,6 +1842,7 @@ await priceFilterTest();
     await deckLegalityTest();
 await clipboardRangeAndTotalTest();
 await clipboardListsTest();
+await clipboardEdgeCasesTest();
 await ownedCountsTest();
 await deckTagsTest();
 await deckButtonPlacementTest();

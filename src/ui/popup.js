@@ -35,6 +35,21 @@
       const box = document.getElementById(id);
       box.checked = Boolean(values[id]);
     }
+    // A switch saved on whose host was then refused — Firefox closes the popup when it asks
+    // for a permission, so the refusal can arrive with nobody left to hear it — is put back
+    // off here, the next time the popup opens, so the switch says what the extension can do.
+    // On a microtask: the host table below is declared after this callback is set up.
+    queueMicrotask(() => {
+      for (const [id, origins] of Object.entries(OPTIONAL_HOSTS)) {
+        if (!values[id] || !chrome.permissions || !chrome.permissions.contains) continue;
+        chrome.permissions.contains({ origins }, has => {
+          void chrome.runtime.lastError;
+          if (has) return;
+          document.getElementById(id).checked = false;
+          chrome.storage.local.set({ [id]: false });
+        });
+      }
+    });
 
 // EDHREC and CardTrader are optional, and so is the access they need. The browser
 // only grants these hosts when the user turns one of them on -- turning a switch
@@ -83,11 +98,16 @@ function requestHostAccess(key) {
       document.getElementById(id).addEventListener('change', event => {
         const wanted = event.target.checked;
         if (wanted && OPTIONAL_HOSTS[id]) {
+          // Saved first, then asked: in Firefox the permission prompt closes the popup, and a
+          // save that waited for the answer would never run. A refusal turns it back off,
+          // here if the popup is still open, or on its next opening if it is not.
+          chrome.storage.local.set({ [id]: true });
           requestHostAccess(id).then(answer => {
             if (!answer.granted) {
               // A switch that goes back without a word reads as a checkbox that does not
               // work; the browser's own refusal is the useful thing to show.
               event.target.checked = false;
+              chrome.storage.local.set({ [id]: false });
               status.textContent = answer.reason
                 ? (window.STK_I18N ? window.STK_I18N.t('Браузер не дал спросить: ', language) : 'Browser would not ask: ') +
                   answer.reason

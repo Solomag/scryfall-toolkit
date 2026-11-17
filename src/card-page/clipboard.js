@@ -300,11 +300,28 @@
     }
 
     async function persist() {
-      await chrome.storage.local.set({ cards });
+      // The page shows the change at once; storage catches up after.
       shared.clipboardCards = cards;
       render();
       scan();
       refreshPrintButtons();
+      // Another tab may have switched lists a moment ago, before its change reached this one.
+      // Then `cards` in storage is already that other list, and writing this tab's `cards` over
+      // it would replace it. The edit goes into the list it was made in instead.
+      const { clipLists: storedLists } = await chrome.storage.local.get('clipLists');
+      const stored = storedLists ? readLists(storedLists) : null;
+      if (stored && stored.active !== clipLists.active) {
+        stored.lists[clipLists.active] = cards;
+        clipLists = stored;
+        cards = (await chrome.storage.local.get({ cards: [] })).cards;
+        await chrome.storage.local.set({ clipLists });
+        shared.clipboardCards = cards;
+        render();
+        scan();
+        refreshPrintButtons();
+      } else {
+        await chrome.storage.local.set({ cards });
+      }
     }
     // The formatting and identity rules live in src/core/clipboard-format.js; see the
     // note where they are taken.
@@ -516,7 +533,11 @@
     });
     window.STK_ADD_PRINT = async card => {
       if (!card?.name || !card?.set || !card?.number) return;
-      const index = cards.findIndex(item => item.name === card.name && item.set === card.set && item.number === card.number);
+      // By printing, the same key the tick beside it is drawn from: an entry added from a
+      // search grid or Tagger can carry a different spelling of the name (one face of a
+      // double-faced card, a Universes Beyond name), and matching on the name as well left
+      // the tick on and the button adding a second copy it could then never take out.
+      const index = cards.findIndex(item => entryKey(item) === entryKey(card));
       if (index >= 0) cards.splice(index, 1);
       else cards.push({ name:card.name, url:card.uri, set:card.set, number:card.number, forceSet:true });
       await persist();

@@ -167,6 +167,32 @@
     channel: 'scryfall-toolkit', version: 1, source: 'content',
     type: 'settings', value: deckSettingsNow()
   }, '*');
+  let lastStatusAt = 0;
+  let pendingStatus = null;
+  let statusTimer = null;
+  function writeStatus() {
+    const now = Date.now();
+    lastStatusAt = now;
+    const value = pendingStatus || {};
+    pendingStatus = null;
+    const words = list => (Array.isArray(list) ? list : []).slice(0, 20).map(item => String(item).slice(0, 200));
+    const flag = name => value[name] === true;
+    const adapter = value.scryfall && typeof value.scryfall === 'object' ? value.scryfall : null;
+    chrome.storage.local.set({
+      deckModuleStatus: {
+        at: now, page: location.pathname.slice(0, 200),
+        wired: value.wired !== false, off: flag('off'), cleanUp: flag('cleanUp'),
+        edhrecSuggestions: flag('edhrecSuggestions'), deckSearch: flag('deckSearch'),
+        problems: words(value.problems),
+        scryfall: adapter && {
+          problems: words(adapter.problems), hooksInstalled: adapter.hooksInstalled === true,
+          hasScryfall: adapter.hasScryfall === true, hasScryfallApi: adapter.hasScryfallApi === true,
+          hasDeckbuilder: adapter.hasDeckbuilder === true
+        }
+      }
+    }).catch(() => {});
+  }
+  let bridgeTimes = [];
   window.addEventListener('message', event => {
     if (event.source !== window && event.source !== self) return;
     const data = event.data;
@@ -177,10 +203,15 @@
     // What the page world reports back about the deck modules: whether the hooks
     // into Scryfall took, and what did not. It is kept so that "the feature does
     // not work" can be answered with a reason instead of a guess.
+    //
+    // Any script on the page can post this message, so it is rebuilt from the fields the
+    // modules actually send — booleans and short lists of short strings — and written at most
+    // every two seconds — the latest one wins, a burst is written once at its end rather than
+    // dropped. Copying the object as it came let a page fill storage at will.
     if (data.source === 'page' && data.type === 'status') {
-      chrome.storage.local.set({
-        deckModuleStatus: Object.assign({ at: Date.now(), page: location.pathname }, data.value || {})
-      }).catch(() => {});
+      pendingStatus = data.value && typeof data.value === 'object' ? data.value : {};
+      if (statusTimer) return;
+      statusTimer = setTimeout(() => { statusTimer = null; writeStatus(); }, Math.max(0, 2000 - (Date.now() - lastStatusAt)));
     }
     // The page world cannot reach the extension's background worker; this is
     // the only bridge to it. The name is the request type the worker answers.
@@ -202,6 +233,23 @@
         'scryfallSearch', 'edhrecRecs', 'edhrecCommander', 'deckSearchesGet', 'deckSearchesSet'
       ]);
       if (typeof name !== 'string' || !BRIDGE_REQUESTS.has(name)) return reply(false, 'Unknown request');
+      // The list of names is not enough on its own: the page world is shared with every
+      // other script on Scryfall, and a name on the list still sends something out. So each
+      // request also needs the feature that makes it to be on, and a deck page to be open —
+      // with EDHREC switched off, nothing on the page can reach EDHREC through here.
+      const NEEDS = {
+        edhrecRecs: ['edhrecSuggestions'], edhrecCommander: ['edhrecSuggestions'], cardBySet: ['edhrecSuggestions'],
+        scryfallSearch: ['deckSearch'], cardIdentity: ['deckSearch'], deckSearchesGet: ['deckSearch'], deckSearchesSet: ['deckSearch'],
+        cardImages: ['edhrecSuggestions', 'deckSearch'], setDeckResultsView: ['edhrecSuggestions', 'deckSearch']
+      };
+      if (!/^\/(?:@[^/]+\/)?decks\//.test(location.pathname)) return reply(false, 'Not a deck page');
+      if (!NEEDS[name].some(feature => settings[feature])) return reply(false, 'That feature is off');
+      // And a ceiling on how often: the modules make a handful of requests per action, so a
+      // page asking for more than 240 in a minute is not one of them.
+      const now = Date.now();
+      bridgeTimes = bridgeTimes.filter(at => now - at < 60000);
+      if (bridgeTimes.length >= 240) return reply(false, 'Too many requests');
+      bridgeTimes.push(now);
       // Which way results are shown is the page's business and this script's to
       // store; it is not a question for the background worker.
       if (name === 'setDeckResultsView') {

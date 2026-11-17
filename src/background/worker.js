@@ -133,28 +133,39 @@ const EDHREC_TTL = 6 * 3600000;
 
 function loadEdhrecState() {
   if (!edhrecStateLoading) {
-    edhrecStateLoading = chrome.storage.local.get('edhrecState').then(stored => {
+    edhrecStateLoading = chrome.storage.local.get(['edhrecState', 'edhrecTiming']).then(stored => {
       const saved = stored && stored.edhrecState;
+      // The timing lives under its own key since it is written on every request; a state
+      // written before that carries it inside, and is read from there once.
+      const timing = (stored && stored.edhrecTiming) || saved || {};
       if (saved && typeof saved === 'object') {
-        edhrecState = {
-          cache: saved.cache && typeof saved.cache === 'object' ? saved.cache : {},
-          nextRequest: Number.isFinite(saved.nextRequest) ? saved.nextRequest : 0,
-          heldUntil: Number.isFinite(saved.heldUntil) ? saved.heldUntil : 0,
-          failures: Number.isFinite(saved.failures) ? saved.failures : 0
-        };
+        edhrecState.cache = saved.cache && typeof saved.cache === 'object' ? saved.cache : {};
       }
+      edhrecState.nextRequest = Number.isFinite(timing.nextRequest) ? timing.nextRequest : 0;
+      edhrecState.heldUntil = Number.isFinite(timing.heldUntil) ? timing.heldUntil : 0;
+      edhrecState.failures = Number.isFinite(timing.failures) ? timing.failures : 0;
     }).catch(() => {});
   }
   return edhrecStateLoading;
 }
 
 // Coalesced onto the next turn, so a page that looks up ten cards costs one
-// write rather than ten.
-function saveEdhrecState() {
+// write rather than ten. The queue's timing changes on every request and is a few
+// numbers; the cache changes only when an answer arrives and can be megabytes of
+// commander pages. So the cache is written only when it changed (`withCache`), and the
+// timing alone otherwise, into the same stored object.
+let edhrecCacheDirty = false;
+function saveEdhrecState(withCache = false) {
+  if (withCache) edhrecCacheDirty = true;
   if (edhrecSaveTimer !== null) return;
   edhrecSaveTimer = setTimeout(() => {
     edhrecSaveTimer = null;
-    Promise.resolve(chrome.storage.local.set({ edhrecState })).catch(() => {});
+    // Two keys, each written whole from memory: nothing is read back and merged, so a
+    // timing write can never put an older cache back over a newer one.
+    const edhrecTiming = { nextRequest: edhrecState.nextRequest, heldUntil: edhrecState.heldUntil, failures: edhrecState.failures };
+    const values = edhrecCacheDirty ? { edhrecTiming, edhrecState: { cache: edhrecState.cache } } : { edhrecTiming };
+    edhrecCacheDirty = false;
+    Promise.resolve(chrome.storage.local.set(values)).catch(() => {});
   }, 0);
 }
 
@@ -165,6 +176,17 @@ function edhrecPenalty() {
   // two, and "at least" should not mean "by a hair". Doubles to a minute.
   edhrecState.heldUntil = Date.now() + Math.min(60000, 2500 * 2 ** (edhrecState.failures - 1));
   saveEdhrecState();
+}
+
+// Bounded so the storage entry cannot grow with browsing: the oldest entries go first,
+// and a card is asked for again only after six hours.
+function edhrecRemember(path, value) {
+  const cache = edhrecState.cache;
+  delete cache[path];
+  cache[path] = { value, expires: Date.now() + EDHREC_TTL };
+  const keys = Object.keys(cache);
+  for (let i = 0; i < keys.length - 250; i++) delete cache[keys[i]];
+  saveEdhrecState(true);
 }
 
 function edhrecCached(slug) {
@@ -487,8 +509,8 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
         });
       }
       if (!identifiers.length || identifiers.length > 300) throw new Error("Invalid card identifiers");
-      if (identifiers.some(item => item.id
-        ? !/^[0-9a-f-]{36}$/.test(item.id)
+      if (identifiers.some(item => 'id' in item
+        ? !/^[0-9a-f-]{36}$/.test(String(item.id || ''))
         : item.oracle_id
           ? !/^[0-9a-f-]{36}$/i.test(item.oracle_id)
           : (!/^[a-z0-9_-]{1,16}$/.test(item.set) || !/^[a-z0-9★-]{1,24}$/.test(item.collector_number)))) {
@@ -693,6 +715,12 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
       for (const row of result) row.cards.sort((a, b) => a.name.localeCompare(b.name));
       return { checked: seen.size, tags: result };
     }
+    // The deck editor's EDHREC requests: only with the feature on. The content script's
+    // bridge already checks; this is the same rule where the request actually leaves.
+    if ((message.type === 'edhrecRecs' || message.type === 'edhrecCommander') &&
+        !(await chrome.storage.local.get({ edhrecSuggestions: true })).edhrecSuggestions) {
+      throw new Error('EDHREC suggestions are off');
+    }
     if (message.type === 'edhrecRecs') {
       // The whole deck list, as the names EDHREC's own site would send. This is
       // the one request in the extension that carries a deck rather than one
@@ -711,15 +739,39 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
     if (message.type === 'edhrec' || message.type === 'edhrecCommander') {
       const name = String(message.name || '').trim();
       if (!name || name.length > 180 || /[<>\u0000-\u001f]/.test(name)) throw new Error('Invalid card name');
-      const slug = name.normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase()
+      const slugOf = text => text.normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase()
         .replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
-      if (!slug || slug.length > 180) throw new Error('Invalid EDHREC slug');
-      const path = (message.type === 'edhrecCommander' ? 'commanders/' : 'cards/') + slug;
+      // EDHREC names a double-faced or adventure card by its front face ("delver-of-secrets")
+      // and a split card by both halves ("fire-ice"), and the name alone does not say which
+      // it is. The front face is asked for first, the whole name only if that has no page.
+      const slugs = [...new Set([slugOf(name.split(' // ')[0]), slugOf(name)])].filter(Boolean);
+      if (!slugs.length || slugs.some(slug => slug.length > 180)) throw new Error('Invalid EDHREC slug');
+      const kind = message.type === 'edhrecCommander' ? 'commanders/' : 'cards/';
+      const path = kind + slugs[slugs.length - 1];
       await loadEdhrecState();
       const already = edhrecCached(path);
-      if (already) return already.value;
+      if (already) {
+        if (already.value && already.value.missing) throw new Error('EDHREC has no page for this card');
+        return already.value;
+      }
+      let slug = slugs[0];
       const promise = (async () => {
-        const body = await edhrecFetch(path);
+        let body = null;
+        for (const candidate of slugs) {
+          try {
+            body = await edhrecFetch(kind + candidate);
+            slug = candidate;
+            break;
+          } catch (error) {
+            if (!/EDHREC HTTP 404/.test(String(error && error.message))) throw error;
+          }
+        }
+        // No page under any name: remembered like an answer, so the card is not asked for
+        // again on every visit, and reported as the failure it is.
+        if (!body) {
+          edhrecRemember(path, { missing: true });
+          throw new Error('EDHREC has no page for this card');
+        }
         if (message.type === 'edhrecCommander') return edhrecCommanderLists(body);
         const card = body?.container?.json_dict?.card;
         const canonical = value => String(value || '').toLowerCase().replace(/[^a-z0-9]/g,'');
@@ -732,14 +784,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
           url: `https://edhrec.com/cards/${slug}`
         };
       })().then(value => {
-        // Bounded so the storage entry cannot grow with browsing: the oldest
-        // entries go first, and a card is asked for again only after six hours.
-        const cache = edhrecState.cache;
-        delete cache[path];
-        cache[path] = { value, expires: Date.now() + EDHREC_TTL };
-        const keys = Object.keys(cache);
-        for (let i = 0; i < keys.length - 250; i++) delete cache[keys[i]];
-        saveEdhrecState();
+        edhrecRemember(path, value);
         return value;
       });
       return promise;
@@ -1131,17 +1176,26 @@ async function loadSetPlatforms() {
     if (Object.keys(platforms).length) return platforms;
     throw error;
   }
-  const unknown = digital.filter(code => !(code in platforms));
+  // A set whose platform could not be read (a new digital set with no cards yet) is not
+  // asked about again for a day, rather than on every page that needs the index.
+  const now = Date.now();
+  const missing = { ...((!stale && setPlatformIndex.missing) || {}) };
+  const unknown = digital.filter(code => !(code in platforms) && !(missing[code] > now));
   if (!stale && !unknown.length) return platforms;
-  const found = {};
+  let changed = stale;
   try {
     for (const code of unknown) {
       const games = await setPlatformGames(code);
-      if (games) { found[code] = games; platforms[code] = games; }
+      if (games) { platforms[code] = games; delete missing[code]; }
+      else missing[code] = Date.now() + 24 * 3600000;
+      changed = true;
     }
   } finally {
-    if (Object.keys(found).length) {
-      await chrome.storage.local.set({ setPlatformIndex:{ platforms, expires:Date.now() + 30 * 24 * 3600000 } }).catch(() => {});
+    // Written whenever anything was learnt, and whenever the index was stale, so a stale
+    // index with nothing new to ask about gets a fresh expiry instead of being rebuilt again.
+    if (changed) {
+      const expires = stale ? Date.now() + 30 * 24 * 3600000 : setPlatformIndex.expires;
+      await chrome.storage.local.set({ setPlatformIndex: { platforms, missing, expires } }).catch(() => {});
     }
   }
   return platforms;
@@ -1206,11 +1260,15 @@ function lookup(compact, id) {
   return (compact.d[id] || []).map(i => ({ name: compact.t[i], slug: compact.t[i] }));
 }
 
+// Bumped by a refresh. A load that started before it must not put older data back over it.
+let indexesGeneration = 0;
 async function loadStoredIndexes() {
   if (!indexesLoading) {
     indexesLoading = (async () => {
+      const generation = indexesGeneration;
       const stored = await chrome.storage.local.get("tagIndexes");
       const saved = stored.tagIndexes;
+      if (generation !== indexesGeneration) return;
       if (saved?.oracle && saved?.art1 && saved?.art2) {
         tagIndexes = saved;
         return;
@@ -1220,6 +1278,7 @@ async function loadStoredIndexes() {
       const [oracle, art1, art2] = await Promise.all([
         loadBundledIndex('oracle'), loadBundledIndex('art1'), loadBundledIndex('art2')
       ]);
+      if (generation !== indexesGeneration) return;
       tagIndexes = { oracle, art1, art2 };
     })().catch(error => { indexesLoading = null; throw error; });
   }
@@ -1270,6 +1329,7 @@ async function refreshIndexes() {
     art2: { t: artCompact.t, d: Object.fromEntries(entries.slice(middle)) }
   };
   await chrome.storage.local.set({ tagIndexes: next });
+  indexesGeneration += 1;
   tagIndexes = next;
   cache.clear();
 }

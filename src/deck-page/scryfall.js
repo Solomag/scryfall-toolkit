@@ -83,6 +83,13 @@
   // URL, then the deckbuilder's own id, then whatever deck is active.
   function lookupDeckId(waitTime) {
     if (!scryfallApi()) {
+      // Doubling from 300 ms, about 38 s in all; after that the page is not going to grow
+      // one, and the answer is "no deck" rather than a promise that never settles and
+      // timers that run as long as the tab is open.
+      if ((waitTime || 300) > 20000) {
+        report('ScryfallAPI never appeared; no deck id');
+        return Promise.resolve(deckIdFromUrl());
+      }
       return delay(waitTime || 300).then(() => lookupDeckId((waitTime || 300) * 2));
     }
     const fromUrl = deckIdFromUrl();
@@ -163,12 +170,18 @@
 
   let hooksInstalled = false;
 
+  // Two halves, installed separately. The API's methods can be wrapped as soon as the API
+  // is there; the deckbuilder is a Vue instance that may mount later. Marking the whole
+  // install done before the second half had a deckbuilder to hook meant it never ran, and
+  // the diagnostics said "hooks ✓" over a sort that did nothing.
+  let decksHooked = false;
+  let hookRetries = 0;
   function addHooks() {
     if (hooksInstalled) return true;
-    hooksInstalled = true;
 
     const decks = decksApi();
-    if (decks) {
+    if (decks && !decksHooked) {
+      decksHooked = true;
       ['addCard', 'updateEntry', 'replaceEntry', 'createEntry', 'destroyEntry'].forEach(method => {
         const original = decks[method];
         if (typeof original !== 'function') return;
@@ -179,15 +192,22 @@
           return result;
         };
       });
-    } else {
+    } else if (!decks) {
       report('ScryfallAPI.decks is not available');
     }
 
     const db = deckbuilder();
     if (!db) {
-      report('Scryfall.deckbuilder is not available');
+      // Tried again for about half a minute, while the editor mounts; then reported once.
+      if (hookRetries < 30) {
+        hookRetries += 1;
+        setTimeout(addHooks, 1000);
+      } else {
+        report('Scryfall.deckbuilder is not available');
+      }
       return false;
     }
+    hooksInstalled = true;
 
     // totalCount is a method on the Vue instance. Wrapping it is how upstream
     // learns the total changed.

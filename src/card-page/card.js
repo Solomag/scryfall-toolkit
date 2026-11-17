@@ -64,7 +64,12 @@
     const cost = document.querySelector('#main .card-text-mana-cost');
     const symbols = [...(cost?.querySelectorAll('.card-symbol') || [])];
     if (cost && symbols.length) {
-      const query = symbols.map(symbol => symbol.textContent.replace(/[{}]/g, '')).join('');
+      // Plain symbols lose their braces ("2RR"); a hybrid or Phyrexian one keeps them, since
+      // "G/UG/U" is not something Scryfall can split back into two {G/U}.
+      const query = symbols.map(symbol => {
+        const text = symbol.textContent.trim();
+        return text.includes('/') ? text : text.replace(/[{}]/g, '');
+      }).join('');
       if (query) {
         const link = document.createElement('a');
         link.href = `/search?q=${encodeURIComponent(`mana="${query}"`)}`;

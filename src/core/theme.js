@@ -24,8 +24,16 @@ const applyTheme = value => {
   currentTheme = ['auto', 'light', 'dark'].includes(stored) ? stored : 'auto';
   const dark = themeMode(currentTheme) === 'dark';
   document.documentElement.classList.toggle("stk-dark", dark);
-  if (dark) { repairAccountColors(); repairDarkPurple(); repairBotsArtwork(); }
+  // Once per page. Each repair installs an observer that stays for the page's life, and a
+  // switch between light and dark (the system's, with the theme on Auto) called them again,
+  // adding one more observer every time. What they mark is styled only under stk-dark, so
+  // after a switch back to light the marks simply do nothing.
+  if (dark && !repairsStarted) {
+    repairsStarted = true;
+    repairAccountColors(); repairDarkPurple(); repairBotsArtwork();
+  }
 };
+let repairsStarted = false;
 if (systemDark && systemDark.addEventListener) {
   systemDark.addEventListener('change', () => { if (currentTheme === 'auto') applyTheme('auto'); });
 }
@@ -189,11 +197,17 @@ function repairBotsArtwork() {
 function repairAccountColors() {
   if (!document.documentElement.matches('.stk-account-page,.stk-info-page')) return;
   let observer;
-  const scan = () => {
+  const pending = new Set();
+  // Within `root` and the root itself — the whole of #main on the first pass, and after that
+  // only what was added. Sweeping all of #main on every change cost two style reads and a
+  // layout per element each frame while the reader typed in the deck editor.
+  const within = (root, selector) => [...(root.matches?.(selector) ? [root] : []), ...root.querySelectorAll(selector)];
+  const scan = root => {
     const main = document.getElementById('main') || document.querySelector('main');
     if (!main) return;
+    if (!root || !main.contains(root)) root = main;
     // Account forms have several light title bars with no shared CSS class.
-    for (const node of main.querySelectorAll('div,section,article,header,h1,h2,h3,h4,h5,h6,legend')) {
+    for (const node of within(root, 'div,section,article,header,h1,h2,h3,h4,h5,h6,legend')) {
       if (node.classList.contains('stk-account-light-bar')) continue;
       const style = getComputedStyle(node);
       // A band that paints a picture is a picture, not a light surface to flatten:
@@ -213,10 +227,10 @@ function repairAccountColors() {
         else if (document.documentElement.classList.contains('stk-account-page')) node.classList.add('stk-account-light-surface');
       }
     }
-    for (const node of main.querySelectorAll('label,button,span,a')) {
+    for (const node of within(root, 'label,button,span,a')) {
       if (/^Choose an image file(?:\s*…|\s*\.\.\.)?$/i.test(node.textContent.trim())) node.classList.add('stk-account-upload-button');
     }
-    for (const node of main.querySelectorAll('span,small,b,abbr,h2,h3,h4,h5,h6')) {
+    for (const node of within(root, 'span,small,b,abbr,h2,h3,h4,h5,h6')) {
       if (!node.closest('#deckbuilder,[class*="deckbuilder"]') || node.childElementCount) continue;
       const text = node.textContent.trim();
       if (/^(?:[A-Z][A-Z0-9]{1,5}(?:\s*[·•]\s*[0-9A-Z★-]+)?|LAND)$/.test(text) &&
@@ -231,15 +245,21 @@ function repairAccountColors() {
       }
     }
     if (!observer) {
-      observer = new MutationObserver(() => {
-        if (observer.scheduled) return;
+      observer = new MutationObserver(mutations => {
+        for (const mutation of mutations) for (const node of mutation.addedNodes) if (node.nodeType === 1) pending.add(node);
+        if (!pending.size || observer.scheduled) return;
         observer.scheduled = true;
-        requestAnimationFrame(() => { observer.scheduled = false; scan(); });
+        requestAnimationFrame(() => {
+          observer.scheduled = false;
+          const roots = [...pending];
+          pending.clear();
+          for (const added of roots) if (added.isConnected) scan(added);
+        });
       });
       observer.observe(main, { childList: true, subtree: true });
     }
   };
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', scan, { once:true });
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => scan(), { once:true });
   else scan();
 }
 

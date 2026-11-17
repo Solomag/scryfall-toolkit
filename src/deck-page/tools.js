@@ -21,6 +21,12 @@
 // functions. The behaviour is kept as upstream has it, including where upstream
 // is quirky — the notes below say so where it matters.
 
+// Wrapped so that nothing but `STK_DECK_TOOLS` reaches the page's global scope: this runs
+// in the page's own world, beside Scryfall's scripts, and a name declared here at the top
+// level would collide with one of theirs.
+(function () {
+'use strict';
+
 // The order a deck reads in when it is sorted by card type. Anything not listed
 // sorts last.
 const TYPE_ORDER = [
@@ -169,3 +175,4 @@ self.STK_DECK_TOOLS = {
   hasDedicatedLandSection,
   flattenEntries
 };
+})();

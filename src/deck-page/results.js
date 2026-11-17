@@ -130,10 +130,12 @@
     }
     const batches = [];
     for (let i = 0; i < missing.length; i += 75) batches.push(missing.slice(i, i + 75));
+    // Each batch on its own: one refused (the bridge's ceiling, a bad identifier) costs that
+    // batch its art, not every card on the panel.
     Promise.all(batches.map(batch => request('cardImages', {
       ids: batch.filter(c => c.id).map(c => c.id),
       printings: batch.filter(c => !c.id && c.printing).map(c => c.printing)
-    })))
+    }).catch(() => [])))
       .then(replies => {
         const byKey = new Map();
         for (const reply of replies) {

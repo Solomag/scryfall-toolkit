@@ -332,6 +332,9 @@ let edhrecNextStatus = null;
 const edhrecCard = { name: 'Test Card', num_decks: 1200, potential_decks: 40000, salt: 1.5 };
 
 const mock = createChrome({});
+// EDHREC's hosts are optional permissions; the worker sends nothing there without them.
+// Granted here as a reader who turned the features on has them; one case takes them away.
+mock.permissions.grantedOrigins.push('https://json.edhrec.com/*', 'https://edhrec.com/*');
 
 const page = createPage({
   url: 'chrome-extension://scryfall-toolkit/background.js',
@@ -588,6 +591,13 @@ async function firefoxBackgroundTest() {
       const bad = await send({ type: 'cardImages', oracleIds: ['not-a-uuid'] });
       assertEqual(bad, { ok: false, error: 'Invalid card identifiers' },
         'a malformed oracle id is refused rather than passed on');
+      const empty = await send({ type: 'cardImages', ids: [''] });
+      assertEqual(empty, { ok: false, error: 'Invalid card identifiers' },
+        'an empty id is refused, not read as a set and number of "undefined"');
+      mock.state.edhrecSuggestions = false;
+      assertEqual(await send({ type: 'edhrecRecs', commanders: ['Tameshi'], cards: ['1 Counterspell'] }),
+        { ok: false, error: 'EDHREC suggestions are off' }, 'with EDHREC suggestions off, the worker sends nothing to EDHREC');
+      delete mock.state.edhrecSuggestions;
     }
 
     {
@@ -873,6 +883,41 @@ async function firefoxBackgroundTest() {
         'two decks of the same size and commander are two requests, not one');
       assertEqual(posted.map(body => body.cards.join(',')).sort(), ['1 Counterspell', '1 Sol Ring'],
         'and each request carries its own deck list');
+    }
+    {
+      // EDHREC names a double-faced card by its front face, a split card by both halves.
+      const realFetch = ctx.fetch;
+      const asked = [];
+      ctx.fetch = async (url, init) => {
+        const text = String(url);
+        if (text.startsWith('https://json.edhrec.com/pages/cards/')) {
+          asked.push(text.replace('https://json.edhrec.com/pages/cards/', ''));
+          if (text.endsWith('/delver-of-secrets.json')) {
+            return new Response(JSON.stringify({ container: { json_dict: { card: { name: 'Delver of Secrets // Insectile Aberration', names: ['Delver of Secrets'], num_decks: 10, potential_decks: 100 } } } }), { status: 200 });
+          }
+          if (text.endsWith('/fire-ice.json')) {
+            return new Response(JSON.stringify({ container: { json_dict: { card: { name: 'Fire // Ice', num_decks: 5, potential_decks: 50 } } } }), { status: 200 });
+          }
+          return new Response('{}', { status: 404 });
+        }
+        return realFetch(url, init);
+      };
+      try {
+        const delver = await send({ type: 'edhrec', name: 'Delver of Secrets // Insectile Aberration' }, undefined, 15000);
+        assertEqual([delver.ok, delver.data && delver.data.url], [true, 'https://edhrec.com/cards/delver-of-secrets'],
+          'a double-faced card is found by its front face');
+        const fire = await send({ type: 'edhrec', name: 'Fire // Ice' }, undefined, 15000);
+        assertEqual([fire.ok, asked.slice(-2)], [true, ['fire.json', 'fire-ice.json']],
+          'a split card falls back to both halves when the front half has no page');
+        const before = asked.length;
+        const none = await send({ type: 'edhrec', name: 'Nonexistent Card' }, undefined, 15000);
+        const again = await send({ type: 'edhrec', name: 'Nonexistent Card' }, undefined, 15000);
+        assertEqual([none.ok, again.ok, asked.length - before], [false, false, 1],
+          'a card EDHREC has no page for is asked about once and then remembered');
+      } finally {
+        ctx.fetch = realFetch;
+        mock.permissions.grantedOrigins.push('https://json.edhrec.com/*', 'https://edhrec.com/*');
+      }
     }
     {
       // CardTrader's API answers in the account's own currency and has no currency parameter, so

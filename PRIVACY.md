@@ -38,6 +38,9 @@ synchronised to any account.
 | Every setting in the popup: theme, tag and price options, thresholds, format order and visibility, language choices | so the extension behaves the same next time |
 | Your CardTrader personal access token | the optional CardTrader price feature |
 | Cached data: tag indexes, Scryfall set categories, set platforms, discovered format names | to avoid re-downloading large lists |
+| EDHREC's answers for up to 250 recent cards and commanders, with the timing of the request queue (`edhrecState`); the CardTrader request timing (`traderThrottle`) | so the same page is not asked for twice and the services' rate limits hold across restarts |
+| Whether the deck editor modules started, and what went wrong if they did not (`deckModuleStatus`), with the path of the deck page it was read on — which includes your Scryfall username | the **Diagnostics** section of the settings page |
+| How you last chose to view results in the deck editor's panels (`deckResultsView`) | so the panels open the way you left them |
 | The extension reads Scryfall's own `localStorage.cardClipboard` **once** | to import an older CardClip clipboard. It is read, not written, and the read stops after the import. |
 
 The token field in the settings stays empty on purpose: a blank field is only used to
@@ -58,9 +61,17 @@ requests, and so does each service named below.
 - The tag bulk files (`oracle_tags`, `art_tags`) are downloaded and cached locally.
 - If you turn on the deck editor's search and type a query there, that query is sent to
   `/cards/search`. It is your own text — Scryfall sees what you searched for, as it would
-  if you had typed it into their search box.
-- Sent: Scryfall card and set identifiers, and search queries. Not your account, not your
-  clipboard content, not your token.
+  if you had typed it into their search box. **+ All** on a search page sends that page's
+  own query the same way, a page of results at a time.
+- When you press one of the buttons on a deck page — **Show Tokens**, the legality check or
+  **Tags in this deck** — every printing in that deck (set code and collector number) goes to
+  `/cards/collection`, because that is how Scryfall answers about a whole deck at once.
+- When the clipboard's list is open, the set code and collector number of each card in it go
+  to `/cards/collection` to show the list's total price. Only while the list is open, and each
+  printing only once.
+- Sent: Scryfall card and set identifiers, and search queries — including, as above, the
+  printings of a deck when you ask about it and of your clipboard while its list is open.
+  Not your account, not your collection, not your token.
 - Requests to the API use `credentials: 'omit'`, so your Scryfall login cookies are not
   attached to them.
 
@@ -84,6 +95,9 @@ requests, and so does each service named below.
 - That second request is what makes the suggestions answer to your deck rather than to
   your commander alone. It is also the largest thing this extension ever sends anywhere.
   It is sent only when you click the button, and turning the feature off stops it.
+- With the suggestions on, a search in the deck editor's own search panel also asks for the
+  commander's page (the first kind above, not the deck list), to show beside each result how
+  many of that commander's decks play it. Turning the suggestions off stops that too.
 - **EDHREC does not publish that endpoint.** It is the one their own site uses, it has no
   documented contract, and it may change or disappear without notice. If it does, the
   panel falls back to their published commander page rather than failing.
@@ -111,7 +125,8 @@ is made to Cardmarket unless you click it.
 ## What is not collected
 
 Not by this extension, in this version: your name, your email, your browsing history, your
-deck lists, your Scryfall account, your payment details, your IP address (as data we keep),
+deck lists (they are sent to Scryfall or EDHREC only as described above, when you ask, and
+never kept), your Scryfall account, your payment details, your IP address (as data we keep),
 your keystrokes, or anything about how you use the extension. We have no server to send it
 to and no analytics SDK in the build.
 

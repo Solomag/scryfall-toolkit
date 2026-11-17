@@ -645,6 +645,44 @@ const card = (name, typeLine, id) => ({
       assertEqual(w.document.querySelector('.stk-search-panel'), null, 'and the panel closes');
     }
 
+    console.log('deck-search: partners, and a query with "or" in it');
+    {
+      const w = makeWorld({
+        deck: {
+          id: 'deck-p', sections: { primary: ['commanders', 'nonlands'], secondary: [] },
+          entries: {
+            commanders: [
+              { id: 'c1', count: 1, section: 'commanders', raw_text: true, card_digest: { name: 'Thrasios, Triton Hero', type_line: 'Legendary Creature' } },
+              { id: 'c2', count: 1, section: 'commanders', raw_text: true, card_digest: { name: 'Tymna the Weaver', type_line: 'Legendary Creature' } }
+            ],
+            nonlands: []
+          }
+        },
+        html: '<div class="deckbuilder-toolbar"></div><div id="deckbuilder"></div>'
+      });
+      w.boot();
+      const asked = [];
+      const colours = { 'Thrasios, Triton Hero': 'gu', 'Tymna the Weaver': 'wb' };
+      w.self.STK_BRIDGE = {
+        request: (name, value) => {
+          asked.push({ name, value });
+          if (name === 'cardIdentity') return Promise.resolve({ colorIdentity: colours[value.name] });
+          return Promise.resolve({ cards: [], hasMore: false });
+        }
+      };
+      w.self.STK_DECK_SEARCH.apply({ deckSearch: true });
+      w.document.getElementById('stk-search-button').dispatchEvent(new w.self.Event('click'));
+      await tick();
+      await tick();
+      w.document.querySelector('.stk-search-input').value = 't:goblin or t:elf';
+      w.document.querySelector('.stk-search-identity').checked = true;
+      w.document.querySelector('.stk-search-form').dispatchEvent(new w.self.Event('submit'));
+      await tick();
+      const ran = asked.filter(a => a.name === 'scryfallSearch').pop();
+      assertEqual(ran && ran.value.query, '(t:goblin or t:elf) id<=wubg not:funny',
+        'both partners\' colours make the identity, and an "or" is bracketed so the qualifiers cover both sides');
+    }
+
     console.log('deck-search: saved searches are kept per deck');
     {
       const DECK = '11111111-2222-4333-8444-555555555555';
