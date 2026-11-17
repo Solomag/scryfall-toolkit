@@ -221,9 +221,13 @@
           if (name === 'deckSearchesGet') return reply(true, Array.isArray(all[deck]) ? all[deck] : []);
           const list = (Array.isArray(value.list) ? value.list : [])
             .map(query => String(query).replace(/\s+/g, ' ').trim().slice(0, 300)).filter(Boolean);
-          const next = { ...all, [deck]: [...new Set(list)].slice(0, 20) };
-          if (!next[deck].length) delete next[deck];
-          // At most 200 decks: the oldest written first are dropped, so a list cannot grow forever.
+          // Taken out and put back at the end, so the order of the keys is the order they were
+          // last written in, and the cap below drops the deck left alone longest.
+          const next = { ...all };
+          delete next[deck];
+          const kept = [...new Set(list)].slice(0, 20);
+          if (kept.length) next[deck] = kept;
+          // At most 200 decks: the least recently written go first, so a list cannot grow forever.
           const decks = Object.keys(next);
           for (const old of decks.slice(0, Math.max(0, decks.length - 200))) delete next[old];
           return chrome.storage.local.set({ deckSavedSearches: next }).then(() => reply(true, next[deck] || []));

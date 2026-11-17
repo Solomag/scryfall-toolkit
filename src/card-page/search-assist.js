@@ -362,26 +362,43 @@
     const match = clause.match(/^-?([a-z]+)(?::|=|!=|>=|<=|>|<)/i);
     return match ? FAMILY.get(match[1].toLowerCase()) || match[1].toLowerCase() : null;
   }
-  function withFilter(query, filter) {
+  // Keywords a card can match more than once: "is:commander" says nothing about
+  // "-is:digital", so for these only the very same clause counts as already there.
+  const MANY_VALUED = new Set(['is', 'not', 'has', 't', 'o', 'fo', 'kw', 'otag', 'atag', 'produces', 'in', 'a', 'ft', 'wm']);
+  // The clauses of the filter the query does not already settle, and the query with them.
+  function filterClauses(query, filter) {
     const tokens = splitClauses(query);
-    if (!tokens.length) return query;
     const keys = new Set(tokens.map(keyOf).filter(Boolean));
     const lower = tokens.map(token => token.toLowerCase());
-    const missing = splitClauses(filter).filter(clause => {
+    return splitClauses(filter).filter(clause => {
       const key = keyOf(clause);
-      return key ? !keys.has(key) : !lower.includes(clause.toLowerCase());
+      if (lower.includes(clause.toLowerCase())) return false;
+      return !key || MANY_VALUED.has(key) || !keys.has(key);
     });
+  }
+  function withFilter(query, filter) {
+    if (!splitClauses(query).length) return query;
+    const missing = filterClauses(query, filter);
     if (!missing.length) return query;
     // "a or b game:paper" is "a or (b and game:paper)" to Scryfall.
     const base = /(^|\s)or(\s|$)/i.test(query) ? `(${query.trim()})` : query.trim();
     return base + ' ' + missing.join(' ');
   }
-  function withoutFilter(query, filter) {
-    const drop = new Set(splitClauses(filter).map(clause => clause.toLowerCase()));
-    let rest = splitClauses(query).filter(token => !drop.has(token.toLowerCase())).join(' ');
+  // The query without the clauses the extension added: taken off the end, where they were
+  // put, so a clause the reader typed themselves stays.
+  function withoutFilter(query, added) {
+    const tokens = splitClauses(query);
+    for (const clause of [...added].reverse()) {
+      if (tokens.length && tokens[tokens.length - 1].toLowerCase() === clause.toLowerCase()) tokens.pop();
+    }
+    let rest = tokens.join(' ');
     if (/^\(.*\)$/.test(rest) && /(^|\s)or(\s|$)/i.test(rest)) rest = rest.slice(1, -1);
     return rest;
   }
+  // Which clauses were added to which query, for the note on the results page. Kept for the
+  // tab, so the note appears only on the search the extension actually changed.
+  const FILTER_NOTE_KEY = 'stk-filter-added';
+  const sameQuery = (a, b) => String(a || '').replace(/\s+/g, ' ').trim() === String(b || '').replace(/\s+/g, ' ').trim();
 
   function initDefaultFilter() {
     const filter = String(settings.defaultSearchFilter || '').trim().slice(0, 200);
@@ -393,16 +410,25 @@
       let target;
       try { target = new URL(form.getAttribute('action') || location.href, location.href); } catch { return; }
       if (!/(^|\.)scryfall\.com$/.test(target.hostname) || target.pathname !== '/search') return;
+      const added = filterClauses(input.value, filter);
       input.value = withFilter(input.value, filter);
+      try {
+        if (added.length) sessionStorage.setItem(FILTER_NOTE_KEY, JSON.stringify({ q: input.value, added }));
+        else sessionStorage.removeItem(FILTER_NOTE_KEY);
+      } catch { /* No storage: the search still runs, only without the note. */ }
     }, true);
 
     if (location.pathname !== '/search') return;
     const params = new URLSearchParams(location.search);
     const query = params.get('q') || '';
-    const used = splitClauses(filter).filter(clause => splitClauses(query).some(token => token.toLowerCase() === clause.toLowerCase()));
+    let used = [];
+    try {
+      const note = JSON.parse(sessionStorage.getItem(FILTER_NOTE_KEY) || 'null');
+      if (note && sameQuery(note.q, query) && Array.isArray(note.added)) used = note.added.map(String);
+    } catch { used = []; }
     const info = document.querySelector('.search-info');
     if (!used.length || !info) return;
-    params.set('q', withoutFilter(query, filter));
+    params.set('q', withoutFilter(query, used));
     const note = document.createElement('span');
     note.className = 'stk-filter-note';
     note.textContent = 'Default filter: ' + used.join(' ') + ' ';
@@ -556,7 +582,11 @@
       if (!builtQuery(read())) return;
       const query = full();
       dialog.close();
-      location.assign('/search?q=' + encodeURIComponent(query));
+      // The rest of the current search — its view, order, uniqueness — carries over.
+      const params = new URLSearchParams(location.pathname === '/search' ? location.search : '');
+      params.set('q', query);
+      params.delete('page');
+      location.assign('/search?' + params);
     });
     cancel.addEventListener('click', () => dialog.close());
     open.addEventListener('click', () => { paint(); dialog.showModal(); });

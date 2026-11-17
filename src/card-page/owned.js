@@ -20,32 +20,37 @@
 // Nothing is fetched: the counts are in storage, and the page already says which card
 // each element is.
 (() => {
+  // Basic lands are left unmarked in a deck: almost no collection export lists them, so
+  // marking them would paint every deck's mana base red and bury what is really missing.
+  const BASICS = new Set(['plains', 'island', 'swamp', 'mountain', 'forest', 'wastes']);
+  const isBasic = name => BASICS.has(String(name || '').toLowerCase().replace(/^snow-covered\s+/, '').trim());
+
   self.STK_CONTENT.on("ownedCounts", async () => {
     const { cardPage, identity } = await self.STK_CONTENT.context;
-    const { collection } = await chrome.storage.local.get({ collection: null });
-    if (!collection || !collection.byCard) return;
+    let { collection } = await chrome.storage.local.get({ collection: null });
     const { owned } = self.STK_COLLECTION;
+    const deckPage = /^\/@[^/]+\/decks\//.test(location.pathname);
     const nameOfCardPage = () => [...document.querySelectorAll('#main .card-text-card-name')]
       .map(node => node.textContent.trim()).filter(Boolean)[0] || '';
 
-    if (cardPage) {
+    const markCardPage = () => {
+      if (!cardPage) return;
       const title = document.querySelector('#main .card-text-title') ||
         document.querySelector('#main .card-text-card-name')?.parentElement;
       const counts = owned(collection, { name: nameOfCardPage(), set: identity?.set, number: identity?.number });
-      if (title && counts && !title.querySelector('.stk-owned')) {
-        const badge = document.createElement('span');
-        badge.className = 'stk-owned' + (counts.card ? '' : ' stk-owned-none');
-        badge.textContent = counts.card ? `Owned ×${counts.card}` : 'Not in your collection';
-        if (counts.card && counts.print !== null) {
-          badge.title = `${counts.print} of this printing, ${counts.card} of the card in all`;
-          if (counts.print) badge.textContent += ` (this printing ×${counts.print})`;
-        }
-        title.append(badge);
+      if (!title || !counts || title.querySelector('.stk-owned')) return;
+      const badge = document.createElement('span');
+      badge.className = 'stk-owned' + (counts.card ? '' : ' stk-owned-none');
+      badge.textContent = counts.card ? `Owned ×${counts.card}` : 'Not in your collection';
+      if (counts.card && counts.print !== null) {
+        badge.title = `${counts.print} of this printing, ${counts.card} of the card in all`;
+        if (counts.print) badge.textContent += ` (this printing ×${counts.print})`;
       }
-    }
+      title.append(badge);
+    };
 
-    const markGrid = () => {
-      for (const item of document.querySelectorAll('.card-grid-item:not([aria-hidden="true"])')) {
+    const markGrid = scope => {
+      for (const item of scope.querySelectorAll('.card-grid-item:not([aria-hidden="true"])')) {
         if (item.querySelector(':scope > .stk-owned-count')) continue;
         const name = item.querySelector('.card-grid-item-invisible-label')?.textContent.trim() ||
           item.querySelector('img[alt]')?.getAttribute('alt')?.split(' (')[0];
@@ -61,11 +66,11 @@
       }
     };
 
-    const markDeck = () => {
-      for (const row of document.querySelectorAll('.deck-list-entry')) {
+    const markDeck = scope => {
+      for (const row of scope.querySelectorAll('.deck-list-entry')) {
         if (row.querySelector('.stk-owned-row')) continue;
         const name = row.querySelector('.deck-list-entry-name')?.textContent.trim();
-        if (!name) continue;
+        if (!name || isBasic(name)) continue;
         const need = Number(row.querySelector('.deck-list-entry-count')?.textContent.trim()) || 1;
         const have = owned(collection, { name })?.card || 0;
         const mark = document.createElement('span');
@@ -76,17 +81,36 @@
       }
     };
 
-    markGrid();
-    if (/^\/@[^/]+\/decks\//.test(location.pathname)) markDeck();
-    let pending = false;
-    new MutationObserver(() => {
-      if (pending) return;
-      pending = true;
-      setTimeout(() => {
-        pending = false;
-        markGrid();
-        if (/^\/@[^/]+\/decks\//.test(location.pathname)) markDeck();
-      }, 150);
+    const paintAll = () => {
+      document.querySelectorAll('.stk-owned, .stk-owned-count, .stk-owned-row').forEach(node => node.remove());
+      if (!collection || !collection.byCard) return;
+      markCardPage();
+      markGrid(document);
+      if (deckPage) markDeck(document);
+    };
+    paintAll();
+
+    // A collection loaded, replaced or deleted in the settings shows on the open pages too.
+    chrome.storage.onChanged.addListener(changes => {
+      if (!changes.collection) return;
+      collection = changes.collection.newValue || null;
+      paintAll();
+    });
+
+    // Search results and deck lists can grow after load; a card page cannot. Only the nodes
+    // that arrive are looked at, and only when they hold a card or a deck row.
+    if (cardPage && !deckPage) return;
+    const WATCHED = '.card-grid-item, .deck-list-entry';
+    new MutationObserver(mutations => {
+      if (!collection || !collection.byCard) return;
+      for (const mutation of mutations) {
+        for (const node of mutation.addedNodes) {
+          if (node.nodeType !== 1 || !(node.matches?.(WATCHED) || node.querySelector?.(WATCHED))) continue;
+          const scope = node.matches?.(WATCHED) ? node.parentElement || node : node;
+          markGrid(scope);
+          if (deckPage) markDeck(scope);
+        }
+      }
     }).observe(document.body, { childList: true, subtree: true });
   });
 })();

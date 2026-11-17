@@ -807,7 +807,8 @@ async function searchFilterAndAddAllTest() {
   let asked = null;
   const page = createPage({
     url: 'https://scryfall.com/search?q=t%3Agoblin+game%3Apaper&order=name', html,
-    state: { settingsLanguage: 'en', defaultSearchFilter: 'game:paper lang:en', cards: [
+    sessionStorage: { 'stk-filter-added': JSON.stringify({ q: 't:goblin game:paper', added: ['game:paper'] }) },
+    state: { settingsLanguage: 'en', defaultSearchFilter: 'game:paper -is:digital', cards: [
       { name: 'Card 1', url: 'https://scryfall.com/card/tst/1/card-1', set: 'tst', number: '1' }] },
     routes: { ...routes, searchAll: message => { asked = message; return { total: 3, truncated: false, cards: [
       { name: 'Card 1', url: 'https://scryfall.com/card/tst/1/card-1', set: 'tst', number: '1' },
@@ -826,13 +827,23 @@ async function searchFilterAndAddAllTest() {
 
   input.value = 't:goblin';
   fireEvent(form, 'submit');
-  assertEqual(input.value, 't:goblin game:paper lang:en', 'the filter is added as the search is sent');
+  assertEqual(input.value, 't:goblin game:paper -is:digital', 'the filter is added as the search is sent');
+  assertEqual(JSON.parse(page.window.sessionStorage.getItem('stk-filter-added')).added, ['game:paper', '-is:digital'],
+    'and what was added is remembered for the results page');
   input.value = 't:goblin game:arena';
   fireEvent(form, 'submit');
-  assertEqual(input.value, 't:goblin game:arena lang:en', 'but a keyword the query already has is left as typed');
+  assertEqual(input.value, 't:goblin game:arena -is:digital', 'but a keyword the query already has is left as typed');
+  input.value = 'is:commander';
+  fireEvent(form, 'submit');
+  assertEqual(input.value, 'is:commander game:paper -is:digital',
+    'while a keyword a card can match many times, like is:, does not stop a different clause of it');
+  input.value = 't:goblin game:paper -is:digital';
+  fireEvent(form, 'submit');
+  assertEqual(page.window.sessionStorage.getItem('stk-filter-added'), null,
+    'and a query that already says it all is sent as typed, with no note to follow it');
   input.value = 't:goblin or t:elf';
   fireEvent(form, 'submit');
-  assertEqual(input.value, '(t:goblin or t:elf) game:paper lang:en', 'and an "or" is bracketed so the filter covers both sides');
+  assertEqual(input.value, '(t:goblin or t:elf) game:paper -is:digital', 'and an "or" is bracketed so the filter covers both sides');
   input.value = '';
   fireEvent(form, 'submit');
   assertEqual(input.value, '', 'an empty box is left empty');
@@ -987,12 +998,22 @@ async function ownedCountsTest() {
   const deckHtml = `<!DOCTYPE html><html><body><div id="main"><div class="deck-list">
     <li class="deck-list-entry"><span class="deck-list-entry-count">4</span><span class="deck-list-entry-name"><a href="https://scryfall.com/card/tst/1/x">Test Card</a></span></li>
     <li class="deck-list-entry"><span class="deck-list-entry-count">1</span><span class="deck-list-entry-name"><a href="https://scryfall.com/card/tst/2/y">Card 2</a></span></li>
+    <li class="deck-list-entry"><span class="deck-list-entry-count">12</span><span class="deck-list-entry-name"><a href="https://scryfall.com/card/tst/3/z">Snow-Covered Island</a></span></li>
   </div></div></body></html>`;
   const deck = await loadDeckPage({ collection, clipboard: false, deckLegality: false, deckTagSummary: false }, routes, deckHtml);
   const marks = [...deck.document.querySelectorAll('.stk-owned-row')];
   assertEqual(marks.map(mark => mark.textContent), ['3/4', '✓1'], 'a deck row says how many are owned against how many it plays');
   assert(marks[0].classList.contains('stk-owned-short') && !marks[1].classList.contains('stk-owned-short'),
     'and a row the collection does not cover is marked short');
+  assertEqual(deck.document.querySelectorAll('.deck-list-entry')[2].querySelector('.stk-owned-row'), null,
+    'basic lands are left unmarked, since collection exports rarely list them');
+  deck.mock.fireChanges({ collection: { oldValue: collection, newValue: { ...collection, byCard: { 'test card': 4, 'card 2': 1 } } } });
+  await sleep(20);
+  assertEqual([...deck.document.querySelectorAll('.stk-owned-row')].map(mark => mark.textContent), ['✓4', '✓1'],
+    'a collection loaded again in the settings shows on the open page');
+  deck.mock.fireChanges({ collection: { oldValue: collection, newValue: undefined } });
+  await sleep(20);
+  assertEqual(deck.document.querySelectorAll('.stk-owned-row').length, 0, 'and a deleted one takes its marks with it');
 }
 
 async function searchPageTest() {

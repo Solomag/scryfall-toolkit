@@ -615,8 +615,9 @@ async function firefoxBackgroundTest() {
       assertEqual(prices.ok, true, 'the clipboard total asks for prices by set and number');
       assertEqual(Object.keys(prices.data[0]).sort(), ['eur', 'number', 'set', 'tix', 'usd'],
         'and gets one row per printing with the three currencies');
-      assertEqual(await send({ type: 'clipboardPrices', cards: [{ set: 'x', number: '1' }] }),
-        { ok: false, error: 'Invalid cards' }, 'a set code Scryfall would refuse is refused here');
+      const mixed = await send({ type: 'clipboardPrices', cards: [{ set: 'x', number: '1' }, { set: 'mh3', number: '42' }] });
+      assertEqual([mixed.ok, mixed.data.length], [true, 1],
+        'a printing Scryfall would refuse is left out, and the rest are still priced');
     }
     {
       // The deck's cards by Tagger oracle tag, read off the cached index.

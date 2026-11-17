@@ -447,7 +447,7 @@ name itself, without the leading `.` or `#`.
 | `card-text` | class | src/card-page/edhrec.js |
 | `card-text-card-name` | class | src/card-page/clipboard.js, src/card-page/edhrec.js, src/card-page/owned.js, src/card-page/prices.js |
 | `card-text-mana-cost` | class | src/card-page/card.js |
-| `card-text-title` | class | src/card-page/clipboard.js, src/card-page/owned.js |
+| `card-text-title` | class | src/card-page/clipboard.js, src/card-page/owned.js, src/card-page/prices.js |
 | `card-text-type-line` | class | src/card-page/card.js |
 | `checklist` | class | src/card-page/clipboard.js |
 | `color-indicator` | class | src/card-page/card.js |

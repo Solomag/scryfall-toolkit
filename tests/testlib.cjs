@@ -332,6 +332,7 @@ function createPage(options) {
     // against other languages separately.
     navigator: { language: 'ru-RU', languages: ['ru-RU', 'ru', 'en-US'], clipboard: { writeText: text => { mock.clipboardWrites.push(text); return Promise.resolve(); } } },
     localStorage: createLocalStorage(options.localStorage),
+    sessionStorage: createLocalStorage(options.sessionStorage),
     confirm: () => (confirmQueue.length ? confirmQueue.shift() : true),
     MutationObserver: liveObserver,
     requestAnimationFrame: callback => setTimeout(() => callback(Date.now()), 0),

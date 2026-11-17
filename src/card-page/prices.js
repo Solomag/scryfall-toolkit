@@ -358,7 +358,13 @@
     if (setFilters.showStores === false) return;
     const list = [...document.querySelectorAll('#stores .toolbox-links')].pop();
     // The front face's name: every one of the three finds a double-faced card by it.
-    const name = document.querySelector('#main .card-text-card-name')?.textContent.trim();
+    // On a printing in another language the name on the page is the printed one; the shops
+    // index the English name, which Scryfall puts in brackets in the page's og:title.
+    const printedLang = document.querySelector('#main .card-text-title[lang]')?.getAttribute('lang');
+    const english = printedLang && printedLang !== 'en'
+      ? (document.querySelector('meta[property="og:title"]')?.getAttribute('content') || '').match(/\(([^()]+)\)\s*$/)?.[1]
+      : '';
+    const name = (english || document.querySelector('#main .card-text-card-name')?.textContent || '').trim();
     if (!list || !name || list.querySelector('.stk-shop-link')) return;
     for (const [shop, url] of EXTRA_SHOPS) {
       const item = document.createElement('li');

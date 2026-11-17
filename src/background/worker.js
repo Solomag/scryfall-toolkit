@@ -647,9 +647,13 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
     // Prices for the clipboard's total: each printing's own, from the collection endpoint
     // seventy-five at a time through the paced queue.
     if (message.type === 'clipboardPrices') {
-      const list = Array.isArray(message.cards) ? message.cards : [];
-      if (!list.length || list.length > 600 || list.some(card =>
-        !/^[a-z0-9_-]{3,6}$/i.test(card?.set || '') || !/^[a-z0-9★-]{1,24}$/i.test(card?.number || ''))) throw new Error('Invalid cards');
+      if (!Array.isArray(message.cards) || message.cards.length > 600) throw new Error('Invalid cards');
+      // A printing Scryfall would refuse is left out rather than failing the rest: one odd
+      // collector number must not take the whole clipboard's total with it. The caller
+      // treats a printing that comes back with no row as one with no price.
+      const list = message.cards.filter(card =>
+        /^[a-z0-9_-]{3,6}$/i.test(card?.set || '') && /^[a-z0-9★-]{1,24}$/i.test(card?.number || ''));
+      if (!list.length) return [];
       const out = [];
       for (let i = 0; i < list.length; i += 75) {
         const result = await scryfallJSON('https://api.scryfall.com/cards/collection', {
