@@ -3,7 +3,7 @@
 Things that are known, agreed, and not being worked on right now. Nothing here is a
 defect: each is either a deliberate deferral or work waiting on a decision.
 
-Last updated 2026-11-13.
+Last updated 2026-11-17.
 
 ---
 
@@ -28,12 +28,28 @@ than the answer and is the first thing a reader will otherwise re-litigate.
 
 ## To do
 
-Nothing scheduled. The two picture items that were here are closed below (rows 6 and 7).
+Nothing scheduled.
 
-The deck editor is the one part not checked on the live site by the tools: Scryfall's
-deck pages sit behind a Cloudflare check that refuses an automated browser, and the editor
-needs an account. It was checked by hand in 2026-10 (closed row 1); after a change to
-`src/deck-page/`, check it by hand again.
+The deck editor needs an account, so the tools cannot reach it on their own. It can still
+be checked live: sign in once in a visible Chrome for Testing window with the repository
+loaded as the extension and a profile kept under `dist/` (with `--remote-debugging-port`),
+then drive it over CDP. That is how it was checked on 2026-11-17 (closed row 10). After a
+change to `src/deck-page/` or `edhrec.js`, do it again.
+
+## Ideas
+
+Found by surveying about fifteen other Scryfall extensions (Chrome Web Store, AMO, GitHub)
+on 2026-11-13. None is agreed; each is a candidate, in rough order of usefulness. Search
+suggestions and saved searches came from the same survey and shipped in 2.4.5.
+
+| | Idea | Seen in | Notes |
+|---|---|---|---|
+| 1 | **Default search filters** — a clause such as `game:paper` or `lang:en` added to every search | Better Scryfall, Scryfall Buddy, Scryfall Auto Filter | The digital-set filter already does a narrow version of this. Must show on the page that a filter is active, or results will look wrong with no visible cause. |
+| 2 | **Copy every card in the results** to the clipboard in one click | Scryfall Enhancer | Small. A search can be hundreds of cards over many pages, so it needs the API (`/cards/search` pages) and the rate-limit queues, not the visible grid. |
+| 3 | **Deck legality in the extra formats** (Premodern and the others) for a whole deck, not one card | Scryfall Casual Challenge Checker | The format catalogue exists; the deck page would need to check every card and say which fail. |
+| 4 | **More shops** — Mana Pool, Card Kingdom, Cardsphere links and prices beside CardTrader | ScryBuy (the most-used one found, ~200 users) | Each shop is its own API and terms question, as CardTrader was (decided row 2). ScryBuy's links are affiliate links; ours should not be. |
+| 5 | **Search Scryfall from the context menu and the address bar** (`omnibox`) | Scryfall Context Menu | Needs the `contextMenus` permission, which is a new line in the store review; worth it only if asked for. |
+| 6 | **A form-based query builder** synced with the search box | Yassir | Doubtful: it duplicates Scryfall's own Advanced Search page. |
 
 ## Closed
 
@@ -43,10 +59,12 @@ needs an account. It was checked by hand in 2026-10 (closed row 1); after a chan
 | 2 | **A fourth Shambleshark module** | Ported and removed. `card-input-modifier` showed a card image on hovering a deck row; Scryfall's own tooltip covered the deck and the site already previews cards on hover, so it made the editor worse and duplicated the site. No code from it is in the package. |
 | 3 | **Rate limits, checked against the page that states them** | Done, 2026-10-01. Reading <https://scryfall.com/docs/api/rate-limits> rather than trusting the number already in the code found that one 130 ms slot for everything was about four times their limit for `/cards/search`, `/cards/named` and `/cards/collection` — the endpoints the finish column, the EDHREC artwork, the deck search and the hover preview all use. There was also no hold-back on a 429, and their page says a 429 means thirty seconds of limitation and then a possible ban. Each class now has its own queue at their published ceiling plus a margin, every call to the host goes through one of them, and a 429 holds all of them. The test that checks this reads the ceilings out of the source, because a `const` in a `vm` script is not reachable from the test context and because the numbers are the thing being asserted. |
 | 4 | **Split `content.js`** | Done, 2026-10-01. `content.js` was 1901 lines in one closure holding the clipboard, tags, print manipulation, CardTrader, EDHREC, formats, the deck page and the set filters. It is now `src/card-page/core.js` (the settings, what page this is, the request wrapper, the shared clipboard, the hover preview, and the boot) and nine feature files. Every line of logic was moved as it stands rather than retyped, and a check confirmed it: of 1692 code lines, the only ones absent afterwards are the four `let` declarations that became one `shared` object and the eighteen `if (settings.x) initY();` lines that became the boot list. Nothing else moved. The CSS half and the contract layer it was really about followed: the theme is seven files under `src/styles/theme/`, and `docs/scryfall-dom.md` names every Scryfall class and the file that uses it (below). |
-| 5 | **Chrome Web Store review** | Cleared. 2.4.3 is live in the Chrome Web Store (updated 2026-10-16) and on addons.mozilla.org. 2.4.4 was submitted to both on 2026-11-13 by the release workflow itself (`.github/workflows/release.yml`) and is in their review queues. |
+| 5 | **Store review** | Cleared. 2.4.4 (2026-11-13) and 2.4.5 (2026-11-14) were both submitted by the release workflow itself (`.github/workflows/release.yml`) and both passed review; 2.4.5 is live in the Chrome Web Store and on addons.mozilla.org. |
 | 6 | **Illustrations of the panels, on real data** | Done, 2026-11-13. The five pictures in `assets/shots/` are photographs of scryfall.com with the extension loaded in Chrome for Testing and drawing its own panels (`npm run shots`); see decided row 4. EDHREC is still not pictured: its permission is optional and Chrome grants it only after a click. |
 | 7 | **Store screenshots of Scryfall itself** | Done, 2026-11-13. Store slots 1 and 2 are live captures — a card page, and a search page with the clipboard open beside one row of cards — at the store's 1280×800, uncropped and with nothing drawn over a card. Slots 3–5 are the settings page in three tiles instead of five. See section 7 of the store listing. |
 | 8 | **Review fixes checked on the live site** | Done, 2026-11-13, for 2.4.4. With the extension loaded in Chrome for Testing: a card page, a double-faced card, search results, a set page, a Tagger card page and the home page all drew their panels, and none logged an error. |
+| 9 | **Search suggestions and saved searches** | Shipped in 2.4.5 (2026-11-14), with the add button in the text, checklist and full search views. The first two items of the extension survey (Ideas, above). |
+| 10 | **2.4.5 checked live in Chrome and Firefox** | Done, 2026-11-17. Chrome for Testing: search in all four views, suggestions, the save star, a card page; signed in, the deck editor and EDHREC suggestions, where Add and Remove changed the deck on the server. Firefox 159, with the AMO package installed over WebDriver BiDi: the same search and card-page checks, and no console errors. The deck editor was not repeated in Firefox (no signed-in profile there). |
 
 **The second layer, done.** 270 names of Scryfall's own markup are no longer reached for from
 wherever they are needed. `docs/scryfall-dom.md` lists every one of them, the page family it
