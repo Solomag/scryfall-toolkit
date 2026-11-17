@@ -245,6 +245,15 @@ async function fetchMock(url, init) {
       if (q.includes(QUERY_ID)) return jsonResponse({ total_cards: 1, data: [{ legalities: { legacy: 'legal' } }] });
       return jsonResponse({ total_cards: 0, data: [] });
     }
+    if (q === 'stk-all') { // searchAll: two pages, and one card whose page is not on scryfall.com
+      const page = Number(parsed.searchParams.get('page') || 1);
+      const card = n => ({ name: 'Card ' + n, set: 'tst', collector_number: String(n),
+        scryfall_uri: 'https://scryfall.com/card/tst/' + n + '/card-' + n + '?utm_source=api' });
+      if (page === 1) return jsonResponse({ total_cards: 4, has_more: true,
+        next_page: 'https://api.scryfall.com/cards/search?q=stk-all&page=2',
+        data: [card(1), card(2), { ...card(9), scryfall_uri: 'https://evil.example/card/tst/9' }] });
+      return jsonResponse({ total_cards: 4, has_more: false, data: [card(3)] });
+    }
     if (parsed.searchParams.get('unique') === 'prints') { // allPrints
       if (q.includes(EVIL_PRINTS_ID)) {
         return jsonResponse({ data: [PRINT_A], has_more: true, next_page: 'https://evil.example/steal' });
@@ -1047,6 +1056,15 @@ console.log('background.js: setCategories caching');
     assertEqual(badFinishes, { ok: false, error: 'Invalid printing IDs' }, 'malformed ids are rejected');
     const tooMany = await send({ type: 'finishes', ids: Array.from({ length: 76 }, () => FIN_ID_1) });
     assertEqual(tooMany, { ok: false, error: 'Invalid printing IDs' }, 'more than 75 ids are rejected');
+
+console.log('background.js: searchAll message');
+    const all = await send({ type: 'searchAll', query: 'stk-all', unique: 'cards', order: 'name', dir: 'asc' });
+    assertEqual(all.ok, true, 'searchAll succeeds');
+    assertEqual(all.data.cards.map(card => card.number), ['1', '2', '3'], 'every page is walked, and a card off scryfall.com is dropped');
+    assertEqual(all.data.cards[0], { name: 'Card 1', url: 'https://scryfall.com/card/tst/1/card-1', set: 'tst', number: '1' },
+      'saved in the clipboard shape, with the tracking query taken off the link');
+    assertEqual([all.data.total, all.data.truncated], [4, false], 'with the total, and not cut short');
+    assertEqual(await send({ type: 'searchAll', query: '' }), { ok: false, error: 'Invalid search query' }, 'an empty query is refused');
 
 console.log('background.js: allPrints message');
     const badOracle = await send({ type: 'allPrints', oracleId: 'nope' });

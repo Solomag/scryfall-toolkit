@@ -738,6 +738,59 @@ async function searchAssistTest() {
   assertEqual(mock.state.savedSearchList, ['t:goblin'], 'only that one');
 }
 
+// The default filter, added to a search as the form is sent, and "add all" in the clipboard.
+async function searchFilterAndAddAllTest() {
+  console.log('content scripts: default search filter and add all results');
+  const html = `<!DOCTYPE html><html><body>
+    <form action="/search"><input id="header-search-field" name="q" value=""></form>
+    <div class="search-info"><p><strong>1 – 60 of 3 cards</strong></p></div>
+    <div id="main"></div></body></html>`;
+  let asked = null;
+  const page = createPage({
+    url: 'https://scryfall.com/search?q=t%3Agoblin+game%3Apaper&order=name', html,
+    state: { settingsLanguage: 'en', defaultSearchFilter: 'game:paper lang:en', cards: [
+      { name: 'Card 1', url: 'https://scryfall.com/card/tst/1/card-1', set: 'tst', number: '1' }] },
+    routes: { ...routes, searchAll: message => { asked = message; return { total: 3, truncated: false, cards: [
+      { name: 'Card 1', url: 'https://scryfall.com/card/tst/1/card-1', set: 'tst', number: '1' },
+      { name: 'Card 2', url: 'https://scryfall.com/card/tst/2/card-2', set: 'tst', number: '2' },
+      { name: 'Card 3', url: 'https://scryfall.com/card/tst/3/card-3', set: 'tst', number: '3' }] }; } }
+  });
+  await page.script('src/core/i18n.js');
+  await page.script('src/core/format-catalog.js');
+  await page.script('src/core/tag-icons.js');
+  await page.cardPage();
+  await sleep(60);
+  const { document, mock } = page;
+  const input = document.getElementById('header-search-field');
+  const form = document.querySelector('form');
+  form.addEventListener('submit', event => event.preventDefault());
+
+  input.value = 't:goblin';
+  fireEvent(form, 'submit');
+  assertEqual(input.value, 't:goblin game:paper lang:en', 'the filter is added as the search is sent');
+  input.value = 't:goblin game:arena';
+  fireEvent(form, 'submit');
+  assertEqual(input.value, 't:goblin game:arena lang:en', 'but a keyword the query already has is left as typed');
+  input.value = 't:goblin or t:elf';
+  fireEvent(form, 'submit');
+  assertEqual(input.value, '(t:goblin or t:elf) game:paper lang:en', 'and an "or" is bracketed so the filter covers both sides');
+  input.value = '';
+  fireEvent(form, 'submit');
+  assertEqual(input.value, '', 'an empty box is left empty');
+
+  const note = document.querySelector('.search-info .stk-filter-note');
+  assert(note && note.textContent.includes('game:paper'), 'the results page says the filter was added');
+  assertEqual(new URL(note.querySelector('a').getAttribute('href'), 'https://scryfall.com').searchParams.get('q'), 't:goblin', 'and links to the search without it');
+
+  const all = document.querySelector('.search-info .stk-add-all');
+  assert(all, 'the result count has an "add all" button');
+  click(all);
+  await waitFor(() => mock.state.cards.length === 3, 'every result is added');
+  assertEqual([asked.query, asked.order], ['t:goblin game:paper', 'name'], 'asked for with the page\'s own query and order');
+  assertEqual(mock.state.cards.map(card => card.number), ['1', '2', '3'], 'a card already there is not added twice');
+  assertEqual(all.textContent, '✓ 2 added', 'and the button says how many were new');
+}
+
 async function searchPageTest() {
   console.log('content scripts: search page');
   const html = `<!DOCTYPE html><html><body><div id="main" class="card-grid">
@@ -1510,6 +1563,7 @@ async function cardTraderCurrencyTest() {
     await searchPageTest();
     await searchViewsTest();
     await searchAssistTest();
+    await searchFilterAndAddAllTest();
     await clipboardDisabledTest();
     await legacyMigrationTest();
     await advancedPriceFilterTest();

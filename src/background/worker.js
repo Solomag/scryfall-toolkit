@@ -689,6 +689,41 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
       }).filter(card => card.id);
       return { cards, hasMore: Boolean(result.has_more), page };
     }
+    if (message.type === 'searchAll') {
+      // Every result of the search on screen, for the clipboard's "add all". The page
+      // shows 60 at a time and the reader wants the list, so this walks the API's pages
+      // through the same paced queue as every other /cards/search call, and stops at
+      // MAX_PAGES rather than letting a search for "t:creature" run for minutes.
+      const MAX_PAGES = 10;
+      const query = String(message.query || '').trim();
+      if (!query || query.length > 1000 || /[<>\u0000-\u001f]/.test(query)) throw new Error('Invalid search query');
+      const unique = ['cards', 'prints', 'art'].includes(message.unique) ? message.unique : 'cards';
+      const params = new URLSearchParams({ q: query, unique });
+      if (/^[a-z]{1,20}$/.test(String(message.order || ''))) params.set('order', message.order);
+      if (['asc', 'desc', 'auto'].includes(message.dir)) params.set('dir', message.dir);
+      let url = 'https://api.scryfall.com/cards/search?' + params;
+      const cards = [];
+      let total = 0;
+      for (let page = 0; page < MAX_PAGES && url; page++) {
+        const response = await scryfallJSON(url);
+        if (!Array.isArray(response.data)) throw new Error('Invalid search result');
+        total = Number(response.total_cards) || total;
+        for (const card of response.data) {
+          const uri = card.scryfall_uri && new URL(card.scryfall_uri);
+          if (!uri || uri.protocol !== 'https:' || uri.hostname !== 'scryfall.com' || !uri.pathname.startsWith('/card/')) continue;
+          cards.push({
+            name: String(card.name || '').slice(0, 200),
+            url: uri.origin + uri.pathname,
+            set: String(card.set || '').slice(0, 16),
+            number: String(card.collector_number || '').slice(0, 16)
+          });
+        }
+        const next = response.has_more && response.next_page ? new URL(response.next_page) : null;
+        if (next && (next.protocol !== 'https:' || next.hostname !== 'api.scryfall.com' || next.pathname !== '/cards/search')) throw new Error('Invalid next page');
+        url = next?.href || '';
+      }
+      return { cards: cards.filter(card => card.name && card.set && card.number), total, truncated: Boolean(url) };
+    }
     if (message.type === 'cardtrader') {
       const id = String(message.id), set = String(message.set);
       if (!/^[0-9a-f-]{36}$/.test(id) || !/^[a-z0-9_-]{1,16}$/i.test(set)) throw new Error('Invalid card');

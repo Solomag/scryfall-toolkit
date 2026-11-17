@@ -27,8 +27,6 @@
 (async () => {
   const { settings, request } = await self.STK_CONTENT.context;
 
-  async function initSearchAssist() {
-
   // Scryfall's keywords, with the short forms it accepts. Only the first name of each
   // group is offered; the others are recognised when typed.
   const KEYWORDS = [
@@ -43,6 +41,8 @@
   ];
   const FAMILY = new Map();
   for (const group of KEYWORDS) for (const name of group) FAMILY.set(name, group[0]);
+
+  async function initSearchAssist() {
 
   const COLORS = ['w', 'u', 'b', 'r', 'g', 'c', 'm', 'colorless', 'multicolor', 'azorius', 'dimir', 'rakdos',
     'gruul', 'selesnya', 'orzhov', 'izzet', 'golgari', 'boros', 'simic', 'bant', 'esper', 'grixis', 'jund',
@@ -347,5 +347,73 @@
 
   }
 
+
+  // --- the default filter -------------------------------------------------------------
+  //
+  // Clauses the reader wants on every search ("game:paper", "lang:en"), added when a
+  // search form is sent. A clause is left out when the query already says something
+  // with the same keyword, so "game:arena" typed by hand is not overruled. It is added
+  // to the query itself, so the box on the results page shows it; a note beside the
+  // result count says it was added and links to the same search without it.
+  function splitClauses(text) {
+    return String(text || '').match(/-?[a-z]+(?::|=|!=|>=|<=|>|<)"[^"]*"|"[^"]*"|\S+/gi) || [];
+  }
+  function keyOf(clause) {
+    const match = clause.match(/^-?([a-z]+)(?::|=|!=|>=|<=|>|<)/i);
+    return match ? FAMILY.get(match[1].toLowerCase()) || match[1].toLowerCase() : null;
+  }
+  function withFilter(query, filter) {
+    const tokens = splitClauses(query);
+    if (!tokens.length) return query;
+    const keys = new Set(tokens.map(keyOf).filter(Boolean));
+    const lower = tokens.map(token => token.toLowerCase());
+    const missing = splitClauses(filter).filter(clause => {
+      const key = keyOf(clause);
+      return key ? !keys.has(key) : !lower.includes(clause.toLowerCase());
+    });
+    if (!missing.length) return query;
+    // "a or b game:paper" is "a or (b and game:paper)" to Scryfall.
+    const base = /(^|\s)or(\s|$)/i.test(query) ? `(${query.trim()})` : query.trim();
+    return base + ' ' + missing.join(' ');
+  }
+  function withoutFilter(query, filter) {
+    const drop = new Set(splitClauses(filter).map(clause => clause.toLowerCase()));
+    let rest = splitClauses(query).filter(token => !drop.has(token.toLowerCase())).join(' ');
+    if (/^\(.*\)$/.test(rest) && /(^|\s)or(\s|$)/i.test(rest)) rest = rest.slice(1, -1);
+    return rest;
+  }
+
+  function initDefaultFilter() {
+    const filter = String(settings.defaultSearchFilter || '').trim().slice(0, 200);
+    if (!filter) return;
+    document.addEventListener('submit', event => {
+      const form = event.target;
+      const input = form?.querySelector?.('input[name="q"]');
+      if (!input || !input.value.trim()) return;
+      let target;
+      try { target = new URL(form.getAttribute('action') || location.href, location.href); } catch { return; }
+      if (!/(^|\.)scryfall\.com$/.test(target.hostname) || target.pathname !== '/search') return;
+      input.value = withFilter(input.value, filter);
+    }, true);
+
+    if (location.pathname !== '/search') return;
+    const params = new URLSearchParams(location.search);
+    const query = params.get('q') || '';
+    const used = splitClauses(filter).filter(clause => splitClauses(query).some(token => token.toLowerCase() === clause.toLowerCase()));
+    const info = document.querySelector('.search-info');
+    if (!used.length || !info) return;
+    params.set('q', withoutFilter(query, filter));
+    const note = document.createElement('span');
+    note.className = 'stk-filter-note';
+    note.textContent = 'Default filter: ' + used.join(' ') + ' ';
+    note.title = 'Added by Scryfall Toolkit; change it in the extension settings';
+    const off = document.createElement('a');
+    off.href = '/search?' + params;
+    off.textContent = 'search without it';
+    note.append(off);
+    (info.querySelector('p') || info).append(note);
+  }
+
+  self.STK_CONTENT.on("defaultSearchFilter", () => initDefaultFilter());
   self.STK_CONTENT.on("searchAssist", () => initSearchAssist());
 })();

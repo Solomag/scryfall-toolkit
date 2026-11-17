@@ -44,6 +44,9 @@
 <p class="hint">Подсказывает ключевые слова (t:, otag:, set:…) и их значения: теги из Tagger, сеты, форматы, цвета. Стрелки выбирают, Enter или Tab вставляют, Esc закрывает.</p>
 <label><input type="checkbox" id="savedSearches"> Сохранённые поиски</label>
 <p class="hint">Звёздочка рядом с числом найденных карт сохраняет поиск. Сохранённые поиски появляются, когда пустое поле поиска в фокусе.</p>
+<label for="defaultSearchFilter">Фильтр для каждого поиска</label>
+<input id="defaultSearchFilter" type="text" maxlength="200" autocomplete="off" spellcheck="false" placeholder="game:paper lang:en">
+<p class="hint">Добавляется к каждому поиску на Scryfall, если в запросе ещё нет условия с тем же ключевым словом. Рядом с числом найденных карт видно, что фильтр добавлен, и есть ссылка на тот же поиск без него. Пусто — выключено.</p>
 </section>
 
 <section id="visibilityGroup"><div class="section-head"><h2>Видимость</h2>

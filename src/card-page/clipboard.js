@@ -290,8 +290,45 @@
         add.classList.toggle("stk-selected", selected);
       }
     }
+    // "Add all": every result of the search on screen, not only the sixty the page
+    // shows. The worker walks the API's pages; cards already in the clipboard are left
+    // where they are, and the button says how many were new.
+    function addAllButton() {
+      if (location.pathname !== '/search') return;
+      const params = new URLSearchParams(location.search);
+      const query = (params.get('q') || '').trim();
+      const info = document.querySelector('.search-info');
+      if (!query || !info || info.querySelector('.stk-add-all')) return;
+      const all = button('+ All', async () => {
+        const shown = (info.textContent.match(/of\s+([\d,]+)/) || [])[1];
+        const count = shown ? Number(shown.replace(/,/g, '')) : 0;
+        if (count > 175 && !confirm(`Add all ${count} cards to the clipboard?` +
+          (count > 1750 ? ' Only the first 1750 will be added.' : ''))) return;
+        all.disabled = true;
+        all.textContent = 'Adding…';
+        try {
+          const result = await request({ type: 'searchAll', query,
+            unique: params.get('unique') || 'cards', order: params.get('order') || '', dir: params.get('dir') || '' });
+          const have = new Set(cards.map(entryKey));
+          const fresh = result.cards.filter(card => !have.has(entryKey(card)) && have.add(entryKey(card)));
+          cards.push(...fresh);
+          await persist();
+          all.textContent = `✓ ${fresh.length} added`;
+          all.title = result.truncated ? `Only the first ${result.cards.length} of ${result.total} were added` : '';
+        } catch {
+          all.textContent = '+ All';
+          all.title = 'Could not load the results';
+        }
+        all.disabled = false;
+      });
+      all.className = 'stk-add-all';
+      all.title = 'Add every result of this search to the clipboard';
+      all.setAttribute('aria-label', all.title);
+      (info.querySelector('p') || info).append(all);
+    }
     render();
     scan();
+    addAllButton();
     let pending = false;
     const ADDABLE = ".card-grid-item, .card-image, a.text-grid-item, table.checklist tr";
     new MutationObserver(mutations => {

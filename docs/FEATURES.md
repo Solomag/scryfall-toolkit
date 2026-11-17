@@ -32,6 +32,11 @@ bottom right. Each row shows the card's set code and collector number beside its
 - Without a set on the line, printings of the same card are **counted**: three of Mana
   Drain copy as `3 Mana Drain`, not as three identical lines. With a set on the line they
   stay separate, because that is what tells them apart.
+- **Add all.** On a search page, `+ All` at the end of the result-count line adds every
+  result of the search, not only the sixty on screen. The worker reads the API's pages
+  through the same paced queue as every other search (at most ten pages, 1750 cards), in
+  the page's own order; cards already in the clipboard are left where they are, and the
+  button says how many were new. Over 175 results it asks first.
 - The same clipboard, formats and rules appear on Tagger pages. The two pages hold one
   clipboard between them and used to format it separately; the rules now live in
   `src/core/clipboard-format.js`, which both load.
@@ -85,7 +90,14 @@ it saves that query, and pressed again forgets it. Focusing an empty search box 
 queries, newest first; picking one runs it, and × forgets it. Up to fifty are kept, in the
 browser's own storage and nowhere else.
 
-Both have a switch under **Search** on the settings page and are on by default.
+**Default filter.** Clauses written under **Search** on the settings page (`game:paper`,
+`lang:en`…) are added to every search sent from a Scryfall search box. A clause is skipped when
+the query already has a condition with the same keyword, so `game:arena` typed by hand wins;
+a query with `or` in it is bracketed first, so the filter covers both sides. The filter goes
+into the query itself, so the results page shows it in the box, and a note beside the result
+count names it and links to the same search without it. Empty, the default, means off.
+
+The first two have a switch under **Search** on the settings page and are on by default.
 
 ## Prints
 

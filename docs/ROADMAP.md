@@ -40,12 +40,13 @@ change to `src/deck-page/` or `edhrec.js`, do it again.
 
 Found by surveying about fifteen other Scryfall extensions (Chrome Web Store, AMO, GitHub)
 on 2026-11-13. None is agreed; each is a candidate, in rough order of usefulness. Search
-suggestions and saved searches came from the same survey and shipped in 2.4.5.
+suggestions and saved searches came from the same survey and shipped in 2.4.5; rows 1 and 2
+are done on `main` and wait for the next release.
 
 | | Idea | Seen in | Notes |
 |---|---|---|---|
-| 1 | **Default search filters** — a clause such as `game:paper` or `lang:en` added to every search | Better Scryfall, Scryfall Buddy, Scryfall Auto Filter | The digital-set filter already does a narrow version of this. Must show on the page that a filter is active, or results will look wrong with no visible cause. |
-| 2 | **Copy every card in the results** to the clipboard in one click | Scryfall Enhancer | Small. A search can be hundreds of cards over many pages, so it needs the API (`/cards/search` pages) and the rate-limit queues, not the visible grid. |
+| 1 | **Done, unreleased.** **Default search filters** — a clause such as `game:paper` or `lang:en` added to every search | Better Scryfall, Scryfall Buddy, Scryfall Auto Filter | The digital-set filter already does a narrow version of this. Must show on the page that a filter is active, or results will look wrong with no visible cause. |
+| 2 | **Done, unreleased.** **Copy every card in the results** to the clipboard in one click | Scryfall Enhancer | Small. A search can be hundreds of cards over many pages, so it needs the API (`/cards/search` pages) and the rate-limit queues, not the visible grid. |
 | 3 | **Deck legality in the extra formats** (Premodern and the others) for a whole deck, not one card | Scryfall Casual Challenge Checker | The format catalogue exists; the deck page would need to check every card and say which fail. |
 | 4 | **More shops** — Mana Pool, Card Kingdom, Cardsphere links and prices beside CardTrader | ScryBuy (the most-used one found, ~200 users) | Each shop is its own API and terms question, as CardTrader was (decided row 2). ScryBuy's links are affiliate links; ours should not be. |
 | 5 | **Search Scryfall from the context menu and the address bar** (`omnibox`) | Scryfall Context Menu | Needs the `contextMenus` permission, which is a new line in the store review; worth it only if asked for. |

@@ -168,7 +168,7 @@ input[type=checkbox]:disabled{opacity:.4;cursor:default}
 label:has(> input[type=checkbox]:disabled){cursor:default;opacity:.55}
 fieldset:disabled{opacity:.55}
 fieldset{border:1px solid #655968;border-radius:5px;margin:16px 0 4px;padding:7px 12px 12px}legend{padding:0 6px;color:#e4c7ea}
-select,input[type=password]{width:100%;padding:8px;margin-top:4px;color:#e9e5ee;background:#24242a;border:1px solid #6a6070;border-radius:4px}
+select,input[type=password],input[type=text]{width:100%;padding:8px;margin-top:4px;color:#e9e5ee;background:#24242a;border:1px solid #6a6070;border-radius:4px}
 .salt-thresholds{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px}.salt-thresholds label{display:flex;align-items:center;gap:8px}.salt-thresholds input{width:72px;padding:5px;color:#e9e5ee;background:#24242a;border:1px solid #6a6070;border-radius:4px}
 .salt-thresholds[hidden]{display:none}
 button{background:#473b50;color:#f1e8f3;border:1px solid #88758d;border-radius:4px;cursor:pointer;padding:7px 10px}button:hover{background:#5d4b68}

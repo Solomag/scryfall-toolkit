@@ -216,3 +216,6 @@ html.stk-hide-caster #caster-tray{display:none!important}
 #stk-suggest .stk-suggest-remove:hover{color:#fff}
 .stk-save-search{margin-right:8px;padding:0 4px;background:none;border:0;color:inherit;font-size:18px;line-height:1;vertical-align:-2px;cursor:pointer;opacity:.7}
 .stk-save-search:hover,.stk-save-search.stk-selected{opacity:1;color:#e8c15a}
+.stk-add-all{margin-left:10px;padding:1px 8px;border:1px solid currentColor;border-radius:4px;background:none;color:inherit;font:inherit;font-size:12px;cursor:pointer;opacity:.75}
+.stk-add-all:hover{opacity:1}.stk-add-all:disabled{cursor:progress;opacity:.5}
+.stk-filter-note{margin-left:10px;font-size:12px;opacity:.75}.stk-filter-note a{color:inherit;text-decoration:underline}
