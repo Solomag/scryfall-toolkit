@@ -1,4 +1,4 @@
-# Chrome Web Store listing — Scryfall Toolkit 2.4.5
+# Chrome Web Store listing — Scryfall Toolkit 2.4.6
 
 Everything here is written from the shipped code, so that the answers given in the store
 console match what the extension actually does. Where a field needs a decision from the

@@ -8,6 +8,28 @@ All releases: <https://github.com/Solomag/scryfall-toolkit/releases>
 
 ---
 
+### 2.4.6 - a filter for every search, add all results, deck legality in any format, and more
+
+**Default search filter.** A filter written under Search in the settings (`game:paper`, `lang:en`…)
+is added to every search sent from a Scryfall search box, unless the query already has a condition
+with the same keyword. The results page names it and links to the same search without it.
+
+**`+ All`** beside the result count adds every result of a search to the clipboard, not only the
+sixty on screen — up to 1750 cards, read through the paced API queue. Cards already there are not
+added twice.
+
+**Deck legality in any format.** The check on deck pages has a format picker: Commander first, then
+every other format Scryfall rules on, and Heritage, Classic Legacy and Peak Legacy when they are on.
+
+**More shops.** Card pages get "Search on" links to Card Kingdom, Mana Pool and Cardsphere in the
+buy block: searches by name, with no prices fetched and no affiliate code. Own switch.
+
+**Search Scryfall from anywhere.** "Search Scryfall for …" in the right-click menu on selected text
+(this adds the `contextMenus` permission), and `sf` plus a space in the address bar.
+
+**Query builder.** A form on the home page and beside the result count for name, type, rules text,
+colours, mana value, format, rarity and set; it shows the whole query before running it.
+
 ### 2.4.5 - search suggestions, saved searches, and the clipboard's + in every search view
 
 **Search help.** Scryfall's search boxes suggest the syntax as it is typed: the keywords, and the
