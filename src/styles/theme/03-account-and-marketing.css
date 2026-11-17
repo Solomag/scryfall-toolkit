@@ -95,9 +95,9 @@ html.stk-dark #main .reference-jump svg [fill="#000"]{fill:#bfb4c8!important}
 
 /* The blog index keeps its post cards, its embedded deck lists and the pills
    above them in Scryfall's white. */
-html.stk-dark.stk-blog-page #main :is(.blog-post-small,.blog-post-small-header,.blog-post-small-content,.blog-post-small>.inner-flex){background-image:none!important;background-color:var(--stk-page)!important;color:var(--stk-ink)!important;border-color:var(--stk-border-2)!important}
-html.stk-dark.stk-blog-page #main :is(.blog-post-metadata,.blog-index,.blog-category) :is(.button-n.tiny-n,.tiny-n){background-color:var(--stk-panel)!important;color:var(--stk-link)!important;border-color:var(--stk-border-2)!important}
-html.stk-dark.stk-blog-page #main :is(.blog-post-metadata,.blog-index,.blog-category) :is(.muted-n,.tiny-n.muted-n){color:#a8a2af!important}
+html.stk-dark.stk-blog-page #main :is(.blog-post-small,.blog-post-small-content,.blog-post-small>.inner-flex){background-image:none!important;background-color:var(--stk-page)!important;color:var(--stk-ink)!important;border-color:var(--stk-border-2)!important}
+html.stk-dark.stk-blog-page #main :is(.blog-post-metadata) :is(.button-n.tiny-n,.tiny-n){background-color:var(--stk-panel)!important;color:var(--stk-link)!important;border-color:var(--stk-border-2)!important}
+html.stk-dark.stk-blog-page #main :is(.blog-post-metadata) :is(.muted-n,.tiny-n.muted-n){color:#a8a2af!important}
 html.stk-dark.stk-blog-page #main :is(.blog-post-small,.blog-post-large) :is(p,strong,span,h1,h2,h3,h4){color:var(--stk-ink)!important}
 /* A post can embed a deck list, which brings its own white panel and its own
    grey ink with it. */

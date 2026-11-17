@@ -68,10 +68,7 @@ Scryfall knows nothing about.
 
 | Class | Rules reaching for it | Part |
 | --- | --- | --- |
-| `.blog-category` | 4 | `02-shared-pages`, `03-account-and-marketing` |
-| `.blog-index` | 4 | `02-shared-pages`, `03-account-and-marketing` |
 | `.blog-post-large` | 4 | `02-shared-pages`, `03-account-and-marketing` |
-| `.blog-post` | 3 | `02-shared-pages` |
 | `.button-n` | 3 | `01-card-page`, `02-shared-pages`, `03-account-and-marketing`, `04-surfaces`, `06-shared-surfaces` |
 | `.scryfall-decklist-embed` | 3 | `03-account-and-marketing` |
 | `.blog-orbit` | 2 | `02-shared-pages` |
@@ -84,14 +81,8 @@ Scryfall knows nothing about.
 | `.inner-flex` | 2 | `01-card-page`, `02-shared-pages`, `03-account-and-marketing` |
 | `.scryfall-decklist-embed-title` | 2 | `03-account-and-marketing` |
 | `.tiny-n` | 2 | `03-account-and-marketing` |
-| `.blog-articles` | 1 | `02-shared-pages` |
-| `.blog-content` | 1 | `02-shared-pages` |
-| `.blog-pagination` | 1 | `02-shared-pages` |
-| `.blog-post-content` | 1 | `02-shared-pages` |
-| `.blog-post-large-body` | 1 | `02-shared-pages` |
 | `.blog-post-large-header` | 1 | `02-shared-pages` |
 | `.blog-post-small-content` | 1 | `03-account-and-marketing`, `04-surfaces` |
-| `.blog-post-small-header` | 1 | `03-account-and-marketing` |
 | `.muted-n` | 1 | `03-account-and-marketing`, `04-surfaces` |
 | `.posts` | 1 | `02-shared-pages` |
 | `.scryfall-decklist-embed-card` | 1 | `03-account-and-marketing` |
@@ -115,9 +106,6 @@ Scryfall knows nothing about.
 | `.faq-link` | 3 | `02-shared-pages` |
 | `.reference-block` | 2 | `01-card-page`, `02-shared-pages`, `03-account-and-marketing` |
 | `.reference-example` | 2 | `01-card-page`, `02-shared-pages`, `03-account-and-marketing` |
-| `.bot` | 1 | `02-shared-pages` |
-| `.bot-card` | 1 | `02-shared-pages` |
-| `.bots-list` | 1 | `02-shared-pages` |
 | `.box` | 1 | `02-shared-pages` |
 | `.box-header` | 1 | `02-shared-pages` |
 | `.button-n` | 1 | `01-card-page`, `02-shared-pages`, `03-account-and-marketing`, `04-surfaces`, `06-shared-surfaces` |
@@ -480,7 +468,6 @@ name itself, without the leading `.` or `#`.
 | `sidebar-prices` | class | src/card-page/deck-lists.js |
 | `sidebar-toolbox` | class | src/card-page/prices.js |
 | `text-grid-item` | class | src/card-page/clipboard.js |
-| `toolbox-disclaimer` | class | src/card-page/prices.js |
 | `toolbox-links` | class | src/card-page/prices.js |
 | `[data-entry]` | attribute | src/deck-page/clean-up.js |
 | `deckbuilder` | id | src/deck-page/edhrec.js, src/deck-page/search.js |
@@ -493,5 +480,5 @@ name itself, without the leading `.` or `#`.
 
 ---
 
-Total: **362** Scryfall class names.
+Total: **350** Scryfall class names.
 

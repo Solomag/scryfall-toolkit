@@ -141,7 +141,7 @@ html.stk-dark #main #stk-tags a{color:var(--stk-link-purple)!important}
 html.stk-dark #main :is(.reference-block,.reference-block-doc,.reference-block-examples,.reference-jump,h1,h2,h3,h4,h5,h6){text-shadow:none!important;-webkit-text-stroke:0!important}
 html.stk-dark #main ::selection{background:#705488!important;color:#fff!important;text-shadow:none!important}
 html.stk-dark #main :is(mark,.highlight,.search-highlight){background:#59476a!important;color:#fff!important;text-shadow:none!important}
-html.stk-dark.stk-docs-page #main :is(.box,.panel,.well,.bot,.bot-card,.bots-list,.faq,.faq-answer,.faq-question,.reference-example,.reference-block){background:var(--stk-page)!important;color:var(--stk-ink)!important;border-color:var(--stk-border-2)!important}
+html.stk-dark.stk-docs-page #main :is(.box,.panel,.well,.faq,.faq-answer,.faq-question,.reference-example,.reference-block){background:var(--stk-page)!important;color:var(--stk-ink)!important;border-color:var(--stk-border-2)!important}
 html.stk-dark.stk-docs-page #main :is(.box-header,.panel-heading,.reference-title,.faq-heading){background:var(--stk-panel-2)!important;color:var(--stk-ink)!important;text-shadow:none!important}
 /* The background is set on its own, never through the shorthand: a light bar is
    sometimes a brand band that carries a logo as its background image (the Slack
@@ -149,7 +149,7 @@ html.stk-dark.stk-docs-page #main :is(.box-header,.panel-heading,.reference-titl
 html.stk-dark.stk-info-page #main .stk-account-light-bar,html.stk-dark.stk-info-page #main .stk-info-light-surface{background-color:var(--stk-panel)!important;color:var(--stk-ink)!important;border-color:var(--stk-border-2)!important;box-shadow:none!important}
 html.stk-dark.stk-info-page #main :is(.stk-account-light-bar,.stk-info-light-surface) :is(h1,h2,h3,h4,p,span,li){color:var(--stk-ink)!important;text-shadow:none!important}
 html.stk-dark #main :is(.search-results,.search-controls,.set-header-content,.set-header-title,.card-grid-header-content){background:transparent!important}
-html.stk-dark.stk-blog-page #main :is(.blog-content,.blog-index,.blog-category,.blog-articles,.posts){background:var(--stk-page)!important;color:var(--stk-ink)!important}
+html.stk-dark.stk-blog-page #main :is(.posts){background:var(--stk-page)!important;color:var(--stk-ink)!important}
 html.stk-dark.stk-blog-page #main :is(img,video,picture){filter:none!important;mix-blend-mode:normal!important}
 
 /* Deck editor controls and metadata use the same contrast as the card detail. */
@@ -224,8 +224,8 @@ html.stk-dark.stk-bots-page #main :is(.bot-marketing-panel,.bot-marketing-panel-
    grey on dark grey. The dimmed band is the intent, so the earlier rule is gone
    and only the inner layout of the band is left transparent. */
 html.stk-dark.stk-team-page #main .team-header .inner-flex{background-color:transparent!important;color:inherit}
-html.stk-dark.stk-blog-page #main :is(.blog-post-large,.blog-post-large>.inner-flex,.blog-post-large-header,.blog-post-large-content,.blog-post-content,.blog-post-large-body,.blog-post,.blog-index,.blog-category,.blog-pagination){background-image:none!important;background-color:var(--stk-page)!important;color:var(--stk-ink)!important}
+html.stk-dark.stk-blog-page #main :is(.blog-post-large,.blog-post-large>.inner-flex,.blog-post-large-header,.blog-post-large-content){background-image:none!important;background-color:var(--stk-page)!important;color:var(--stk-ink)!important}
 html.stk-dark.stk-blog-page #main .blog-orbit{background:transparent!important}
 html.stk-dark.stk-blog-page #main .blog-orbit img{filter:none!important}
-html.stk-dark.stk-blog-page #main :is(.blog-post-large,.blog-post) :is(p,li,span,h1,h2,h3,h4){color:var(--stk-ink)!important}
-html.stk-dark.stk-blog-page #main :is(.blog-post-large,.blog-post) a:not(.button-n){color:#bda1df!important}
+html.stk-dark.stk-blog-page #main :is(.blog-post-large) :is(p,li,span,h1,h2,h3,h4){color:var(--stk-ink)!important}
+html.stk-dark.stk-blog-page #main :is(.blog-post-large) a:not(.button-n){color:#bda1df!important}

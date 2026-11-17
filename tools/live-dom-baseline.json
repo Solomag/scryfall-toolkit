@@ -1,21 +1,7 @@
 {
   "note": "Names from docs/scryfall-dom.md not seen on the public pages tools/check-live-dom.cjs opens. `unseen`: they appear only after a click or behind a sign-in. `stale`: they should be on a public page and are not, because Scryfall changed it; fix the theme or script that uses them. `unseen` is rewritten by `node tools/check-live-dom.cjs --update`; `stale` is kept by hand.",
   "updated": "2026-11-17",
-  "stale": [
-    "class:blog-articles",
-    "class:blog-category",
-    "class:blog-content",
-    "class:blog-index",
-    "class:blog-pagination",
-    "class:blog-post",
-    "class:blog-post-content",
-    "class:blog-post-large-body",
-    "class:blog-post-small-header",
-    "class:bot",
-    "class:bot-card",
-    "class:bots-list",
-    "class:toolbox-disclaimer"
-  ],
+  "stale": [],
   "unseen": [
     "class:account",
     "class:account-content",

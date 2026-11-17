@@ -97,12 +97,13 @@ compares with this contract. Names that only appear after a click or behind a si
 `tools/live-dom-baseline.json` as `unseen`, so the run fails only when a name that *was* on a public
 page is gone. A scheduled task runs it every Monday and reports only a change.
 
-Its first run, 2026-11-17, found three pages Scryfall has already rebuilt, kept as `stale` in the
-baseline until fixed: the bots page (`.bot`, `.bot-card`, `.bots-list` are now `bot-marketing-*`
-panels), the blog (`.blog-index`, `.blog-post`, `.blog-content` and six more are now
-`blog-post-large` and `blog-post-small`), and the shop disclaimer under "Buy this card"
-(`.toolbox-disclaimer`, which `prices.js` reaches for with `?.` and so survives). The theme rules
-for the first two no longer match anything.
+Its first run, 2026-11-17, found thirteen names Scryfall had already dropped: the old bots-page
+classes (`.bot`, `.bot-card`, `.bots-list`, now `bot-marketing-*` panels), nine old blog classes
+(`.blog-index`, `.blog-post`, `.blog-content`…, now `blog-post-large` and `blog-post-small`) and the
+shop disclaimer under "Buy this card" (`.toolbox-disclaimer`). None of it was a visible fault —
+the theme already had rules for the new markup, and the old names sat beside them in the same
+selector lists — so the fix was to take the dead names out, along with the `prices.js` lines
+that hid a disclaimer that no longer exists. Both pages were checked dark afterwards.
 
 The tool meant to support it, `tools/dom-contract.cjs`, was itself an example of the
 problem. It had its own list of scripts to scan, that list named `content.js`, and when
