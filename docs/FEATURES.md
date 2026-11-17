@@ -32,6 +32,14 @@ bottom right. Each row shows the card's set code and collector number beside its
 - Without a set on the line, printings of the same card are **counted**: three of Mana
   Drain copy as `3 Mana Drain`, not as three identical lines. With a set on the line they
   stay separate, because that is what tells them apart.
+- **A range with Shift.** Press `+` on one card, then Shift and `+` on another: every card
+  between the two, in the order the page shows them, goes in. If the second card was already
+  in, the run comes out instead.
+- **The total.** With the list open, its first line is what the clipboard costs at Scryfall's
+  prices — one copy of each printing, summed per currency, in each currency the reader has not
+  hidden under Visibility. The prices are asked for only while the list is open, seventy-five
+  printings per request, and remembered, so adding a card asks about that card alone. A card
+  with no price in a currency is left out of that sum, and the line's tooltip says how many.
 - **Add all.** On a search page, `+ All` at the end of the result-count line adds every
   result of the search, not only the sixty on screen. The worker reads the API's pages
   through the same paced queue as every other search (at most ten pages, 1750 cards), in

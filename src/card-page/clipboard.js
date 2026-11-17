@@ -23,6 +23,7 @@
   // that was not there.
   const {
     settings,
+    setFilters,
     cardPath,
     cardPage,
     advancedPage,
@@ -78,7 +79,7 @@
     toolbar.className = "stk-toolbar";
     const list = document.createElement("div");
     list.className = "stk-list";
-    const open = iconButton('clip', 'Show card list', () => { list.hidden = !list.hidden; });
+    const open = iconButton('clip', 'Show card list', () => { list.hidden = !list.hidden; if (!list.hidden) paintTotal(); });
     const badge = document.createElement('span');
     badge.className = 'stk-count';
     badge.setAttribute('aria-hidden', 'true');
@@ -165,6 +166,47 @@
     document.body.append(root);
     list.hidden = true;
 
+    // What the clipboard costs: each entry's printing at Scryfall's price, summed per
+    // currency, for the currencies the reader has not hidden. Asked for only while the list
+    // is open, and remembered per printing so adding a card asks about that card alone.
+    const CURRENCIES = [['usd', '$', 'USD'], ['eur', '€', 'EUR'], ['tix', '', 'TIX']];
+    const priceOf = new Map();
+    let totalTimer = null;
+    const totalLine = document.createElement('p');
+    totalLine.className = 'stk-total';
+    function paintTotal() {
+      const shown = CURRENCIES.filter(([kind]) => setFilters?.prices?.[kind] !== false);
+      if (!shown.length || !cards.length) { totalLine.remove(); return; }
+      list.prepend(totalLine);
+      const priced = cards.filter(card => card.set && card.number);
+      const missing = priced.filter(card => !priceOf.has(entryKey(card)));
+      const parts = shown.map(([kind, sign, code]) => {
+        let sum = 0;
+        let counted = 0;
+        for (const card of priced) {
+          const value = Number(priceOf.get(entryKey(card))?.[kind]);
+          if (Number.isFinite(value) && value > 0) { sum += value; counted += 1; }
+        }
+        return { text: sign ? sign + sum.toFixed(2) : sum.toFixed(2) + ' ' + code, counted };
+      });
+      totalLine.textContent = 'Total: ' + parts.map(part => part.text).join(' · ');
+      const without = cards.length - Math.max(0, ...parts.map(part => part.counted));
+      totalLine.title = missing.length ? 'Reading prices…'
+        : (without ? `${without} of ${cards.length} cards have no price here` : 'Scryfall prices, one copy of each printing');
+      if (missing.length && !list.hidden) {
+        clearTimeout(totalTimer);
+        totalTimer = setTimeout(() => {
+          request({ type: 'clipboardPrices', cards: missing.slice(0, 600).map(card => ({ set: card.set, number: card.number })) })
+            .then(answer => {
+              for (const row of answer || []) priceOf.set(entryKey({ set: row.set, number: row.number }), row);
+              for (const card of missing.slice(0, 600)) if (!priceOf.has(entryKey(card))) priceOf.set(entryKey(card), {});
+              paintTotal();
+            })
+            .catch(() => { totalLine.title = 'Could not read prices'; });
+        }, 300);
+      }
+    }
+
     async function persist() {
       await chrome.storage.local.set({ cards });
       shared.clipboardCards = cards;
@@ -180,6 +222,7 @@
       open.setAttribute('aria-label', `${'Show card list'} (${cards.length})`);
       list.replaceChildren();
       if (!cards.length) { const empty = document.createElement("p"); empty.textContent = 'List is empty'; list.append(empty); return; }
+      paintTotal();
       for (const [index, card] of cards.entries()) {
         const row = document.createElement("div");
         row.className = "stk-list-row";
@@ -247,6 +290,9 @@
       return places;
     }
 
+    // Which card each add button stands for, for the Shift range; and the last one pressed.
+    const addable = new WeakMap();
+    let lastPressed = null;
     function scan() {
       // The checklist's header gets the column the rows get, or every row is one cell
       // longer than its heading.
@@ -276,14 +322,37 @@
         if (!add) {
           add = button("+", async event => {
             if (stop) { event.preventDefault(); event.stopPropagation(); }
+            // Shift and a second button: every card between this one and the last one
+            // pressed, in the order the page shows them, takes the state this one is
+            // being given — all added, or all taken out.
+            const from = lastPressed && document.contains(lastPressed) ? lastPressed : null;
             const idx = cards.findIndex(c => entryKey(c) === key);
+            const adding = idx < 0;
+            if (event.shiftKey && from && from !== add) {
+              const order = [...document.querySelectorAll('.stk-add')];
+              const [a, b] = [order.indexOf(from), order.indexOf(add)].sort((x, y) => x - y);
+              if (a >= 0) {
+                for (const other of order.slice(a, b + 1)) {
+                  const card = addable.get(other);
+                  if (!card) continue;
+                  const at = cards.findIndex(c => entryKey(c) === entryKey(card));
+                  if (adding && at < 0) cards.push(card);
+                  else if (!adding && at >= 0) cards.splice(at, 1);
+                }
+                lastPressed = add;
+                await persist();
+                return;
+              }
+            }
             if (idx >= 0) cards.splice(idx, 1);
             else cards.push({ name, url: link, set, number });
+            lastPressed = add;
             await persist();
           });
           add.className = "stk-add";
           holder.append(add);
         }
+        addable.set(add, { name, url: link, set, number });
         const selected = cards.some(c => entryKey(c) === key);
         add.textContent = selected ? "✓" : "+";
         add.setAttribute("aria-label", `${selected ? 'Remove' : 'Add'} ${name}`);

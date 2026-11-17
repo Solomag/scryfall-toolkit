@@ -644,6 +644,27 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
     // that carry it. The cards come from the same collection answer the token and legality
     // buttons read, and the tags from the index already cached for the card pages, so a
     // whole deck costs the collection call and nothing per card.
+    // Prices for the clipboard's total: each printing's own, from the collection endpoint
+    // seventy-five at a time through the paced queue.
+    if (message.type === 'clipboardPrices') {
+      const list = Array.isArray(message.cards) ? message.cards : [];
+      if (!list.length || list.length > 600 || list.some(card =>
+        !/^[a-z0-9_-]{3,6}$/i.test(card?.set || '') || !/^[a-z0-9★-]{1,24}$/i.test(card?.number || ''))) throw new Error('Invalid cards');
+      const out = [];
+      for (let i = 0; i < list.length; i += 75) {
+        const result = await scryfallJSON('https://api.scryfall.com/cards/collection', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ identifiers: list.slice(i, i + 75).map(card => ({ set: card.set, collector_number: card.number })) })
+        });
+        for (const card of result.data || []) {
+          const prices = card.prices || {};
+          const pick = (a, b) => (prices[a] ?? prices[b] ?? null);
+          out.push({ set: String(card.set || ''), number: String(card.collector_number || ''),
+            usd: pick('usd', 'usd_foil'), eur: pick('eur', 'eur_foil'), tix: prices.tix ?? null });
+        }
+      }
+      return out;
+    }
     if (message.type === 'deckTags') {
       const tags = Array.isArray(message.tags) ? message.tags.map(String) : [];
       if (!tags.length || tags.length > 40 || tags.some(tag => !/^[a-z0-9-]{1,60}$/.test(tag))) throw new Error('Invalid tags');

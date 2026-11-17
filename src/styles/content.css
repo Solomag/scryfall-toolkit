@@ -245,4 +245,5 @@ form.homepage-form + .stk-builder-open{display:block;margin:10px auto 0}
 .stk-search-forget{padding:0 4px;border:0;background:none;color:inherit;cursor:pointer;opacity:.6}
 .stk-search-forget:hover{opacity:1}
 .stk-search-save{margin-left:6px}
+#scryfall-toolkit-clipboard .stk-total{margin:0 0 6px;padding:0 0 6px;border-bottom:1px solid #8884;font-weight:600;font-size:13px}
 .stk-filter-note{margin-left:10px;font-size:12px;opacity:.75}.stk-filter-note a{color:inherit;text-decoration:underline}

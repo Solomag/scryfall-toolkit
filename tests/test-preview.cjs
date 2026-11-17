@@ -865,6 +865,47 @@ async function searchFilterAndAddAllTest() {
     'it shows the query it will run: the current one, then the clauses the form wrote');
 }
 
+// Shift and a second +: the cards between the two. And the clipboard's total.
+async function clipboardRangeAndTotalTest() {
+  console.log('content scripts: Shift-click range and the clipboard total');
+  const item = n => `<div class="card-grid-item"><a class="card-grid-item-card" href="https://scryfall.com/card/tst/${n}/c${n}">
+    <span class="card-grid-item-invisible-label">Card ${n}</span></a></div>`;
+  const html = `<!DOCTYPE html><html><body><div class="card-grid">${[1, 2, 3, 4, 5].map(item).join('')}</div></body></html>`;
+  let asked = null;
+  const page = createPage({
+    url: 'https://scryfall.com/search?q=t%3Agoblin', html,
+    state: { settingsLanguage: 'en', cards: [], setFilters: null },
+    routes: { ...routes, clipboardPrices: message => { asked = message; return message.cards.map(card => ({
+      set: card.set, number: card.number, usd: card.number === '5' ? null : '1.50', eur: '1.00', tix: '0.10' })); } }
+  });
+  await page.script('src/core/i18n.js');
+  await page.script('src/core/format-catalog.js');
+  await page.script('src/core/tag-icons.js');
+  await page.cardPage();
+  await sleep(60);
+  const { document, mock } = page;
+  const adds = () => [...document.querySelectorAll('.card-grid-item .stk-add')];
+  click(adds()[0]);
+  await waitFor(() => mock.state.cards.length === 1, 'one card added the usual way');
+  click(adds()[3], { shiftKey: true });
+  await waitFor(() => mock.state.cards.length === 4, 'Shift on another adds everything between');
+  assertEqual(mock.state.cards.map(card => card.number), ['1', '2', '3', '4'], 'in the order the page shows them');
+  click(adds()[2]);
+  await waitFor(() => mock.state.cards.length === 3, 'a plain click still takes one card out');
+  click(adds()[4], { shiftKey: true });
+  await waitFor(() => mock.state.cards.length === 5, 'and Shift from there adds the rest of that run');
+  click(adds()[3], { shiftKey: true });
+  await waitFor(() => mock.state.cards.length === 3, 'Shift on a card already in takes the run out instead');
+  assertEqual(mock.state.cards.map(card => card.number).sort(), ['1', '2', '3'], 'leaving the cards outside it');
+
+  click(document.querySelector('#scryfall-toolkit-clipboard .stk-icon-clip'));
+  await waitFor(() => asked, 'opening the list asks for the prices of what is in it');
+  assertEqual(asked.cards.map(card => card.number).sort(), ['1', '2', '3'], 'by set and number');
+  await waitFor(() => /\$4\.50/.test(document.querySelector('.stk-total')?.textContent || ''), 'the total appears');
+  assertEqual(document.querySelector('.stk-total').textContent, 'Total: $4.50 · €3.00 · 0.30 TIX',
+    'summed per currency, in every currency the reader keeps');
+}
+
 async function searchPageTest() {
   console.log('content scripts: search page');
   const html = `<!DOCTYPE html><html><body><div id="main" class="card-grid">
@@ -1643,6 +1684,7 @@ async function cardTraderCurrencyTest() {
     await advancedPriceFilterTest();
 await priceFilterTest();
     await deckLegalityTest();
+await clipboardRangeAndTotalTest();
 await deckTagsTest();
 await deckButtonPlacementTest();
     await setPlatformTest();
