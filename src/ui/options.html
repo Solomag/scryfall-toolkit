@@ -44,6 +44,8 @@
 <p class="hint">Подсказывает ключевые слова (t:, otag:, set:…) и их значения: теги из Tagger, сеты, форматы, цвета. Стрелки выбирают, Enter или Tab вставляют, Esc закрывает.</p>
 <label><input type="checkbox" id="savedSearches"> Сохранённые поиски</label>
 <p class="hint">Звёздочка рядом с числом найденных карт сохраняет поиск. Сохранённые поиски появляются, когда пустое поле поиска в фокусе.</p>
+<label><input type="checkbox" id="queryBuilder"> Конструктор запроса</label>
+<p class="hint">Кнопка на главной и рядом с числом найденных карт открывает форму: название, тип, текст, цвета, мановая стоимость, формат, редкость, сет. Перед поиском показывает запрос, который получится.</p>
 <label for="defaultSearchFilter">Фильтр для каждого поиска</label>
 <input id="defaultSearchFilter" type="text" maxlength="200" autocomplete="off" spellcheck="false" placeholder="game:paper lang:en">
 <p class="hint">Добавляется к каждому поиску на Scryfall, если в запросе ещё нет условия с тем же ключевым словом. Рядом с числом найденных карт видно, что фильтр добавлен, и есть ссылка на тот же поиск без него. Пусто — выключено.</p>
@@ -102,6 +104,7 @@
 <div class="pair-group" id="priceGroup-prices"><div class="pair-caption"></div><div class="pair-items"></div></div>
 <div class="pair-group" id="priceGroup-links"><div class="pair-caption"></div>
 <label class="stores-row"><input type="checkbox" class="stk-check" id="setStores"> Показывать блок «Купить карту»</label>
+<label class="stores-row"><input type="checkbox" class="stk-check" id="extraShopLinks"> Поиск карты в Card Kingdom, Mana Pool и Cardsphere</label>
 <div class="pair-items"></div>
 </div>
 </div>

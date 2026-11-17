@@ -414,6 +414,157 @@
     (info.querySelector('p') || info).append(note);
   }
 
+  // --- the query builder --------------------------------------------------------------
+  //
+  // A small form for the clauses people look up most — name, type, rules text, colours,
+  // mana value, format, rarity, set — that writes Scryfall's syntax for them. It adds to
+  // what is already in the search box rather than replacing it, and it shows the query it
+  // will run before running it, so it doubles as a way to learn the syntax. Scryfall's own
+  // Advanced Search covers everything; this covers the common part without leaving the page.
+  const quoteIfNeeded = text => /[\s"()]/.test(text) ? '"' + text.replace(/"/g, '') + '"' : text;
+  function builtQuery(fields) {
+    const parts = [];
+    const name = String(fields.name || '').trim();
+    if (name) parts.push(quoteIfNeeded(name));
+    for (const word of String(fields.type || '').trim().split(/\s+/).filter(Boolean)) parts.push('t:' + quoteIfNeeded(word));
+    const text = String(fields.oracle || '').trim();
+    if (text) parts.push('o:' + quoteIfNeeded(text));
+    const colors = (fields.colors || []).filter(c => /^[wubrgc]$/.test(c)).join('');
+    if (colors) {
+      const op = { exact: '=', including: '>=', most: '<=' }[fields.colorMode] || '>=';
+      parts.push((fields.colorField === 'id' ? 'id' : 'c') + op + colors);
+    }
+    if (/^\d{1,2}$/.test(String(fields.mv || ''))) {
+      parts.push('mv' + (['=', '>=', '<='].includes(fields.mvOp) ? fields.mvOp : '=') + fields.mv);
+    }
+    if (/^[a-z]+$/.test(fields.format || '')) parts.push('f:' + fields.format);
+    if (/^[a-z]+$/.test(fields.rarity || '')) parts.push('r:' + fields.rarity);
+    const set = String(fields.set || '').trim().toLowerCase();
+    if (/^[a-z0-9]{2,6}$/.test(set)) parts.push('s:' + set);
+    return parts.join(' ');
+  }
+
+  function initQueryBuilder() {
+    const anchor = location.pathname === '/'
+      ? document.querySelector('form.homepage-form, form[action="/search"]')
+      : (location.pathname === '/search' ? document.querySelector('.search-info') : null);
+    if (!anchor || document.getElementById('stk-builder')) return;
+    const open = document.createElement('button');
+    open.type = 'button';
+    open.className = 'stk-builder-open';
+    open.textContent = 'Query builder';
+    open.title = 'Build a search from a form';
+
+    const dialog = document.createElement('dialog');
+    dialog.id = 'stk-builder';
+    const field = (label, control) => {
+      const row = document.createElement('label');
+      row.className = 'stk-builder-row';
+      const caption = document.createElement('span');
+      caption.textContent = label;
+      row.append(caption, control);
+      return row;
+    };
+    const input = (name, placeholder) => {
+      const element = document.createElement('input');
+      element.type = 'text';
+      element.name = name;
+      element.placeholder = placeholder;
+      element.autocomplete = 'off';
+      element.spellcheck = false;
+      return element;
+    };
+    const select = (name, options) => {
+      const element = document.createElement('select');
+      element.name = name;
+      for (const [value, label] of options) {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = label;
+        element.append(option);
+      }
+      return element;
+    };
+    const title = document.createElement('h2');
+    title.textContent = 'Query builder';
+    const colors = document.createElement('span');
+    colors.className = 'stk-builder-colors';
+    for (const value of ['w', 'u', 'b', 'r', 'g', 'c']) {
+      const box = document.createElement('label');
+      const check = document.createElement('input');
+      check.type = 'checkbox';
+      check.name = 'colors';
+      check.value = value;
+      box.append(check, document.createTextNode(value.toUpperCase()));
+      colors.append(box);
+    }
+    const colorRow = document.createElement('span');
+    colorRow.className = 'stk-builder-inline';
+    colorRow.append(select('colorField', [['c', 'Colour'], ['id', 'Identity']]), colors,
+      select('colorMode', [['including', 'including'], ['exact', 'exactly'], ['most', 'at most']]));
+    const mvRow = document.createElement('span');
+    mvRow.className = 'stk-builder-inline';
+    const mv = input('mv', '');
+    mv.inputMode = 'numeric';
+    mv.size = 3;
+    mvRow.append(select('mvOp', [['=', '='], ['>=', '≥'], ['<=', '≤']]), mv);
+    const formats = ['standard', 'pioneer', 'modern', 'legacy', 'vintage', 'pauper', 'commander', 'premodern'];
+    const preview = document.createElement('code');
+    preview.className = 'stk-builder-preview';
+    const run = document.createElement('button');
+    run.type = 'button';
+    run.className = 'button-n stk-builder-run';
+    run.textContent = 'Search';
+    const cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.className = 'button-n';
+    cancel.textContent = 'Close';
+    const actions = document.createElement('div');
+    actions.className = 'stk-builder-actions';
+    actions.append(run, cancel);
+    dialog.append(title,
+      field('Name', input('name', 'goblin')),
+      field('Type', input('type', 'legendary creature')),
+      field('Rules text', input('oracle', 'draw a card')),
+      field('Colours', colorRow),
+      field('Mana value', mvRow),
+      field('Format', select('format', [['', 'any'], ...formats.map(key => [key, key[0].toUpperCase() + key.slice(1)])])),
+      field('Rarity', select('rarity', [['', 'any'], ['common', 'Common'], ['uncommon', 'Uncommon'], ['rare', 'Rare'], ['mythic', 'Mythic']])),
+      field('Set code', input('set', 'mh3')),
+      preview, actions);
+    document.body.append(dialog);
+
+    const current = () => (location.pathname === '/search'
+      ? new URLSearchParams(location.search).get('q') || '' : '').trim();
+    const read = () => {
+      const value = name => dialog.querySelector(`[name="${name}"]`)?.value || '';
+      return {
+        name: value('name'), type: value('type'), oracle: value('oracle'),
+        colors: [...dialog.querySelectorAll('input[name="colors"]')].filter(box => box.checked).map(box => box.value),
+        colorField: value('colorField'), colorMode: value('colorMode'),
+        mv: value('mv').trim(), mvOp: value('mvOp'), format: value('format'), rarity: value('rarity'), set: value('set')
+      };
+    };
+    const full = () => [current(), builtQuery(read())].filter(Boolean).join(' ');
+    const paint = () => {
+      preview.textContent = full() || '—';
+      run.disabled = !builtQuery(read());
+    };
+    dialog.addEventListener('input', paint);
+    dialog.addEventListener('change', paint);
+    run.addEventListener('click', () => {
+      if (!builtQuery(read())) return;
+      const query = full();
+      dialog.close();
+      location.assign('/search?q=' + encodeURIComponent(query));
+    });
+    cancel.addEventListener('click', () => dialog.close());
+    open.addEventListener('click', () => { paint(); dialog.showModal(); });
+    if (anchor.matches('.search-info')) (anchor.querySelector('p') || anchor).append(open);
+    else anchor.after(open);
+  }
+
+  self.STK_CONTENT.on("queryBuilder", () => initQueryBuilder());
   self.STK_CONTENT.on("defaultSearchFilter", () => initDefaultFilter());
   self.STK_CONTENT.on("searchAssist", () => initSearchAssist());
 })();

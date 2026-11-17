@@ -136,6 +136,7 @@ nothing. Where a fallback is in use, the panel names which of the two it is show
 | --- | --- |
 | `storage`, `unlimitedStorage` | your settings, clipboard and the cached tag indexes, which are large |
 | `alarms` | refresh the bundled tag data at most once every seven days |
+| `contextMenus` | one item, "Search Scryfall for …", on selected text; it opens a Scryfall search in a new tab and keeps nothing |
 | Host access to `api.scryfall.com`, `data.scryfall.io`, `tagger.scryfall.com` | the features above |
 | Host access to `json.edhrec.com` *(asked for when the feature is turned on)* | the optional EDHREC usage and salt features |
 | Host access to `edhrec.com` *(asked for when EDHREC suggestions are turned on)* | the deck-specific recommendations, which live on that host — see the note above |

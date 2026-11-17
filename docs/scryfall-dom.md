@@ -445,7 +445,7 @@ name itself, without the leading `.` or `#`.
 | `card-profile` | class | src/card-page/clipboard.js |
 | `card-symbol` | class | src/card-page/card.js |
 | `card-text` | class | src/card-page/edhrec.js |
-| `card-text-card-name` | class | src/card-page/clipboard.js, src/card-page/edhrec.js |
+| `card-text-card-name` | class | src/card-page/clipboard.js, src/card-page/edhrec.js, src/card-page/prices.js |
 | `card-text-mana-cost` | class | src/card-page/card.js |
 | `card-text-title` | class | src/card-page/clipboard.js |
 | `card-text-type-line` | class | src/card-page/card.js |
@@ -464,6 +464,7 @@ name itself, without the leading `.` or `#`.
 | `deckbuilder-section-title-bar` | class | src/deck-page/clean-up.js |
 | `deckbuilder-toolbar` | class | src/deck-page/edhrec.js, src/deck-page/search.js |
 | `deckbuilder-toolbar-items-right` | class | src/deck-page/edhrec.js, src/deck-page/search.js |
+| `homepage-form` | class | src/card-page/search-assist.js |
 | `marketing-features-item-image` | class | src/core/theme.js |
 | `modal-dialog-close` | class | src/deck-page/edhrec.js, src/deck-page/search.js |
 | `modal-dialog-content` | class | src/deck-page/edhrec.js |

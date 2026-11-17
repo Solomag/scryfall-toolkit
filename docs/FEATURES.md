@@ -97,7 +97,18 @@ a query with `or` in it is bracketed first, so the filter covers both sides. The
 into the query itself, so the results page shows it in the box, and a note beside the result
 count names it and links to the same search without it. Empty, the default, means off.
 
-The first two have a switch under **Search** on the settings page and are on by default.
+**Query builder.** A button on the home page and beside the result count opens a form for the
+clauses most searches use: name, type, rules text, colours or colour identity (including,
+exactly, at most), mana value, format, rarity and set code. It writes Scryfall's syntax for
+them, adds it to what is already searched, and shows the whole query before running it, so it
+is also a way to learn the syntax. Scryfall's Advanced Search still covers everything else.
+
+**Search from anywhere.** Selected text on any page has "Search Scryfall for …" in the
+right-click menu, and `sf` followed by a space in the address bar searches Scryfall for what is
+typed after it. Both open an ordinary search page; nothing is fetched or kept by the extension.
+
+Suggestions, saved searches and the builder each have a switch under **Search** on the settings
+page and are on by default.
 
 ## Prints
 
@@ -233,16 +244,22 @@ deckbuilder on a card page is therefore reported as "no suitable editor page ope
 failure of the feature.
 
 **Deck legality check.** A button on a deck page asks Scryfall about each of the deck's cards,
-one at a time, and lists the ones it counts as not legal in Commander. It checks **individual
-cards**, not the deck as a whole, and both the setting's name and the help say so. Commander is
-not chosen: the editor on Scryfall builds commander decks, and that is a fact about the page
-rather than a setting, so there is nothing to pick from.
+and lists the ones it counts as not legal in Commander. It checks **individual cards**, not the
+deck as a whole, and both the setting's name and the help say so. Commander comes first because
+the editor on Scryfall builds commander decks; a picker in the panel checks the same deck in any
+other format Scryfall rules on (Standard, Modern, Legacy, Pauper, Premodern and the rest), read
+off the same answer, and in Heritage, Classic Legacy and Peak Legacy when those are turned on
+for card pages. Those three are computed by the same searches the card page uses, asked for
+twenty cards at a time, so a hundred-card deck is five calls rather than a hundred. Each answer
+is kept while the page is open, so switching back costs nothing.
 
 **What it does not check, and says so beside the answer:** the commander's colour
 identity, the hundred-card limit, and the one-copy rule for cards marked "Commander
 only". Those are rules about the deck as a whole. Scryfall has no endpoint that applies
 them to a deck, and computing them here would mean writing a mana-symbol parser and then
 trusting it — so the panel reports one thing well and prints its own boundary underneath.
+In another format the note names what that format's own deck rules are instead: deck size,
+the number of copies and the sideboard are not checked.
 A card Scryfall says nothing about is counted apart from a card it calls illegal, because
 the two call for different actions.
 
@@ -391,6 +408,11 @@ drawn in a state the model could not explain — a master off with a rule on.
   price a reader had switched on, on their first page load after an update, while the boxes on the
   settings page show them all off. See the price filter above. They are in this section because
   they are settings about what is shown, not because they have anything to do with sets.
+
+  **Three more shops, as links.** Card Kingdom, Mana Pool and Cardsphere are added to the end of
+  the block as "Search on …" links: a search for the card by name on each, in a new tab. No
+  price is fetched, nothing reaches the shop before the reader clicks, and the links carry no
+  affiliate code. They have their own switch below the block's, and the block's switch locks it.
 
   **And one switch over the block they sit in.** Scryfall draws one column headed "Buy This Card",
   holding the three links; emptying it shop by shop leaves the heading and the column behind, which

@@ -346,6 +346,36 @@
   }
 
 
+  // Three more shops under Scryfall's own "Buy this card": a search for the card by name
+  // on each, opened in a new tab. Links only — no price is fetched and nothing is sent to
+  // the shop before the reader clicks — and plain links, with no affiliate code in them.
+  const EXTRA_SHOPS = [
+    ['Card Kingdom', name => 'https://www.cardkingdom.com/catalog/search?search=header&filter%5Bname%5D=' + encodeURIComponent(name)],
+    ['Mana Pool', name => 'https://manapool.com/cards?q=' + encodeURIComponent(name)],
+    ['Cardsphere', name => 'https://www.cardsphere.com/search?q=' + encodeURIComponent(name)]
+  ];
+  function initShopLinks() {
+    if (setFilters.showStores === false) return;
+    const list = [...document.querySelectorAll('#stores .toolbox-links')].pop();
+    // The front face's name: every one of the three finds a double-faced card by it.
+    const name = document.querySelector('#main .card-text-card-name')?.textContent.trim();
+    if (!list || !name || list.querySelector('.stk-shop-link')) return;
+    for (const [shop, url] of EXTRA_SHOPS) {
+      const item = document.createElement('li');
+      const link = document.createElement('a');
+      link.className = 'button-n stk-shop-link';
+      link.href = url(name);
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer nofollow';
+      const label = document.createElement('i');
+      label.textContent = 'Search on ' + shop;
+      link.append(label);
+      item.append(link);
+      list.append(item);
+    }
+  }
+
+  self.STK_CONTENT.on("shopLinks", () => initShopLinks());
   self.STK_CONTENT.on("cardTrader", () => initCardTrader());
   self.STK_CONTENT.on("priceFilter", () => initPriceFilter());
   self.STK_CONTENT.on("advancedPriceFilter", () => initAdvancedPriceFilter());

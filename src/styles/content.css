@@ -176,6 +176,7 @@ html.stk-dark #stk-deck-tokens{background:#242526;color:#e6e3df}
 /* Scryfall's own verdict, where it is not simply "outside this format". Dimmed rather than
    bold: the card name is the thing being read and the verdict is a qualifier on it, and a
    badge loud enough to compete with the name would be a badge about the wrong thing. */
+.stk-legality-format{display:block;margin:0 0 10px}
 .stk-legality-verdict{opacity:.72;font-size:12px}
 .stk-legality-note{margin:0 0 9px;font-size:13px;line-height:1.45}
 .stk-legality-list{margin:0 0 12px;padding-left:22px}
@@ -218,4 +219,16 @@ html.stk-hide-caster #caster-tray{display:none!important}
 .stk-save-search:hover,.stk-save-search.stk-selected{opacity:1;color:#e8c15a}
 .stk-add-all{margin-left:10px;padding:1px 8px;border:1px solid currentColor;border-radius:4px;background:none;color:inherit;font:inherit;font-size:12px;cursor:pointer;opacity:.75}
 .stk-add-all:hover{opacity:1}.stk-add-all:disabled{cursor:progress;opacity:.5}
+#stk-builder{width:min(460px,calc(100vw - 32px));padding:16px 18px;color:#e9e4ee;background:#292b2c;border:1px solid #66646a;border-radius:10px;font:14px/1.4 system-ui,sans-serif}
+#stk-builder::backdrop{background:#0008}
+#stk-builder h2{margin:0 0 12px;font-size:17px}
+#stk-builder .stk-builder-row{display:grid;grid-template-columns:96px 1fr;align-items:center;gap:8px;margin:0 0 8px}
+#stk-builder input[type=text],#stk-builder select{min-width:0;padding:5px 7px;color:inherit;background:#1f2021;border:1px solid #5c5a60;border-radius:5px;font:inherit}
+#stk-builder .stk-builder-inline{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+#stk-builder .stk-builder-colors label{margin-right:6px;white-space:nowrap}
+#stk-builder .stk-builder-preview{display:block;margin:12px 0;padding:7px 9px;background:#1f2021;border-radius:5px;overflow-wrap:anywhere}
+#stk-builder .stk-builder-actions{display:flex;gap:8px;justify-content:flex-end}
+.stk-builder-open{margin-left:10px;padding:1px 8px;border:1px solid currentColor;border-radius:4px;background:none;color:inherit;font:inherit;font-size:12px;cursor:pointer;opacity:.75}
+.stk-builder-open:hover{opacity:1}
+form.homepage-form + .stk-builder-open{display:block;margin:10px auto 0}
 .stk-filter-note{margin-left:10px;font-size:12px;opacity:.75}.stk-filter-note a{color:inherit;text-decoration:underline}

@@ -207,16 +207,32 @@ function createChrome(options = {}) {
     }
   };
 
+  const menus = [];
+  const menuListeners = [];
+  const omniboxListeners = [];
+  const tabsOpened = [];
   const chrome = {
     runtime,
     permissions,
     storage: { local, sync: local, onChanged: { addListener: fn => changeListeners.push(fn) } },
     alarms: { create() {}, onAlarm: { addListener: fn => alarmListeners.push(fn) } },
     action: { setBadgeText() {}, setBadgeBackgroundColor() {} },
-    tabs: { sendMessage() {}, onUpdated: { addListener() {} } }
+    tabs: { sendMessage() {}, onUpdated: { addListener() {} },
+      create(options) { tabsOpened.push({ how: 'create', ...options }); },
+      update(options) { tabsOpened.push({ how: 'update', ...options }); } },
+    contextMenus: {
+      removeAll(callback) { menus.length = 0; callback?.(); },
+      create(item, callback) { menus.push(item); callback?.(); },
+      onClicked: { addListener: fn => menuListeners.push(fn) }
+    },
+    omnibox: {
+      setDefaultSuggestion(suggestion) { omniboxListeners.suggestion = suggestion; },
+      onInputEntered: { addListener: fn => omniboxListeners.push(fn) }
+    }
   };
 
   return {
+    menus, menuListeners, omniboxListeners, tabsOpened,
     chrome, state, sentMessages, clipboardWrites, openOptionsPageCalls,
     messageListeners, installedListeners, alarmListeners, changeListeners, fireChanges,
     permissions

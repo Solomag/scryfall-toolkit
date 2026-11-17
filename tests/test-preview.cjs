@@ -225,6 +225,27 @@ async function deckLegalityTest() {
   assert(/said nothing about/i.test(text), 'and says that one card had no answer, apart from not-legal');
   assert(/Commander/.test(text), 'and says which format it judged');
 
+  const picker = dialog.querySelector('select.stk-legality-format');
+  assert(picker, 'the dialog has a format picker');
+  assertEqual(picker.querySelector('option').value, 'commander', 'with Commander first');
+  for (const option of picker.querySelectorAll('option')) {
+    if (option.getAttribute('value') === 'premodern') option.setAttribute('selected', '');
+    else option.removeAttribute('selected');
+  }
+  picker.dispatchEvent(new page.window.Event('change'));
+  await sleep(60);
+  assertEqual(sent[1]?.format, 'premodern', 'choosing another format asks about that one');
+  assertEqual(dialog.querySelector('h2').textContent, 'Card legality in Premodern', 'and the title names it');
+  assert(/banned in Premodern/.test(dialog.textContent) && !/one-copy rule/.test(dialog.textContent),
+    'with the verdicts and the limits for that format, not for Commander');
+  for (const option of picker.querySelectorAll('option')) {
+    if (option.getAttribute('value') === 'commander') option.setAttribute('selected', '');
+    else option.removeAttribute('selected');
+  }
+  picker.dispatchEvent(new page.window.Event('change'));
+  await sleep(60);
+  assertEqual(sent.length, 2, 'and going back to Commander reuses the first answer');
+
   // The site's panels are English whatever the settings page's language is: the settings
   // language is for the settings page, and the controls this adds to Scryfall and Tagger do not
   // take it. This case used to assert the panel was Russian here.
@@ -410,6 +431,19 @@ async function cardPageTest() {
   console.log('content scripts: card page');
   const page = await loadCardPage({ cards: [] });
   const { document, mock, location } = page;
+
+  // Three more shops under "Buy this card": searches by name, plain links in a new tab.
+  const shops = [...document.querySelectorAll('#stores .toolbox-links .stk-shop-link')];
+  assertEqual(shops.map(link => link.textContent), ['Search on Card Kingdom', 'Search on Mana Pool', 'Search on Cardsphere'],
+    'the buy block gets a search link for three more shops');
+  assertEqual(shops.map(link => decodeURIComponent(link.getAttribute('href'))), [
+    'https://www.cardkingdom.com/catalog/search?search=header&filter[name]=Test Card',
+    'https://manapool.com/cards?q=Test Card',
+    'https://www.cardsphere.com/search?q=Test Card'], 'each searching for the card by name, with no affiliate code');
+  assert(shops.every(link => link.getAttribute('target') === '_blank' && /noopener/.test(link.getAttribute('rel'))),
+    'opened in a new tab without handing the shop this page');
+  const noShops = await loadCardPage({ cards: [], extraShopLinks: false });
+  assert(!noShops.document.querySelector('.stk-shop-link'), 'and none when the switch is off');
 
   // Clipboard shell.
   const aside = document.getElementById('scryfall-toolkit-clipboard');
@@ -789,6 +823,21 @@ async function searchFilterAndAddAllTest() {
   assertEqual([asked.query, asked.order], ['t:goblin game:paper', 'name'], 'asked for with the page\'s own query and order');
   assertEqual(mock.state.cards.map(card => card.number), ['1', '2', '3'], 'a card already there is not added twice');
   assertEqual(all.textContent, '✓ 2 added', 'and the button says how many were new');
+
+  // The query builder: a form that writes the syntax, added to what is already searched.
+  const open = document.querySelector('.search-info .stk-builder-open');
+  assert(open, 'the result count has a query builder button');
+  const builder = document.getElementById('stk-builder');
+  const set = (name, value) => { builder.querySelector(`[name="${name}"]`).value = value; };
+  set('name', 'goblin guide');
+  set('type', 'legendary creature');
+  set('oracle', 'haste');
+  set('mv', '1');
+  builder.querySelector('input[name="colors"][value="r"]').checked = true;
+  fireEvent(builder, 'input');
+  assertEqual(builder.querySelector('.stk-builder-preview').textContent,
+    't:goblin game:paper "goblin guide" t:legendary t:creature o:haste c>=r mv=1',
+    'it shows the query it will run: the current one, then the clauses the form wrote');
 }
 
 async function searchPageTest() {

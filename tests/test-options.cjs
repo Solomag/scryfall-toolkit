@@ -1023,13 +1023,14 @@ function sectionOrderTest() {
     'and no fieldset or legend anywhere in it, so nothing is drawn as a nested frame');
   assert(!/<p class="hint">/.test(group),
     'and no paragraph of explanation on the page: the notes are in the "?" dialog instead');
-  // The controls the markup holds, which is the four that are not drawn from a table: the
-  // Caster marker, the whole "Buy This Card" block, and CardTrader's switch and token field.
+  // The controls the markup holds, which are the five that are not drawn from a table: the
+  // Caster marker, the whole "Buy This Card" block, the extra shops inside it, and
+  // CardTrader's switch and token field.
   // Everything else in the section — the platforms table, the nine places and the five prices —
   // is written by options.js from the model.
   assertEqual([...group.matchAll(/<input[^>]*id="([A-Za-z0-9_-]+)"/g)].map(match => match[1]).sort(),
-    ['cardtraderPrices', 'cardtraderToken', 'setCaster', 'setStores'],
-    'and exactly the four controls the model cannot draw for it');
+    ['cardtraderPrices', 'cardtraderToken', 'extraShopLinks', 'setCaster', 'setStores'],
+    'and exactly the five controls the model cannot draw for it');
   // No platform has a button to open settings, and there is no disclosure over the three
   // places: twelve boxes standing open is the whole shape, and a button over nine of them would
   // be a click for nothing.

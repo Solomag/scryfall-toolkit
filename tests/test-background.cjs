@@ -84,6 +84,7 @@ const setsResponse = {
   ]
 };
 
+const deckFormatQueries = [];
 const collectionResponse = { data: [
   { id: FIN_ID_1, finishes: ['foil'], promo_types: ['textured'] },
   { id: FIN_ID_2, finishes: ['nonfoil'], promo_types: [] }
@@ -214,6 +215,7 @@ async function fetchMock(url, init) {
       };
       return jsonResponse({ data: identifiers.map(item => ({
         id: 'deck-card-' + item.set + '-' + item.collector_number,
+        oracle_id: '00000000-0000-4000-9000-' + String(Object.keys(VERDICT).indexOf(item.set) + 1).padStart(12, '0'),
         name: 'Card of ' + item.set.toUpperCase(),
         set: item.set,
         collector_number: item.collector_number,
@@ -240,6 +242,13 @@ async function fetchMock(url, init) {
   if (target.startsWith('https://api.scryfall.com/cards/search')) {
     const parsed = new URL(target);
     const q = parsed.searchParams.get('q') || '';
+    if (q.startsWith('(oracleid:') && q.endsWith(') AND (st:core OR st:expansion) AND -atag:external-ip')) {
+      // Heritage for a deck: one search for many cards. Only mh3's card (…0001) is in it.
+      deckFormatQueries.push(q);
+      const ids = [...q.matchAll(/oracleid:([0-9a-f-]{36})/g)].map(m => m[1]);
+      return jsonResponse({ total_cards: 1, has_more: false, data: ids.filter(id => id.endsWith('0001'))
+        .map(id => ({ oracle_id: id, legalities: { legacy: 'legal' } })) });
+    }
     if (q.includes(' AND ')) { // legality query
       if (q.includes(QUERY_404_ID)) return jsonResponse({}, 404);
       if (q.includes(QUERY_ID)) return jsonResponse({ total_cards: 1, data: [{ legalities: { legacy: 'legal' } }] });
@@ -535,6 +544,21 @@ async function firefoxBackgroundTest() {
     assertEqual(mock.changeListeners.length, 1, 'storage.onChanged listener registered');
     assert(ctx.STK_FORMAT_OVERRIDES, 'format-overrides.js loaded through importScripts');
 
+    console.log('background.js: searching Scryfall from the menu and the address bar');
+    ctx.ensureSearchMenu();
+    assertEqual(mock.menus.map(item => [item.id, item.contexts.join()]), [['stk-search-selection', 'selection']],
+      'one item in the right-click menu, for selected text, put there on install and on start');
+    mock.menuListeners[0]({ menuItemId: 'stk-search-selection', selectionText: '  Lightning\n Bolt ' }, { index: 4 });
+    assertEqual(mock.tabsOpened.pop(), { how: 'create', url: 'https://scryfall.com/search?q=Lightning%20Bolt', index: 5 },
+      'which opens a Scryfall search for the selection beside the tab it came from');
+    assertEqual(mock.omniboxListeners.suggestion, { description: 'Search Scryfall for %s' }, 'the address bar says what "sf" does');
+    mock.omniboxListeners[0]('t:goblin c:r', 'currentTab');
+    assertEqual(mock.tabsOpened.pop(), { how: 'update', url: 'https://scryfall.com/search?q=t%3Agoblin%20c%3Ar' },
+      'and Enter runs the search in the same tab');
+    mock.omniboxListeners[0]('bolt', 'newBackgroundTab');
+    assertEqual(mock.tabsOpened.pop(), { how: 'create', url: 'https://scryfall.com/search?q=bolt', active: false },
+      'or in a background tab, as the browser asked');
+
     console.log('background.js: sender guard');
     const fetchesBefore = fetchLog.length;
     const guarded = await send({ type: 'tags', set: 'tst', number: '1' }, 'https://evil.example/page');
@@ -584,6 +608,18 @@ async function firefoxBackgroundTest() {
       // will not answer about is not a card it calls legal.
       assertEqual(verdict.data.notLegal, [], 'a deck of cards Scryfall calls legal has nothing on the list');
       assertEqual(verdict.data.unknown, 1, 'and the card it said nothing about is counted apart');
+    }
+    {
+      // Another format: one Scryfall rules on, and one this extension computes.
+      const deck = [{ set: 'mh3', collector_number: '42' }, { set: 'penny', collector_number: '1' }];
+      const penny = await send({ type: 'deckLegality', entries: deck, format: 'premodern' });
+      assertEqual(penny.data.format, 'premodern', 'a deck can be checked in another of the formats Scryfall rules on');
+      const heritage = await send({ type: 'deckLegality', entries: deck, format: 'heritage' });
+      assertEqual(heritage.data.notLegal.map(card => card.set), ['penny'],
+        'and in one this extension computes, where a card the search leaves out is not legal');
+      assertEqual(deckFormatQueries.length, 1, 'asked as one search for the whole deck, not one per card');
+      assertEqual(await send({ type: 'deckLegality', entries: deck, format: 'nonsense' }),
+        { ok: false, error: 'Invalid format' }, 'and a format it does not know is refused');
     }
     {
       // Scryfall does not have two verdicts, it has four: across every format in

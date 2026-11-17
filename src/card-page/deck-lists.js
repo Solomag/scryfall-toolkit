@@ -208,14 +208,25 @@
   // `legalities`, and a panel that called all three of them "not legal" would be
   // paraphrasing a distinction Scryfall took the trouble to make.
   const VERDICT_TEXT = {
-    banned: 'banned in Commander',
-    restricted: 'restricted in Commander'
+    banned: 'banned in %f',
+    restricted: 'restricted in %f'
   };
+  // The formats on offer. Commander first, because it is what the editor builds; then
+  // Scryfall's own, read off the same answer; then the three this extension computes,
+  // only when the reader has turned them on for card pages.
+  const DECK_FORMATS = [['commander', 'Commander'], ['standard', 'Standard'], ['pioneer', 'Pioneer'],
+    ['modern', 'Modern'], ['legacy', 'Legacy'], ['vintage', 'Vintage'], ['pauper', 'Pauper'],
+    ['paupercommander', 'Pauper Commander'], ['oathbreaker', 'Oathbreaker'], ['brawl', 'Brawl'],
+    ['historic', 'Historic'], ['timeless', 'Timeless'], ['premodern', 'Premodern'],
+    ['oldschool', 'Old School'], ['predh', 'PreDH']];
+  const EXTRA_DECK_FORMATS = [['heritage', 'Heritage'], ['classic', 'Classic Legacy'], ['peak', 'Peak Legacy']];
 
   function initDeckLegality() {
     const entries = deckEntries();
     if (!entries.length || !document.querySelector('#main .sidebar, #main .deck-list')) return;
 
+    const formats = [...DECK_FORMATS, ...EXTRA_DECK_FORMATS.filter(([key]) => settings[key])];
+    const nameOf = key => (formats.find(([k]) => k === key) || [key, key])[1];
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'button-n stk-legality-button';
@@ -229,34 +240,48 @@
     close.addEventListener('click', () => dialog.close());
     const title = document.createElement('h2');
     title.textContent = 'Card legality in Commander';
+    const picker = document.createElement('select');
+    picker.className = 'stk-legality-format';
+    picker.setAttribute('aria-label', 'Format');
+    for (const [key, label] of formats) {
+      const option = document.createElement('option');
+      option.value = key;
+      option.textContent = label;
+      picker.append(option);
+    }
     const content = document.createElement('div');
     content.className = 'stk-legality-result';
-    dialog.append(title, close, content);
+    dialog.append(title, close, picker, content);
     document.body.append(dialog);
 
-    let pending;
+    const answers = new Map();
     const line = text => {
       const p = document.createElement('p');
       p.className = 'stk-legality-note';
       p.textContent = text;
       return p;
     };
-    button.addEventListener('click', async () => {
-      dialog.showModal();
-      if (!pending) {
-        content.textContent = 'Checking cards…';
-        pending = request({ type: 'deckLegality', entries })
-          .catch(error => { pending = null; throw error; });
+    let chosen = 'commander';
+    picker.value = chosen;
+    async function check() {
+      const format = chosen;
+      const name = nameOf(format);
+      title.textContent = 'Card legality in ' + name;
+      content.textContent = 'Checking cards…';
+      if (!answers.has(format)) {
+        answers.set(format, request({ type: 'deckLegality', entries, format })
+          .catch(error => { answers.delete(format); throw error; }));
       }
       try {
-        const answer = await pending;
+        const answer = await answers.get(format);
+        if (chosen !== format) return;
         content.replaceChildren();
         if (!answer.checked) {
           content.append(line('Scryfall did not answer about a single card.'));
           return;
         }
         if (!answer.notLegal.length && !answer.unknown) {
-          content.append(line('Scryfall counts every card in the deck as legal in Commander.'));
+          content.append(line('Scryfall counts every card in the deck as legal in %f.'.replace('%f', name)));
         } else if (answer.notLegal.length) {
           const list = document.createElement('ul');
           list.className = 'stk-legality-list';
@@ -270,18 +295,16 @@
             item.append(link, document.createTextNode(
               ' — ' + (card.set || '').toUpperCase() + ' #' + card.collector_number));
             // Scryfall's own word for why, when it is not simply "outside this format".
-            // A banned card is a different problem from a card that was never legal here,
-            // and "not legal" alone would say so misleadingly about both.
             const why = VERDICT_TEXT[card.verdict];
             if (why) {
               const mark = document.createElement('span');
               mark.className = 'stk-legality-verdict';
-              mark.textContent = ' · ' + why;
+              mark.textContent = ' · ' + why.replace('%f', name);
               item.append(mark);
             }
             list.append(item);
           }
-          content.append(line('Scryfall counts these cards as not legal in Commander:'));
+          content.append(line('Scryfall counts these cards as not legal in %f:'.replace('%f', name)));
           content.append(list);
         }
         if (answer.unknown) {
@@ -289,12 +312,15 @@
         }
         // Always last, and never omitted: it is the half of the answer a list of card
         // names cannot give.
-        content.append(line(
-          'Only each card’s legality on its own was checked. The commander’s colour identity, the hundred-card limit and the one-copy rule for cards marked “Commander only” were not.'));
+        content.append(line(format === 'commander'
+          ? 'Only each card’s legality on its own was checked. The commander’s colour identity, the hundred-card limit and the one-copy rule for cards marked “Commander only” were not.'
+          : 'Only each card’s legality on its own was checked. Deck size, the number of copies and the sideboard were not.'));
       } catch {
-        content.replaceChildren(line('Could not check legality.'));
+        if (chosen === format) content.replaceChildren(line('Could not check legality.'));
       }
-    });
+    }
+    picker.addEventListener('change', () => { chosen = picker.value || chosen; check(); });
+    button.addEventListener('click', () => { dialog.showModal(); check(); });
     placeDeckButton(button);
   }
 

@@ -143,6 +143,7 @@ The store asks why each permission is needed. These are the answers, matched to
 | `storage` | keep the clipboard and the settings between sessions | `src/background/worker.js`, `src/ui/options.js`, `src/core/theme.js`, `src/card-page/clipboard.js`, `src/card-page/tagger-clipboard.js` |
 | `unlimitedStorage` | cache the bundled tag indexes locally instead of re-downloading several megabytes on every card page | `src/background/worker.js` (`tagIndexes`) |
 | `alarms` | refresh the tag data at most once every seven days | `src/background/worker.js` |
+| `contextMenus` | one right-click item on selected text that opens a Scryfall search for it | `src/background/worker.js` |
 | `https://api.scryfall.com/*` | card, print, set and search lookups, and the tag bulk files | `src/background/worker.js` |
 | `https://data.scryfall.io/*` | the tag bulk files Scryfall serves from this host | `src/background/worker.js` (through the URL Scryfall returns) |
 | `https://tagger.scryfall.com/*` | live tag and related-card data for the card on the page | `src/background/worker.js` |
@@ -465,6 +466,13 @@ shipped file, and the manifest declares no CSP override, so the Manifest V3 defa
 > "stk-tags-refresh" runs once every 7 days (periodInMinutes 10080) to re-download
 > Scryfall's published tag bulk files and replace the cached copy. The alarm does
 > nothing else: no other network call, no tracking, no user activity of any kind.
+
+**`contextMenus`:**
+
+> One item, "Search Scryfall for “%s”", shown only when text is selected. Choosing it
+> opens https://scryfall.com/search with the selected text as the query, in a new tab.
+> The selection is not stored or sent anywhere else. The address-bar keyword "sf" does
+> the same from the address bar and needs no permission.
 
 **`storage`:**
 

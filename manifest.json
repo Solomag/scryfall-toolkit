@@ -26,8 +26,12 @@
   "permissions": [
     "storage",
     "unlimitedStorage",
-    "alarms"
+    "alarms",
+    "contextMenus"
   ],
+  "omnibox": {
+    "keyword": "sf"
+  },
   "optional_host_permissions": [
     "https://api.cardtrader.com/*",
     "https://json.edhrec.com/*",

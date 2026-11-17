@@ -365,7 +365,33 @@ ensureRefreshAlarm();
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.alarms.create("stk-tags-refresh", { periodInMinutes: 7 * 24 * 60 });
+  ensureSearchMenu();
   refreshIndexes().catch(() => {});
+});
+
+// Searching Scryfall from outside it: the right-click menu on selected text, and the
+// address bar after the keyword "sf". Both open an ordinary search page in a new tab;
+// nothing is fetched here and nothing about the selection is kept.
+const scryfallSearchURL = text => 'https://scryfall.com/search?q=' +
+  encodeURIComponent(String(text || '').replace(/\s+/g, ' ').trim().slice(0, 300));
+function ensureSearchMenu() {
+  if (!chrome.contextMenus?.create) return;
+  chrome.contextMenus.removeAll(() => {
+    chrome.contextMenus.create({ id: 'stk-search-selection', title: 'Search Scryfall for “%s”', contexts: ['selection'] },
+      () => void chrome.runtime.lastError);
+  });
+}
+chrome.runtime.onStartup?.addListener(ensureSearchMenu);
+chrome.contextMenus?.onClicked.addListener((info, tab) => {
+  if (info.menuItemId !== 'stk-search-selection' || !String(info.selectionText || '').trim()) return;
+  chrome.tabs.create({ url: scryfallSearchURL(info.selectionText), index: tab ? tab.index + 1 : undefined });
+});
+chrome.omnibox?.setDefaultSuggestion?.({ description: 'Search Scryfall for %s' });
+chrome.omnibox?.onInputEntered.addListener((text, disposition) => {
+  if (!String(text || '').trim()) return;
+  const url = scryfallSearchURL(text);
+  if (disposition === 'currentTab') chrome.tabs.update({ url });
+  else chrome.tabs.create({ url, active: disposition !== 'newBackgroundTab' });
 });
 
 chrome.runtime.onMessage.addListener((message, sender, respond) => {
@@ -556,8 +582,17 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
     // as a whole, Scryfall has no endpoint that applies them to a deck, and computing
     // them here would mean writing a mana-symbol parser and then trusting it.
     if (message.type === 'deckLegality') {
-      const FORMAT = 'commander';
+      // Commander by default, which is what the deck editor builds. Any other format
+      // Scryfall rules on is read off the same `legalities`; the three this extension
+      // adds itself (Heritage, Classic and Peak Legacy) are answered by the same search
+      // clauses the card page uses, asked for twenty cards at a time rather than one.
+      const FORMAT = String(message.format || 'commander');
+      if (!DECK_FORMATS.has(FORMAT) && !(FORMAT in EXTRA_FORMAT_CLAUSES)) throw new Error('Invalid format');
       const { cards } = await deckCards(message.entries);
+      if (FORMAT in EXTRA_FORMAT_CLAUSES) {
+        const verdicts = await extraFormatVerdicts(FORMAT, cards.map(card => card.oracle_id));
+        for (const card of cards) card.legalities = { ...card.legalities, [FORMAT]: verdicts.get(card.oracle_id) };
+      }
       // Scryfall's whole vocabulary for one format, read off live answers rather than
       // assumed: `legal`, `not_legal`, `banned` and `restricted` are the four values that
       // come back across every format in `legalities`, and for Commander the two that are
@@ -795,12 +830,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
       if (!/^(classic|peak|heritage)$/.test(String(message.format))) throw new Error("Invalid format");
       const override = self.STK_FORMAT_OVERRIDES?.[message.format]?.[message.oracleId];
       if (override) return { legality: override };
-      const clauses = {
-        classic: "legal:legacy AND date<=roe",
-        peak: "legal:legacy AND date<=emn",
-        heritage: "(st:core OR st:expansion) AND -atag:external-ip"
-      };
-      const q = `oracleid:${message.oracleId} AND ${clauses[message.format]}`;
+      const q = `oracleid:${message.oracleId} AND ${EXTRA_FORMAT_CLAUSES[message.format]}`;
       // /cards/search is one of the endpoints limited to two a second, and this one
       // is asked once per format the reader turns on, so it goes through the paced
       // queue like the rest rather than straight to fetch.
@@ -819,6 +849,46 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
   })().then(data => respond({ ok: true, data }), error => respond({ ok: false, error: String(error.message || error) }));
   return true;
 });
+
+// The formats a whole deck can be checked in. Scryfall's own, read off `legalities`,
+// and the ones this extension computes from a search.
+const DECK_FORMATS = new Set(['commander', 'standard', 'pioneer', 'modern', 'legacy', 'vintage',
+  'pauper', 'paupercommander', 'oathbreaker', 'brawl', 'historic', 'timeless', 'premodern', 'oldschool', 'predh']);
+const EXTRA_FORMAT_CLAUSES = {
+  classic: "legal:legacy AND date<=roe",
+  peak: "legal:legacy AND date<=emn",
+  heritage: "(st:core OR st:expansion) AND -atag:external-ip"
+};
+// Each card's verdict in one of the computed formats, by Oracle ID. The search names
+// twenty cards at a time, so a hundred-card deck is five calls, not a hundred. A card
+// the search does not return is not legal; a correction in the overrides file wins.
+async function extraFormatVerdicts(format, oracleIds) {
+  const ids = [...new Set(oracleIds.filter(id => /^[0-9a-f-]{36}$/.test(id || '')))];
+  const verdicts = new Map(ids.map(id => [id, 'not_legal']));
+  for (let i = 0; i < ids.length; i += 20) {
+    const group = ids.slice(i, i + 20);
+    const q = `(${group.map(id => 'oracleid:' + id).join(' OR ')}) AND ${EXTRA_FORMAT_CLAUSES[format]}`;
+    let url = `https://api.scryfall.com/cards/search?q=${encodeURIComponent(q)}`;
+    while (url) {
+      let result;
+      try { result = await scryfallJSON(url); } catch (error) {
+        if (error && error.status === 404) break;
+        throw error;
+      }
+      for (const card of result.data || []) {
+        if (!verdicts.has(card.oracle_id)) continue;
+        verdicts.set(card.oracle_id, card.legalities?.legacy || 'legal');
+      }
+      const next = result.has_more && result.next_page ? new URL(result.next_page) : null;
+      url = next && next.hostname === 'api.scryfall.com' && next.pathname === '/cards/search' ? next.href : '';
+    }
+  }
+  for (const id of ids) {
+    const override = self.STK_FORMAT_OVERRIDES?.[format]?.[id];
+    if (override) verdicts.set(id, override);
+  }
+  return verdicts;
+}
 
 // Scryfall publishes its rate limits per endpoint class, and the classes are not
 // the same size:
