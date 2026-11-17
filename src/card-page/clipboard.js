@@ -72,6 +72,98 @@
       await chrome.storage.local.set({ cards });
     }
 
+    // More than one clipboard. The one in use is still `cards`, exactly as before, so the
+    // Tagger page, the per-printing buttons and anything else that reads `cards` keep
+    // working without knowing there are others; the rest wait in `clipLists.lists` under
+    // their names. Switching moves one list out of `cards` and another into it, in a
+    // single write, so there is no moment when a list exists in both places or in neither.
+    const LIST_LIMIT = 20;
+    const readLists = value => {
+      const lists = {};
+      for (const [name, items] of Object.entries(value?.lists || {})) {
+        if (typeof name === 'string' && name.trim() && Array.isArray(items)) lists[name.slice(0, 40)] = items;
+      }
+      const active = typeof value?.active === 'string' && value.active.trim() ? value.active.slice(0, 40) : 'Main';
+      delete lists[active];
+      return { active, lists };
+    };
+    let clipLists = readLists((await chrome.storage.local.get('clipLists')).clipLists);
+    const listNames = () => [clipLists.active, ...Object.keys(clipLists.lists).sort((a, b) => a.localeCompare(b))];
+    async function switchTo(name) {
+      if (name === clipLists.active || !(name in clipLists.lists)) return;
+      const lists = { ...clipLists.lists, [clipLists.active]: cards };
+      cards = lists[name];
+      delete lists[name];
+      clipLists = { active: name, lists };
+      await chrome.storage.local.set({ cards, clipLists });
+      shared.clipboardCards = cards;
+      render();
+      scan();
+      refreshPrintButtons();
+    }
+    function askName(question, current = '') {
+      const answer = prompt(question, current);
+      const name = String(answer || '').replace(/\s+/g, ' ').trim().slice(0, 40);
+      if (!name) return '';
+      if (listNames().includes(name) && name !== current) { alert('There is already a list called ' + name + '.'); return ''; }
+      return name;
+    }
+    const listPicker = document.createElement('select');
+    listPicker.className = 'stk-list-picker';
+    listPicker.setAttribute('aria-label', 'Card list');
+    listPicker.addEventListener('change', async () => {
+      const choice = listPicker.value;
+      if (choice === '\u0000new') {
+        if (listNames().length >= LIST_LIMIT) { alert('At most ' + LIST_LIMIT + ' lists.'); render(); return; }
+        const name = askName('Name of the new list:');
+        if (!name) { render(); return; }
+        clipLists = { ...clipLists, lists: { ...clipLists.lists, [name]: [] } };
+        return switchTo(name);
+      }
+      if (choice === '\u0000rename') {
+        const name = askName('New name for this list:', clipLists.active);
+        if (name && name !== clipLists.active) {
+          clipLists = { ...clipLists, active: name };
+          await chrome.storage.local.set({ clipLists });
+        }
+        render();
+        return;
+      }
+      if (choice === '\u0000delete') {
+        const others = Object.keys(clipLists.lists);
+        if (!others.length || !confirm('Delete the list ' + clipLists.active + ' and its ' + cards.length + ' cards?')) { render(); return; }
+        const next = others.sort((a, b) => a.localeCompare(b))[0];
+        const lists = { ...clipLists.lists };
+        cards = lists[next];
+        delete lists[next];
+        clipLists = { active: next, lists };
+        await chrome.storage.local.set({ cards, clipLists });
+        shared.clipboardCards = cards;
+        render();
+        scan();
+        refreshPrintButtons();
+        return;
+      }
+      return switchTo(choice);
+    });
+    function paintPicker() {
+      listPicker.replaceChildren();
+      const option = (value, text) => {
+        const element = document.createElement('option');
+        element.value = value;
+        element.textContent = text;
+        return element;
+      };
+      for (const name of listNames()) {
+        const items = name === clipLists.active ? cards : clipLists.lists[name];
+        listPicker.append(option(name, name + ' (' + items.length + ')'));
+      }
+      listPicker.append(option('\u0000new', '+ New list…'), option('\u0000rename', 'Rename this list…'));
+      if (Object.keys(clipLists.lists).length) listPicker.append(option('\u0000delete', 'Delete this list…'));
+      listPicker.value = clipLists.active;
+      for (const element of listPicker.options) element.selected = element.value === clipLists.active;
+    }
+
     const root = document.createElement("aside");
     root.id = "scryfall-toolkit-clipboard";
     root.setAttribute("aria-label", "Card clipboard");
@@ -177,7 +269,7 @@
     function paintTotal() {
       const shown = CURRENCIES.filter(([kind]) => setFilters?.prices?.[kind] !== false);
       if (!shown.length || !cards.length) { totalLine.remove(); return; }
-      list.prepend(totalLine);
+      listPicker.after(totalLine);
       const priced = cards.filter(card => card.set && card.number);
       const missing = priced.filter(card => !priceOf.has(entryKey(card)));
       const parts = shown.map(([kind, sign, code]) => {
@@ -221,6 +313,8 @@
       badge.hidden = !cards.length;
       open.setAttribute('aria-label', `${'Show card list'} (${cards.length})`);
       list.replaceChildren();
+      paintPicker();
+      list.append(listPicker);
       if (!cards.length) { const empty = document.createElement("p"); empty.textContent = 'List is empty'; list.append(empty); return; }
       paintTotal();
       for (const [index, card] of cards.entries()) {
@@ -408,6 +502,10 @@
       setTimeout(() => { pending = false; scan(); }, 100);
     }).observe(document.body, { childList: true, subtree: true });
     chrome.storage.onChanged.addListener(changes => {
+      if (changes.clipLists) {
+        clipLists = readLists(changes.clipLists.newValue);
+        if (!changes.cards) render();
+      }
       if (changes.cards && Array.isArray(changes.cards.newValue)) {
         cards = changes.cards.newValue;
         shared.clipboardCards = cards;

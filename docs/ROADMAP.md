@@ -50,7 +50,7 @@ holds. None is agreed; each is a candidate, in rough order of usefulness.
 | 3 | **Owned copies** — import a collection export (Moxfield, Manabox, Archidekt CSV) and show "owned ×N" on card pages, search results and deck rows | Archidekt and Moxfield forums: the most repeated request found; Deckplanet shipped it as "long requested" | Local only, in browser storage, nothing uploaded. The work is the importers (three CSV shapes) and matching by set and collector number. Large; worth it only if the first two land well. |
 | 4 | **Done, unreleased.** **Select a range** — shift-click a second `+` in search results to add every card between the two | Archidekt forum: multi-select cards | Small: the clipboard already knows every add button on the page and its order. |
 | 5 | **Done, unreleased.** **Clipboard total** — the clipboard shows the sum of its cards' prices in the currency the reader keeps visible | — | Prices come with the `/cards/collection` answer; one call per 75 cards, through the paced queue. Respects the price-hiding settings. |
-| 6 | **More than one clipboard** — named lists, switched from the toolbar | — | Changes the storage shape (`cards` becomes a list of lists), so it needs a migration and a test of it. |
+| 6 | **Done, unreleased.** **More than one clipboard** — named lists, switched from the toolbar | — | Done without changing the storage shape: `cards` stays the list in use and the others wait under `clipLists`, so nothing needed migrating. |
 
 ## Closed
 

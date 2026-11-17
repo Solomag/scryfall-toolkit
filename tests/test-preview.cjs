@@ -906,6 +906,55 @@ async function clipboardRangeAndTotalTest() {
     'summed per currency, in every currency the reader keeps');
 }
 
+// More than one clipboard: `cards` stays the list in use, the others wait under their names.
+async function clipboardListsTest() {
+  console.log('content scripts: more than one clipboard');
+  const item = n => `<div class="card-grid-item"><a class="card-grid-item-card" href="https://scryfall.com/card/tst/${n}/c${n}">
+    <span class="card-grid-item-invisible-label">Card ${n}</span></a></div>`;
+  const html = `<!DOCTYPE html><html><body><div class="card-grid">${[1, 2].map(item).join('')}</div></body></html>`;
+  const first = { name: 'Card 1', url: 'https://scryfall.com/card/tst/1/c1', set: 'tst', number: '1' };
+  const page = createPage({
+    url: 'https://scryfall.com/search?q=t%3Agoblin', html,
+    state: { settingsLanguage: 'en', cards: [first], setFilters: { prices: { usd: false, eur: false, tix: false } } }, routes
+  });
+  await page.script('src/core/i18n.js');
+  await page.script('src/core/format-catalog.js');
+  await page.script('src/core/tag-icons.js');
+  await page.cardPage();
+  await sleep(60);
+  const { document, mock } = page;
+  page.window.prompt = () => 'Second';
+  if (page.context) page.context.prompt = page.window.prompt;
+  const picker = () => document.querySelector('#scryfall-toolkit-clipboard .stk-list-picker');
+  const choose = value => {
+    for (const option of picker().querySelectorAll('option')) {
+      if (option.getAttribute('value') === value) option.setAttribute('selected', '');
+      else option.removeAttribute('selected');
+    }
+    picker().dispatchEvent(new page.window.Event('change'));
+  };
+  click(document.querySelector('#scryfall-toolkit-clipboard .stk-icon-clip'));
+  assert(picker(), 'the open list starts with a picker of lists');
+  assertEqual([...picker().querySelectorAll('option')].map(o => o.textContent).slice(0, 1), ['Main (1)'],
+    'the list in use, named Main until it is renamed, with its count');
+
+  choose('\u0000new');
+  await waitFor(() => mock.state.clipLists?.active === 'Second', 'a new list is made and switched to');
+  assertEqual(mock.state.cards, [], 'it starts empty');
+  assertEqual(mock.state.clipLists.lists, { Main: [first] }, 'and the old one waits under its name, unchanged');
+
+  click(document.querySelectorAll('.card-grid-item .stk-add')[1]);
+  await waitFor(() => mock.state.cards.length === 1, 'adding goes to the list in use');
+  assertEqual(mock.state.cards[0].number, '2', 'which is the new one');
+  assertEqual(document.querySelectorAll('.card-grid-item .stk-add.stk-selected').length, 1,
+    'and the ticks on the page follow the list in use');
+
+  choose('Main');
+  await waitFor(() => mock.state.clipLists?.active === 'Main', 'switching back');
+  assertEqual(mock.state.cards, [first], 'brings the first list back as it was');
+  assertEqual(mock.state.clipLists.lists.Second.map(card => card.number), ['2'], 'and puts the second one away');
+}
+
 async function searchPageTest() {
   console.log('content scripts: search page');
   const html = `<!DOCTYPE html><html><body><div id="main" class="card-grid">
@@ -1685,6 +1734,7 @@ async function cardTraderCurrencyTest() {
 await priceFilterTest();
     await deckLegalityTest();
 await clipboardRangeAndTotalTest();
+await clipboardListsTest();
 await deckTagsTest();
 await deckButtonPlacementTest();
     await setPlatformTest();

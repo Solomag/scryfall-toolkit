@@ -32,6 +32,12 @@ bottom right. Each row shows the card's set code and collector number beside its
 - Without a set on the line, printings of the same card are **counted**: three of Mana
   Drain copy as `3 Mana Drain`, not as three identical lines. With a set on the line they
   stay separate, because that is what tells them apart.
+- **More than one list.** The open clipboard starts with a picker: the list in use (called
+  Main until it is renamed), the others with their counts, and New, Rename and Delete. Adding,
+  copying, the ticks on the page and the total all follow the list in use. Up to twenty lists.
+  The list in use is still stored as `cards`, as it always was, so the Tagger page and anything
+  else that reads it needed no change; the others wait under `clipLists`, and a switch moves
+  one out and the other in with a single write.
 - **A range with Shift.** Press `+` on one card, then Shift and `+` on another: every card
   between the two, in the order the page shows them, goes in. If the second card was already
   in, the run comes out instead.
