@@ -19,7 +19,7 @@ const defaults = {
   // here would make every old key look as though it had a value, and the migration
   // reads those keys to decide what the reader had chosen.
   setFilters: null, setFiltersMigrated: false,
-  taggerSearchLinks: false, cardSearchLinks: true, searchAutocomplete: true, savedSearches: true, defaultSearchFilter: '', extraShopLinks: true, queryBuilder: true, deckNoPrices: true, stackedDeckCards: true, deckLegality: true,
+  taggerSearchLinks: false, cardSearchLinks: true, searchAutocomplete: true, savedSearches: true, defaultSearchFilter: '', extraShopLinks: true, queryBuilder: true, deckTagSummary: true, deckTagList: '', deckNoPrices: true, stackedDeckCards: true, deckLegality: true,
   deckCleanUpImprover: true, cleanUpLandsInSingleton: true, sortEntriesPrimary: 'none', insertSortingHeadings: true,
   edhrecSuggestions: true, deckSearch: true,
   legalities: true, exportFormat: "moxfield", formatOrder: null, formatVisibility: null,
@@ -38,7 +38,7 @@ const defaults = {
 // one flag, the two category rules carry a list under them, and the four price kinds are
 // told apart by the model rather than by an id. A key-by-key save would have to be kept
 // in step with all three, and there is no test that could tell that it was not.
-const basicFields = ["clipboard", "printAddButtons", "tags", "cardTags", "artTags", "relationships", "finishBadges", "cardtraderPrices", "edhrecUsage", "edhrecSalt", "showSaltScale", "edhrecUsageDisplay", "usageColorMetric", "legalities", "exportFormat", "taggerSearchLinks", "cardSearchLinks", "searchAutocomplete", "savedSearches", "defaultSearchFilter", "extraShopLinks", "queryBuilder", "deckNoPrices", "stackedDeckCards", "deckLegality", "deckCleanUpImprover", "cleanUpLandsInSingleton", "sortEntriesPrimary", "insertSortingHeadings", "edhrecSuggestions", "deckSearch"];
+const basicFields = ["clipboard", "printAddButtons", "tags", "cardTags", "artTags", "relationships", "finishBadges", "cardtraderPrices", "edhrecUsage", "edhrecSalt", "showSaltScale", "edhrecUsageDisplay", "usageColorMetric", "legalities", "exportFormat", "taggerSearchLinks", "cardSearchLinks", "searchAutocomplete", "savedSearches", "defaultSearchFilter", "extraShopLinks", "queryBuilder", "deckTagSummary", "deckTagList", "deckNoPrices", "stackedDeckCards", "deckLegality", "deckCleanUpImprover", "cleanUpLandsInSingleton", "sortEntriesPrimary", "insertSortingHeadings", "edhrecSuggestions", "deckSearch"];
 // EDHREC and CardTrader are optional features, and so is the access they need.
 // Chrome has a place for exactly this: optional_host_permissions, granted only
 // when the user turns one of them on. Turning a switch off and on again is also
@@ -388,7 +388,14 @@ chrome.storage.local.get(defaults, values => {
       caption: 'Проверять допустимость карт в Commander',
       notes: [
         'Проверяет допустимость отдельных карт в Commander. Не проверяет цветовую идентичность колоды, её размер и ограничения на число копий.',
-        'Кнопка появляется на странице колоды. Формат не выбирается: редактор Scryfall собирает командные колоды.'
+        'Кнопка появляется на странице колоды. Сначала проверяется Commander; в окне можно выбрать другой формат.'
+      ]
+    },
+    deckTagSummary: {
+      caption: 'Сводка тегов колоды',
+      notes: [
+        'Кнопка на странице колоды показывает, сколько карт колоды отмечены в Scryfall Tagger как ramp, draw, removal, sweeper и другие, и какие именно. Теги берутся из копии, которую расширение уже хранит, поэтому запрос к Scryfall один на всю колоду.',
+        'Список тегов можно задать своим: через пробел или запятую. Пустое поле — стандартный список.'
       ]
     },
     edhrecSuggestions: {

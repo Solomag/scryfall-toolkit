@@ -317,6 +317,31 @@ async function deckLegalityTest() {
 // is the whole content of this test. It cannot be checked by `npm run render`, which is
 // where that limitation is written down: the features run in the harness and the browser
 // only draws what they left behind, so a decision made here cannot be revisited there.
+// What the deck does, by tag: one request for the whole deck, and a list of counts.
+async function deckTagsTest() {
+  console.log('deck page: the tag summary counts the deck by Tagger tag');
+  const html = `<!DOCTYPE html><html><body><div id="main"><div class="sidebar"></div><div class="deck-list">
+    <div class="deck-list-entry"><span class="deck-list-entry-name"><a href="https://scryfall.com/card/mh3/42/x">X</a></span></div>
+    <div class="deck-list-entry"><span class="deck-list-entry-name"><a href="https://scryfall.com/card/dom/126/y">Y</a></span></div>
+  </div></div></body></html>`;
+  const sent = [];
+  const page = await loadDeckPage({ deckTagSummary: true, deckLegality: false, clipboard: false, deckTagList: 'ramp, draw' },
+    { ...routes, deckTags: message => { sent.push(message); return { checked: 2, tags: [
+      { tag: 'ramp', known: true, cards: [{ name: 'Sol Ring', uri: 'https://scryfall.com/card/c21/263/sol-ring' }] },
+      { tag: 'draw', known: true, cards: [] }] }; } }, html);
+  const button = page.document.querySelector('.stk-deck-tags-button');
+  assert(button, 'the deck page has a tag summary button');
+  button.dispatchEvent(new page.window.Event('click'));
+  await sleep(60);
+  assertEqual(sent.length, 1, 'pressing it asks the worker once for the whole deck');
+  assertEqual(sent[0].tags, ['ramp', 'draw'], 'for the reader\'s own tag list when one is set');
+  const rows = [...page.document.querySelectorAll('.stk-deck-tags-list > li')];
+  assertEqual(rows.map(row => row.querySelector('summary').textContent.replace(/\s+/g, ' ').trim()), ['1 ramp', '0 draw'],
+    'each tag with its count');
+  assert(/Sol Ring/.test(rows[0].textContent), 'and the cards behind it');
+  assert(rows[1].classList.contains('stk-deck-tags-none'), 'a tag with no cards is shown dimmed rather than hidden');
+}
+
 async function deckButtonPlacementTest() {
   console.log('deck page: the buttons go where a reader can see them, not into a hidden box');
   const html = `<!DOCTYPE html><html><body><div id="main">
@@ -1618,6 +1643,7 @@ async function cardTraderCurrencyTest() {
     await advancedPriceFilterTest();
 await priceFilterTest();
     await deckLegalityTest();
+await deckTagsTest();
 await deckButtonPlacementTest();
     await setPlatformTest();
 await advancedSetFilterTest();

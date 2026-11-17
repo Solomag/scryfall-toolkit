@@ -243,6 +243,15 @@ about a page visited before the settings page, so it names which page that was. 
 deckbuilder on a card page is therefore reported as "no suitable editor page open", never as a
 failure of the feature.
 
+**Tags in this deck** *(on by default)*. A button on a deck page counts the deck's cards by
+Scryfall Tagger oracle tag — ramp, draw, removal, sweeper, counterspell, tutor, recursion and a
+few more — and opens each count to the cards behind it; the tag itself links to every card Tagger
+marks with it. The tags come from the copy of Tagger's index the extension already keeps for the
+card pages, so the whole deck is the one collection request the other deck buttons make, not a
+request per card. The list of tags can be replaced with your own in the settings; a word that is
+not a Tagger tag is named under the list rather than counted as zero. A card carries several tags,
+so the counts overlap and are not meant to add up.
+
 **Deck legality check.** A button on a deck page asks Scryfall about each of the deck's cards,
 and lists the ones it counts as not legal in Commander. It checks **individual cards**, not the
 deck as a whole, and both the setting's name and the help say so. Commander comes first because
@@ -310,8 +319,11 @@ a query box in Scryfall's own syntax, lists what comes back, and puts a card in 
 Two checkboxes narrow it: only the commander's colours, and no funny cards. Requests go
 through the extension's Scryfall queue rather than firing out of the page.
 
-Upstream's version also keeps saved searches; theirs describes that as not finished, and
-this leaves it out rather than shipping something half done.
+**Saved searches, per deck.** The ☆ Save button beside the box saves the query in it for this
+deck, and the deck's saved queries sit under the form as buttons that run them; × forgets one.
+Each deck has its own list (up to 20, newest first), kept in the browser's storage under the
+deck's id, so a search for one commander's pieces does not show up while building another.
+Upstream's version kept one list for everything and described it as not finished.
 
 **Three** Shambleshark deck modules are here. A fourth was ported and taken back out:
 `card-input-modifier` showed a card image when the cursor was over a deck row, which

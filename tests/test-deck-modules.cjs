@@ -645,6 +645,50 @@ const card = (name, typeLine, id) => ({
       assertEqual(w.document.querySelector('.stk-search-panel'), null, 'and the panel closes');
     }
 
+    console.log('deck-search: saved searches are kept per deck');
+    {
+      const DECK = '11111111-2222-4333-8444-555555555555';
+      const w = makeWorld({
+        deck: { id: DECK, sections: { primary: ['nonlands'], secondary: [] }, entries: { nonlands: [] } },
+        html: '<div class="deckbuilder-toolbar"></div><div id="deckbuilder"></div>'
+      });
+      w.boot();
+      // The deck's id is read off the address, as it is on Scryfall.
+      w.self.location.pathname = '/@someone/decks/' + DECK + '/build';
+      const asked = [];
+      let stored = ['t:goblin'];
+      w.self.STK_BRIDGE = {
+        request: (name, value) => {
+          asked.push({ name, value });
+          if (name === 'deckSearchesGet') return Promise.resolve(stored.slice());
+          if (name === 'deckSearchesSet') { stored = value.list.slice(); return Promise.resolve(stored.slice()); }
+          return Promise.resolve({ cards: [], hasMore: false });
+        }
+      };
+      w.self.STK_DECK_SEARCH.apply({ deckSearch: true });
+      w.document.getElementById('stk-search-button').dispatchEvent(new w.self.Event('click'));
+      await tick();
+      await tick();
+      const get = asked.find(a => a.name === 'deckSearchesGet');
+      assertEqual(get && get.value.deck, DECK, 'the panel asks for this deck\'s saved searches by its id');
+      const chips = () => [...w.document.querySelectorAll('.stk-search-chip > button:first-child')].map(b => b.textContent);
+      assertEqual(chips(), ['t:goblin'], 'and shows each as a button under the form');
+
+      w.document.querySelector('.stk-search-chip > button').dispatchEvent(new w.self.Event('click'));
+      await tick();
+      const ran = asked.filter(a => a.name === 'scryfallSearch').pop();
+      assertEqual(ran && ran.value.query, 't:goblin not:funny', 'pressing one runs it');
+
+      w.document.querySelector('.stk-search-input').value = 'o:"draw a card"';
+      w.document.querySelector('.stk-search-save').dispatchEvent(new w.self.Event('click'));
+      await tick();
+      assertEqual(stored, ['o:"draw a card"', 't:goblin'], 'the star saves the query in the box for this deck, newest first');
+      assertEqual(chips(), ['o:"draw a card"', 't:goblin'], 'and it appears among the buttons');
+      w.document.querySelectorAll('.stk-search-forget')[1].dispatchEvent(new w.self.Event('click'));
+      await tick();
+      assertEqual(stored, ['o:"draw a card"'], 'and × forgets one');
+    }
+
     console.log('deck-search: with no commander known, the colour filter steps aside');
     {
       const w = makeWorld({

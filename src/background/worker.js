@@ -640,6 +640,34 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
             : (a.verdict === 'banned' ? -1 : 1)))
       };
     }
+    // What the deck does, by Tagger oracle tag: for each tag asked for, the deck's cards
+    // that carry it. The cards come from the same collection answer the token and legality
+    // buttons read, and the tags from the index already cached for the card pages, so a
+    // whole deck costs the collection call and nothing per card.
+    if (message.type === 'deckTags') {
+      const tags = Array.isArray(message.tags) ? message.tags.map(String) : [];
+      if (!tags.length || tags.length > 40 || tags.some(tag => !/^[a-z0-9-]{1,60}$/.test(tag))) throw new Error('Invalid tags');
+      const { cards } = await deckCards(message.entries);
+      await loadStoredIndexes();
+      const index = tagIndexes.oracle;
+      const ids = new Map((index?.t || []).map((name, i) => [name, i]));
+      const result = tags.map(tag => ({ tag, known: ids.has(tag), cards: [] }));
+      const seen = new Set();
+      for (const card of cards) {
+        const oracleId = card.oracle_id || card.card_faces?.[0]?.oracle_id;
+        // A card listed twice (two printings of it in the deck) is one card here.
+        if (!oracleId || seen.has(oracleId)) continue;
+        seen.add(oracleId);
+        const has = new Set(index?.d?.[oracleId] || []);
+        for (const row of result) {
+          if (row.known && has.has(ids.get(row.tag)) && /^https:\/\/scryfall\.com\//.test(card.scryfall_uri || '')) {
+            row.cards.push({ name: String(card.name || '').slice(0, 200), uri: card.scryfall_uri });
+          }
+        }
+      }
+      for (const row of result) row.cards.sort((a, b) => a.name.localeCompare(b.name));
+      return { checked: seen.size, tags: result };
+    }
     if (message.type === 'edhrecRecs') {
       // The whole deck list, as the names EDHREC's own site would send. This is
       // the one request in the extension that carries a deck rather than one

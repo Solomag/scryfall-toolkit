@@ -222,6 +222,14 @@
 <label class="feature-main"><input type="checkbox" class="stk-check" id="deckLegality"> Проверять допустимость карт в Commander</label>
 <button type="button" class="feature-help" data-help="deckLegality" aria-haspopup="dialog" title="Что это">?</button>
 </div>
+<div class="feature-row">
+<label class="feature-main"><input type="checkbox" class="stk-check" id="deckTagSummary"> Сводка тегов колоды</label>
+<button type="button" class="feature-help" data-help="deckTagSummary" aria-haspopup="dialog" title="Что это">?</button>
+</div>
+<div class="feature-panel" id="deckTagListPanel">
+<label for="deckTagList">Свои теги для сводки</label>
+<input id="deckTagList" type="text" maxlength="600" autocomplete="off" spellcheck="false" placeholder="ramp draw removal">
+</div>
 <!-- EDHREC suggestions need a host that is asked for only from a click. The permission chip is
      that click: it appears only while the feature is on without the access it needs, and the
      page never asks on its own. A limited mode is the case where only part of the access is

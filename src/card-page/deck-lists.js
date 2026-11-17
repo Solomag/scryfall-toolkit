@@ -324,6 +324,100 @@
     placeDeckButton(button);
   }
 
+  // What the deck does, by Tagger oracle tag: how many of its cards ramp, draw, remove,
+  // wipe the board… and which ones. The tags are the community's, from Scryfall Tagger;
+  // the list of which to count is the reader's, with a short default.
+  const DEFAULT_DECK_TAGS = ['ramp', 'draw', 'removal', 'sweeper', 'counterspell', 'tutor',
+    'recursion', 'sacrifice-outlet', 'graveyard-hate', 'lifegain', 'burn', 'discard', 'mill'];
+  const deckTagList = () => {
+    const own = String(settings.deckTagList || '').toLowerCase().split(/[\s,]+/)
+      .filter(tag => /^[a-z0-9-]{1,60}$/.test(tag));
+    return [...new Set(own.length ? own : DEFAULT_DECK_TAGS)].slice(0, 40);
+  };
+
+  function initDeckTags() {
+    const entries = deckEntries();
+    if (!entries.length || !document.querySelector('#main .sidebar, #main .deck-list')) return;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'button-n stk-deck-tags-button';
+    button.textContent = 'Tags in this deck';
+    const dialog = document.createElement('dialog');
+    dialog.id = 'stk-deck-tags';
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'button-n';
+    close.textContent = 'Close';
+    close.addEventListener('click', () => dialog.close());
+    const title = document.createElement('h2');
+    title.textContent = 'What this deck does, by tag';
+    const content = document.createElement('div');
+    content.className = 'stk-deck-tags-result';
+    dialog.append(title, close, content);
+    document.body.append(dialog);
+    let pending;
+    button.addEventListener('click', async () => {
+      dialog.showModal();
+      if (!pending) {
+        content.textContent = 'Reading tags…';
+        pending = request({ type: 'deckTags', entries, tags: deckTagList() })
+          .catch(error => { pending = null; throw error; });
+      }
+      try {
+        const answer = await pending;
+        content.replaceChildren();
+        const list = document.createElement('ul');
+        list.className = 'stk-deck-tags-list';
+        for (const row of answer.tags) {
+          if (!row.known) continue;
+          const item = document.createElement('li');
+          const details = document.createElement('details');
+          const summary = document.createElement('summary');
+          const count = document.createElement('span');
+          count.className = 'stk-deck-tags-count';
+          count.textContent = String(row.cards.length);
+          const tag = document.createElement('a');
+          tag.href = 'https://scryfall.com/search?q=' + encodeURIComponent('otag:' + row.tag);
+          tag.target = '_blank';
+          tag.rel = 'noopener noreferrer';
+          tag.textContent = row.tag;
+          tag.title = 'Every card Tagger marks ' + row.tag;
+          summary.append(count, ' ', tag);
+          details.append(summary);
+          if (row.cards.length) {
+            const cards = document.createElement('ul');
+            for (const card of row.cards) {
+              const li = document.createElement('li');
+              const link = document.createElement('a');
+              link.href = card.uri;
+              link.target = '_blank';
+              link.rel = 'noopener noreferrer';
+              link.textContent = card.name;
+              li.append(link);
+              cards.append(li);
+            }
+            details.append(cards);
+          } else {
+            item.classList.add('stk-deck-tags-none');
+          }
+          item.append(details);
+          list.append(item);
+        }
+        content.append(list);
+        const note = document.createElement('p');
+        note.className = 'stk-legality-note';
+        const unknown = answer.tags.filter(row => !row.known).map(row => row.tag);
+        note.textContent = `${answer.checked} different cards read. Tags are Scryfall Tagger's, from the copy this extension keeps; a card can carry several, so the counts overlap.` +
+          (unknown.length ? ` Not Tagger tags, so not counted: ${unknown.join(', ')}.` : '');
+        content.append(note);
+      } catch {
+        content.replaceChildren(document.createTextNode('Could not read the tags.'));
+      }
+    });
+    placeDeckButton(button);
+  }
+
+  self.STK_CONTENT.on("deckTags", () => initDeckTags());
   self.STK_CONTENT.on("deckTokens", () => initDeckTokens());
   self.STK_CONTENT.on("deckLegality", () => initDeckLegality());
   self.STK_CONTENT.on("stackedDeckCards", () => initStackedDeckCards());

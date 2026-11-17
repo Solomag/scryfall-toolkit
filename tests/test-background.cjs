@@ -610,6 +610,28 @@ async function firefoxBackgroundTest() {
       assertEqual(verdict.data.unknown, 1, 'and the card it said nothing about is counted apart');
     }
     {
+      // The deck's cards by Tagger oracle tag, read off the cached index.
+      const ORACLE = n => '00000000-0000-4000-9000-' + String(n).padStart(12, '0');
+      // `tagIndexes` is a `let` in the worker, so it is not a property of the context; it is
+      // set from inside it, after the worker has loaded its own copy.
+      await require('node:vm').runInContext('loadStoredIndexes()', ctx);
+      ctx.STK_TEST_ORACLE = { t: ['ramp', 'draw', 'removal'], d: { [ORACLE(1)]: [0, 1], [ORACLE(3)]: [1] } };
+      require('node:vm').runInContext('STK_SAVED_INDEXES = tagIndexes; tagIndexes = { ...tagIndexes, oracle: STK_TEST_ORACLE }', ctx);
+      const deck = [{ set: 'mh3', collector_number: '42' }, { set: 'dom', collector_number: '126' }, { set: 'penny', collector_number: '1' }];
+      const tags = await send({ type: 'deckTags', entries: deck, tags: ['ramp', 'draw', 'removal', 'not-a-tag'] });
+      assertEqual(tags.ok, true, 'the deck tag summary answers');
+      assertEqual(tags.data.tags.map(row => [row.tag, row.known, row.cards.map(card => card.name)]), [
+        ['ramp', true, ['Card of MH3']],
+        ['draw', true, ['Card of MH3', 'Card of PENNY']],
+        ['removal', true, []],
+        ['not-a-tag', false, []]
+      ], 'each tag asked for, with the deck\'s cards that carry it, and a tag Tagger does not have marked as such');
+      assertEqual(tags.data.checked, 3, 'and how many different cards were read');
+      assertEqual(await send({ type: 'deckTags', entries: deck, tags: ['Bad Tag!'] }),
+        { ok: false, error: 'Invalid tags' }, 'a tag that is not a slug is refused');
+      require('node:vm').runInContext('tagIndexes = STK_SAVED_INDEXES', ctx);
+    }
+    {
       // Another format: one Scryfall rules on, and one this extension computes.
       const deck = [{ set: 'mh3', collector_number: '42' }, { set: 'penny', collector_number: '1' }];
       const penny = await send({ type: 'deckLegality', entries: deck, format: 'premodern' });

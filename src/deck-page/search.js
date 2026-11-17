@@ -15,8 +15,9 @@
 // https://github.com/crookedneighbor/shambleshark), rewritten in plain
 // JavaScript. Shambleshark searches Scryfall straight from the page and adds
 // saved searches; this goes through the extension's background worker so the
-// request is queued with everything else Scryfall, and it does not keep saved
-// searches — upstream describes those as not done yet too.
+// request is queued with everything else Scryfall. Saved searches are kept per
+// deck: the star saves the query in the box, and the deck's saved queries sit
+// under the form as buttons that run them.
 //
 // What is here is the part that matters: type a query, see what Scryfall
 // returns, put a card in the deck. Searches can be narrowed to the commander's
@@ -103,9 +104,17 @@
     noFunny.checked = true;
     noFunnyLabel.append(noFunny, ' Exclude funny cards');
     options.append(identityLabel, ' ', noFunnyLabel);
+    const saved = document.createElement('p');
+    saved.className = 'stk-search-saved';
+    const star = document.createElement('button');
+    star.type = 'button';
+    star.className = 'button-n tiny-n stk-search-save';
+    star.textContent = '\u2606 Save';
+    star.title = 'Save this search for this deck';
+    form.append(star);
     const body = document.createElement('div');
     body.className = 'stk-search-results';
-    content.append(form, options, body);
+    content.append(form, options, saved, body);
     dialog.append(title, content);
     overlay.append(dialog);
     const close = () => { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); };
@@ -117,6 +126,8 @@
       input: overlay.querySelector('.stk-search-input'),
       identity: overlay.querySelector('.stk-search-identity'),
       noFunny: overlay.querySelector('.stk-search-no-funny'),
+      saved: overlay.querySelector('.stk-search-saved'),
+      star: overlay.querySelector('.stk-search-save'),
       body: overlay.querySelector('.stk-search-results'),
       close
     };
@@ -177,6 +188,59 @@
       }).catch(() => new Map());
     }).catch(() => new Map());
     return ratesPromise;
+  }
+
+  // --- this deck's saved searches -------------------------------------------
+
+  function wireSaved(panel, run) {
+    let deck = '';
+    let list = [];
+    const paint = () => {
+      panel.saved.replaceChildren();
+      const query = panel.input.value.trim();
+      const on = Boolean(query) && list.includes(query);
+      panel.star.textContent = (on ? '\u2605' : '\u2606') + ' Save';
+      panel.star.title = on ? 'Forget this search for this deck' : 'Save this search for this deck';
+      panel.star.disabled = !deck;
+      for (const saved of list) {
+        const chip = document.createElement('span');
+        chip.className = 'stk-search-chip';
+        const runIt = document.createElement('button');
+        runIt.type = 'button';
+        runIt.className = 'button-n tiny-n';
+        runIt.textContent = saved;
+        runIt.title = 'Run this saved search';
+        runIt.addEventListener('click', () => { panel.input.value = saved; paint(); run(); });
+        const forget = document.createElement('button');
+        forget.type = 'button';
+        forget.className = 'stk-search-forget';
+        forget.textContent = '\u00d7';
+        forget.title = 'Forget this saved search';
+        forget.setAttribute('aria-label', 'Forget ' + saved);
+        forget.addEventListener('click', () => store(list.filter(item => item !== saved)));
+        chip.append(runIt, forget);
+        panel.saved.append(chip);
+      }
+    };
+    const store = next => bridge().request('deckSearchesSet', { deck: deck, list: next })
+      .then(reply => { list = unwrap(reply) || []; paint(); })
+      .catch(() => {});
+    panel.star.addEventListener('click', () => {
+      const query = panel.input.value.trim();
+      if (!deck || !query) return;
+      store(list.includes(query) ? list.filter(item => item !== query) : [query].concat(list));
+    });
+    panel.input.addEventListener('input', paint);
+    paint();
+    Promise.resolve(scryfall.activeDeckId ? scryfall.activeDeckId() : '').then(id => {
+      if (!/^[0-9a-f-]{36}$/.test(String(id || ''))) return;
+      deck = String(id);
+      return bridge().request('deckSearchesGet', { deck: deck }).then(reply => {
+        list = unwrap(reply) || [];
+        paint();
+      });
+    }).catch(() => {});
+    return paint;
   }
 
   // --- searching ------------------------------------------------------------
@@ -241,8 +305,10 @@
       });
     }).catch(() => {});
 
+    const repaintSaved = wireSaved(panel, () => runSearch(panel, area, 1));
     panel.form.addEventListener('submit', event => {
       event.preventDefault();
+      repaintSaved();
       runSearch(panel, area, 1);
     });
     panel.input.focus();

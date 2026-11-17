@@ -67,7 +67,7 @@
     edhrecUsage: false, edhrecSalt: false, showSaltScale: false, edhrecUsageDisplay: 'both',
     usageColorMetric: 'decks', usageMediumDecks: 50000, usageHighDecks: 100000,
     usageMediumPercent: 1, usageHighPercent: 2.6, saltMediumThreshold: 1, saltHighThreshold: 2,
-    taggerSearchLinks: false, cardSearchLinks: true, searchAutocomplete: true, savedSearches: true, defaultSearchFilter: '', extraShopLinks: true, queryBuilder: true, deckNoPrices: true, stackedDeckCards: true, deckLegality: true,
+    taggerSearchLinks: false, cardSearchLinks: true, searchAutocomplete: true, savedSearches: true, defaultSearchFilter: '', extraShopLinks: true, queryBuilder: true, deckTagSummary: true, deckTagList: '', deckNoPrices: true, stackedDeckCards: true, deckLegality: true,
     premodern: true, heritage: false, classic: false, peak: false,
     formatOrder: null, formatVisibility: null,
     deckCleanUpImprover: true, cleanUpLandsInSingleton: true,
@@ -199,7 +199,7 @@
       // it, and the card page reaches it through its own script.
       const BRIDGE_REQUESTS = new Set([
         'setDeckResultsView', 'cardBySet', 'cardImages', 'cardIdentity',
-        'scryfallSearch', 'edhrecRecs', 'edhrecCommander'
+        'scryfallSearch', 'edhrecRecs', 'edhrecCommander', 'deckSearchesGet', 'deckSearchesSet'
       ]);
       if (typeof name !== 'string' || !BRIDGE_REQUESTS.has(name)) return reply(false, 'Unknown request');
       // Which way results are shown is the page's business and this script's to
@@ -209,6 +209,25 @@
         settings.deckResultsView = view;
         chrome.storage.local.set({ deckResultsView: view }).catch(() => {});
         return reply(true, view);
+      }
+      // The deck editor's saved searches, one list per deck, kept here for the same reason:
+      // storage is this script's, and the page world cannot reach it. Bounded on the way in,
+      // because the page world is also where any other script on Scryfall runs.
+      if (name === 'deckSearchesGet' || name === 'deckSearchesSet') {
+        const deck = String(value && value.deck || '');
+        if (!/^[0-9a-f-]{36}$/.test(deck)) return reply(false, 'Invalid deck');
+        return chrome.storage.local.get({ deckSavedSearches: {} }).then(({ deckSavedSearches }) => {
+          const all = deckSavedSearches && typeof deckSavedSearches === 'object' ? deckSavedSearches : {};
+          if (name === 'deckSearchesGet') return reply(true, Array.isArray(all[deck]) ? all[deck] : []);
+          const list = (Array.isArray(value.list) ? value.list : [])
+            .map(query => String(query).replace(/\s+/g, ' ').trim().slice(0, 300)).filter(Boolean);
+          const next = { ...all, [deck]: [...new Set(list)].slice(0, 20) };
+          if (!next[deck].length) delete next[deck];
+          // At most 200 decks: the oldest written first are dropped, so a list cannot grow forever.
+          const decks = Object.keys(next);
+          for (const old of decks.slice(0, Math.max(0, decks.length - 200))) delete next[old];
+          return chrome.storage.local.set({ deckSavedSearches: next }).then(() => reply(true, next[deck] || []));
+        }).catch(error => reply(false, error));
       }
       // `type` last, so the payload cannot overwrite it.
       chrome.runtime.sendMessage({ ...(value || {}), type: name })
@@ -547,6 +566,7 @@
     ["stackedDeckCards", () => settings.stackedDeckCards, false],
     ["deckTokens", () => settings.deckTokens, false],
     ["deckLegality", () => settings.deckLegality && /^\/@[^/]+\/decks\//.test(location.pathname), false],
+    ["deckTags", () => settings.deckTagSummary && /^\/@[^/]+\/decks\//.test(location.pathname), false],
   ];
 
   // On a macrotask, not a microtask. Every feature file is waiting on `arrived`

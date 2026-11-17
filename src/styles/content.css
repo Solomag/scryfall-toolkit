@@ -231,4 +231,18 @@ html.stk-hide-caster #caster-tray{display:none!important}
 .stk-builder-open{margin-left:10px;padding:1px 8px;border:1px solid currentColor;border-radius:4px;background:none;color:inherit;font:inherit;font-size:12px;cursor:pointer;opacity:.75}
 .stk-builder-open:hover{opacity:1}
 form.homepage-form + .stk-builder-open{display:block;margin:10px auto 0}
+#stk-deck-tags{max-width:min(520px,calc(100vw - 32px))}
+.stk-deck-tags-button{margin:8px}
+.stk-deck-tags-list{margin:0 0 12px;padding:0;list-style:none}
+.stk-deck-tags-list>li{margin:4px 0}
+.stk-deck-tags-list summary{cursor:pointer}
+.stk-deck-tags-list ul{margin:4px 0 8px;padding-left:34px}
+.stk-deck-tags-none{opacity:.55}
+.stk-deck-tags-count{display:inline-block;min-width:26px;font-weight:600;text-align:right}
+.stk-search-saved{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.stk-search-saved:empty{display:none}
+.stk-search-chip{display:inline-flex;align-items:center;gap:2px}
+.stk-search-forget{padding:0 4px;border:0;background:none;color:inherit;cursor:pointer;opacity:.6}
+.stk-search-forget:hover{opacity:1}
+.stk-search-save{margin-left:6px}
 .stk-filter-note{margin-left:10px;font-size:12px;opacity:.75}.stk-filter-note a{color:inherit;text-decoration:underline}
