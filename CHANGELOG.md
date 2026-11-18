@@ -8,6 +8,18 @@ All releases: <https://github.com/Solomag/scryfall-toolkit/releases>
 
 ---
 
+### 2.4.7 - your collection, deck tags, and more from the clipboard
+
+**Your collection.** Load a CSV export (Moxfield, Manabox, Archidekt, Deckbox…) under Collection in the settings; one reader finds the columns by their headers and only the counts are kept, in the browser. Card pages say how many copies of the card and this printing you own, search results carry a count, and deck rows show owned against played, marking what is short (basic lands are left out).
+
+**Tags in this deck.** A button on deck pages counts the deck's cards by Scryfall Tagger tag — ramp, draw, removal, sweeper and more — from the tag index the extension already keeps; the list of tags can be your own.
+
+**Saved searches per deck.** The deck editor's search has a Save star; each deck keeps its own saved queries as buttons under the form.
+
+**Clipboard.** Shift and a second + adds every card between the two; the open list shows its total at Scryfall prices in each currency you keep visible; and there can be several named lists, switched from the top of the list.
+
+**Fixes.** The default filter no longer drops a clause because the query has another of the same many-valued keyword (is:, t:, o:…), and its note covers only what the extension added; the query builder keeps the view and order of the current search; shop links search by the English name on a non-English printing.
+
 ### 2.4.6 - a filter for every search, add all results, deck legality in any format, and more
 
 **Default search filter.** A filter written under Search in the settings (`game:paper`, `lang:en`…)
