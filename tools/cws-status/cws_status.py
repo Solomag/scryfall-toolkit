@@ -95,6 +95,46 @@ def _read_windows_credential(target: str) -> str | None:
     return blob.decode("utf-8").strip()
 
 
+def _write_windows_credential(target: str, value: str) -> None:
+    import ctypes
+    from ctypes import wintypes
+
+    class CREDENTIAL(ctypes.Structure):
+        _fields_ = [
+            ("Flags", wintypes.DWORD), ("Type", wintypes.DWORD),
+            ("TargetName", wintypes.LPWSTR), ("Comment", wintypes.LPWSTR),
+            ("LastWritten", wintypes.FILETIME), ("CredentialBlobSize", wintypes.DWORD),
+            ("CredentialBlob", ctypes.POINTER(ctypes.c_ubyte)), ("Persist", wintypes.DWORD),
+            ("AttributeCount", wintypes.DWORD), ("Attributes", ctypes.c_void_p),
+            ("TargetAlias", wintypes.LPWSTR), ("UserName", wintypes.LPWSTR),
+        ]
+
+    blob = value.encode("utf-16-le")
+    buf = (ctypes.c_ubyte * len(blob)).from_buffer_copy(blob)
+    cred = CREDENTIAL(Type=1, TargetName=target, CredentialBlobSize=len(blob),
+                      CredentialBlob=ctypes.cast(buf, ctypes.POINTER(ctypes.c_ubyte)),
+                      Persist=2, UserName="x")  # 2 = CRED_PERSIST_LOCAL_MACHINE
+    advapi = ctypes.WinDLL("advapi32", use_last_error=True)
+    advapi.CredWriteW.argtypes = [ctypes.POINTER(CREDENTIAL), wintypes.DWORD]
+    advapi.CredWriteW.restype = wintypes.BOOL
+    if not advapi.CredWriteW(ctypes.byref(cred), 0):
+        raise OSError(ctypes.get_last_error(), "CredWriteW failed")
+
+
+def set_secrets() -> int:
+    """Ask for each secret without echo and store it in the Windows Credential Manager."""
+    import getpass
+    print("Ввод не отображается. Пусто + Enter — оставить как есть.")
+    for n in SECRET_NAMES:
+        mark = "задан" if secret(n) else "нет"
+        v = getpass.getpass(f"{n} [{mark}]: ").strip()
+        if v:
+            _write_windows_credential(n, v)
+            print(f"  {n}: сохранён")
+    print("Готово. Проверка: --secrets, затем --test-telegram")
+    return 0
+
+
 def secret(name: str) -> str | None:
     return (os.environ.get(name) or "").strip() or _read_windows_credential(name)
 
@@ -248,7 +288,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--source", choices=("auto", "api", "page"), default="auto")
     ap.add_argument("--test-telegram", action="store_true", help="отправить пробное сообщение и выйти")
     ap.add_argument("--secrets", action="store_true", help="показать, какие секреты заданы (без значений)")
+    ap.add_argument("--set-secrets", action="store_true", help="ввести секреты (без эха) в Диспетчер учётных данных")
     args = ap.parse_args(argv)
+    if args.set_secrets:
+        return set_secrets()
     setup_logging(to_file=not (args.dry_run or args.secrets))
 
     if args.secrets:

@@ -22,7 +22,8 @@ python -I -X utf8 tools/cws-status/cws_status.py --source page     # force the p
 
 ## Secrets
 
-Read from an environment variable, or else from the Windows Credential Manager entry with
+Easiest: `python -I -X utf8 tools/cws-status/cws_status.py --set-secrets` asks for each one without echo.
+Otherwise: read from an environment variable, or else from the Windows Credential Manager entry with
 the same name. Never commit them. With `/pass` and no value `cmdkey` asks for it, so it does
 not end up in the shell history:
 
