@@ -135,6 +135,74 @@ def set_secrets() -> int:
     return 0
 
 
+def oauth_login(client_file: str) -> int:
+    """Desktop OAuth flow: the user signs in to Google in the browser, the refresh token goes
+    straight to the Credential Manager together with the client id and secret. Nothing is printed."""
+    import base64
+    import hashlib
+    import http.server as httpserver  # not "http": that name is this module's request helper
+    import secrets as pysecrets
+    import webbrowser
+
+    cfg = json.loads(Path(client_file).read_text(encoding="utf-8"))
+    cfg = cfg.get("installed") or cfg.get("web") or cfg
+    client_id, client_secret = cfg["client_id"], cfg["client_secret"]
+    verifier = pysecrets.token_urlsafe(64)
+    challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b"=").decode()
+    state = pysecrets.token_urlsafe(16)
+    got: dict = {}
+
+    class Handler(httpserver.BaseHTTPRequestHandler):
+        def do_GET(self):  # noqa: N802
+            q = urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query)
+            if q.get("state", [""])[0] == state:
+                got.update({k: v[0] for k, v in q.items()})
+            ok = "code" in got
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(("<h2>Готово, окно можно закрыть.</h2>" if ok else
+                              "<h2>Вход не удался — посмотрите терминал.</h2>").encode())
+
+        def log_message(self, *a):
+            pass
+
+    srv = httpserver.HTTPServer(("127.0.0.1", 0), Handler)
+    redirect = f"http://127.0.0.1:{srv.server_port}"
+    url = "https://accounts.google.com/o/oauth2/v2/auth?" + urllib.parse.urlencode({
+        "client_id": client_id, "redirect_uri": redirect, "response_type": "code",
+        "scope": "https://www.googleapis.com/auth/chromewebstore.readonly",
+        "access_type": "offline", "prompt": "consent", "state": state,
+        "code_challenge": challenge, "code_challenge_method": "S256",
+    })
+    print("Открываю браузер. Войдите аккаунтом издателя Chrome Web Store и разрешите доступ.")
+    print("Если браузер не открылся, откройте ссылку вручную:\n" + url)
+    webbrowser.open(url)
+    srv.timeout = 300
+    while not got:
+        srv.handle_request()
+        if not got:
+            print("Ответ без кода (или истекло 5 минут) — прерываю.")
+            return 1
+    if "error" in got or "code" not in got:
+        print(f"Google вернул ошибку: {got.get('error')}")
+        return 1
+    tok = json.loads(http("https://oauth2.googleapis.com/token", data={
+        "client_id": client_id, "client_secret": client_secret, "code": got["code"],
+        "code_verifier": verifier, "grant_type": "authorization_code", "redirect_uri": redirect,
+    }))
+    if not tok.get("refresh_token"):
+        print("Google не выдал refresh token — повторите вход.")
+        return 1
+    _write_windows_credential("CWS_CLIENT_ID", client_id)
+    _write_windows_credential("CWS_CLIENT_SECRET", client_secret)
+    _write_windows_credential("CWS_REFRESH_TOKEN", tok["refresh_token"])
+    print("Сохранено: CWS_CLIENT_ID, CWS_CLIENT_SECRET, CWS_REFRESH_TOKEN (Диспетчер учётных данных).")
+    if not secret("CWS_PUBLISHER_ID"):
+        print("Осталось: CWS_PUBLISHER_ID — запустите --set-secrets и вставьте его (Enter на остальных).")
+    return 0
+
+
 def secret(name: str) -> str | None:
     return (os.environ.get(name) or "").strip() or _read_windows_credential(name)
 
@@ -289,7 +357,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--test-telegram", action="store_true", help="отправить пробное сообщение и выйти")
     ap.add_argument("--secrets", action="store_true", help="показать, какие секреты заданы (без значений)")
     ap.add_argument("--set-secrets", action="store_true", help="ввести секреты (без эха) в Диспетчер учётных данных")
+    ap.add_argument("--auth", metavar="CLIENT_JSON", help="войти в Google (OAuth-клиент Desktop из JSON) и сохранить ключи CWS")
     args = ap.parse_args(argv)
+    if args.auth:
+        return oauth_login(args.auth)
     if args.set_secrets:
         return set_secrets()
     setup_logging(to_file=not (args.dry_run or args.secrets))
