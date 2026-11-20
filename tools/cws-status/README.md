@@ -22,8 +22,10 @@ python -I -X utf8 tools/cws-status/cws_status.py --source page     # force the p
 
 ## Secrets
 
-Easiest: `--auth <client_secret_*.json>` signs in to Google (Desktop OAuth client) and stores the
-three CWS keys; `--set-secrets` asks for each value without echo.
+Easiest: `--auth <client_secret_*.json> [--full-scope]` signs in to Google (Desktop OAuth client) and stores the
+three CWS keys (`--full-scope` adds upload rights, so the same token can go to the release
+workflow secret). The consent screen must be "In production": in "Testing" tokens die after 7 days.
+`--set-secrets` asks for each value without echo.
 Otherwise: read from an environment variable, or else from the Windows Credential Manager entry with
 the same name. Never commit them. With `/pass` and no value `cmdkey` asks for it, so it does
 not end up in the shell history:

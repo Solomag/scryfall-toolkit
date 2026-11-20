@@ -135,9 +135,10 @@ def set_secrets() -> int:
     return 0
 
 
-def oauth_login(client_file: str) -> int:
+def oauth_login(client_file: str, full: bool = False) -> int:
     """Desktop OAuth flow: the user signs in to Google in the browser, the refresh token goes
-    straight to the Credential Manager together with the client id and secret. Nothing is printed."""
+    straight to the Credential Manager together with the client id and secret. Nothing is printed.
+    ``full`` asks for the read-write scope, so the same token also serves the release workflow."""
     import base64
     import hashlib
     import http.server as httpserver  # not "http": that name is this module's request helper
@@ -171,7 +172,7 @@ def oauth_login(client_file: str) -> int:
     redirect = f"http://127.0.0.1:{srv.server_port}"
     url = "https://accounts.google.com/o/oauth2/v2/auth?" + urllib.parse.urlencode({
         "client_id": client_id, "redirect_uri": redirect, "response_type": "code",
-        "scope": "https://www.googleapis.com/auth/chromewebstore.readonly",
+        "scope": "https://www.googleapis.com/auth/chromewebstore" + ("" if full else ".readonly"),
         "access_type": "offline", "prompt": "consent", "state": state,
         "code_challenge": challenge, "code_challenge_method": "S256",
     })
@@ -358,9 +359,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--secrets", action="store_true", help="показать, какие секреты заданы (без значений)")
     ap.add_argument("--set-secrets", action="store_true", help="ввести секреты (без эха) в Диспетчер учётных данных")
     ap.add_argument("--auth", metavar="CLIENT_JSON", help="войти в Google (OAuth-клиент Desktop из JSON) и сохранить ключи CWS")
+    ap.add_argument("--full-scope", action="store_true", help="с --auth: право загрузки (тот же ключ годится для релизов в GitHub)")
     args = ap.parse_args(argv)
     if args.auth:
-        return oauth_login(args.auth)
+        return oauth_login(args.auth, args.full_scope)
     if args.set_secrets:
         return set_secrets()
     setup_logging(to_file=not (args.dry_run or args.secrets))
